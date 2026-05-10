@@ -434,9 +434,9 @@ fun Step0(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Image(
-            painterResource(R.drawable.setup_welcome_image), 
+            painterResource(R.drawable.ic_launcher_foreground), 
             contentDescription = null,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = 32.dp).size(128.dp)
         )
         
         Spacer(Modifier.weight(1f))
