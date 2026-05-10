@@ -85,6 +85,7 @@ fun WelcomeWizard(
         else -> 3
     }
     var step by rememberSaveable { mutableIntStateOf(determineStep()) }
+    var requiresRestart by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(step) {
         if (step == 2)
@@ -96,10 +97,6 @@ fun WelcomeWizard(
             }
     }
     val useWideLayout = isWideScreen()
-    val stepBackgroundColor = Color(ContextCompat.getColor(ctx, R.color.setup_step_background))
-    val textColor = Color(ContextCompat.getColor(ctx, R.color.setup_text_action))
-    val textColorDim = textColor.copy(alpha = 0.5f)
-    val titleColor = Color(ContextCompat.getColor(ctx, R.color.setup_text_title))
     val appName = stringResource(ctx.applicationInfo.labelRes)
     @Composable fun bigText() {
         val resource = if (step == 0) R.string.setup_welcome_title else R.string.setup_steps_title
@@ -241,7 +238,11 @@ fun WelcomeWizard(
                         }
                         Spacer(Modifier.height(8.dp))
                         Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)) {
-                            LoadGestureLibPreference("Gesture Typing Library")
+                            LoadGestureLibPreference(
+                                title = "Gesture Typing Library",
+                                restartOnSuccess = false,
+                                onSuccess = { requiresRestart = true }
+                            )
                             if (gestureLibInstalled) {
                                 Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.align(Alignment.CenterEnd).padding(end = 16.dp), tint = MaterialTheme.colorScheme.primary)
                             }
@@ -281,7 +282,7 @@ fun WelcomeWizard(
                                 }
                             }
                         } else {
-                            Text("AI features are not available in this build flavor.", color = textColorDim)
+                            Text("AI features are not available in this build flavor.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else if (step == 5) {
@@ -308,7 +309,7 @@ fun WelcomeWizard(
                             } else {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.padding(end = 8.dp), tint = MaterialTheme.colorScheme.primary)
-                                    Text("Permission granted.", color = textColor)
+                                    Text("Permission granted.", color = MaterialTheme.colorScheme.onSurface)
                                 }
                             }
                         }
@@ -391,37 +392,37 @@ fun WelcomeWizard(
                         stringResource(R.string.setup_step3_instruction, appName),
                         stringResource(R.string.setup_finish_action),
                         painterResource(R.drawable.ic_setup_check),
-                        finish,
+                        {
+                            finish()
+                            if (requiresRestart) {
+                                Runtime.getRuntime().exit(0)
+                            }
+                        },
                         null,
                         { step-- }
                     )
                 }
             }
     }
-    Surface {
-        CompositionLocalProvider(
-            LocalContentColor provides textColor,
-            LocalTextStyle provides MaterialTheme.typography.titleLarge.merge(color = textColor),
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (useWideLayout)
-                    Row {
-                        Box(Modifier.weight(0.4f)) {
-                            bigText()
-                        }
-                        Box(Modifier.weight(0.6f)) {
-                            steps()
-                        }
-                    }
-                else
-                    Column {
+            if (useWideLayout)
+                Row {
+                    Box(Modifier.weight(0.4f)) {
                         bigText()
+                    }
+                    Box(Modifier.weight(0.6f)) {
                         steps()
                     }
-            }
+                }
+            else
+                Column {
+                    bigText()
+                    steps()
+                }
         }
     }
 }
@@ -462,10 +463,6 @@ private fun WidePreview() {
     Theme(previewDark) {
         Surface {
             WelcomeWizard({}) {  }
-        }
-    }
-}
-eWizard({}) {  }
         }
     }
 }
