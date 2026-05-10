@@ -429,16 +429,26 @@ fun WelcomeWizard(
 
 @Composable
 fun Step0(onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(painterResource(R.drawable.setup_welcome_image), null)
-        Row(Modifier.clickable { onClick() }
-            .padding(top = 4.dp, start = 4.dp, end = 4.dp)
-            //.background(color = MaterialTheme.colorScheme.primary)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Image(
+            painterResource(R.drawable.setup_welcome_image), 
+            contentDescription = null,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+        
+        Spacer(Modifier.weight(1f))
+        
+        androidx.compose.material3.Button(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 16.dp)
         ) {
-            Spacer(Modifier.weight(1f))
             Text(
                 stringResource(R.string.setup_start_action),
-                modifier = Modifier.padding(horizontal = 16.dp)
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(vertical = 8.dp)
             )
         }
     }

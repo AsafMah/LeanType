@@ -158,7 +158,10 @@ fun LoadGestureLibPreference(
                     // Delete the library
                     libFile.delete()
                     prefs.edit(commit = true) { remove(Settings.PREF_LIBRARY_CHECKSUM) }
-                    Runtime.getRuntime().exit(0)
+                    onSuccess?.invoke()
+                    if (restartOnSuccess) {
+                        Runtime.getRuntime().exit(0)
+                    }
                 } else {
                     // Load from file
                     showDialog = false
