@@ -349,7 +349,7 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 else view.background.colorFilter = adjustedBackgroundFilter
             MAIN_BACKGROUND -> {
                 if (keyboardBackground != null) {
-                    if (!backgroundSetupDone) {
+                    if (!backgroundSetupDone && view.width > 0 && view.height > 0) {
                         keyboardBackground = keyboardBackground!!.toBitmap(view.width, view.height).toDrawable(view.context.resources)
                         backgroundSetupDone = true
                     }
@@ -534,7 +534,7 @@ class DefaultColors (
             MORE_SUGGESTIONS_BACKGROUND -> view.background.colorFilter = backgroundFilter
             MAIN_BACKGROUND -> {
                 if (keyboardBackground != null) {
-                    if (!backgroundSetupDone) {
+                    if (!backgroundSetupDone && view.width > 0 && view.height > 0) {
                         keyboardBackground = keyboardBackground!!.toBitmap(view.width, view.height).toDrawable(view.context.resources)
                         backgroundSetupDone = true
                     }
@@ -585,7 +585,7 @@ class AllColors(private val colorMap: EnumMap<ColorType, Int>, override val them
             ONE_HANDED_MODE_BUTTON -> setColor(view.background, MAIN_BACKGROUND) // button has no separate background color
             MAIN_BACKGROUND -> {
                 if (keyboardBackground != null) {
-                    if (!backgroundSetupDone) {
+                    if (!backgroundSetupDone && view.width > 0 && view.height > 0) {
                         keyboardBackground = keyboardBackground!!.toBitmap(view.width, view.height).toDrawable(view.context.resources)
                         backgroundSetupDone = true
                     }

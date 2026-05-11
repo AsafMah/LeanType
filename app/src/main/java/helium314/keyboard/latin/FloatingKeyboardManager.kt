@@ -45,8 +45,9 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
         private const val CORNER_RADIUS_DP = 16f
     }
 
-    private val prefs: SharedPreferences =
+    private val prefs: SharedPreferences by lazy {
         DeviceProtectedUtils.getSharedPreferences(context, PREFS_NAME)
+    }
 
     private var overlayRoot: FrameLayout? = null
     private var windowManager: WindowManager? = null
