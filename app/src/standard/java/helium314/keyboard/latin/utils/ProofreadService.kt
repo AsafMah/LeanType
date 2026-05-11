@@ -103,6 +103,7 @@ class ProofreadService(private val context: Context) {
         val connection = url.openConnection() as HttpURLConnection
         return try {
             connection.requestMethod = "GET"
+            connection.setRequestProperty("User-Agent", "LeanType/1.0")
             connection.connect()
             if (connection.responseCode == 200) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
@@ -133,6 +134,7 @@ class ProofreadService(private val context: Context) {
         return try {
             connection.requestMethod = "GET"
             connection.setRequestProperty("Authorization", "Bearer $token")
+            connection.setRequestProperty("User-Agent", "LeanType/1.0")
             connection.connect()
             if (connection.responseCode == 200) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
@@ -461,6 +463,7 @@ class ProofreadService(private val context: Context) {
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Authorization", "Bearer $token")
+            connection.setRequestProperty("User-Agent", "LeanType/1.0")
             
             connection.doOutput = true
             connection.connectTimeout = 30000
