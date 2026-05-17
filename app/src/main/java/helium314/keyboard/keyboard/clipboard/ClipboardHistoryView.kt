@@ -189,13 +189,14 @@ class ClipboardHistoryView @JvmOverloads constructor(
     private lateinit var searchBarTextView: TextView
     private var searchQuery = StringBuilder()
     private var backButton: ImageButton? = null
-    
-    // We reuse searchWatcher logic but applied manually or to a hidden text view if needed.
-    // Actually we just filter manually now.
-    
-    // ... initialize ...
-    // Note: XML elements for search overlay are now unused, we should eventually remove them from XML.
-    // For now, we just ignore them.
+
+    // ---- Edit mode state (mirrors search-mode pattern) ----
+    private var editingClipId: Long? = null
+    private var editingText = StringBuilder()
+    private var editTextView: TextView? = null
+    private var editSaveButton: ImageButton? = null
+    private var editCancelButton: ImageButton? = null
+    private val inEditMode: Boolean get() = editingClipId != null
     
     private fun startSearchMode() {
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
@@ -278,7 +279,34 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
-        
+
+        if (inEditMode) {
+            val char = if (primaryCode > 0) primaryCode.toChar() else null
+            when {
+                primaryCode == KeyCode.DELETE -> {
+                    if (editingText.isNotEmpty()) {
+                        editingText.deleteCharAt(editingText.length - 1)
+                        editTextView?.text = editingText.toString()
+                    }
+                }
+                primaryCode == Constants.CODE_ENTER -> stopEditMode(commit = true)
+                primaryCode == Constants.CODE_SPACE -> {
+                    editingText.append(' ')
+                    editTextView?.text = editingText.toString()
+                }
+                char != null -> {
+                    editingText.append(char)
+                    editTextView?.text = editingText.toString()
+                }
+                else -> {
+                    // Any other key (Symbols, Settings, etc.) cancels edit and is forwarded.
+                    stopEditMode(commit = false)
+                    keyboardActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat)
+                }
+            }
+            return
+        }
+
         if (inSearchMode) {
             val char = if (primaryCode > 0) primaryCode.toChar() else null
             
@@ -321,7 +349,12 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onTextInput(text: String) {
          val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
          val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
-         
+
+         if (inEditMode) {
+             editingText.append(text)
+             editTextView?.text = editingText.toString()
+             return
+         }
          if (inSearchMode) {
              searchQuery.append(text)
              searchBarTextView.text = searchQuery.toString()
@@ -368,6 +401,106 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onUpWithDeletePointerActive() { keyboardActionListener.onUpWithDeletePointerActive() }
     override fun resetMetaState() { keyboardActionListener.resetMetaState() }
     
+    // ---- Inline edit mode (used by the long-press "Edit" action) ----
+
+    private fun startEditMode(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
+        if (entry.imageUri != null) return // image clips are not editable
+        // If we're somehow already in search mode, exit it first.
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if (inSearchMode) stopSearchMode()
+
+        editingClipId = entry.id
+        editingText = StringBuilder(entry.text)
+
+        val colors = Settings.getValues().mColors
+
+        // Build the strip UI: [cancel] [text view (in-progress)] [save]
+        clipboardStrip.removeAllViews()
+
+        editCancelButton = ImageButton(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            setImageResource(R.drawable.ic_close)
+            setBackgroundResource(R.drawable.toolbar_key_background)
+            setColorFilter(colors.get(ColorType.KEY_ICON))
+            colors.setColor(background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
+            contentDescription = context.getString(android.R.string.cancel)
+            setOnClickListener { stopEditMode(commit = false) }
+        }
+        clipboardStrip.addView(editCancelButton)
+
+        editTextView = TextView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+            gravity = android.view.Gravity.CENTER_VERTICAL or android.view.Gravity.START
+            textSize = 16f
+            setTextColor(colors.get(ColorType.KEY_TEXT))
+            text = editingText.toString()
+            setHint(R.string.clipboard_edit_dialog_hint)
+            setHintTextColor((colors.get(ColorType.KEY_TEXT) and 0x00FFFFFF) or 0x80000000.toInt())
+            setPadding(16, 0, 16, 0)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.START
+            Settings.getInstance().getCustomTypeface()?.let { typeface = it }
+        }
+        clipboardStrip.addView(editTextView)
+
+        editSaveButton = ImageButton(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            // Reuse the keyboard's icon set so the icon matches the theme; fall back to
+            // a simple checkmark drawable from the framework if not available.
+            val iconSet = KeyboardSwitcher.getInstance().keyboard?.mIconsSet
+            val enterIcon = iconSet?.getIconDrawable("enter") ?: iconSet?.getIconDrawable("done")
+            if (enterIcon != null) setImageDrawable(enterIcon)
+            else setImageResource(android.R.drawable.ic_menu_save)
+            setBackgroundResource(R.drawable.toolbar_key_background)
+            setColorFilter(colors.get(ColorType.KEY_ICON))
+            colors.setColor(background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
+            contentDescription = context.getString(android.R.string.ok)
+            setOnClickListener { stopEditMode(commit = true) }
+        }
+        clipboardStrip.addView(editSaveButton)
+
+        // Switch the bottom row to the standard alphabet keyboard so the user can type.
+        setBottomRowLayout(KeyboardId.ELEMENT_ALPHABET)
+
+        // Hide the clipboard list/empty view while editing to make focus obvious.
+        clipboardRecyclerView.visibility = View.GONE
+        emptyViewContainer.visibility = View.GONE
+    }
+
+    private fun stopEditMode(commit: Boolean) {
+        val id = editingClipId ?: return
+        val newText = editingText.toString()
+        editingClipId = null
+        editingText = StringBuilder()
+
+        // Restore the toolbar.
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        clipboardStrip.removeAllViews()
+        toolbarKeys.forEach { clipboardStrip.addView(it) }
+        editTextView = null
+        editSaveButton = null
+        editCancelButton = null
+
+        // Restore the clipboard keyboard bottom row.
+        setBottomRowLayout(KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW)
+        clipboardRecyclerView.visibility = View.VISIBLE
+        updateEmptyView(clipboardAdapter.isFiltering)
+
+        if (commit) {
+            val deleted = clipboardHistoryManager.updateClipText(id, newText)
+            if (deleted != null) {
+                clipboardRecyclerView.showUndoForDeletedEntry(deleted)
+            }
+        }
+    }
+
     private fun setupClipKey(params: KeyDrawParams) {
         clipboardAdapter.apply {
             itemBackgroundId = keyBackgroundId
@@ -485,13 +618,101 @@ class ClipboardHistoryView @JvmOverloads constructor(
         if (Settings.getValues().mAlphaAfterClipHistoryEntry)
             keyboardActionListener.onCodeInput(KeyCode.ALPHA, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
     }
+
+    override fun onKeyLongPress(clipId: Long, anchor: View): Boolean {
+        val entry = clipboardHistoryManager.getHistoryEntryContent(clipId) ?: return false
+        AudioAndHapticFeedbackManager.getInstance()
+            .performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, this, HapticEvent.KEY_LONG_PRESS)
+        showClipContextMenu(entry, anchor)
+        return true
+    }
+
+    private fun showClipContextMenu(entry: helium314.keyboard.latin.ClipboardHistoryEntry, anchor: View) {
+        val isImage = entry.imageUri != null
+        val pinLabelRes = if (entry.isPinned) R.string.clipboard_action_unpin else R.string.clipboard_action_pin
+
+        // Build option list dynamically; Edit is omitted for image clips.
+        data class Option(val labelRes: Int, val action: () -> Unit)
+        val options = mutableListOf<Option>()
+        if (!isImage) {
+            options += Option(R.string.clipboard_action_edit) { showEditDialog(entry, anchor) }
+        }
+        options += Option(pinLabelRes) { clipboardHistoryManager.toggleClipPinned(entry.id) }
+        if (!isImage) {
+            options += Option(R.string.clipboard_action_copy) { copyEntryToSystemClipboard(entry) }
+            options += Option(R.string.clipboard_action_share) { shareEntry(entry) }
+        }
+        options += Option(R.string.clipboard_action_delete) { deleteEntry(entry) }
+
+        val labels = options.map { context.getString(it.labelRes) }.toTypedArray()
+        val dialog = android.app.AlertDialog.Builder(context)
+            .setItems(labels) { d, which ->
+                d.dismiss()
+                options[which].action()
+            }
+            .create()
+        attachDialogToKeyboard(dialog, anchor)
+        dialog.show()
+    }
+
+    private fun showEditDialog(entry: helium314.keyboard.latin.ClipboardHistoryEntry, anchor: View) {
+        // Editing happens inline (not in an AlertDialog) because EditText cannot reliably
+        // receive input from inside the IME's own window. Instead we mirror the existing
+        // search-mode pattern: take over the clipboard strip with an editor UI and
+        // intercept keyboard codes in onCodeInput.
+        startEditMode(entry)
+    }
+
+    private fun copyEntryToSystemClipboard(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
+        try {
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("clip", entry.text))
+        } catch (_: Exception) { /* ignore */ }
+    }
+
+    private fun shareEntry(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
+        try {
+            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, entry.text)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            val chooser = android.content.Intent.createChooser(send, null).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+        } catch (_: Exception) { /* ignore */ }
+    }
+
+    private fun deleteEntry(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
+        // Pinned items can't be removed; unpin first so they behave like any other entry.
+        if (entry.isPinned) clipboardHistoryManager.toggleClipPinned(entry.id)
+        val index = clipboardHistoryManager.getClips().indexOfFirst { it.id == entry.id }
+        if (index < 0) return
+        val deleted = clipboardHistoryManager.removeEntry(index) ?: return
+        clipboardAdapter.notifyItemRemoved(index)
+        clipboardRecyclerView.showUndoForDeletedEntry(deleted)
+    }
+
+    private fun attachDialogToKeyboard(dialog: android.app.AlertDialog, anchor: View) {
+        // Same pattern used in EmojiPalettesView so the dialog appears above the IME window.
+        val window = dialog.window ?: return
+        val lp = window.attributes
+        lp.token = anchor.windowToken
+        lp.type = android.view.WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+        window.attributes = lp
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+    }
  
 
 
     fun stopClipboardHistory() {
         if (!this::clipboardAdapter.isInitialized) return
-        
-        // Also ensure search mode is stopped if we explicitly leave clipboard history
+
+        // Also ensure edit/search modes are stopped if we explicitly leave clipboard history
+        if (inEditMode && isAttachedToWindow) {
+            stopEditMode(commit = false)
+        }
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
         if (inSearchMode && isAttachedToWindow) {

@@ -196,6 +196,17 @@ class ClipboardHistoryManager(
         clipboardDao?.sort()
     }
 
+    /**
+     * Update the text content of an existing clip. If [newText] is blank the clip is
+     * deleted; the deleted entry (if any) is returned so the caller can offer undo.
+     * Returns null when no entry was deleted (i.e. for a regular text update).
+     */
+    fun updateClipText(id: Long, newText: String): ClipboardHistoryEntry? {
+        val deleted = arrayOfNulls<ClipboardHistoryEntry>(1)
+        clipboardDao?.updateText(id, newText, deleted)
+        return deleted[0]
+    }
+
     // We do not want to update history while user is visualizing it, so we check retention only
     // when history is about to be shown
     fun prepareClipboardHistory() = clipboardDao?.clearOldClips(true)
