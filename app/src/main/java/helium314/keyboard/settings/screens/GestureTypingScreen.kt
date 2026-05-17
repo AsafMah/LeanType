@@ -63,6 +63,26 @@ fun GestureTypingScreen(
             add(R.string.settings_category_behavior)
             add(Settings.PREF_GESTURE_SPACE_AWARE)
             add(Settings.PREF_GESTURE_FAST_TYPING_COOLDOWN)
+
+            // Two-thumb typing settings — every option defaults to off / current behaviour.
+            add(R.string.settings_category_two_thumb_typing)
+            add(Settings.PREF_GESTURE_MANUAL_SPACING)
+            val manualSpacing = prefs.getBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, Defaults.PREF_GESTURE_MANUAL_SPACING)
+            if (manualSpacing)
+                add(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE)
+            // Manual spacing and the autospace grace timer are mutually exclusive philosophies;
+            // only show the grace-period slider when manual spacing is off.
+            if (!manualSpacing)
+                add(Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS)
+            add(Settings.PREF_GESTURE_TAP_DURING_SWIPE)
+            if (prefs.getBoolean(Settings.PREF_GESTURE_TAP_DURING_SWIPE, Defaults.PREF_GESTURE_TAP_DURING_SWIPE))
+                add(Settings.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS)
+            add(Settings.PREF_GESTURE_TAP_PROMOTION_MS)
+            add(Settings.PREF_GESTURE_APOSTROPHE_KEY)
+            add(Settings.PREF_GESTURE_DUAL_THUMB_HINTING)
+            if (prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING, Defaults.PREF_GESTURE_DUAL_THUMB_HINTING))
+                add(Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT)
+            add(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS)
         }
 
         add(R.string.settings_category_gestures_advanced)
@@ -163,6 +183,74 @@ fun createGestureTypingSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_DELETE_SWIPE, R.string.delete_swipe, R.string.delete_swipe_summary) {
         SwitchPreference(it, Defaults.PREF_DELETE_SWIPE)
+    },
+    // Two-thumb typing settings (behaviour is implemented in follow-up changes; defaults preserve current behaviour).
+    Setting(context, Settings.PREF_GESTURE_MANUAL_SPACING,
+        R.string.gesture_manual_spacing, R.string.gesture_manual_spacing_summary) {
+        SwitchPreference(it, Defaults.PREF_GESTURE_MANUAL_SPACING)
+    },
+    Setting(context, Settings.PREF_GESTURE_FRAGMENT_BACKSPACE,
+        R.string.gesture_fragment_backspace, R.string.gesture_fragment_backspace_summary) {
+        SwitchPreference(it, Defaults.PREF_GESTURE_FRAGMENT_BACKSPACE)
+    },
+    Setting(context, Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS, R.string.gesture_autospace_grace) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_GESTURE_AUTOSPACE_GRACE_MS,
+            range = 0f..500f,
+            description = {
+                if (it <= 0) stringResource(R.string.gesture_autospace_grace_off)
+                else stringResource(R.string.abbreviation_unit_milliseconds, it.toString())
+            }
+        )
+    },
+    Setting(context, Settings.PREF_GESTURE_TAP_DURING_SWIPE,
+        R.string.gesture_tap_during_swipe, R.string.gesture_tap_during_swipe_summary) {
+        SwitchPreference(it, Defaults.PREF_GESTURE_TAP_DURING_SWIPE)
+    },
+    Setting(context, Settings.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS, R.string.gesture_tap_as_swipe_window) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS,
+            range = 0f..200f,
+            description = { stringResource(R.string.abbreviation_unit_milliseconds, it.toString()) }
+        )
+    },
+    Setting(context, Settings.PREF_GESTURE_TAP_PROMOTION_MS,
+        R.string.gesture_tap_promotion, R.string.gesture_tap_promotion_summary) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_GESTURE_TAP_PROMOTION_MS,
+            range = 0f..200f,
+            description = {
+                if (it <= 0) stringResource(R.string.gesture_autospace_grace_off)
+                else stringResource(R.string.abbreviation_unit_milliseconds, it.toString())
+            }
+        )
+    },
+    Setting(context, Settings.PREF_GESTURE_APOSTROPHE_KEY,
+        R.string.gesture_apostrophe_key, R.string.gesture_apostrophe_key_summary) {
+        SwitchPreference(it, Defaults.PREF_GESTURE_APOSTROPHE_KEY)
+    },
+    Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
+        R.string.gesture_dual_thumb_hinting, R.string.gesture_dual_thumb_hinting_summary) {
+        SwitchPreference(it, Defaults.PREF_GESTURE_DUAL_THUMB_HINTING)
+    },
+    Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT, R.string.gesture_dual_thumb_midline) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT,
+            range = 30f..70f,
+            description = { value -> "${value.toInt()}%" }
+        )
+    },
+    Setting(context, Settings.PREF_GESTURE_DEBUG_DRAW_POINTS,
+        R.string.gesture_debug_draw_points, R.string.gesture_debug_draw_points_summary) {
+        SwitchPreference(it, Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS)
     },
 )
 

@@ -111,6 +111,18 @@ public class SettingsValues {
         public final boolean mGestureFloatingPreviewDynamicEnabled;
         public final int mGestureFastTypingCooldown;
         public final int mGestureTrailFadeoutDuration;
+        // Two-thumb typing settings (see plan in PR #improve-two-thumb-typing).
+        // Wired into preferences here; behaviour for each is implemented in follow-up changes.
+        public final boolean mGestureManualSpacing;
+        public final boolean mGestureFragmentBackspace;
+        public final int mGestureAutospaceGraceMs;
+        public final boolean mGestureTapDuringSwipe;
+        public final int mGestureTapAsSwipeWindowMs;
+        public final int mGestureTapPromotionMs;
+        public final boolean mGestureDualThumbHinting;
+        public final int mGestureDualThumbMidlinePct;
+        public final boolean mGestureDebugDrawPoints;
+        public final boolean mGestureApostropheKey;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -297,6 +309,27 @@ public class SettingsValues {
                                 Defaults.PREF_GESTURE_FAST_TYPING_COOLDOWN);
                 mGestureTrailFadeoutDuration = prefs.getInt(Settings.PREF_GESTURE_TRAIL_FADEOUT_DURATION,
                                 Defaults.PREF_GESTURE_TRAIL_FADEOUT_DURATION);
+                // Two-thumb typing prefs (defaults preserve current behaviour).
+                mGestureManualSpacing = prefs.getBoolean(Settings.PREF_GESTURE_MANUAL_SPACING,
+                                Defaults.PREF_GESTURE_MANUAL_SPACING);
+                mGestureFragmentBackspace = prefs.getBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE,
+                                Defaults.PREF_GESTURE_FRAGMENT_BACKSPACE);
+                mGestureAutospaceGraceMs = prefs.getInt(Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS,
+                                Defaults.PREF_GESTURE_AUTOSPACE_GRACE_MS);
+                mGestureTapDuringSwipe = prefs.getBoolean(Settings.PREF_GESTURE_TAP_DURING_SWIPE,
+                                Defaults.PREF_GESTURE_TAP_DURING_SWIPE);
+                mGestureTapAsSwipeWindowMs = prefs.getInt(Settings.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS,
+                                Defaults.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS);
+                mGestureTapPromotionMs = prefs.getInt(Settings.PREF_GESTURE_TAP_PROMOTION_MS,
+                                Defaults.PREF_GESTURE_TAP_PROMOTION_MS);
+                mGestureDualThumbHinting = prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
+                                Defaults.PREF_GESTURE_DUAL_THUMB_HINTING);
+                mGestureDualThumbMidlinePct = prefs.getInt(Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT,
+                                Defaults.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT);
+                mGestureDebugDrawPoints = prefs.getBoolean(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS,
+                                Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS);
+                mGestureApostropheKey = prefs.getBoolean(Settings.PREF_GESTURE_APOSTROPHE_KEY,
+                                Defaults.PREF_GESTURE_APOSTROPHE_KEY);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions
