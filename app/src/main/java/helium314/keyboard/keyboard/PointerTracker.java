@@ -128,6 +128,11 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     private boolean mIsDetectingGesture = false; // per PointerTracker.
     private static boolean sInGesture = false;
+    // True for this pointer when its down-event happened while another pointer's batch gesture
+    // was already in progress (sInGesture==true) and the pref PREF_GESTURE_TAP_DURING_SWIPE is on.
+    // Used in onUpEventInternal to suppress an accidental tap-keystroke if the parent gesture
+    // committed between this pointer's down and up.
+    private boolean mIsTapDuringSwipe = false;
     private static TypingTimeRecorder sTypingTimeRecorder;
 
     // The position and time at which first down event occurred.
@@ -729,6 +734,12 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                     sTypingTimeRecorder.getLastLetterTypingTime(), getActivePointerTrackerCount());
             mGestureStrokeDrawingPoints.onDownEvent(
                     x, y, mBatchInputArbiter.getElapsedTimeSinceFirstDown(eventTime));
+            // Two-thumb typing: remember whether this pointer started while another pointer's
+            // batch gesture was already in progress. Used in onUpEventInternal to suppress a
+            // stray tap-keystroke if the parent gesture commits before this pointer lifts.
+            mIsTapDuringSwipe = sInGesture
+                    && Settings.getValues().mGestureTapDuringSwipe
+                    && key != null && Character.isLetter(key.getCode());
         }
     }
 
@@ -1187,6 +1198,8 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         sTimerProxy.cancelKeyTimersOf(this);
         final boolean isInDraggingFinger = mIsInDraggingFinger;
         final boolean isInSlidingKeyInput = mIsInSlidingKeyInput;
+        final boolean wasTapDuringSwipe = mIsTapDuringSwipe;
+        mIsTapDuringSwipe = false;
         resetKeySelectionByDraggingFinger();
         mIsDetectingGesture = false;
         final Key currentKey = mCurrentKey;
@@ -1251,6 +1264,15 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
         if (currentKey != null && currentKey.isRepeatable()
                 && (currentKey.getCode() == currentRepeatingKeyCode) && !isInDraggingFinger) {
+            return;
+        }
+        // Two-thumb typing (#1.3): if this pointer went down as a child of an in-progress
+        // batch gesture but the parent gesture committed before our up-event, suppress the
+        // tap-keystroke so we don't append a stray letter to the just-committed word.
+        // Long-press taps (longer than PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS) fall through to
+        // normal behaviour so the user can still type characters after a gesture commits.
+        if (wasTapDuringSwipe && !sInGesture
+                && eventTime - mDownTime <= Settings.getValues().mGestureTapAsSwipeWindowMs) {
             return;
         }
         detectAndSendKey(currentKey, mKeyX, mKeyY, eventTime);
