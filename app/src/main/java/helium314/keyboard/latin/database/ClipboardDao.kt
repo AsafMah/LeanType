@@ -104,7 +104,7 @@ class ClipboardDao private constructor(private val db: Database) {
 
     /**
      * Update the text of an existing clip identified by [id].
-     * - If [newText] is blank, the clip is deleted (caller can use [restoreClip] for undo).
+     * - If [newText] is empty, the clip is deleted (caller can use [restoreClip] for undo).
      * - If another (non-image) clip already has the same text, the duplicate is removed
      *   and the edited entry is kept (pin status of the kept entry is preserved).
      * - Editing always bumps the timestamp to "now" so the entry moves to the top.

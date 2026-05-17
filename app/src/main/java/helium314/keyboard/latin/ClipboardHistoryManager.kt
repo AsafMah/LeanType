@@ -197,9 +197,9 @@ class ClipboardHistoryManager(
     }
 
     /**
-     * Update the text content of an existing clip. If [newText] is blank the clip is
-     * deleted; the deleted entry (if any) is returned so the caller can offer undo.
-     * Returns null when no entry was deleted (i.e. for a regular text update).
+     * Update the text content of an existing clip. If [newText] is empty the clip is
+     * deleted and returned so the caller can offer undo. Returns null for a regular text
+     * update, when the entry does not exist, or when it is an image clip.
      */
     fun updateClipText(id: Long, newText: String): ClipboardHistoryEntry? {
         val deleted = arrayOfNulls<ClipboardHistoryEntry>(1)

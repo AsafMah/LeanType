@@ -666,8 +666,10 @@ class ClipboardHistoryView @JvmOverloads constructor(
     private fun copyEntryToSystemClipboard(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
         try {
             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            cm.setPrimaryClip(android.content.ClipData.newPlainText("clip", entry.text))
-        } catch (_: Exception) { /* ignore */ }
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("clipboard", entry.text))
+        } catch (e: SecurityException) {
+            helium314.keyboard.latin.utils.Log.w("ClipboardHistoryView", "Failed to set primary clip: ${e.message}")
+        }
     }
 
     private fun shareEntry(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
@@ -681,7 +683,9 @@ class ClipboardHistoryView @JvmOverloads constructor(
                 addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(chooser)
-        } catch (_: Exception) { /* ignore */ }
+        } catch (e: android.content.ActivityNotFoundException) {
+            helium314.keyboard.latin.utils.Log.w("ClipboardHistoryView", "No activity to handle share: ${e.message}")
+        }
     }
 
     private fun deleteEntry(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
