@@ -265,6 +265,30 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     public static void cancelAllPointerTrackers() {
         sPointerTrackerQueue.cancelAllPointerTrackers();
+        // Two-thumb typing (#1.2): drop any pending grace-period commit during teardown so
+        // the deferred runnable doesn't fire against a possibly-disposed view. If a commit
+        // was indeed pending, the only thing keeping {@code sInGesture} true was the grace
+        // window itself — clear it now so post-teardown touches don't see stale state.
+        if (BatchInputArbiter.cancelGrace()) {
+            sInGesture = false;
+        }
+    }
+
+    /**
+     * Static commit path used by the autospace grace period (#1.2). Called from
+     * {@link BatchInputArbiter} when a deferred commit fires (timer expired or
+     * {@link BatchInputArbiter#flushGrace} was invoked). Mirrors the body of the per-instance
+     * {@link #onEndBatchInput(InputPointers, long)} but skips the {@code mIsTrackingForActionDisabled}
+     * check because the original tracker may have been reused for a different finger by now —
+     * the per-instance flag is no longer meaningful for the previously-committed gesture.
+     * Always invoked on the main looper.
+     */
+    private static void commitDeferredBatchInput(
+            final InputPointers aggregatedPointers, final long upEventTime) {
+        sTypingTimeRecorder.onEndBatchInput(upEventTime);
+        sTimerProxy.cancelAllUpdateBatchInputTimers();
+        sListener.onEndBatchInput(aggregatedPointers);
+        sInGesture = false;
     }
 
     public static void setKeyboardActionListener(final KeyboardActionListener listener) {
@@ -711,12 +735,45 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         mBogusMoveEventDetector.onActualDownEvent(x, y);
         if (key != null && key.isModifier()) {
             if (sInGesture) {
-                // Make sure not to interrupt an active gesture
+                // Make sure not to interrupt an active gesture (or a pending grace commit —
+                // modifier taps during the grace window are silently ignored, same as during
+                // an actively-moving gesture).
                 return;
             } else {
                 // Before processing a down event of modifier key, all pointers
                 // already being tracked should be released.
                 sPointerTrackerQueue.releaseAllPointers(eventTime);
+            }
+        }
+        // Two-thumb typing (#1.2): if we're inside the autospace grace window of a previous
+        // gesture, this new pointer is either a continuation of that same composing word
+        // (letter on the alphabet keyboard, gesture handling still enabled) or a terminator
+        // (anything else). Decide BEFORE the rest of the down-event flow runs so the arbiter
+        // state is consistent by the time addDownEventPoint() below queries
+        // {@code sNextDownContinuesPendingGesture}. No-op when the user hasn't enabled the
+        // grace period — {@code isGracePending} is only ever true when
+        // {@code PREF_GESTURE_AUTOSPACE_GRACE_MS > 0}.
+        if (BatchInputArbiter.isGracePending()) {
+            // Gate on {@code shouldHandleGesture} too: if gesture typing was disabled (e.g.
+            // the user toggled the pref mid-grace, or we're on a layout where gestures aren't
+            // handled), {@link BatchInputArbiter#continuePendingGesture} would set a flag
+            // that never gets consumed by {@code addDownEventPoint} — leaking it into the
+            // next gesture. Flushing is the safe choice here.
+            final boolean isLetterContinuation = sGestureEnabler.shouldHandleGesture()
+                    && key != null
+                    && !key.isModifier()
+                    && Character.isLetter(key.getCode())
+                    && mKeyboard != null && mKeyboard.mId.isAlphabetKeyboard();
+            if (isLetterContinuation) {
+                // Drop the deferred commit and tell the arbiter to keep sGestureFirstDownTime
+                // intact, so this pointer's elapsed-time stamps line up with the existing
+                // aggregate. {@code sInGesture} stays true throughout.
+                BatchInputArbiter.continuePendingGesture();
+            } else {
+                // Non-letter tap (space, punctuation, gestures off, …): commit the pending
+                // gesture word synchronously so this keystroke lands AFTER it. Clears
+                // {@code sInGesture} via the DeferredCommit callback before we proceed.
+                BatchInputArbiter.flushGrace();
             }
         }
         sPointerTrackerQueue.add(this);
@@ -1251,10 +1308,18 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             if (currentKey != null) {
                 callListenerOnRelease(currentKey, currentKey.getCode(), true);
             }
+            // Two-thumb typing (#1.2): defer the commit by {@code mGestureAutospaceGraceMs}
+            // when configured, so a follow-up finger can continue the same word. {@code 0}
+            // (the default) preserves today's immediate-commit behaviour byte-for-byte.
+            final int graceMs = Settings.getValues().mGestureAutospaceGraceMs;
             if (mBatchInputArbiter.mayEndBatchInput(
-                    eventTime, getActivePointerTrackerCount(), this)) {
+                    eventTime, getActivePointerTrackerCount(), graceMs, this,
+                    PointerTracker::commitDeferredBatchInput)) {
                 sInGesture = false;
             }
+            // If mayEndBatchInput returned false because a grace timer was scheduled,
+            // {@code sInGesture} intentionally stays true throughout the window so key
+            // previews stay suppressed and concurrent move events keep aggregating.
             showGestureTrail();
             return;
         }
