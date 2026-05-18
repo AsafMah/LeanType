@@ -1385,28 +1385,21 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             if (currentKey != null) {
                 callListenerOnRelease(currentKey, currentKey.getCode(), true);
             }
-            // Two-thumb typing (#1.2): defer the commit by {@code mGestureAutospaceGraceMs}
-            // when configured, so a follow-up finger can continue the same word. {@code 0}
-            // (the default) preserves today's immediate-commit behaviour byte-for-byte.
-            final int graceMs = Settings.getValues().mGestureAutospaceGraceMs;
+            // The unified combining-mode timer lives in InputLogic now and handles the
+            // commit-vs-extend decision at end-of-gesture (it sees the result, not the raw
+            // pointer events). So we always end the gesture immediately here: graceMs = 0.
+            // The old BatchInputArbiter grace path stays in place for backwards-compat with
+            // PREF_GESTURE_AUTOSPACE_GRACE_MS, but it's now dormant by default.
+            final int graceMs = 0;
             // Two-thumb typing (#2.1): capture the current keyboard so the deferred commit
             // path can apply the dual-thumb hinter with the geometry that was live at the
-            // moment of lift — not whatever might be live when the grace timer fires (the
-            // layout could have swapped during the window).
+            // moment of lift.
             final Keyboard keyboardSnapshotForCommit = mKeyboard;
             if (mBatchInputArbiter.mayEndBatchInput(
                     eventTime, getActivePointerTrackerCount(), graceMs, this,
                     (pts, ts) -> commitDeferredBatchInput(pts, ts, keyboardSnapshotForCommit))) {
                 sInGesture = false;
-            } else if (BatchInputArbiter.isGracePending()) {
-                // Two-thumb typing (#1.2 visual): grace timer just got scheduled. Flag the
-                // floating preview so the user sees an ellipsis trailing the would-be-committed
-                // word — a clear signal that the commit is deferred and they can still extend.
-                sDrawingProxy.setGestureCommitPending(true);
             }
-            // If mayEndBatchInput returned false because a grace timer was scheduled,
-            // {@code sInGesture} intentionally stays true throughout the window so key
-            // previews stay suppressed and concurrent move events keep aggregating.
             showGestureTrail();
             return;
         }

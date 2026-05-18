@@ -20,6 +20,7 @@ import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
@@ -98,16 +99,16 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private static final float MINIMUM_XSCALE_OF_LANGUAGE_NAME = 0.8f;
     // Incognito icon to draw on spacebar when incognito mode is enabled
     private final Drawable mIncognitoIcon;
-    // --- Two-thumb typing (autospace visual hint) ------------------------------------------
-    // Holds a 0..1 alpha used to draw a translucent overlay rectangle on the space key
-    // whenever an automatic space is inserted. The {@link ValueAnimator} fades the alpha
-    // linearly from 1 → 0 over {@code SPACE_FLASH_DURATION_MS} and triggers
-    // {@link #invalidateKey(Key)} on each frame so the user sees a short pulse on the bar.
-    // A separate boolean would be enough for binary on/off, but a fading float looks far
-    // less jarring next to normal key feedback.
-    private float mSpaceFlashAlpha = 0f;
-    @Nullable private ValueAnimator mSpaceFlashAnimator;
-    private static final long SPACE_FLASH_DURATION_MS = 220L;
+    // --- Two-thumb typing: combining-mode visual --------------------------------------------
+    // While the unified combining-mode grace timer is pending in InputLogic, we draw a
+    // countdown progress bar at the bottom of the space bar AND a faint translucent tint
+    // over the whole keyboard to reinforce "next input extends the current word". A
+    // ValueAnimator drives invalidations at ~60fps so the bar shrinks smoothly; on cancel
+    // / timer-expiry we set mCombiningModeActive=false and the bar disappears next frame.
+    private boolean mCombiningModeActive = false;
+    private long mCombiningStartTimeMs = 0L;
+    private int mCombiningGraceMs = 0;
+    @Nullable private ValueAnimator mCombiningAnimator;
 
     // Stuff to draw altCodeWhileTyping keys.
     private final ObjectAnimator mAltCodeKeyWhileTypingFadeoutAnimator;
@@ -313,28 +314,38 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     }
 
     /**
-     * Two-thumb typing: fire a short visual flash on the space bar. Called by
-     * {@link helium314.keyboard.latin.inputlogic.InputLogic} when it has just inserted an
-     * automatic space, so the user gets unambiguous feedback that a silent space-insertion
-     * happened (especially important with the autospace grace-period feature where
-     * insertion is decoupled from the keystroke that caused it).
+     * Combining mode (replaces the older PREF_AUTOSPACE_VISUAL_HINT flash): turn the
+     * progress-bar indicator on the spacebar on/off. While on, a countdown bar shrinks
+     * from full width at {@code startTimeMs} to zero at {@code startTimeMs + graceMs};
+     * the keyboard ALSO draws a faint translucent tint over the whole view to signal
+     * "your next input extends the current word".
      *
-     * No-ops if the space key isn't on the current keyboard (numeric / symbol layouts).
-     * Repeated calls cancel any in-flight animation and restart from full alpha, so a burst
-     * of autospaces feels like one continuous highlight rather than a stutter.
+     * <p>Called from {@link helium314.keyboard.latin.inputlogic.InputLogic} on every
+     * tap / gesture completion (active=true) and on commit / cancel (active=false).
+     * No-ops when the space key isn't on the current layout (numeric / symbol).
      */
-    public void startSpaceAutospaceFlash() {
-        if (mSpaceKey == null) return;
-        if (mSpaceFlashAnimator != null) {
-            mSpaceFlashAnimator.cancel();
+    public void setCombiningMode(final boolean active, final long startTimeMs, final int graceMs) {
+        // Stop any in-flight animator before mutating state — guarantees we don't have an
+        // animator updating mCombiningModeActive=false's invalidation while we set true.
+        if (mCombiningAnimator != null) {
+            mCombiningAnimator.cancel();
+            mCombiningAnimator = null;
         }
-        final ValueAnimator animator = ValueAnimator.ofFloat(1f, 0f);
-        animator.setDuration(SPACE_FLASH_DURATION_MS);
+        mCombiningModeActive = active && graceMs > 0;
+        mCombiningStartTimeMs = startTimeMs;
+        mCombiningGraceMs = graceMs;
+        // Always invalidate the whole view once so the global tint overlay appears or
+        // clears immediately — invalidateKey() in the animator only refreshes the space
+        // key's bounds, which isn't enough for the keyboard-wide tint.
+        invalidate();
+        if (!mCombiningModeActive) return;
+        if (mSpaceKey == null) return;
+        final ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
+        animator.setDuration(graceMs);
         animator.addUpdateListener(a -> {
-            mSpaceFlashAlpha = (float) a.getAnimatedValue();
-            invalidateKey(mSpaceKey);
+            if (mSpaceKey != null) invalidateKey(mSpaceKey);
         });
-        mSpaceFlashAnimator = animator;
+        mCombiningAnimator = animator;
         animator.start();
     }
 
@@ -808,6 +819,23 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     }
 
     @Override
+    protected void onDraw(@NonNull final Canvas canvas) {
+        super.onDraw(canvas);
+        // Combining-mode whole-keyboard tint: when the unified grace timer is pending in
+        // InputLogic, dim the keys very slightly with a translucent themed overlay so the
+        // user knows their next input continues the current word. Drawn on top of the
+        // key visuals so it's visible regardless of theme. ~8% alpha is enough to register
+        // without obscuring labels.
+        if (mCombiningModeActive) {
+            final Paint p = new Paint();
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(mLanguageOnSpacebarTextColor);
+            p.setAlpha(28);
+            canvas.drawRect(0f, 0f, getWidth(), getHeight(), p);
+        }
+    }
+
+    @Override
     protected void onDrawKeyTopVisuals(@NonNull final Key key, @NonNull final Canvas canvas,
             @NonNull final Paint paint, @NonNull final KeyDrawParams params) {
         if (key.altCodeWhileTyping() && key.isEnabled()) {
@@ -816,23 +844,30 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         super.onDrawKeyTopVisuals(key, canvas, paint, params);
         final int code = key.getCode();
         if (code == Constants.CODE_SPACE) {
-            // Two-thumb typing: when an autospace was just inserted, draw a translucent
-            // highlight on top of the space key. {@code mSpaceFlashAlpha} is updated by the
-            // value animator started in {@link #startSpaceAutospaceFlash} and fades to 0.
-            if (mSpaceFlashAlpha > 0f) {
-                final int saved = paint.getColor();
-                final int savedAlpha = paint.getAlpha();
-                final Paint.Style savedStyle = paint.getStyle();
-                // Theme-tinted highlight (use the language-on-spacebar color as a proxy for
-                // "matches theme accent") at variable alpha. 180 of 255 at peak so even
-                // light themes pop without obscuring the space key visuals beneath.
-                paint.setStyle(Paint.Style.FILL);
-                paint.setColor(mLanguageOnSpacebarTextColor);
-                paint.setAlpha((int) (180 * mSpaceFlashAlpha));
-                canvas.drawRect(0f, 0f, key.getWidth(), key.getHeight(), paint);
-                paint.setStyle(savedStyle);
-                paint.setColor(saved);
-                paint.setAlpha(savedAlpha);
+            // Combining mode: while the grace timer is pending, draw a thin progress bar
+            // along the bottom of the space key that shrinks linearly toward 0 over the
+            // grace period. Clear when the timer fires, gets cancelled, or is restarted.
+            // See {@link #setCombiningMode}.
+            if (mCombiningModeActive && mCombiningGraceMs > 0) {
+                final long now = SystemClock.uptimeMillis();
+                final long elapsed = now - mCombiningStartTimeMs;
+                final float remainingFrac =
+                        Math.max(0f, 1f - ((float) elapsed) / (float) mCombiningGraceMs);
+                if (remainingFrac > 0f) {
+                    final int saved = paint.getColor();
+                    final int savedAlpha = paint.getAlpha();
+                    final Paint.Style savedStyle = paint.getStyle();
+                    paint.setStyle(Paint.Style.FILL);
+                    paint.setColor(mLanguageOnSpacebarTextColor);
+                    paint.setAlpha(180);
+                    final float barHeight = Math.max(2f, key.getHeight() * 0.10f);
+                    final float barWidth = key.getWidth() * remainingFrac;
+                    canvas.drawRect(0f, key.getHeight() - barHeight,
+                            barWidth, key.getHeight(), paint);
+                    paint.setStyle(savedStyle);
+                    paint.setColor(saved);
+                    paint.setAlpha(savedAlpha);
+                }
             }
             // Draw incognito icon watermark if incognito mode is enabled
             if (Settings.getValues().mIncognitoModeEnabled && mIncognitoIcon != null) {

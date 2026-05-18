@@ -10,6 +10,8 @@ import static helium314.keyboard.latin.common.SuggestionSpanUtilsKt.getTextWithS
 
 import android.graphics.Color;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.text.InputType;
 import android.text.SpannableString;
@@ -121,6 +123,24 @@ public final class InputLogic {
     // entries past the current length are filtered at read time, and the list is cleared
     // outright whenever the composing word is committed or reset.
     private final java.util.ArrayList<Integer> mGestureFragmentBoundaries = new java.util.ArrayList<>();
+
+    // ---- Unified combining-mode state machine ----------------------------------------------
+    // After every composing-word-extending event (tap of a letter OR gesture completion),
+    // schedule a Handler callback in {@code mCombiningGraceMs} milliseconds. The callback
+    // commits the current composing word (optionally with autocorrect) and inserts an
+    // auto-space. Any new tap/gesture before the callback cancels it AND extends the same
+    // composing word, so users can build a word from multiple fragments — e.g. tap "s",
+    // then two-finger swipe "il"+"ver" to get "silver". Short words ("I", "so") still get
+    // an autospace because the timer fires once the user pauses.
+    //
+    // Visual: while a commit is pending, the spacebar shows a countdown progress bar
+    // (the {@link MainKeyboardView#setCombiningMode} call) — replaces the older
+    // PREF_AUTOSPACE_VISUAL_HINT flash, which was decoupled from the state that caused it.
+    //
+    // All access on the main thread (touch events + Handler posts to main looper).
+    private final Handler mCombiningHandler = new Handler(Looper.getMainLooper());
+    @Nullable private Runnable mPendingCombiningCommit;
+    private boolean mInCombiningMode;
 
     // Keeps track of most recently inserted text (multi-character key) for
     // reverting
@@ -594,26 +614,30 @@ public final class InputLogic {
         handler.showGesturePreviewAndSetSuggestions(SuggestedWords.getEmptyBatchInstance(), false);
         handler.cancelUpdateSuggestionStrip();
         ++mAutoCommitSequenceNumber;
+        // Combining mode: snapshot before cancel; the gesture will re-arm the timer on completion.
+        final boolean wasInCombiningMode = mInCombiningMode;
+        cancelCombiningMode();
         mConnection.beginBatchEdit();
-        // Two-thumb typing (#1.1 + #1.4): two ways the gesture can EXTEND an existing
+        // Two-thumb typing (#1.1 + combining-mode): two ways the gesture can EXTEND an existing
         // composing word instead of replacing it:
         //   * manual spacing (always extends, user explicitly opted out of autospace), or
-        //   * tap-promotion within the timer window (user just tapped a letter; treat the
-        //     gesture as a continuation of the same word — e.g. "tap p, tap a, swipe ul" →
-        //     "paul"). The window is measured against {@code mLastKeyTime} which the input
-        //     pipeline updates on every key event.
+        //   * combining mode active at gesture-start (a tap or prior gesture has armed the
+        //     grace timer; this gesture should append to the same word — e.g. "tap s, swipe
+        //     ilver" → "silver", or "swipe tech, swipe nology" → "technology"). The window
+        //     is enforced by the Handler-driven timer, so a long gesture never "ages out".
         // Both gate on cursor-at-end of an existing composing word; if the cursor isn't there
-        // we can't safely extend. We capture {@code mGestureExtendsByTapPromotion} into state
-        // so {@link #onUpdateTailBatchInputCompleted} reuses the SAME decision (otherwise a
-        // long gesture could "age out" of the window between start and end).
+        // we can't safely extend.
         final boolean cursorAtEndOfComposingWord = mWordComposer.isComposingWord()
                 && !mWordComposer.isCursorFrontOrMiddleOfComposingWord();
         final boolean manualSpacingExtend = settingsValues.mGestureManualSpacing
                 && cursorAtEndOfComposingWord;
-        mGestureExtendsByTapPromotion = settingsValues.mGestureTapPromotionMs > 0
-                && cursorAtEndOfComposingWord
-                && (SystemClock.uptimeMillis() - mLastKeyTime) <= settingsValues.mGestureTapPromotionMs;
-        final boolean extendComposingWord = manualSpacingExtend || mGestureExtendsByTapPromotion;
+        final boolean combiningExtend = wasInCombiningMode && cursorAtEndOfComposingWord;
+        // Legacy tap-promotion flag retained so onUpdateTailBatchInputCompleted reuses the
+        // same decision (kept here so a long gesture doesn't fall out of the window between
+        // start and end). When combining mode supersedes tap-promotion the flag just tracks
+        // "we want to extend".
+        mGestureExtendsByTapPromotion = combiningExtend;
+        final boolean extendComposingWord = manualSpacingExtend || combiningExtend;
         if (mWordComposer.isComposingWord()) {
             if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
                 // If we are in the middle of a recorrection, we need to commit the recorrection
@@ -720,6 +744,9 @@ public final class InputLogic {
 
     public void onCancelBatchInput(final LatinIME.UIHandler handler) {
         mInputLogicHandler.onCancelBatchInput();
+        // Combining mode: cancelled gesture wipes the would-be-fragment from the composing
+        // word — drop the timer so we don't fire an autospace based on stale state.
+        cancelCombiningMode();
         // Tap-promotion-extend was a per-gesture decision; clear on cancel so the NEXT
         // gesture re-evaluates against current timing.
         mGestureExtendsByTapPromotion = false;
@@ -761,6 +788,88 @@ public final class InputLogic {
     /** Clear all recorded fragment boundaries. Call after committing / resetting the composing word. */
     private void clearFragmentBoundaries() {
         if (!mGestureFragmentBoundaries.isEmpty()) mGestureFragmentBoundaries.clear();
+    }
+
+    // ---- Unified combining-mode helpers --------------------------------------------------
+
+    /**
+     * Enter or refresh combining mode: cancel any prior pending commit, schedule a new one
+     * {@code graceMs} from now, and notify the keyboard view to draw the countdown progress
+     * bar on the spacebar. No-op when {@code mCombiningGraceMs <= 0}.
+     */
+    private void enterCombiningMode(final SettingsValues settingsValues) {
+        final int graceMs = settingsValues.mCombiningGraceMs;
+        if (graceMs <= 0) return;
+        // We only arm the timer if there's actually a composing word — for tap-only events on
+        // separators / cursor-front recompositions there's nothing to auto-commit, and arming
+        // the timer would draw a spurious progress bar.
+        if (!mWordComposer.isComposingWord()) return;
+        cancelCombiningTimerOnly();
+        mInCombiningMode = true;
+        final long startTime = SystemClock.uptimeMillis();
+        mPendingCombiningCommit = () -> onCombiningGraceExpired();
+        mCombiningHandler.postDelayed(mPendingCombiningCommit, graceMs);
+        final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+        if (kv != null) kv.setCombiningMode(true, startTime, graceMs);
+    }
+
+    /**
+     * Cancel a pending combining-mode commit without firing it. Used on backspace,
+     * separators, cursor moves, explicit commits, and any place that wipes the composing
+     * word — callers there commit through their own paths and don't want the timer to
+     * race them.
+     */
+    void cancelCombiningMode() {
+        cancelCombiningTimerOnly();
+        if (mInCombiningMode) {
+            mInCombiningMode = false;
+            final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+            if (kv != null) kv.setCombiningMode(false, 0L, 0);
+        }
+    }
+
+    private void cancelCombiningTimerOnly() {
+        if (mPendingCombiningCommit != null) {
+            mCombiningHandler.removeCallbacks(mPendingCombiningCommit);
+            mPendingCombiningCommit = null;
+        }
+    }
+
+    /** Public accessor so PointerTracker / KeyboardActionListenerImpl can ask "are we extending right now?". */
+    public boolean isInCombiningMode() {
+        return mInCombiningMode;
+    }
+
+    /**
+     * Fired by the Handler when the grace timer expires. Commit the current composing word
+     * (with or without autocorrect per {@code PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE}), then
+     * insert an autospace via the existing helper. Clears the visual indicator.
+     */
+    private void onCombiningGraceExpired() {
+        mPendingCombiningCommit = null;
+        mInCombiningMode = false;
+        final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+        if (kv != null) kv.setCombiningMode(false, 0L, 0);
+        final SettingsValues sv = Settings.getInstance().getCurrent();
+        if (!mWordComposer.isComposingWord()) return;
+        mConnection.beginBatchEdit();
+        if (sv.mCombiningAutocorrectOnAutospace) {
+            // Use the same path as a regular space-commit: it runs autocorrect when the
+            // composer has a stronger suggestion, and falls back to typed-word otherwise.
+            commitCurrentAutoCorrection(sv, LastComposedWord.NOT_A_SEPARATOR, mLatinIME.mHandler);
+        } else {
+            commitTyped(sv, LastComposedWord.NOT_A_SEPARATOR);
+        }
+        // Now insert the autospace. The existing helper performs the URL / e-mail / phantom
+        // checks; we want a real space after the (now-committed) word.
+        insertAutomaticSpaceIfOptionsAndTextAllow(sv);
+        mSpaceState = SpaceState.NONE;
+        mConnection.endBatchEdit();
+        // Refresh suggestions / shift state so the strip clears and the next letter is
+        // properly auto-capped if appropriate.
+        if (mSuggestionStripViewAccessor != null) {
+            setSuggestedWords(SuggestedWords.getEmptyInstance());
+        }
     }
 
     /**
@@ -1571,6 +1680,8 @@ public final class InputLogic {
             // Two-thumb typing (#1.1): record this tap as a fragment boundary so a future
             // backspace under PREF_GESTURE_FRAGMENT_BACKSPACE can pop the whole tap.
             recordFragmentBoundaryIfTracking(settingsValues);
+            // Combining mode: arm/refresh the grace timer for the next input.
+            enterCombiningMode(settingsValues);
         } else {
             final boolean swapWeakSpace = tryStripSpaceAndReturnWhetherShouldSwapInstead(event, inputTransaction);
 
@@ -1606,6 +1717,9 @@ public final class InputLogic {
      */
     private void handleSeparatorEvent(final Event event, final InputTransaction inputTransaction,
             final LatinIME.UIHandler handler) {
+        // Combining mode: explicit separator (space, punctuation, Enter) supersedes the
+        // grace timer — the user is committing the word themselves.
+        cancelCombiningMode();
         final int codePoint = event.getCodePoint();
         final SettingsValues settingsValues = inputTransaction.getSettingsValues();
         final boolean wasComposingWord = mWordComposer.isComposingWord();
@@ -1746,6 +1860,9 @@ public final class InputLogic {
      * @param inputTransaction The transaction in progress.
      */
     private void handleBackspaceEvent(final Event event, final InputTransaction inputTransaction) {
+        // Combining mode: a backspace always cancels the pending commit. The user is
+        // explicitly retracting input; we don't want the timer to fire mid-correction.
+        cancelCombiningMode();
         final String currentKeyboardScript = inputTransaction.getSettingsValues().mCurrentKeyboardScript;
         // Two-thumb typing (#1.1, PREF_GESTURE_FRAGMENT_BACKSPACE): try to pop the most-recent
         // fragment from the composing word as one keystroke. Returns true if handled — in
@@ -2780,6 +2897,9 @@ public final class InputLogic {
         mWordComposer.reset();
         // Two-thumb typing (#1.1): composing word is wiped — drop the matching boundaries.
         clearFragmentBoundaries();
+        // Combining mode is keyed on a composing word existing; if we're wiping it, the
+        // pending timer would commit nothing useful, so cancel.
+        cancelCombiningMode();
         if (alsoResetLastComposedWord) {
             mLastComposedWord = LastComposedWord.NOT_A_COMPOSED_WORD;
         }
@@ -2913,14 +3033,6 @@ public final class InputLogic {
                 && !(mConnection.getCodePointBeforeCursor() == Constants.CODE_PERIOD
                         && mConnection.wordBeforeCursorMayBeEmail())) {
             mConnection.commitCodePoint(Constants.CODE_SPACE);
-            // Two-thumb typing: visible feedback for the silent autospace insertion. Gated
-            // on PREF_AUTOSPACE_VISUAL_HINT and only fires when the space key is on the
-            // currently-visible keyboard (numeric / symbol layouts have no space bar to
-            // flash; the method on MainKeyboardView is itself null-safe).
-            if (settingsValues.mAutospaceVisualHint) {
-                final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
-                if (kv != null) kv.startSpaceAutospaceFlash();
-            }
             // todo: why not remove phantom space state?
         }
     }
@@ -3040,6 +3152,11 @@ public final class InputLogic {
         if (isInlineEmojiSearchAction()) {
             searchForEmojiInline(SuggestedWords.NOT_A_SEQUENCE_NUMBER, mLatinIME::setSuggestions);
         }
+        // Combining mode: arm the grace timer after a gesture, regardless of whether it
+        // extended or replaced. This lets the user follow up with another tap/swipe to keep
+        // building the same word ("tech" → wait → swipe "nology" → "technology") OR pause to
+        // commit + autospace automatically.
+        enterCombiningMode(settingsValues);
     }
 
     /**

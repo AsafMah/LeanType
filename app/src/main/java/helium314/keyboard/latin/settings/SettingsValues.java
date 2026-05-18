@@ -124,6 +124,9 @@ public class SettingsValues {
         public final boolean mGestureDebugDrawPoints;
         public final boolean mGestureApostropheKey;
         public final boolean mAutospaceVisualHint;
+        // Unified combining-mode (replaces gesture-only grace + tap-promotion). Default 0 = off.
+        public final int mCombiningGraceMs;
+        public final boolean mCombiningAutocorrectOnAutospace;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -333,6 +336,11 @@ public class SettingsValues {
                                 Defaults.PREF_GESTURE_APOSTROPHE_KEY);
                 mAutospaceVisualHint = prefs.getBoolean(Settings.PREF_AUTOSPACE_VISUAL_HINT,
                                 Defaults.PREF_AUTOSPACE_VISUAL_HINT);
+                mCombiningGraceMs = prefs.getInt(Settings.PREF_COMBINING_GRACE_MS,
+                                Defaults.PREF_COMBINING_GRACE_MS);
+                mCombiningAutocorrectOnAutospace = prefs.getBoolean(
+                                Settings.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE,
+                                Defaults.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions

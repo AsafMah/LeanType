@@ -59,33 +59,26 @@ fun TwoThumbTypingScreen(
             return@buildList
         }
 
-        // --- Manual spacing (#1.1) + its sub-options + the autospace grace alternative ---
+        // --- Combining mode (unified replacement for autospace grace + tap promotion + flash) ---
         add(R.string.settings_category_two_thumb_typing_spacing)
+        add(Settings.PREF_COMBINING_GRACE_MS)
+        if (prefs.getInt(Settings.PREF_COMBINING_GRACE_MS, Defaults.PREF_COMBINING_GRACE_MS) > 0) {
+            add(Settings.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE)
+        }
         add(Settings.PREF_GESTURE_MANUAL_SPACING)
         val manualSpacing = prefs.getBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, Defaults.PREF_GESTURE_MANUAL_SPACING)
         if (manualSpacing) {
             // Sub-option of manual spacing only (still scaffolded — backspace-by-fragment is
             // not yet implemented, but the toggle is here so it's visible alongside the parent).
             add(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE)
-        } else {
-            // Mutually exclusive with manual spacing: when the user opts into the explicit
-            // "no autospace ever" mode, the timer-based grace period is meaningless.
-            add(Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS)
         }
 
-        // PREF_AUTOSPACE_VISUAL_HINT: a brief flash on the space key whenever an autospace
-        // is actually inserted. Useful with grace-period typing (#1.2) so users can tell when
-        // the silent space-insertion was applied — feedback otherwise relies on watching the
-        // text field, which is awkward on small screens.
-        add(Settings.PREF_AUTOSPACE_VISUAL_HINT)
-
-        // --- Tap / swipe interaction tweaks (#1.3 + #1.4) ---
+        // --- Tap / swipe interaction tweaks (#1.3) ---
         add(R.string.settings_category_two_thumb_typing_taps)
         add(Settings.PREF_GESTURE_TAP_DURING_SWIPE)
         if (prefs.getBoolean(Settings.PREF_GESTURE_TAP_DURING_SWIPE, Defaults.PREF_GESTURE_TAP_DURING_SWIPE)) {
             add(Settings.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS)
         }
-        add(Settings.PREF_GESTURE_TAP_PROMOTION_MS)
 
         // --- Layout-side (#2.3): apostrophe key for contractions. Layout edit still owed to
         // the user; the toggle is here so it's discoverable once that's in place. ---
@@ -116,6 +109,23 @@ fun TwoThumbTypingScreen(
  * so the parent gesture screen stays uncluttered.
  */
 fun createTwoThumbTypingSettings(context: Context) = listOf(
+    Setting(context, Settings.PREF_COMBINING_GRACE_MS,
+        R.string.combining_grace, R.string.combining_grace_summary) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_COMBINING_GRACE_MS,
+            range = 0f..1000f,
+            description = {
+                if (it <= 0) stringResource(R.string.gesture_autospace_grace_off)
+                else stringResource(R.string.abbreviation_unit_milliseconds, it.toString())
+            }
+        )
+    },
+    Setting(context, Settings.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE,
+        R.string.combining_autocorrect_on_autospace, R.string.combining_autocorrect_on_autospace_summary) {
+        SwitchPreference(it, Defaults.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE)
+    },
     Setting(context, Settings.PREF_GESTURE_MANUAL_SPACING,
         R.string.gesture_manual_spacing, R.string.gesture_manual_spacing_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_MANUAL_SPACING)
@@ -123,18 +133,6 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_GESTURE_FRAGMENT_BACKSPACE,
         R.string.gesture_fragment_backspace, R.string.gesture_fragment_backspace_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_FRAGMENT_BACKSPACE)
-    },
-    Setting(context, Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS, R.string.gesture_autospace_grace) { def ->
-        SliderPreference(
-            name = def.title,
-            key = def.key,
-            default = Defaults.PREF_GESTURE_AUTOSPACE_GRACE_MS,
-            range = 0f..500f,
-            description = {
-                if (it <= 0) stringResource(R.string.gesture_autospace_grace_off)
-                else stringResource(R.string.abbreviation_unit_milliseconds, it.toString())
-            }
-        )
     },
     Setting(context, Settings.PREF_GESTURE_TAP_DURING_SWIPE,
         R.string.gesture_tap_during_swipe, R.string.gesture_tap_during_swipe_summary) {
@@ -147,19 +145,6 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
             default = Defaults.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS,
             range = 0f..200f,
             description = { stringResource(R.string.abbreviation_unit_milliseconds, it.toString()) }
-        )
-    },
-    Setting(context, Settings.PREF_GESTURE_TAP_PROMOTION_MS,
-        R.string.gesture_tap_promotion, R.string.gesture_tap_promotion_summary) { def ->
-        SliderPreference(
-            name = def.title,
-            key = def.key,
-            default = Defaults.PREF_GESTURE_TAP_PROMOTION_MS,
-            range = 0f..200f,
-            description = {
-                if (it <= 0) stringResource(R.string.gesture_autospace_grace_off)
-                else stringResource(R.string.abbreviation_unit_milliseconds, it.toString())
-            }
         )
     },
     Setting(context, Settings.PREF_GESTURE_APOSTROPHE_KEY,
@@ -182,10 +167,6 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_GESTURE_DEBUG_DRAW_POINTS,
         R.string.gesture_debug_draw_points, R.string.gesture_debug_draw_points_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS)
-    },
-    Setting(context, Settings.PREF_AUTOSPACE_VISUAL_HINT,
-        R.string.autospace_visual_hint, R.string.autospace_visual_hint_summary) {
-        SwitchPreference(it, Defaults.PREF_AUTOSPACE_VISUAL_HINT)
     },
 )
 

@@ -259,6 +259,14 @@
     <string name="autospace_visual_hint">Flash space key on auto-space</string>
     <!-- Description for "autospace_visual_hint". -->
     <string name="autospace_visual_hint_summary">Briefly highlight the space bar each time an automatic space is inserted</string>
+    <!-- Title of the unified combining-mode grace setting. -->
+    <string name="combining_grace">Combining grace period</string>
+    <!-- Description of the unified combining-mode grace setting. -->
+    <string name="combining_grace_summary">After every tap or swipe, wait this long for a follow-up before committing the word. While waiting, the spacebar shows a countdown.</string>
+    <!-- Title of the toggle for running autocorrect when the combining grace timer fires. -->
+    <string name="combining_autocorrect_on_autospace">Autocorrect on auto-space</string>
+    <!-- Description for combining_autocorrect_on_autospace. -->
+    <string name="combining_autocorrect_on_autospace_summary">When the grace timer commits a word with an automatic space, also apply autocorrection</string>
 
     <!-- Preferences item for enabling clipboard history -->
     <string name="enable_clipboard_history">Enable clipboard history</string>

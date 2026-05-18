@@ -139,6 +139,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GESTURE_DEBUG_DRAW_POINTS = "gesture_debug_draw_points";
     public static final String PREF_GESTURE_APOSTROPHE_KEY = "gesture_apostrophe_key";
     public static final String PREF_AUTOSPACE_VISUAL_HINT = "autospace_visual_hint";
+    // Unified "combining-mode" model: after every composing-word-extending event (tap OR
+    // gesture), wait this many milliseconds; any new tap/gesture within the window EXTENDS
+    // the same composing word, anything else (or expiry) commits + autospaces. 0 disables.
+    public static final String PREF_COMBINING_GRACE_MS = "combining_grace_ms";
+    public static final String PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE = "combining_autocorrect_on_autospace";
     public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREF_USE_CONTACTS = "use_contacts";
     public static final String PREF_USE_APPS = "use_apps";
