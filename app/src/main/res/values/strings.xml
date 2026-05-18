@@ -36,6 +36,10 @@
     <string name="settings_screen_preferences">Preferences</string>
     <!-- Settings screen title for gesture typing preferences -->
     <string name="settings_screen_gesture">Gesture Typing</string>
+    <!-- Settings screen title for the experimental two-thumb typing features (autospace grace, tap-during-swipe, manual spacing, point hinting, debug overlay, …). -->
+    <string name="settings_screen_two_thumb_typing">Two-thumb typing (experimental)</string>
+    <!-- Description shown next to the two-thumb typing settings entry on the main settings screen. -->
+    <string name="settings_screen_two_thumb_typing_summary">Experimental tweaks for typing with two thumbs at once</string>
     <!-- Settings screen title for text correction options -->
     <string name="settings_screen_correction">Text correction</string>
     <!-- Settings screen title for advanced settings -->
@@ -207,6 +211,14 @@
 
     <!-- Section header for two-thumb / simultaneous gesture typing settings (multi-finger glide typing improvements). -->
     <string name="settings_category_two_thumb_typing">Two-thumb typing</string>
+    <!-- Subsection header on the two-thumb typing screen: spacing / word-commit behaviour. -->
+    <string name="settings_category_two_thumb_typing_spacing">Spacing &amp; word commit</string>
+    <!-- Subsection header: how taps interact with swipes mid-gesture. -->
+    <string name="settings_category_two_thumb_typing_taps">Tap + swipe interactions</string>
+    <!-- Subsection header: layout-side extras (e.g. apostrophe key). -->
+    <string name="settings_category_two_thumb_typing_layout">Layout extras</string>
+    <!-- Subsection header: point-hinting / recognizer assistance + debug overlay. -->
+    <string name="settings_category_two_thumb_typing_hinting">Recognition &amp; debug</string>
     <!-- Title of the setting that disables auto-spacing at the end of a gesture so that words can be composed from multiple swipe fragments. -->
     <string name="gesture_manual_spacing">Manual spacing</string>
     <!-- Description for "gesture_manual_spacing". When on, the keyboard does not commit a space when all fingers lift after a gesture; instead the user must tap space, punctuation, or Enter to commit. -->
