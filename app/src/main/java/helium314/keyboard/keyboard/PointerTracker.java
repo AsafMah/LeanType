@@ -10,6 +10,8 @@ import static java.lang.Math.abs;
 
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.view.MotionEvent;
 
@@ -133,6 +135,28 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     // Used in onUpEventInternal to suppress an accidental tap-keystroke if the parent gesture
     // committed between this pointer's down and up.
     private boolean mIsTapDuringSwipe = false;
+
+    // ---- Two-thumb typing: tap-then-swipe promotion (#1.4) ----
+    // When PREF_GESTURE_TAP_PROMOTION_MS > 0, a non-gesture tap on a letter doesn't commit
+    // immediately. Instead we post the commit to {@link #sTapPromotionHandler} after that many
+    // milliseconds. If the same pointer comes back down on a letter inside that window AND
+    // begins a gesture (mayStartBatchInput passes), we cancel the pending commit and splice
+    // the tap into the gesture by seeding addDownEventPoint with the prior tap's coords/time.
+    // If the user instead tap-tap-taps, or the down isn't a gesture candidate, we fire the
+    // pending commit synchronously so the letter lands before the next keystroke.
+    //
+    // Lives at instance scope because the same Android pointerId is what the user perceives as
+    // "same finger lifts and goes back down". Tracker reuse for a different pointerId would
+    // not preserve these fields anyway.
+    private Runnable mPendingTapCommit;
+    private int mTapSeedX;
+    private int mTapSeedY;
+    private long mTapSeedTime;
+    private boolean mIsPromotedFromTap;
+    // Shared Handler for tap-promotion timers; lazy-init on the main looper, like the grace
+    // handler in BatchInputArbiter. All access is on the UI thread.
+    private static Handler sTapPromotionHandler;
+
     private static TypingTimeRecorder sTypingTimeRecorder;
 
     // The position and time at which first down event occurred.
@@ -272,6 +296,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (BatchInputArbiter.cancelGrace()) {
             sInGesture = false;
         }
+        // Two-thumb typing (#1.4): same idea — a deferred tap commit on an inactive tracker
+        // (already removed from the pointer queue) would not have been canceled by the queue
+        // sweep above, so do it explicitly.
+        cancelAllPendingTapPromotions();
     }
 
     /**
@@ -289,6 +317,165 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         sTimerProxy.cancelAllUpdateBatchInputTimers();
         sListener.onEndBatchInput(aggregatedPointers);
         sInGesture = false;
+    }
+
+    // ---- Tap-promotion helpers (two-thumb typing #1.4) ----
+
+    /**
+     * Static commit path used by the tap-promotion timer / hold-then-flush logic. Mirrors the
+     * relevant parts of {@link #detectAndSendKey} and {@link #callListenerOnCodeInput} but
+     * uses only the snapshot captured at schedule time + static collaborators — never the
+     * possibly-reused {@link PointerTracker} instance state. Always invoked on the main looper.
+     *
+     * @param key the original tapped Key snapshot
+     * @param code the primary code captured at schedule time
+     * @param outputText {@code key.getOutputText()} captured at schedule time (for
+     *     {@code MULTIPLE_CODE_POINTS} keys); may be {@code null} otherwise
+     * @param x the x-coord captured from the original tap
+     * @param y the y-coord captured from the original tap
+     * @param upEventTime the time the original tap lifted
+     * @param useProximityCorrection whether the original keyboard reported
+     *     {@link Keyboard#hasProximityCharsCorrection(int)} for this code at schedule time
+     * @param wasInSlidingKeyInput snapshot of whether the original up was finishing a sliding
+     *     key input — controls whether we fire {@link sListener.onFinishSlidingInput}
+     */
+    private static void commitDeferredTap(final Key key, final int code, final String outputText,
+            final int x, final int y, final long upEventTime,
+            final boolean useProximityCorrection, final boolean wasInSlidingKeyInput) {
+        if (key == null) {
+            sListener.onCancelInput();
+            return;
+        }
+        sTypingTimeRecorder.onCodeInput(code, upEventTime);
+        if (code == KeyCode.MULTIPLE_CODE_POINTS) {
+            if (outputText != null) sListener.onTextInput(outputText);
+        } else if (code != KeyCode.NOT_SPECIFIED) {
+            if (useProximityCorrection) {
+                sListener.onCodeInput(code, x, y, false);
+            } else {
+                sListener.onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
+            }
+        }
+        sListener.onReleaseKey(code, false);
+        if (wasInSlidingKeyInput) {
+            sListener.onFinishSlidingInput();
+        }
+    }
+
+    /**
+     * Static cleanup: cancel pending tap-promotion commits on every tracker. Called from
+     * {@link #cancelAllPointerTrackers} so view teardown / IME-level cleanup doesn't leave
+     * orphaned commits queued on {@link #sTapPromotionHandler} firing against a stale listener.
+     */
+    private static void cancelAllPendingTapPromotions() {
+        final int trackersSize = sTrackers.size();
+        for (int i = 0; i < trackersSize; ++i) {
+            sTrackers.get(i).cancelPendingTapCommit();
+        }
+    }
+
+    /**
+     * Defer this tap's commit by {@code promotionMs} (state machine: SCHEDULED → fire timer →
+     * commit; or candidate-down lifts SCHEDULED to HELD; gesture-start drops HELD; pointer-up
+     * without gesture flushes HELD). The Runnable captures only immutable snapshots so tracker
+     * reuse during the window can't corrupt the deferred commit.
+     *
+     * @param key the tapped Key (snapshot)
+     * @param keyX, keyY coords originally passed to the synchronous detectAndSendKey call
+     * @param downTime time the tap originally went down (becomes the seed timestamp if this
+     *     tap is later promoted into a gesture)
+     * @param upEventTime time the tap lifted (passed to sListener.onCodeInput when fired)
+     * @param promotionMs user-configured window in ms (caller must have ensured {@code > 0})
+     * @param wasInSlidingKeyInput snapshot of {@code mIsInSlidingKeyInput} at up-time
+     */
+    private void scheduleTapPromotionCommit(final Key key, final int keyX, final int keyY,
+            final long downTime, final long upEventTime, final int promotionMs,
+            final boolean wasInSlidingKeyInput) {
+        // Cancel any pre-existing pending commit on this tracker — shouldn't normally happen
+        // but defends against pathological re-entry (e.g. a phantom up while a tap is held).
+        cancelPendingTapCommit();
+        // Snapshot every piece of state the deferred commit needs. {@code mKeyboard} may be
+        // null in theory; treat that as "no proximity correction" rather than crashing.
+        final int code = key.getCode();
+        final String outputText = (code == KeyCode.MULTIPLE_CODE_POINTS) ? key.getOutputText() : null;
+        final boolean useProximityCorrection = (mKeyboard != null)
+                && mKeyboard.hasProximityCharsCorrection(code);
+        final Runnable commit = new Runnable() {
+            private boolean mConsumed;
+            @Override
+            public void run() {
+                if (mConsumed) return;
+                mConsumed = true;
+                if (mPendingTapCommit == this) {
+                    mPendingTapCommit = null;
+                    mIsPromotedFromTap = false;
+                }
+                // If a gesture (on any tracker) is in progress by the time we fire, typing
+                // this letter would corrupt the in-flight gesture word — drop it silently.
+                if (sInGesture) return;
+                commitDeferredTap(key, code, outputText, keyX, keyY, upEventTime,
+                        useProximityCorrection, wasInSlidingKeyInput);
+            }
+        };
+        mPendingTapCommit = commit;
+        mTapSeedX = keyX;
+        mTapSeedY = keyY;
+        mTapSeedTime = downTime;
+        mIsPromotedFromTap = false;
+        if (sTapPromotionHandler == null) {
+            sTapPromotionHandler = new Handler(Looper.getMainLooper());
+        }
+        sTapPromotionHandler.postDelayed(commit, promotionMs);
+    }
+
+    /**
+     * Move a pending tap commit from SCHEDULED to HELD: the Handler queue entry is removed,
+     * but the Runnable stays in {@link #mPendingTapCommit} ready to be fired or canceled
+     * once we know whether the in-progress down event develops into a gesture (drop) or
+     * lifts without one (flush).
+     */
+    private void holdPendingTapCommit() {
+        if (mPendingTapCommit == null) return;
+        if (sTapPromotionHandler != null) {
+            sTapPromotionHandler.removeCallbacks(mPendingTapCommit);
+        }
+        // Keep mPendingTapCommit referencing the Runnable. The Runnable's own mConsumed guard
+        // makes a second invocation a no-op, so it's safe even if some other path later
+        // posts/runs it accidentally.
+    }
+
+    /**
+     * Cancel any pending tap commit (SCHEDULED or HELD) without typing the letter. Used when
+     * the user explicitly canceled this tracker, when the deferred tap was promoted into a
+     * gesture (the gesture word subsumes the tap), or during view teardown.
+     */
+    private void cancelPendingTapCommit() {
+        if (mPendingTapCommit == null) {
+            // Defensive — the promotion flag should never outlive the runnable, but clear it
+            // anyway to keep the invariant explicit.
+            mIsPromotedFromTap = false;
+            return;
+        }
+        if (sTapPromotionHandler != null) {
+            sTapPromotionHandler.removeCallbacks(mPendingTapCommit);
+        }
+        mPendingTapCommit = null;
+        mIsPromotedFromTap = false;
+    }
+
+    /**
+     * Synchronously fire the pending tap commit (SCHEDULED or HELD), then clear the slot.
+     * Used when a follow-up down isn't a promotion candidate, or when a held tap's
+     * second-pointer up arrives without a gesture having started.
+     */
+    private void firePendingTapCommitNow() {
+        final Runnable pending = mPendingTapCommit;
+        if (pending == null) return;
+        if (sTapPromotionHandler != null) sTapPromotionHandler.removeCallbacks(pending);
+        // The runnable's mConsumed guard + the {@code if (mPendingTapCommit == this)} cleanup
+        // inside its body null the slot and clear mIsPromotedFromTap atomically with the
+        // actual commit — no need to do it again here.
+        pending.run();
     }
 
     public static void setKeyboardActionListener(final KeyboardActionListener listener) {
@@ -618,6 +805,12 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (DEBUG_LISTENER) {
             Log.d(TAG, String.format(Locale.US, "[%d] onStartBatchInput", mPointerId));
         }
+        // Two-thumb typing (#1.4): if this gesture-start was promoted from a recent tap on
+        // the same finger, the prior letter is now subsumed by the gesture word — drop the
+        // held tap commit so {@link #commitDeferredTap} never fires for it.
+        if (mIsPromotedFromTap) {
+            cancelPendingTapCommit();
+        }
         sListener.onStartBatchInput();
         dismissAllPopupKeysPanels();
         sTimerProxy.cancelLongPressTimersOf(this);
@@ -776,6 +969,30 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 BatchInputArbiter.flushGrace();
             }
         }
+        // Two-thumb typing (#1.4): if this tracker has a deferred tap commit pending (the user
+        // tapped a letter and the promotion window hasn't expired), park the timer NOW so it
+        // can't fire mid-investigation and corrupt the in-progress sequence. The pending tap
+        // is then either:
+        //   - subsumed into the gesture (canceled in {@link #onStartBatchInput}),
+        //   - flushed if this pointer lifts without starting a gesture (see {@link #onUpEventInternal}), or
+        //   - fired right now if the new down isn't a plausible promotion candidate (non-
+        //     letter, gestures disabled, symbol layout, …) so its letter lands before the
+        //     new keystroke is processed.
+        if (mPendingTapCommit != null) {
+            final boolean promotionCandidate = sGestureEnabler.shouldHandleGesture()
+                    && key != null
+                    && !key.isModifier()
+                    && Character.isLetter(key.getCode())
+                    && mKeyboard != null && mKeyboard.mId.isAlphabetKeyboard();
+            if (promotionCandidate) {
+                // Move the pending commit from SCHEDULED to HELD so it can't fire mid-window.
+                holdPendingTapCommit();
+                mIsPromotedFromTap = true;
+            } else {
+                // Fire the deferred tap now so its letter lands before this new keystroke.
+                firePendingTapCommitNow();
+            }
+        }
         sPointerTrackerQueue.add(this);
         onDownEventInternal(x, y, eventTime);
         if (!sGestureEnabler.shouldHandleGesture()) {
@@ -787,7 +1004,15 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         mIsDetectingGesture = (mKeyboard != null) && mKeyboard.mId.isAlphabetKeyboard()
                 && key != null && !key.isModifier() && !mKeySwipeAllowed && !sInKeySwipe;
         if (mIsDetectingGesture) {
-            mBatchInputArbiter.addDownEventPoint(x, y, eventTime,
+            // Two-thumb typing (#1.4): if this down was flagged as a tap-promotion candidate
+            // in the block above, seed the arbiter with the PRIOR tap's coords/time. The
+            // gesture library then sees the stroke as starting at the tapped letter, so when
+            // the user's actual finger position arrives via the first move event the
+            // recognized stroke spans tap-letter -> swipe path -> ... -> last letter.
+            final int seedX = mIsPromotedFromTap ? mTapSeedX : x;
+            final int seedY = mIsPromotedFromTap ? mTapSeedY : y;
+            final long seedTime = mIsPromotedFromTap ? mTapSeedTime : eventTime;
+            mBatchInputArbiter.addDownEventPoint(seedX, seedY, seedTime,
                     sTypingTimeRecorder.getLastLetterTypingTime(), getActivePointerTrackerCount());
             mGestureStrokeDrawingPoints.onDownEvent(
                     x, y, mBatchInputArbiter.getElapsedTimeSinceFirstDown(eventTime));
@@ -797,6 +1022,12 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             mIsTapDuringSwipe = sInGesture
                     && Settings.getValues().mGestureTapDuringSwipe
                     && key != null && Character.isLetter(key.getCode());
+        } else if (mIsPromotedFromTap) {
+            // Down was a promotion candidate but we aren't detecting a gesture here (e.g.
+            // mKeySwipeAllowed kicked in, or sInKeySwipe). The pending tap shouldn't be
+            // silently held forever — fire it so the letter lands and clear the flag.
+            firePendingTapCommitNow();
+            mIsPromotedFromTap = false;
         }
     }
 
@@ -1257,6 +1488,14 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         final boolean isInSlidingKeyInput = mIsInSlidingKeyInput;
         final boolean wasTapDuringSwipe = mIsTapDuringSwipe;
         mIsTapDuringSwipe = false;
+        // Two-thumb typing (#1.4): if this tracker was a tap-promotion candidate that NEVER
+        // developed into a gesture (mIsPromotedFromTap is still set at up-time, meaning
+        // {@link #onStartBatchInput} never fired), flush the held tap NOW so the prior
+        // letter lands before we process this up event normally.
+        if (mIsPromotedFromTap) {
+            firePendingTapCommitNow();
+            // mIsPromotedFromTap is cleared inside firePendingTapCommitNow's runnable body.
+        }
         resetKeySelectionByDraggingFinger();
         mIsDetectingGesture = false;
         final Key currentKey = mCurrentKey;
@@ -1340,6 +1579,26 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 && eventTime - mDownTime <= Settings.getValues().mGestureTapAsSwipeWindowMs) {
             return;
         }
+        // Two-thumb typing (#1.4): if this tap is on a letter and the user has enabled the
+        // tap-promotion window, defer the keystroke so a quick follow-up swipe-from-here can
+        // splice this letter into a single gesture word (e.g. tap 's' + swipe 'oil' -> "soil").
+        // Default ({@code mGestureTapPromotionMs == 0}) preserves today's immediate-commit
+        // behaviour byte-for-byte. Excluded:
+        //   - disabled keys (the synchronous path wouldn't commit them either),
+        //   - keys with {@code altCodeWhileTyping()} (the synchronous path may swap to an
+        //     alt code based on the live typing-state timer + {@code isClearlyInsideKey},
+        //     neither of which can be reproduced from a snapshot — safer to commit immediately).
+        final int promotionMs = Settings.getValues().mGestureTapPromotionMs;
+        if (promotionMs > 0 && !sInGesture && currentKey != null
+                && currentKey.isEnabled()
+                && !currentKey.altCodeWhileTyping()
+                && Character.isLetter(currentKey.getCode())
+                && !currentKey.isModifier()
+                && mKeyboard != null && mKeyboard.mId.isAlphabetKeyboard()) {
+            scheduleTapPromotionCommit(currentKey, mKeyX, mKeyY, mDownTime, eventTime,
+                    promotionMs, isInSlidingKeyInput);
+            return;
+        }
         detectAndSendKey(currentKey, mKeyX, mKeyY, eventTime);
         if (isInSlidingKeyInput) {
             callListenerOnFinishSlidingInput();
@@ -1352,6 +1611,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return;
         }
         mIsTrackingForActionDisabled = true;
+        // Two-thumb typing (#1.4): drop any pending tap commit on explicit cancel. The user
+        // intentionally aborted this tracker, so typing the letter would be surprising.
+        cancelPendingTapCommit();
     }
 
     public boolean isInOperation() {
