@@ -507,6 +507,11 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         mGestureDebugPointsDrawingPreview.clear();
     }
 
+    @Override
+    public void setGestureCommitPending(final boolean pending) {
+        mGestureFloatingTextDrawingPreview.setCommitPending(pending);
+    }
+
     // Note that this method is called from a non-UI thread.
     @SuppressWarnings("static-method")
     public void setMainDictionaryAvailability(final boolean mainDictionaryAvailable) {
