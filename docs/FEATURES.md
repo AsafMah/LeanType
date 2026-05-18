@@ -13,6 +13,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | ⚙️ **[HF/OpenAI-compatible](#3-hfopenai-compatible-generic-provider)** | Use Mistral, DeepSeek, OpenRouter, etc. |
 | 🧠 **[Custom AI Keys](#4-custom-ai-keys--keywords)** | Configure custom prompts and personas. |
 | 🛡️ **[Offline Proofreading](#5-offline-proofreading-privacy-focused)** | Privacy-first, on-device AI. |
+| 👐 **[Two-thumb Typing (experimental)](#two-thumb-typing-experimental)** | Mix taps and swipes naturally; manual spacing; Nintype-style. |
 
 ## Summary of New Features
 
@@ -34,6 +35,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | **Screenshot Suggestion** | Suggests recently taken screenshots for quick sharing. | `Text correction > Suggest recent screenshots` |
 | **Screenshot on Clipboard** | Automatically saves taken screenshots to your clipboard history. | *Automatic (when enabled)* |
 | **Clipboard Undo** | Undo swipe-to-delete on clipboard items with a timed undo bar. | *Automatic (on swipe delete)* |
+| **Two-thumb Typing** | Mix taps and swipes naturally, multi-tap then swipe, manual spacing, recognition tweaks. All experimental and opt-in. | `Two-thumb typing (experimental)` |
 
 ---
 
@@ -215,6 +217,51 @@ Add these to your prompt to enforce a specific role.
 | `#summarize` | **Summarizer** | "Provide a concise summary." |
 | `#expand` | **Writer** | "Expand on the text with more details." |
 | `#toneshift` | **Tone Adjuster** | "Adjust the tone as requested." |
+
+---
+
+## Two-thumb Typing (experimental)
+
+LeanType ships a set of opt-in tweaks for typing with two thumbs at once — mixing taps and swipes naturally, getting fewer dropped letters when one thumb taps while the other glides, and Nintype-style "manual spacing" where the word doesn't auto-commit until you tap space. All options live under **Settings → Two-thumb typing (experimental)** and default to **off** (or 0 for the sliders), so you only get the behaviour you opt into.
+
+> ⚠️ These features change how gestures and taps interact. Try them one at a time so you can tell what's helping vs. hurting your typing.
+
+### Spacing & word commit
+
+| Pref | Behaviour |
+| :--- | :--- |
+| **Manual spacing** (`gesture_manual_spacing`) | When ON, lifting all fingers after a gesture **does not** auto-commit or insert an autospace. The gesture's result becomes/extends a composing word. Multiple gestures and taps chain into one logical word until you explicitly tap space, punctuation, or Enter. Best paired with the next option. |
+| **Backspace removes last fragment** (`gesture_fragment_backspace`) | Only visible when Manual spacing is on. Backspace pops the entire previous fragment (one swipe's output, or one tap's letter) in a single keystroke instead of one character at a time. |
+| **Autospace grace period** (`gesture_autospace_grace_ms`, 0–500 ms) | Only visible when Manual spacing is off (mutually exclusive). A middle ground: keep the autospace, but delay it by N ms after the last finger lifts. If a new finger goes **down** within that window, the deferred commit is dropped and the gesture continues into the same word — no matter how long that next gesture itself takes. Set to 0 to disable. While the timer is pending, the floating preview text shows a trailing ellipsis (`…`) so you can see the system is waiting. |
+
+> Side effect: when Manual spacing is on, the **Autospace before/after gesture typing** toggles under **Settings → Text correction → Space** are hidden — they become runtime no-ops.
+
+### Tap + swipe interactions
+
+| Pref | Behaviour |
+| :--- | :--- |
+| **Tap during swipe** (`gesture_tap_during_swipe`) | When ON, a quick tap with one finger while the other is mid-swipe is treated as part of the same word — fixes the "stray letter committed before the gesture finishes" pain when typing with two thumbs simultaneously. |
+| **Tap-as-swipe window** (`gesture_tap_as_swipe_window_ms`, 0–200 ms) | Only visible when Tap during swipe is on. How quickly the tap must complete to count as part of the swipe. Default 60 ms. Long-presses fall through to normal behaviour so you can still type a letter after a gesture commits. |
+| **Tap-then-swipe window** (`gesture_tap_promotion_ms`, 0–200 ms) | When > 0, lets you **tap one or more letters** then immediately **swipe** the rest, getting one merged word. Example: tap `p`, tap `a`, swipe `ul` → `paul`. Set to 0 to disable. Each new tap extends the window from its own lift time, so chains can grow indefinitely as long as each tap arrives within the window. |
+
+### Layout extras
+
+| Pref | Behaviour |
+| :--- | :--- |
+| **Apostrophe key for gestures** (`gesture_apostrophe_key`) | When ON, surfaces a swipeable apostrophe key so contractions like `it's` or `don't` can be glided in one stroke. Toggle is visible; actual layout integration depends on whether the active layout exposes the apostrophe — see [layouts.md](../layouts.md) if you maintain a custom layout. |
+
+### Recognition & debug
+
+| Pref | Behaviour |
+| :--- | :--- |
+| **Two-thumb point hinting (experimental)** (`gesture_dual_thumb_hinting`) | When ON, the keyboard post-processes the gesture's raw points before feeding them to the recognizer: tap-bursts that overlap an active stroke get reinforced with synthetic on-stroke waypoints at the tap's centre so the library doesn't under-weight them. Includes a proximity guard so a stray opposite-hand tap doesn't get amplified into a recognition-deforming detour. Most useful for words like `firetruck` (`fretrc` swipe + `iuk` taps). |
+| **Left/right hand split** (`gesture_dual_thumb_midline_pct`, 30–70 %) | Only visible when Point hinting is on. Where the keyboard splits between your left and right hand. Currently used only by the (forthcoming) stray-tap dampener; the proximity guard above is independent of this slider. |
+| **Draw gesture points (debug)** (`gesture_debug_draw_points`) | When ON, overlays the raw gesture samples (small red dots) and any synthetic points injected by Point hinting (larger blue dots) on the keyboard. Useful when iterating on hinting or filing bug reports — turn off for daily typing. |
+
+### Why these exist
+
+These features all started from [HeliBoard issue #291](https://github.com/Helium314/HeliBoard/issues/291) ("Improving simultaneous/two-finger swiping") and Nintype's old "autospace off" + "tap during swipe" behaviours. They're shipped as experimental opt-ins so you can A/B them on your own typing style without risk to the existing single-thumb gesture experience.
+
 | `#generate` | **Content Generator** | "You are a creative content generator. Output ONLY content." |
 
 ### Input Handling Keywords
