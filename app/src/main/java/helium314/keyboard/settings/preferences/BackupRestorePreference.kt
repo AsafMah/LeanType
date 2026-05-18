@@ -151,6 +151,14 @@ private fun backupLauncher(onError: (String) -> Unit): ManagedActivityResultLaun
                     zipStream.putNextEntry(ZipEntry(PROTECTED_PREFS_FILE_NAME))
                     settingsToJsonStream(ctx.protectedPrefs().all, zipStream)
                     zipStream.closeEntry()
+                    // back up auxiliary SharedPreferences files used by individual features
+                    // (gemini_prefs is intentionally excluded: it is EncryptedSharedPreferences
+                    //  whose values are tied to a device-specific master key and contains API keys)
+                    for ((entryName, prefsForBackup) in auxiliaryPrefsToBackUp(ctx)) {
+                        zipStream.putNextEntry(ZipEntry(entryName))
+                        settingsToJsonStream(prefsForBackup.all, zipStream)
+                        zipStream.closeEntry()
+                    }
                     zipStream.close()
                 }
             } catch (t: Throwable) {
@@ -198,13 +206,20 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                             } else if (entry.name == PREFS_FILE_NAME) {
                                 val prefLines = String(zip.readBytes()).split("\n")
                                 val prefs = ctx.prefs()
-                                prefs.edit { clear() }
+                                prefs.edit(commit = true) { clear() }
                                 readJsonLinesToSettings(prefLines, prefs)
                             } else if (entry.name == PROTECTED_PREFS_FILE_NAME) {
                                 val prefLines = String(zip.readBytes()).split("\n")
                                 val protectedPrefs = ctx.protectedPrefs()
-                                protectedPrefs.edit { clear() }
+                                protectedPrefs.edit(commit = true) { clear() }
                                 readJsonLinesToSettings(prefLines, protectedPrefs)
+                            } else {
+                                val auxPrefs = auxiliaryPrefsToBackUp(ctx)[entry.name]
+                                if (auxPrefs != null) {
+                                    val prefLines = String(zip.readBytes()).split("\n")
+                                    auxPrefs.edit(commit = true) { clear() }
+                                    readJsonLinesToSettings(prefLines, auxPrefs)
+                                }
                             }
                             zip.closeEntry()
                             entry = zip.nextEntry
@@ -274,12 +289,30 @@ private fun readJsonLinesToSettings(list: List<String>, prefs: SharedPreferences
                 "string set settings" -> Json.decodeFromString<Map<String, Set<String>>>(i.next()).forEach { e.putStringSet(it.key, it.value) }
             }
         }
-        e.apply()
+        // commit synchronously so that post-restore actions and a possible process kill
+        // (e.g. the user closing the app immediately after restore) don't lose data
+        e.commit()
         return true
     } catch (e: Exception) {
         return false
     }
 }
+
+/**
+ * Auxiliary SharedPreferences files (other than the main prefs and protectedPrefs) that
+ * should be included in backups. The key is the zip entry name to use, and the value
+ * is the SharedPreferences instance to read from / write back into on restore.
+ *
+ * NOTE: This must NOT include EncryptedSharedPreferences (e.g. "gemini_prefs"), because
+ * those values are encrypted with a device-bound master key and would be unreadable on
+ * any other device. Plus they typically hold credentials, which we don't want in a plain
+ * backup zip.
+ */
+private fun auxiliaryPrefsToBackUp(ctx: android.content.Context): Map<String, SharedPreferences> =
+    mapOf(
+        FLOATING_KEYBOARD_PREFS_FILE_NAME
+            to DeviceProtectedUtils.getSharedPreferences(ctx, "floating_keyboard_prefs"),
+    )
 
 private fun restoreEntryToDir(zip: ZipInputStream, baseDir: File, entryName: String): Boolean {
     val file = File(baseDir, entryName)
@@ -294,6 +327,7 @@ private fun restoreEntryToDir(zip: ZipInputStream, baseDir: File, entryName: Str
 
 private const val PREFS_FILE_NAME = "preferences.json"
 private const val PROTECTED_PREFS_FILE_NAME = "protected_preferences.json"
+private const val FLOATING_KEYBOARD_PREFS_FILE_NAME = "floating_keyboard_preferences.json"
 
 private val backupFilePatterns by lazy { listOf(
     "blacklists${File.separator}.*\\.txt".toRegex(),

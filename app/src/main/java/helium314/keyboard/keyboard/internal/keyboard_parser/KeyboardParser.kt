@@ -267,7 +267,13 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
         if (!params.mId.mNumberRowEnabled && params.mId.mNumberRowInSymbols && params.mId.mElementId == KeyboardId.ELEMENT_SYMBOLS) {
             // replace first symbols row with number row, but use the labels as popupKeys
             val numberRowCopy = numberRow.toMutableList()
-            numberRowCopy.forEachIndexed { index, keyData -> keyData.popup.symbol = baseKeys[0].getOrNull(index)?.label }
+            numberRowCopy.forEachIndexed { index, keyData ->
+                val symbolKey = baseKeys[0].getOrNull(index) ?: return@forEachIndexed
+                val symbols = mutableListOf<String>()
+                symbolKey.label.takeIf { it.isNotEmpty() }?.let { symbols.add(it) }
+                symbolKey.popup.getPopupKeyLabels(params)?.let { symbols.addAll(it) }
+                if (symbols.isNotEmpty()) keyData.popup.symbols = symbols
+            }
             baseKeys[0] = numberRowCopy
         } else if (!params.mId.mNumberRowEnabled && params.mId.isAlphabetKeyboard && !hasBuiltInNumbers()) {
             if (baseKeys[0].any { it.popup.main != null || !it.popup.relevant.isNullOrEmpty() } // first row of baseKeys has any layout popup key
@@ -290,7 +296,11 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
         layout.forEachIndexed { i, row ->
             val baseRow = baseKeys.getOrNull(i) ?: return@forEachIndexed
             row.forEachIndexed { j, key ->
-                baseRow.getOrNull(j)?.popup?.symbol = key.label
+                val baseKey = baseRow.getOrNull(j) ?: return@forEachIndexed
+                val symbols = mutableListOf<String>()
+                key.label.takeIf { it.isNotEmpty() }?.let { symbols.add(it) }
+                key.popup.getPopupKeyLabels(params)?.let { symbols.addAll(it) }
+                if (symbols.isNotEmpty()) baseKey.popup.symbols = symbols
             }
         }
     }
