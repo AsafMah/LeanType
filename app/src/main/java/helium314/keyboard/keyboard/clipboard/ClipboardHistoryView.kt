@@ -81,7 +81,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val res = context.resources
         val width = ResourceUtils.getKeyboardWidth(context, Settings.getValues()) + paddingLeft + paddingRight
         val baseHeight = if (inEditMode) {
-            ResourceUtils.getKeyboardHeight(res, Settings.getValues()) +
+            ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues()) +
                 resources.getDimensionPixelSize(R.dimen.config_clipboard_edit_panel_extra_height)
         } else {
             ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues())
@@ -315,10 +315,32 @@ class ClipboardHistoryView @JvmOverloads constructor(
                 primaryCode > 0 -> {
                     editable.replace(selStart, selEnd, primaryCode.toChar().toString())
                 }
+                // The 123 / ABC / symbols-shifted keys want to switch the keyboard mode.
+                // Letting them propagate to LatinIME's central listener can crash because
+                // that path expects the MAIN keyboard view to be the active one, while we
+                // are hosting our own bottom-row keyboard. Handle the swap locally.
+                primaryCode == KeyCode.SYMBOL || primaryCode == KeyCode.SYMBOL_ALPHA -> {
+                    setBottomRowLayout(KeyboardId.ELEMENT_SYMBOLS)
+                }
+                primaryCode == KeyCode.ALPHA -> {
+                    setBottomRowLayout(KeyboardId.ELEMENT_ALPHABET)
+                }
+                primaryCode == KeyCode.SHIFT -> {
+                    // Cycle through shift states: alphabet -> shifted -> shift-locked -> alphabet.
+                    val current = (findViewById<MainKeyboardView>(R.id.bottom_row_keyboard))?.keyboard?.mId?.mElementId
+                    val next = when (current) {
+                        KeyboardId.ELEMENT_ALPHABET -> KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED
+                        KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED,
+                        KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED -> KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED
+                        KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED -> KeyboardId.ELEMENT_ALPHABET
+                        else -> KeyboardId.ELEMENT_ALPHABET
+                    }
+                    setBottomRowLayout(next)
+                }
                 else -> {
-                    // Any other key (Symbols, Settings, etc.) cancels edit and is forwarded.
-                    stopEditMode(commit = false)
-                    keyboardActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat)
+                    // Any other unhandled key (settings, language switch, etc.) is just
+                    // ignored while editing -- they would normally swap layouts on the
+                    // main keyboard view, which we are not using.
                 }
             }
             return
@@ -499,12 +521,11 @@ class ClipboardHistoryView @JvmOverloads constructor(
         // Switch the bottom row to the standard alphabet keyboard so the user can type.
         setBottomRowLayout(KeyboardId.ELEMENT_ALPHABET)
 
-        // Pin the bottom-row keyboard to the full alphabet height so it isn't squeezed
-        // out by the editor panel above. wrap_content on the keyboard view can resolve
-        // to 0 when its keyboard object hasn't been measured yet, which would make the
-        // keyboard invisible.
+        // Pin the bottom-row keyboard's height to match the geometry we passed to
+        // setKeyboardGeometry. wrap_content can resolve to 0 before the keyboard object
+        // is measured, which would make the keyboard invisible.
         val bottomRow = findViewById<View>(R.id.bottom_row_keyboard)
-        val kbHeight = ResourceUtils.getKeyboardHeight(context.resources, Settings.getValues())
+        val kbHeight = ResourceUtils.getSecondaryKeyboardHeight(context.resources, Settings.getValues())
         bottomRow?.layoutParams = bottomRow?.layoutParams?.also { it.height = kbHeight }
 
         // Edit mode wants a taller IME than the clipboard pane normally uses; re-measure.
@@ -570,11 +591,26 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val keyboardView = findViewById<MainKeyboardView>(R.id.bottom_row_keyboard)
         keyboardView.setKeyboardActionListener(this)  // Set 'this' as listener to intercept
         PointerTracker.switchTo(keyboardView)
-        // Use Builder to get correct layout
+        // Use Builder to get correct layout. Match EmojiPalettesView's search-mode setup
+        // exactly so we get the same theming the user already accepts as "their"
+        // keyboard there: pass secondary-keyboard-height for the geometry instead of the
+        // full keyboard height. The full-height geometry made the inner keys mismatch
+        // the user's main keyboard visually.
+        val isAlphaOrSymbols = elementId == KeyboardId.ELEMENT_ALPHABET ||
+                elementId == KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED ||
+                elementId == KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED ||
+                elementId == KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED ||
+                elementId == KeyboardId.ELEMENT_SYMBOLS ||
+                elementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED
+        val geometryHeight = if (isAlphaOrSymbols) {
+            ResourceUtils.getSecondaryKeyboardHeight(context.resources, Settings.getValues())
+        } else {
+            ResourceUtils.getKeyboardHeight(context.resources, Settings.getValues())
+        }
         val builder = KeyboardLayoutSet.Builder(context, editorInfo)
             .setSubtype(RichInputMethodManager.getInstance().currentSubtype)
-            .setKeyboardGeometry(ResourceUtils.getKeyboardWidth(context, Settings.getValues()), ResourceUtils.getKeyboardHeight(context.resources, Settings.getValues()))
-        
+            .setKeyboardGeometry(ResourceUtils.getKeyboardWidth(context, Settings.getValues()), geometryHeight)
+
         val kls = builder.build()
         val keyboard = kls.getKeyboard(elementId)
         keyboardView.setKeyboard(keyboard)
