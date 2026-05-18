@@ -23,6 +23,7 @@ import helium314.keyboard.keyboard.internal.BatchInputArbiter;
 import helium314.keyboard.keyboard.internal.BatchInputArbiter.BatchInputArbiterListener;
 import helium314.keyboard.keyboard.internal.BogusMoveEventDetector;
 import helium314.keyboard.keyboard.internal.DrawingProxy;
+import helium314.keyboard.keyboard.internal.DualThumbHinter;
 import helium314.keyboard.keyboard.internal.GestureEnabler;
 import helium314.keyboard.keyboard.internal.GestureStrokeDrawingParams;
 import helium314.keyboard.keyboard.internal.GestureStrokeDrawingPoints;
@@ -310,13 +311,51 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
      * check because the original tracker may have been reused for a different finger by now —
      * the per-instance flag is no longer meaningful for the previously-committed gesture.
      * Always invoked on the main looper.
+     *
+     * @param keyboardSnapshot the {@link Keyboard} captured at scheduling time, used by the
+     *     dual-thumb hinter (#2.1) for geometry; may be {@code null} (hinter no-ops). Using a
+     *     captured snapshot rather than a live static avoids problems if the keyboard layout
+     *     swapped during the grace window.
      */
     private static void commitDeferredBatchInput(
-            final InputPointers aggregatedPointers, final long upEventTime) {
+            final InputPointers aggregatedPointers, final long upEventTime,
+            final Keyboard keyboardSnapshot) {
         sTypingTimeRecorder.onEndBatchInput(upEventTime);
         sTimerProxy.cancelAllUpdateBatchInputTimers();
-        sListener.onEndBatchInput(aggregatedPointers);
+        final DualThumbHinter.Result result =
+                applyDualThumbHinting(aggregatedPointers, keyboardSnapshot);
+        pushGestureDebugSnapshot(aggregatedPointers, result.syntheticOnly);
+        sListener.onEndBatchInput(result.hinted);
         sInGesture = false;
+    }
+
+    /**
+     * Apply the dual-thumb point hinter (#2.1) to the aggregated pointers if the user has
+     * enabled it. Returns an "identity" {@link DualThumbHinter.Result} (hinted == raw,
+     * empty synthetic-only) when the pref is off OR no keyboard geometry is available — we
+     * don't have the key-width / midline needed by the hinter.
+     */
+    private static DualThumbHinter.Result applyDualThumbHinting(
+            final InputPointers raw, final Keyboard keyboard) {
+        final SettingsValues sv = Settings.getValues();
+        if (!sv.mGestureDualThumbHinting || keyboard == null) {
+            return DualThumbHinter.identity(raw);
+        }
+        final int keyWidth = keyboard.mMostCommonKeyWidth;
+        final int midlineX = (int)(keyboard.mOccupiedWidth
+                * (sv.mGestureDualThumbMidlinePct / 100f));
+        return DualThumbHinter.postProcess(raw, keyWidth, midlineX);
+    }
+
+    /**
+     * Push raw + synthetic-only snapshots to the debug overlay if the user has enabled it. The
+     * synthetic-only buffer is what the hinter ADDED (i.e. blue dots in the overlay); when no
+     * hinting was applied it's empty and the overlay shows only the raw red dots.
+     */
+    private static void pushGestureDebugSnapshot(
+            final InputPointers raw, final InputPointers syntheticOnly) {
+        if (!Settings.getValues().mGestureDebugDrawPoints) return;
+        sDrawingProxy.setGestureDebugPoints(raw, syntheticOnly);
     }
 
     // ---- Tap-promotion helpers (two-thumb typing #1.4) ----
@@ -811,6 +850,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (mIsPromotedFromTap) {
             cancelPendingTapCommit();
         }
+        // Two-thumb typing (#2.1): a fresh gesture starts — wipe the previous batch's debug
+        // overlay so it doesn't visually mix with the in-flight gesture.
+        sDrawingProxy.clearGestureDebugPoints();
         sListener.onStartBatchInput();
         dismissAllPopupKeysPanels();
         sTimerProxy.cancelLongPressTimersOf(this);
@@ -857,7 +899,12 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             Log.d(TAG, String.format(Locale.US, "[%d] onEndBatchInput   : batchPoints=%d",
                     mPointerId, aggregatedPointers.getPointerSize()));
         }
-        sListener.onEndBatchInput(aggregatedPointers);
+        // Two-thumb typing (#2.1): post-process the aggregated pointers if hinting is on,
+        // and snapshot before/after for the debug overlay regardless. Geometry comes from
+        // this tracker's current keyboard — for the immediate-commit path it's fresh.
+        final DualThumbHinter.Result result = applyDualThumbHinting(aggregatedPointers, mKeyboard);
+        pushGestureDebugSnapshot(aggregatedPointers, result.syntheticOnly);
+        sListener.onEndBatchInput(result.hinted);
     }
 
     private void cancelBatchInput() {
@@ -871,6 +918,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             Log.d(TAG, String.format(Locale.US, "[%d] onCancelBatchInput", mPointerId));
         }
         sListener.onCancelBatchInput();
+        // Two-thumb typing (#2.1): drop any leftover debug overlay so it doesn't linger over
+        // a cancelled gesture's input.
+        sDrawingProxy.clearGestureDebugPoints();
     }
 
     public void processMotionEvent(final MotionEvent me, final KeyDetector keyDetector) {
@@ -1551,9 +1601,14 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             // when configured, so a follow-up finger can continue the same word. {@code 0}
             // (the default) preserves today's immediate-commit behaviour byte-for-byte.
             final int graceMs = Settings.getValues().mGestureAutospaceGraceMs;
+            // Two-thumb typing (#2.1): capture the current keyboard so the deferred commit
+            // path can apply the dual-thumb hinter with the geometry that was live at the
+            // moment of lift — not whatever might be live when the grace timer fires (the
+            // layout could have swapped during the window).
+            final Keyboard keyboardSnapshotForCommit = mKeyboard;
             if (mBatchInputArbiter.mayEndBatchInput(
                     eventTime, getActivePointerTrackerCount(), graceMs, this,
-                    PointerTracker::commitDeferredBatchInput)) {
+                    (pts, ts) -> commitDeferredBatchInput(pts, ts, keyboardSnapshotForCommit))) {
                 sInGesture = false;
             }
             // If mayEndBatchInput returned false because a grace timer was scheduled,
