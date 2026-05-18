@@ -104,6 +104,14 @@ public final class InputLogic {
     private int mDeleteCount;
     private long mLastKeyTime;
 
+    // Two-thumb typing (#1.4): when {@code mGestureTapPromotionMs > 0} AND the user starts a
+    // gesture within that window of their last letter tap, the gesture extends the existing
+    // composing word instead of replacing it (the manual-spacing-extend path). Flag is set in
+    // {@link #onStartBatchInput} and consumed at the end of {@link #onUpdateTailBatchInputCompleted}.
+    // This lets us make the "extend or not" decision based on the timing AT THE MOMENT OF
+    // GESTURE-START, not gesture-end (so a long gesture doesn't lose the promotion).
+    private boolean mGestureExtendsByTapPromotion;
+
     // Two-thumb typing (#1.1, sub-option PREF_GESTURE_FRAGMENT_BACKSPACE): char-offsets that
     // mark the END of each "fragment" appended to the current composing word under manual
     // spacing. A fragment is one gesture's output OR one tap's letter. With the pref on,
@@ -586,14 +594,25 @@ public final class InputLogic {
         handler.cancelUpdateSuggestionStrip();
         ++mAutoCommitSequenceNumber;
         mConnection.beginBatchEdit();
-        // Two-thumb typing (#1.1): when manual spacing is enabled, the user expects multiple
-        // consecutive gestures (and taps mixed with gestures) to concatenate into one composing
-        // word until they explicitly tap space / punctuation / Enter. Skip the usual "commit
-        // the prior composing word" behaviour in that case — the cursor-front-or-middle branch
-        // is preserved because we genuinely can't extend a word when the cursor isn't at its end.
-        final boolean manualSpacingExtend = settingsValues.mGestureManualSpacing
-                && mWordComposer.isComposingWord()
+        // Two-thumb typing (#1.1 + #1.4): two ways the gesture can EXTEND an existing
+        // composing word instead of replacing it:
+        //   * manual spacing (always extends, user explicitly opted out of autospace), or
+        //   * tap-promotion within the timer window (user just tapped a letter; treat the
+        //     gesture as a continuation of the same word — e.g. "tap p, tap a, swipe ul" →
+        //     "paul"). The window is measured against {@code mLastKeyTime} which the input
+        //     pipeline updates on every key event.
+        // Both gate on cursor-at-end of an existing composing word; if the cursor isn't there
+        // we can't safely extend. We capture {@code mGestureExtendsByTapPromotion} into state
+        // so {@link #onUpdateTailBatchInputCompleted} reuses the SAME decision (otherwise a
+        // long gesture could "age out" of the window between start and end).
+        final boolean cursorAtEndOfComposingWord = mWordComposer.isComposingWord()
                 && !mWordComposer.isCursorFrontOrMiddleOfComposingWord();
+        final boolean manualSpacingExtend = settingsValues.mGestureManualSpacing
+                && cursorAtEndOfComposingWord;
+        mGestureExtendsByTapPromotion = settingsValues.mGestureTapPromotionMs > 0
+                && cursorAtEndOfComposingWord
+                && (SystemClock.uptimeMillis() - mLastKeyTime) <= settingsValues.mGestureTapPromotionMs;
+        final boolean extendComposingWord = manualSpacingExtend || mGestureExtendsByTapPromotion;
         if (mWordComposer.isComposingWord()) {
             if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
                 // If we are in the middle of a recorrection, we need to commit the recorrection
@@ -602,11 +621,11 @@ public final class InputLogic {
                 unlearnWord(mWordComposer.getTypedWord(), settingsValues, Constants.EVENT_BACKSPACE);
                 resetEntireInputState(mConnection.getExpectedSelectionStart(), mConnection.getExpectedSelectionEnd(),
                         true);
-            } else if (manualSpacingExtend) {
-                // Manual spacing: keep the existing composing word; the new gesture's result
-                // will be APPENDED in onUpdateTailBatchInputCompleted instead of replacing it.
-                // We intentionally don't commit-then-autocorrect even the single-letter case
-                // here — under manual spacing the user has opted out of "smart" auto-commit
+            } else if (extendComposingWord) {
+                // Manual spacing OR tap-promotion-extend: keep the existing composing word;
+                // the new gesture's result will be APPENDED in onUpdateTailBatchInputCompleted
+                // instead of replacing it. We intentionally don't commit-then-autocorrect even
+                // the single-letter case here — both modes opt out of the "smart" auto-commit
                 // behaviour, and tapping "i" + gesturing should produce a single composing
                 // word the user can then commit on their own terms.
             } else if (mWordComposer.isSingleLetter() && !isInlineEmojiSearchAction()) {
@@ -640,10 +659,10 @@ public final class InputLogic {
                 || settingsValues.isUsuallyFollowedBySpace(codePointBeforeCursor)) {
             final boolean autoShiftHasBeenOverriden = keyboardSwitcher
                     .getKeyboardShiftMode() != getCurrentAutoCapsState(settingsValues);
-            // Two-thumb typing (#1.1): no autospace before a continuation gesture. The whole
-            // point of manual spacing is that the user controls spacing — silently inserting a
-            // space before extending the composing word would defeat that.
-            if (settingsValues.mAutospaceBeforeGestureTyping && !manualSpacingExtend)
+            // Two-thumb typing (#1.1 + #1.4): no autospace before a continuation gesture.
+            // Both manual spacing and tap-promotion-extend explicitly suppress the autospace
+            // so the new gesture cleanly extends the existing composing word.
+            if (settingsValues.mAutospaceBeforeGestureTyping && !extendComposingWord)
                 mSpaceState = SpaceState.PHANTOM;
             if (!autoShiftHasBeenOverriden) {
                 // When we change the space state, we need to update the shift state of the
@@ -700,6 +719,9 @@ public final class InputLogic {
 
     public void onCancelBatchInput(final LatinIME.UIHandler handler) {
         mInputLogicHandler.onCancelBatchInput();
+        // Tap-promotion-extend was a per-gesture decision; clear on cancel so the NEXT
+        // gesture re-evaluates against current timing.
+        mGestureExtendsByTapPromotion = false;
         // Two-thumb typing (#1.1): if a gesture got far enough into onUpdateBatchInput before
         // being cancelled, {@link InputLogicHandler#updateBatchInput} has already flipped the
         // composer into batch mode and replaced its input pointers with the cancelled
@@ -2938,21 +2960,26 @@ public final class InputLogic {
             return;
         }
         mConnection.beginBatchEdit();
-        // Two-thumb typing (#1.1): under manual spacing, a follow-up gesture should EXTEND the
-        // existing composing word rather than replace it. We snapshot what the word composer
-        // currently holds and concatenate before handing the combined string to
-        // {@link WordComposer#setBatchInputWord} and the editor. The composer's reset() inside
-        // setBatchInputWord does not touch mInputPointers (see WordComposer.java:106 vs the
-        // comment at line 279), so re-feeding a longer string is safe.
-        final boolean extendExistingCompose = settingsValues.mGestureManualSpacing
+        // Two-thumb typing (#1.1 + #1.4): when either manual spacing OR tap-promotion-extend
+        // applies, a follow-up gesture EXTENDS the existing composing word rather than
+        // replacing it. We snapshot what the word composer currently holds and concatenate
+        // before handing the combined string to {@link WordComposer#setBatchInputWord} and
+        // the editor. The composer's reset() inside setBatchInputWord does not touch
+        // mInputPointers (see WordComposer.java:106 vs the comment at line 279), so
+        // re-feeding a longer string is safe.
+        //
+        // {@code mGestureExtendsByTapPromotion} was set in onStartBatchInput so the
+        // promotion-window decision is made at gesture-start time (a long gesture shouldn't
+        // age out of the promotion window between start and end).
+        final boolean extendExistingCompose = (settingsValues.mGestureManualSpacing || mGestureExtendsByTapPromotion)
                 && mWordComposer.isComposingWord()
                 && !mWordComposer.isCursorFrontOrMiddleOfComposingWord();
         final String prevTypedWord = extendExistingCompose ? mWordComposer.getTypedWord() : "";
         final String composedText = prevTypedWord + batchInputText;
-        // Two-thumb typing (#1.1): never silently prepend an autospace when extending an
-        // existing manual-spacing composing word. {@code mSpaceState} can carry PHANTOM in
-        // from prior punctuation / suggestion-pick paths; clearing it here (without inserting)
-        // is the only way to guarantee the user-visible "no autospace" promise.
+        // Two-thumb typing (#1.1 + #1.4): never silently prepend an autospace when extending an
+        // existing composing word. {@code mSpaceState} can carry PHANTOM in from prior
+        // punctuation / suggestion-pick paths; clearing it here (without inserting) is the
+        // only way to guarantee the user-visible "no autospace" promise.
         if (SpaceState.PHANTOM == mSpaceState) {
             if (extendExistingCompose) {
                 mSpaceState = SpaceState.NONE;
@@ -2964,12 +2991,12 @@ public final class InputLogic {
         enterInlineEmojiSearchIfNeeded(batchInputText.codePointAt(0), settingsValues);
         mWordComposer.setBatchInputWord(composedText);
         setComposingTextInternal(composedText, 1);
-        if (settingsValues.mGestureManualSpacing) {
-            // Two-thumb typing (#1.1): downgrade the composer out of batch mode so future
-            // dictionary lookups treat the (possibly already-concatenated) composing word as
-            // typed text instead of using only the last gesture's input pointers. Otherwise
-            // the suggestion strip would keep showing suggestions for the most recent
-            // fragment, and picking one would replace the WHOLE composing span with a
+        if (extendExistingCompose) {
+            // Two-thumb typing (#1.1 + #1.4): downgrade the composer out of batch mode so
+            // future dictionary lookups treat the (possibly already-concatenated) composing
+            // word as typed text instead of using only the last gesture's input pointers.
+            // Otherwise the suggestion strip would keep showing suggestions for the most
+            // recent fragment, and picking one would replace the WHOLE composing span with a
             // single-fragment alternative — catastrophic data loss for the user.
             mWordComposer.unsetBatchMode();
             // Also blank the suggestion strip: the entries computed during the gesture
@@ -2981,19 +3008,22 @@ public final class InputLogic {
             // so backspace can pop the whole word at once. When extending an existing
             // composing word, both the prior fragments AND this new one are already in the
             // boundaries list (prior fragments were recorded at their own append time);
-            // recordFragmentBoundaryIfTracking adds the NEW boundary at the end.
+            // recordFragmentBoundaryIfTracking adds the NEW boundary at the end. No-op if
+            // PREF_GESTURE_FRAGMENT_BACKSPACE isn't on.
             recordFragmentBoundaryIfTracking(settingsValues);
         } else {
-            // Non-manual-spacing path replaces the whole composing word each gesture; any
-            // prior fragment boundaries become meaningless.
+            // Non-extend path replaces the whole composing word each gesture; any prior
+            // fragment boundaries become meaningless.
             clearFragmentBoundaries();
         }
+        // Tap-promotion-extend is a one-shot decision per gesture; clear the flag so the
+        // next gesture re-evaluates the timing.
+        mGestureExtendsByTapPromotion = false;
         mConnection.endBatchEdit();
-        // Space state must be updated before calling updateShiftState. Two-thumb typing (#1.1):
-        // skip the after-gesture autospace when manual spacing is on — the user wants the next
-        // tap (letter or otherwise) to land directly against the composing word, not preceded
-        // by a phantom space.
-        if (settingsValues.mAutospaceAfterGestureTyping && !settingsValues.mGestureManualSpacing)
+        // Space state must be updated before calling updateShiftState. Two-thumb typing
+        // (#1.1 + #1.4): skip the after-gesture autospace when we're extending — neither
+        // manual spacing nor tap-promotion should auto-insert a space after the word.
+        if (settingsValues.mAutospaceAfterGestureTyping && !extendExistingCompose)
             mSpaceState = SpaceState.PHANTOM;
         keyboardSwitcher.requestUpdatingShiftState(getCurrentAutoCapsState(settingsValues),
                 getCurrentRecapitalizeState());
