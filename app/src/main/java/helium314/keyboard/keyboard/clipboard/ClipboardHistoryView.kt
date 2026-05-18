@@ -412,9 +412,20 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onCancelInput() { keyboardActionListener.onCancelInput() }
     override fun onFinishSlidingInput() { keyboardActionListener.onFinishSlidingInput() }
     override fun onCustomRequest(requestCode: Int): Boolean { return keyboardActionListener.onCustomRequest(requestCode) }
-    override fun onHorizontalSpaceSwipe(steps: Int): Boolean { return keyboardActionListener.onHorizontalSpaceSwipe(steps) }
-    override fun onVerticalSpaceSwipe(steps: Int): Boolean { return keyboardActionListener.onVerticalSpaceSwipe(steps) }
-    override fun onEndSpaceSwipe() { keyboardActionListener.onEndSpaceSwipe() }
+    override fun onHorizontalSpaceSwipe(steps: Int): Boolean {
+        // Suppress gestures during edit mode -- they (e.g. touchpad mode) replace the
+        // main IME view, which yanks our editor out from under the user.
+        if (inEditMode) return false
+        return keyboardActionListener.onHorizontalSpaceSwipe(steps)
+    }
+    override fun onVerticalSpaceSwipe(steps: Int): Boolean {
+        if (inEditMode) return false
+        return keyboardActionListener.onVerticalSpaceSwipe(steps)
+    }
+    override fun onEndSpaceSwipe() {
+        if (inEditMode) return
+        keyboardActionListener.onEndSpaceSwipe()
+    }
     override fun toggleNumpad(w: Boolean, f: Boolean): Boolean { return keyboardActionListener.toggleNumpad(w, f) }
     override fun onMoveDeletePointer(steps: Int) { keyboardActionListener.onMoveDeletePointer(steps) }
     override fun onUpWithDeletePointerActive() { keyboardActionListener.onUpWithDeletePointerActive() }
@@ -573,6 +584,9 @@ class ClipboardHistoryView @JvmOverloads constructor(
         if (!enabled) return
         // TODO: Should use LAYER_TYPE_SOFTWARE when hardware acceleration is off?
         setLayerType(LAYER_TYPE_HARDWARE, null)
+        // Propagate to the bottom-row keyboard so it matches the main keyboard's
+        // hardware-accelerated drawing (otherwise key rendering can look different).
+        findViewById<MainKeyboardView>(R.id.bottom_row_keyboard)?.setHardwareAcceleratedDrawingEnabled(true)
     }
 
     fun startClipboardHistory(
