@@ -104,6 +104,15 @@ public final class InputLogic {
     private int mDeleteCount;
     private long mLastKeyTime;
 
+    // Two-thumb typing (#1.1, sub-option PREF_GESTURE_FRAGMENT_BACKSPACE): char-offsets that
+    // mark the END of each "fragment" appended to the current composing word under manual
+    // spacing. A fragment is one gesture's output OR one tap's letter. With the pref on,
+    // backspace pops the most recent fragment in one keystroke instead of deleting one
+    // character at a time. The list is kept in sync with {@code mWordComposer.getTypedWord()}:
+    // entries past the current length are filtered at read time, and the list is cleared
+    // outright whenever the composing word is committed or reset.
+    private final java.util.ArrayList<Integer> mGestureFragmentBoundaries = new java.util.ArrayList<>();
+
     // Keeps track of most recently inserted text (multi-character key) for
     // reverting
     private String mEnteredText;
@@ -703,6 +712,90 @@ public final class InputLogic {
         }
         handler.showGesturePreviewAndSetSuggestions(
                 SuggestedWords.getEmptyInstance(), true /* dismissGestureFloatingPreviewText */);
+    }
+
+    // ---- Two-thumb typing (#1.1): fragment-boundary tracking for PREF_GESTURE_FRAGMENT_BACKSPACE.
+    // The list grows AFTER each fragment is appended to the composing word, recording the
+    // word's length at that point. Backspace pops the most-recent entry and shrinks the
+    // composing word to the previous one (or 0 if empty), giving the user "undo one swipe /
+    // tap" rather than "delete one character" semantics. List is cleared whenever the
+    // composing word is committed or reset; stale entries beyond the current length are
+    // filtered in {@link #tryFragmentBackspace} as a defensive measure.
+
+    /** Record a fragment boundary at the current composing-word length. No-op when not in manual+fragment mode. */
+    private void recordFragmentBoundaryIfTracking(final SettingsValues sv) {
+        if (!sv.mGestureManualSpacing || !sv.mGestureFragmentBackspace) return;
+        if (!mWordComposer.isComposingWord()) return;
+        final int len = mWordComposer.getTypedWord().length();
+        // Don't record duplicates (e.g. the same fragment appended twice in quick succession).
+        if (!mGestureFragmentBoundaries.isEmpty()
+                && mGestureFragmentBoundaries.get(mGestureFragmentBoundaries.size() - 1) == len) {
+            return;
+        }
+        mGestureFragmentBoundaries.add(len);
+    }
+
+    /** Clear all recorded fragment boundaries. Call after committing / resetting the composing word. */
+    private void clearFragmentBoundaries() {
+        if (!mGestureFragmentBoundaries.isEmpty()) mGestureFragmentBoundaries.clear();
+    }
+
+    /**
+     * Try to handle a backspace as a fragment-pop rather than a char-delete. Returns true if
+     * handled (the caller should then return without touching the editor further); false if
+     * the caller should fall through to its normal char-by-char path.
+     *
+     * <p>Gating: both prefs on, composing word at cursor-end, at least one boundary recorded.
+     * When the last boundary is past the composing word's current length (which can happen if
+     * the user externally edited the word), we just drop it and try again — eventually we
+     * either find a valid boundary or run out and fall through.
+     */
+    private boolean tryFragmentBackspace(final SettingsValues sv) {
+        if (!sv.mGestureManualSpacing || !sv.mGestureFragmentBackspace) return false;
+        if (mGestureFragmentBoundaries.isEmpty()) return false;
+        if (!mWordComposer.isComposingWord()) {
+            clearFragmentBoundaries();
+            return false;
+        }
+        if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()) return false;
+
+        final int currentLen = mWordComposer.getTypedWord().length();
+        // Filter out stale boundaries past the current length.
+        while (!mGestureFragmentBoundaries.isEmpty()
+                && mGestureFragmentBoundaries.get(mGestureFragmentBoundaries.size() - 1) >= currentLen) {
+            mGestureFragmentBoundaries.remove(mGestureFragmentBoundaries.size() - 1);
+        }
+        if (mGestureFragmentBoundaries.isEmpty()) return false;
+
+        // Pop one boundary and shrink to the previous one (or 0 if no more).
+        mGestureFragmentBoundaries.remove(mGestureFragmentBoundaries.size() - 1);
+        final int newLen = mGestureFragmentBoundaries.isEmpty()
+                ? 0
+                : mGestureFragmentBoundaries.get(mGestureFragmentBoundaries.size() - 1);
+
+        final String oldWord = mWordComposer.getTypedWord();
+        final String newWord = newLen <= 0
+                ? ""
+                : oldWord.substring(0, Math.min(newLen, oldWord.length()));
+
+        mConnection.beginBatchEdit();
+        if (newWord.isEmpty()) {
+            // Composing word fully cleared: commit empty and reset state. Treat as if a normal
+            // word-delete brought us to a no-composing state.
+            mConnection.commitText("", 1);
+            mWordComposer.reset();
+            clearFragmentBoundaries();
+        } else {
+            // Re-seed the composer with the truncated text. unsetBatchMode() so the next tap
+            // appends correctly and the suggestion strip looks at it as typed text.
+            mWordComposer.setBatchInputWord(newWord);
+            mWordComposer.unsetBatchMode();
+            setComposingTextInternal(newWord, 1);
+        }
+        mConnection.endBatchEdit();
+        // Bump the delete count so any caller watching it (key-repeat etc.) sees progress.
+        mDeleteCount++;
+        return true;
     }
 
     // TODO: on the long term, this method should become private, but it will be
@@ -1452,6 +1545,9 @@ public final class InputLogic {
                 mWordComposer.setCapitalizedModeAtStartComposingTime(inputTransaction.getShiftState());
             }
             setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
+            // Two-thumb typing (#1.1): record this tap as a fragment boundary so a future
+            // backspace under PREF_GESTURE_FRAGMENT_BACKSPACE can pop the whole tap.
+            recordFragmentBoundaryIfTracking(settingsValues);
         } else {
             final boolean swapWeakSpace = tryStripSpaceAndReturnWhetherShouldSwapInstead(event, inputTransaction);
 
@@ -1628,6 +1724,17 @@ public final class InputLogic {
      */
     private void handleBackspaceEvent(final Event event, final InputTransaction inputTransaction) {
         final String currentKeyboardScript = inputTransaction.getSettingsValues().mCurrentKeyboardScript;
+        // Two-thumb typing (#1.1, PREF_GESTURE_FRAGMENT_BACKSPACE): try to pop the most-recent
+        // fragment from the composing word as one keystroke. Returns true if handled — in
+        // which case we still need to update the space-state + shift behaviour like a normal
+        // backspace, so do those AFTER the fragment-pop succeeds, then return early instead
+        // of falling through to the usual per-character path.
+        if (tryFragmentBackspace(inputTransaction.getSettingsValues())) {
+            mSpaceState = SpaceState.NONE;
+            inputTransaction.requireShiftUpdate(InputTransaction.SHIFT_UPDATE_NOW);
+            inputTransaction.setRequiresUpdateSuggestions();
+            return;
+        }
         mSpaceState = SpaceState.NONE;
         mDeleteCount++;
 
@@ -2648,6 +2755,8 @@ public final class InputLogic {
      */
     private void resetComposingState(final boolean alsoResetLastComposedWord) {
         mWordComposer.reset();
+        // Two-thumb typing (#1.1): composing word is wiped — drop the matching boundaries.
+        clearFragmentBoundaries();
         if (alsoResetLastComposedWord) {
             mLastComposedWord = LastComposedWord.NOT_A_COMPOSED_WORD;
         }
@@ -2868,6 +2977,16 @@ public final class InputLogic {
             // now that the composing span is longer than that fragment. Subsequent taps will
             // repopulate suggestions for the full composing word via the normal path.
             setSuggestedWords(SuggestedWords.getEmptyInstance());
+            // PREF_GESTURE_FRAGMENT_BACKSPACE: record this gesture as a fragment boundary
+            // so backspace can pop the whole word at once. When extending an existing
+            // composing word, both the prior fragments AND this new one are already in the
+            // boundaries list (prior fragments were recorded at their own append time);
+            // recordFragmentBoundaryIfTracking adds the NEW boundary at the end.
+            recordFragmentBoundaryIfTracking(settingsValues);
+        } else {
+            // Non-manual-spacing path replaces the whole composing word each gesture; any
+            // prior fragment boundaries become meaningless.
+            clearFragmentBoundaries();
         }
         mConnection.endBatchEdit();
         // Space state must be updated before calling updateShiftState. Two-thumb typing (#1.1):
@@ -3054,6 +3173,9 @@ public final class InputLogic {
         // LastComposedWord#didCommitTypedWord by string equality of the remembered
         // strings.
         mLastComposedWord = mWordComposer.commitWord(commitType, chosenWord, separatorString, ngramContext);
+        // Two-thumb typing (#1.1): the composing word is gone — any tracked fragment
+        // boundaries are now stale and would point past the end of the (empty) word.
+        clearFragmentBoundaries();
         if (DebugFlags.DEBUG_ENABLED) {
             long runTimeMillis = System.currentTimeMillis() - startTimeMillis;
             Log.d(TAG, "commitChosenWord() : " + runTimeMillis + " ms to run "

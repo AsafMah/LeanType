@@ -44,6 +44,14 @@ public class BatchInputArbiter {
     // lands AFTER the gesture word (see {@link #flushGrace}). If neither happens within the
     // window the deferred commit fires on its own.
     //
+    // The grace deadline is measured "from last finger lift to next finger DOWN", not "from
+    // last finger lift to next gesture END". Once a follow-up touch-down happens within the
+    // window, {@link #continuePendingGesture} removes the Handler callback outright; the new
+    // gesture can then take as long as it needs without re-triggering a commit. When THAT
+    // gesture's last finger lifts, a fresh grace timer is scheduled. So typing "tech" + a
+    // 2-second-long "nology" swipe works as long as the "n" down happens within graceMs of
+    // the "h" lift, regardless of how long "nology" itself takes.
+    //
     // All access is on the keyboard view's UI thread (touch events + Handler posts to main
     // looper), so the static state needs no extra synchronization beyond the existing
     // {@code synchronized (sAggregatedPointers)} blocks.
