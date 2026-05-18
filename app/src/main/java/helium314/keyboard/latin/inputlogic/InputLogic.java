@@ -30,6 +30,7 @@ import helium314.keyboard.event.InputTransaction;
 import helium314.keyboard.keyboard.Keyboard;
 import helium314.keyboard.keyboard.KeyboardLayoutSet;
 import helium314.keyboard.keyboard.KeyboardSwitcher;
+import helium314.keyboard.keyboard.MainKeyboardView;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.dictionary.Dictionary;
 import helium314.keyboard.latin.DictionaryFacilitator;
@@ -2912,6 +2913,14 @@ public final class InputLogic {
                 && !(mConnection.getCodePointBeforeCursor() == Constants.CODE_PERIOD
                         && mConnection.wordBeforeCursorMayBeEmail())) {
             mConnection.commitCodePoint(Constants.CODE_SPACE);
+            // Two-thumb typing: visible feedback for the silent autospace insertion. Gated
+            // on PREF_AUTOSPACE_VISUAL_HINT and only fires when the space key is on the
+            // currently-visible keyboard (numeric / symbol layouts have no space bar to
+            // flash; the method on MainKeyboardView is itself null-safe).
+            if (settingsValues.mAutospaceVisualHint) {
+                final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+                if (kv != null) kv.startSpaceAutospaceFlash();
+            }
             // todo: why not remove phantom space state?
         }
     }

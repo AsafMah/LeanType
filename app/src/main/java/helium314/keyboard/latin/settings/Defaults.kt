@@ -134,6 +134,7 @@ object Defaults {
     const val PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT = 50
     const val PREF_GESTURE_DEBUG_DRAW_POINTS = false
     const val PREF_GESTURE_APOSTROPHE_KEY = false
+    const val PREF_AUTOSPACE_VISUAL_HINT = true
     const val PREF_SHOW_SETUP_WIZARD_ICON = true
     const val PREF_USE_CONTACTS = false
     const val PREF_USE_APPS = false

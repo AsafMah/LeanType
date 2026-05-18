@@ -73,6 +73,12 @@ fun TwoThumbTypingScreen(
             add(Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS)
         }
 
+        // PREF_AUTOSPACE_VISUAL_HINT: a brief flash on the space key whenever an autospace
+        // is actually inserted. Useful with grace-period typing (#1.2) so users can tell when
+        // the silent space-insertion was applied — feedback otherwise relies on watching the
+        // text field, which is awkward on small screens.
+        add(Settings.PREF_AUTOSPACE_VISUAL_HINT)
+
         // --- Tap / swipe interaction tweaks (#1.3 + #1.4) ---
         add(R.string.settings_category_two_thumb_typing_taps)
         add(Settings.PREF_GESTURE_TAP_DURING_SWIPE)
@@ -176,6 +182,10 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_GESTURE_DEBUG_DRAW_POINTS,
         R.string.gesture_debug_draw_points, R.string.gesture_debug_draw_points_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS)
+    },
+    Setting(context, Settings.PREF_AUTOSPACE_VISUAL_HINT,
+        R.string.autospace_visual_hint, R.string.autospace_visual_hint_summary) {
+        SwitchPreference(it, Defaults.PREF_AUTOSPACE_VISUAL_HINT)
     },
 )
 

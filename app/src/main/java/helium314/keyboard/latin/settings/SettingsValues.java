@@ -123,6 +123,7 @@ public class SettingsValues {
         public final int mGestureDualThumbMidlinePct;
         public final boolean mGestureDebugDrawPoints;
         public final boolean mGestureApostropheKey;
+        public final boolean mAutospaceVisualHint;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -330,6 +331,8 @@ public class SettingsValues {
                                 Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS);
                 mGestureApostropheKey = prefs.getBoolean(Settings.PREF_GESTURE_APOSTROPHE_KEY,
                                 Defaults.PREF_GESTURE_APOSTROPHE_KEY);
+                mAutospaceVisualHint = prefs.getBoolean(Settings.PREF_AUTOSPACE_VISUAL_HINT,
+                                Defaults.PREF_AUTOSPACE_VISUAL_HINT);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions

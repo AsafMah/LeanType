@@ -255,6 +255,10 @@
     <string name="gesture_apostrophe_key">Apostrophe key for gestures</string>
     <!-- Description for "gesture_apostrophe_key". -->
     <string name="gesture_apostrophe_key_summary">Show a swipeable apostrophe key so contractions like "it\'s" can be glided in one stroke</string>
+    <!-- Title of the setting that enables a brief visual flash on the space key whenever an automatic space is inserted. -->
+    <string name="autospace_visual_hint">Flash space key on auto-space</string>
+    <!-- Description for "autospace_visual_hint". -->
+    <string name="autospace_visual_hint_summary">Briefly highlight the space bar each time an automatic space is inserted</string>
 
     <!-- Preferences item for enabling clipboard history -->
     <string name="enable_clipboard_history">Enable clipboard history</string>

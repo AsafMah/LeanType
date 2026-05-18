@@ -8,6 +8,7 @@ package helium314.keyboard.keyboard;
 
 import android.animation.AnimatorInflater;
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -97,6 +98,16 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private static final float MINIMUM_XSCALE_OF_LANGUAGE_NAME = 0.8f;
     // Incognito icon to draw on spacebar when incognito mode is enabled
     private final Drawable mIncognitoIcon;
+    // --- Two-thumb typing (autospace visual hint) ------------------------------------------
+    // Holds a 0..1 alpha used to draw a translucent overlay rectangle on the space key
+    // whenever an automatic space is inserted. The {@link ValueAnimator} fades the alpha
+    // linearly from 1 → 0 over {@code SPACE_FLASH_DURATION_MS} and triggers
+    // {@link #invalidateKey(Key)} on each frame so the user sees a short pulse on the bar.
+    // A separate boolean would be enough for binary on/off, but a fading float looks far
+    // less jarring next to normal key feedback.
+    private float mSpaceFlashAlpha = 0f;
+    @Nullable private ValueAnimator mSpaceFlashAnimator;
+    private static final long SPACE_FLASH_DURATION_MS = 220L;
 
     // Stuff to draw altCodeWhileTyping keys.
     private final ObjectAnimator mAltCodeKeyWhileTypingFadeoutAnimator;
@@ -299,6 +310,32 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     public void setLanguageOnSpacebarAnimAlpha(final int alpha) {
         mLanguageOnSpacebarAnimAlpha = alpha;
         invalidateKey(mSpaceKey);
+    }
+
+    /**
+     * Two-thumb typing: fire a short visual flash on the space bar. Called by
+     * {@link helium314.keyboard.latin.inputlogic.InputLogic} when it has just inserted an
+     * automatic space, so the user gets unambiguous feedback that a silent space-insertion
+     * happened (especially important with the autospace grace-period feature where
+     * insertion is decoupled from the keystroke that caused it).
+     *
+     * No-ops if the space key isn't on the current keyboard (numeric / symbol layouts).
+     * Repeated calls cancel any in-flight animation and restart from full alpha, so a burst
+     * of autospaces feels like one continuous highlight rather than a stutter.
+     */
+    public void startSpaceAutospaceFlash() {
+        if (mSpaceKey == null) return;
+        if (mSpaceFlashAnimator != null) {
+            mSpaceFlashAnimator.cancel();
+        }
+        final ValueAnimator animator = ValueAnimator.ofFloat(1f, 0f);
+        animator.setDuration(SPACE_FLASH_DURATION_MS);
+        animator.addUpdateListener(a -> {
+            mSpaceFlashAlpha = (float) a.getAnimatedValue();
+            invalidateKey(mSpaceKey);
+        });
+        mSpaceFlashAnimator = animator;
+        animator.start();
     }
 
     public void setKeyboardActionListener(final KeyboardActionListener listener) {
@@ -779,6 +816,24 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         super.onDrawKeyTopVisuals(key, canvas, paint, params);
         final int code = key.getCode();
         if (code == Constants.CODE_SPACE) {
+            // Two-thumb typing: when an autospace was just inserted, draw a translucent
+            // highlight on top of the space key. {@code mSpaceFlashAlpha} is updated by the
+            // value animator started in {@link #startSpaceAutospaceFlash} and fades to 0.
+            if (mSpaceFlashAlpha > 0f) {
+                final int saved = paint.getColor();
+                final int savedAlpha = paint.getAlpha();
+                final Paint.Style savedStyle = paint.getStyle();
+                // Theme-tinted highlight (use the language-on-spacebar color as a proxy for
+                // "matches theme accent") at variable alpha. 180 of 255 at peak so even
+                // light themes pop without obscuring the space key visuals beneath.
+                paint.setStyle(Paint.Style.FILL);
+                paint.setColor(mLanguageOnSpacebarTextColor);
+                paint.setAlpha((int) (180 * mSpaceFlashAlpha));
+                canvas.drawRect(0f, 0f, key.getWidth(), key.getHeight(), paint);
+                paint.setStyle(savedStyle);
+                paint.setColor(saved);
+                paint.setAlpha(savedAlpha);
+            }
             // Draw incognito icon watermark if incognito mode is enabled
             if (Settings.getValues().mIncognitoModeEnabled && mIncognitoIcon != null) {
                 drawIncognitoOnSpacebar(key, canvas);

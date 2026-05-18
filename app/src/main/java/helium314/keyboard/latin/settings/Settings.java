@@ -138,6 +138,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT = "gesture_dual_thumb_midline_pct";
     public static final String PREF_GESTURE_DEBUG_DRAW_POINTS = "gesture_debug_draw_points";
     public static final String PREF_GESTURE_APOSTROPHE_KEY = "gesture_apostrophe_key";
+    public static final String PREF_AUTOSPACE_VISUAL_HINT = "autospace_visual_hint";
     public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREF_USE_CONTACTS = "use_contacts";
     public static final String PREF_USE_APPS = "use_apps";
