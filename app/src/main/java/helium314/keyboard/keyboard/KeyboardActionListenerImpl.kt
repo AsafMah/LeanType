@@ -101,6 +101,16 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         when (primaryCode) {
             KeyCode.TOGGLE_AUTOCORRECT -> return settings.toggleAutoCorrect()
+            KeyCode.TOGGLE_AUTO_CAP -> {
+                settings.toggleAutoCap()
+                keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
+                return
+            }
+            KeyCode.TOGGLE_FORCE_AUTO_CAP -> {
+                settings.toggleForceAutoCaps()
+                keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
+                return
+            }
             KeyCode.TOGGLE_INCOGNITO_MODE -> {
                 settings.toggleAlwaysIncognitoMode()
                 // Invalidate keyboard to update spacebar incognito icon immediately

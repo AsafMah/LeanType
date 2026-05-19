@@ -39,6 +39,8 @@ fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
 fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: String?) {
     // settings need to be updated when buttons change
     if (key != Settings.PREF_AUTO_CORRECTION
+        && key != Settings.PREF_AUTO_CAP
+        && key != Settings.PREF_FORCE_AUTO_CAPS
         && key != Settings.PREF_ALWAYS_INCOGNITO_MODE
         && key?.startsWith(Settings.PREF_ONE_HANDED_MODE_PREFIX) == false)
         return
@@ -57,6 +59,8 @@ private fun setToolbarButtonActivatedState(button: ImageButton) {
         ONE_HANDED -> Settings.getValues().mOneHandedModeEnabled
         SPLIT -> Settings.getValues().mIsSplitKeyboardEnabled
         AUTOCORRECT -> Settings.getValues().mAutoCorrectionEnabledPerUserSettings
+        AUTO_CAP -> Settings.getValues().mAutoCap
+        FORCE_AUTO_CAP -> Settings.getValues().mForceAutoCaps
         else -> true
     }
 }
@@ -79,6 +83,8 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     INCOGNITO -> KeyCode.TOGGLE_INCOGNITO_MODE
     TOUCHPAD -> KeyCode.TOGGLE_TOUCHPAD_MODE
     AUTOCORRECT -> KeyCode.TOGGLE_AUTOCORRECT
+    AUTO_CAP -> KeyCode.TOGGLE_AUTO_CAP
+    FORCE_AUTO_CAP -> KeyCode.TOGGLE_FORCE_AUTO_CAP
     CLEAR_CLIPBOARD -> KeyCode.CLIPBOARD_CLEAR_HISTORY
     CLOSE_HISTORY -> KeyCode.ALPHA
     EMOJI -> KeyCode.EMOJI
@@ -132,7 +138,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 // names need to be aligned with resources strings (using lowercase of key.name)
 enum class ToolbarKey {
     VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
-    INCOGNITO, TOUCHPAD, AUTOCORRECT, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
+    INCOGNITO, TOUCHPAD, AUTOCORRECT, AUTO_CAP, FORCE_AUTO_CAP, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
     PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, PROOFREAD, TRANSLATE,
     CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, CUSTOM_AI_4, CUSTOM_AI_5,
     CUSTOM_AI_6, CUSTOM_AI_7, CUSTOM_AI_8, CUSTOM_AI_9, CUSTOM_AI_10

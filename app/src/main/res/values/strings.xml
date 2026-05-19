@@ -1108,6 +1108,7 @@ New dictionary:
     <!-- Option to enable touchpad mode when swiping the spacebar -->
     <string name="space_swipe_touchpad_mode_entry">Touchpad mode</string>
     <string name="touchpad_sensitivity">Touchpad sensitivity</string>
+    <string name="force_auto_caps">Force auto-capitalize</string>
     <string name="force_auto_caps_title">Force auto-capitalization</string>
     <string name="force_auto_caps_summary">Force sentence capitalization on all text fields except passwords</string>
     <!-- Title of the setting for variable toolbar direction -->
