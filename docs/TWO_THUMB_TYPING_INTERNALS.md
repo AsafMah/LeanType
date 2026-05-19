@@ -31,15 +31,16 @@ The HeliBoard 5-file pref pattern is preserved everywhere: each new pref shows u
 
 ## 2. Phases of the PR
 
-The PR landed in three architectural waves. The current state reflects wave 3 — earlier waves are listed for context because their constants and helpers remain in the codebase (some dormant for backwards-compat).
+The PR landed in four architectural waves. The current state reflects wave 4 — earlier waves are listed for context because their constants and helpers remain in the codebase (some dormant for backwards-compat).
 
 | Wave | Commits | What it built | Status |
 | ---: | :--- | :--- | :--- |
 | 1 | `ea078058`–`13db794b` | Scaffolding + per-feature prefs (manual spacing, autospace grace, tap-during-swipe, tap-promotion, fragment backspace, apostrophe key, dual-thumb hinting, debug overlay) | Foundation; mostly still used |
 | 2 | `72acb111`, `37f45e67` | Tap-promotion refactor (drop deferred multi-tap chain in `PointerTracker`, move "extend" decision to `InputLogic`) + visual flash on autospace | Flash later replaced by progress bar |
 | 3 | `b921c58f`–`f53a8e97` | **Unified combining-mode state machine** (replaces wave-1/2's split grace + tap-promotion + flash) | Current production design |
+| 4 | `3330dfd4`–`f2d66c3d` | Toolbar toggles (AUTOSPACE / AUTO_CAP / FORCE_AUTO_CAP), forward-delete keycode, daily-driver fixes (PHANTOM after auto-commit, auto-cap gesture results) | Current |
 
-The rest of this guide walks through wave 3 in detail, calling out the wave 1/2 mechanisms it superseded so a reviewer can match what's in the code to what the design ended up wanting.
+The rest of this guide walks through waves 3 and 4 in detail, calling out the wave 1/2 mechanisms they superseded so a reviewer can match what's in the code to what the design ended up wanting.
 
 ---
 
@@ -232,6 +233,94 @@ canvas.drawRect(0f, key.getHeight() - barHeight, barWidth, key.getHeight(), pain
 ```
 
 An earlier iteration drew a translucent themed overlay across the whole keyboard too; the user found that too aggressive so it was removed. The spacebar bar alone is now the sole feedback for combining-mode activity.
+
+### 3.11 Wave-4 daily-driver fixes
+
+Two regressions surfaced once the user started typing real prose with combining mode on:
+
+**PHANTOM after timer-driven autospace.** The timer-driven commit used to set
+`mSpaceState = SpaceState.NONE` after inserting the autospace. That's wrong:
+HeliBoard's normal flow uses `SpaceState.PHANTOM` to mark "this trailing space
+is soft — strip it if a punctuation character follows so the user gets
+`hello, world` not `hello , world`". With `NONE`, the existing
+`handleSeparatorEvent` PHANTOM-aware strip path was never taken. Fix is one
+line in `onCombiningGraceExpired`:
+
+```java
+mSpaceState = autospaceInserted ? SpaceState.PHANTOM : SpaceState.NONE;
+```
+
+`autospaceInserted` was already being computed (cursor delta around the
+`insertAutomaticSpaceIfOptionsAndTextAllow` call) for the `revertCommit`
+fix-up; it doubles here. URL/email contexts (where the helper skipped the
+space) stay on `NONE`.
+
+**Gesture results honour shift state.** The recognizer always emits lowercase,
+so swiping `"Hello"` at the start of a sentence produced `"hello"`. The fix
+sits at the top of `onUpdateTailBatchInputCompleted`, right after the seed
+strip and before `prevTypedWord` concat, and is gated on
+`!extendExistingCompose` so continuation gestures keep the casing the user set
+for the head of the word:
+
+```java
+if (!extendExistingCompose && !batchInputText.isEmpty()) {
+    final int shiftMode = keyboardSwitcher.getKeyboardShiftMode();
+    if (shiftMode == CAPS_MODE_MANUAL_SHIFTED
+            || shiftMode == CAPS_MODE_AUTO_SHIFTED) {
+        batchInputText = StringUtils.capitalizeFirstCodePoint(batchInputText, locale);
+    } else if (shiftMode == CAPS_MODE_AUTO_SHIFT_LOCKED
+            || shiftMode == CAPS_MODE_MANUAL_SHIFT_LOCKED) {
+        batchInputText = batchInputText.toUpperCase(locale);
+    }
+}
+```
+
+The shift mode comes from `keyboardSwitcher.getKeyboardShiftMode()` which is
+already kept in sync by `requestUpdatingShiftState` calls scattered through
+the codebase. We don't need to recompute auto-caps state here; the keyboard's
+visible shift indicator IS the source of truth.
+
+---
+
+## 3a. Toolbar toggles (wave 4)
+
+A small but visible addition: three new toolbar keys, each modelled on the
+existing `AUTOCORRECT` toolbar key. The same 7-touchpoint pattern repeats for
+each: KeyCode + checkAndConvertCode allow-list, `ToolbarKey` enum entry +
+`getCodeForToolbarKey` mapping, three `KeyboardIconsSet` icon-set entries
+(default / lxx / rounded), `KeyboardActionListenerImpl` handler with
+`invalidateAllKeys` so the activated state refreshes immediately,
+`Settings.toggle*` method, `setToolbarButtonActivatedState` clause,
+`setToolbarButtonsActivatedStateOnPrefChange` pref-key trigger, and an
+accessibility content-description string.
+
+| ToolbarKey | KeyCode | Underlying pref | Notes |
+| --- | :---: | --- | --- |
+| `AUTOSPACE` | `-246` | New `PREF_AUTOSPACE_ENABLED` (default true) | Master switch ANDed into `SettingsValues.shouldInsertSpacesAutomatically()`. The input-type guard (password / email / URL) still applies on top, so the toolbar button shows as *inactive* in those fields even when the master is on — matching reality. |
+| `AUTO_CAP` | `-247` | Existing `PREF_AUTO_CAP` | Plain wrapper. Activated-state reads `Settings.getValues().mAutoCap`. |
+| `FORCE_AUTO_CAP` | `-248` | Existing `PREF_FORCE_AUTO_CAPS` | Plain wrapper. Activated-state reads `Settings.getValues().mForceAutoCaps`. |
+
+Defaults for the toolbar itself are **unchanged** — neither key is in
+`defaultToolbarPref` or `defaultPinnedToolbarPref`, so users opt in via the
+toolbar customizer dialog. This is a separate decision from the prefs they
+toggle.
+
+`AUTO_CAP` / `FORCE_AUTO_CAP` were delegated to a sub-agent on a parallel
+branch (`add-autocap-toolbar-toggles`) and merged into `main` first, then
+forward-merged into `copilot/improve-two-thumb-typing` — the conflict
+resolution was uniformly "both branches added an entry in the same enum / when
+/ icon map", concatenated trivially.
+
+### Forward-delete keycode
+
+Marginally related: `KeyCode.FORWARD_DELETE = -9` was previously commented out
+in the codebase. Uncommented + allow-listed in `checkAndConvertCode` + mapped
+to `KeyEvent.KEYCODE_FORWARD_DEL` in `keyCodeToKeyEventCode`. A new
+`KeyLabel.DEL = "del"` constant exposes it for simple-format custom layouts.
+No new handler is needed — the existing negative-keycode →
+`sendDownUpKeyEventWithMetaState` fallback in `InputLogic` routes it through
+the raw key-event path. Useful for the user-imported "power" symbol layout
+(not shipped as an asset — see §7).
 
 ---
 
