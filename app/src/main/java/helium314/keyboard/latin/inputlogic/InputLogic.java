@@ -3338,7 +3338,15 @@ public final class InputLogic {
         // {@code mGestureExtendsByTapPromotion} was set in onStartBatchInput so the
         // promotion-window decision is made at gesture-start time (a long gesture shouldn't
         // age out of the promotion window between start and end).
-        final boolean extendExistingCompose = (settingsValues.mGestureManualSpacing || mGestureExtendsByTapPromotion)
+        // Multi-part word composition (#1.6): when combining mode is armed AND a composing
+        // word exists, the next gesture extends it (tech + nology -> technology). This
+        // unifies what was previously only possible via manual-spacing or tap-promotion.
+        final boolean combiningExtendsSwipe = settingsValues.mMultipartAutoExtendInCombining
+                && settingsValues.mCombiningGraceMs > 0
+                && mInCombiningMode;
+        final boolean extendExistingCompose = (settingsValues.mGestureManualSpacing
+                        || mGestureExtendsByTapPromotion
+                        || combiningExtendsSwipe)
                 && mWordComposer.isComposingWord()
                 && !mWordComposer.isCursorFrontOrMiddleOfComposingWord();
         final String prevTypedWord = extendExistingCompose ? mWordComposer.getTypedWord() : "";
@@ -3388,11 +3396,15 @@ public final class InputLogic {
             // recent fragment, and picking one would replace the WHOLE composing span with a
             // single-fragment alternative — catastrophic data loss for the user.
             mWordComposer.unsetBatchMode();
-            // Also blank the suggestion strip: the entries computed during the gesture
-            // (live updates) are for the last fragment only and would be misleading targets
-            // now that the composing span is longer than that fragment. Subsequent taps will
-            // repopulate suggestions for the full composing word via the normal path.
-            setSuggestedWords(SuggestedWords.getEmptyInstance());
+            // Multi-part word composition (#1.6): the suggestion strip was computed during
+            // the gesture and reflects only the LAST fragment, which would mislead the user
+            // if they tapped it (replacing the whole composing span with one fragment). Two
+            // options: blank the strip (legacy) or repopulate it for the full composing word.
+            if (settingsValues.mMultipartFullWordSuggestions) {
+                performUpdateSuggestionStripSync(settingsValues, SuggestedWords.INPUT_STYLE_TYPING);
+            } else {
+                setSuggestedWords(SuggestedWords.getEmptyInstance());
+            }
             // PREF_GESTURE_FRAGMENT_BACKSPACE: record this gesture as a fragment boundary
             // so backspace can pop the whole word at once. When extending an existing
             // composing word, both the prior fragments AND this new one are already in the
