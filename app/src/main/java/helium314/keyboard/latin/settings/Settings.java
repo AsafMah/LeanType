@@ -340,6 +340,16 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         mPrefs.edit().putBoolean(Settings.PREF_AUTO_CORRECTION, !oldValue).apply();
     }
 
+    public void toggleAutoCap() {
+        final boolean oldValue = mPrefs.getBoolean(PREF_AUTO_CAP, Defaults.PREF_AUTO_CAP);
+        mPrefs.edit().putBoolean(Settings.PREF_AUTO_CAP, !oldValue).apply();
+    }
+
+    public void toggleForceAutoCaps() {
+        final boolean oldValue = mPrefs.getBoolean(PREF_FORCE_AUTO_CAPS, Defaults.PREF_FORCE_AUTO_CAPS);
+        mPrefs.edit().putBoolean(Settings.PREF_FORCE_AUTO_CAPS, !oldValue).apply();
+    }
+
     public static boolean readGestureDynamicPreviewEnabled(final SharedPreferences prefs) {
         final boolean followSystem = prefs.getBoolean(PREF_GESTURE_DYNAMIC_PREVIEW_FOLLOW_SYSTEM,
                 Defaults.PREF_GESTURE_DYNAMIC_PREVIEW_FOLLOW_SYSTEM);

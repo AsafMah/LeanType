@@ -1,0 +1,12 @@
+<!--
+    SPDX-License-Identifier: Apache-2.0
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <path
+        android:fillColor="#FFF"
+        android:pathData="M480,120L600,240L520,240L520,320L440,320L440,240L360,240L480,120ZM380,672L580,672L616,760L700,760L510,320L450,320L260,760L344,760L380,672ZM480,399L554.8,600L405.2,600L480,399Z" />
+</vector>
