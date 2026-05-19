@@ -100,6 +100,7 @@ object Defaults {
     const val PREF_SPACE_HORIZONTAL_SWIPE = "move_cursor"
     const val PREF_SPACE_VERTICAL_SWIPE = "touchpad_mode"
     const val PREF_DELETE_SWIPE = true
+    const val PREF_AUTOSPACE_ENABLED = true
     const val PREF_AUTOSPACE_AFTER_PUNCTUATION = false
     const val PREF_AUTOSPACE_AFTER_SUGGESTION = true
     const val PREF_AUTOSPACE_AFTER_GESTURE_TYPING = true

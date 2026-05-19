@@ -101,6 +101,13 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         when (primaryCode) {
             KeyCode.TOGGLE_AUTOCORRECT -> return settings.toggleAutoCorrect()
+            KeyCode.TOGGLE_AUTOSPACE -> {
+                settings.toggleAutospace()
+                // Refresh the toolbar so the AUTOSPACE button's activated state updates;
+                // shouldInsertSpacesAutomatically() is re-read on the next draw.
+                keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
+                return
+            }
             KeyCode.TOGGLE_INCOGNITO_MODE -> {
                 settings.toggleAlwaysIncognitoMode()
                 // Invalidate keyboard to update spacebar incognito icon immediately

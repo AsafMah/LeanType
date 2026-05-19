@@ -83,6 +83,9 @@ public class SettingsValues {
         public final int mTouchpadSensitivity;
         public final boolean mForceAutoCaps;
         public final boolean mDeleteSwipeEnabled;
+        // Master autospace switch (see Settings.PREF_AUTOSPACE_ENABLED). Final gating happens
+        // in shouldInsertSpacesAutomatically() so this works alongside the input-type guard.
+        public final boolean mAutospaceEnabled;
         public final boolean mAutospaceAfterPunctuation;
         public final boolean mAutospaceAfterSuggestion;
         public final boolean mAutospaceAfterGestureTyping;
@@ -380,6 +383,8 @@ public class SettingsValues {
                                 Defaults.PREF_TOUCHPAD_SENSITIVITY);
                 mForceAutoCaps = prefs.getBoolean(Settings.PREF_FORCE_AUTO_CAPS, Defaults.PREF_FORCE_AUTO_CAPS);
                 mDeleteSwipeEnabled = prefs.getBoolean(Settings.PREF_DELETE_SWIPE, Defaults.PREF_DELETE_SWIPE);
+                mAutospaceEnabled = prefs.getBoolean(Settings.PREF_AUTOSPACE_ENABLED,
+                                Defaults.PREF_AUTOSPACE_ENABLED);
                 mAutospaceAfterPunctuation = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION,
                                 Defaults.PREF_AUTOSPACE_AFTER_PUNCTUATION);
                 mAutospaceAfterSuggestion = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_SUGGESTION,
@@ -499,7 +504,12 @@ public class SettingsValues {
         }
 
         public boolean shouldInsertSpacesAutomatically() {
-                return mInputAttributes.mShouldInsertSpacesAutomatically;
+                // AND of:
+                //   * master toggle (PREF_AUTOSPACE_ENABLED, toggleable from the toolbar
+                //     AUTOSPACE key) — user-controlled global on/off.
+                //   * input-type guard (mShouldInsertSpacesAutomatically) — automatically off
+                //     for password / email / URL fields regardless of the master toggle.
+                return mAutospaceEnabled && mInputAttributes.mShouldInsertSpacesAutomatically;
         }
 
         public boolean isLanguageSwitchKeyEnabled() {
