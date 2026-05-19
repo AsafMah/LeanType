@@ -108,12 +108,22 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
                 keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
                 return
             }
-            KeyCode.TOGGLE_INCOGNITO_MODE -> {
-                settings.toggleAlwaysIncognitoMode()
-                // Invalidate keyboard to update spacebar incognito icon immediately
+            KeyCode.TOGGLE_AUTO_CAP -> {
+                settings.toggleAutoCap()
                 keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
                 return
             }
+            KeyCode.TOGGLE_FORCE_AUTO_CAP -> {
+                settings.toggleForceAutoCaps()
+                keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
+                return
+            }
+            KeyCode.TOGGLE_INCOGNITO_MODE -> {
+            settings.toggleAlwaysIncognitoMode()
+            // Invalidate keyboard to update spacebar incognito icon immediately
+            keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
+            return
+        }
             KeyCode.TOGGLE_TOUCHPAD_MODE -> {
                 PointerTracker.sPersistentTouchpadModeActive = !PointerTracker.sPersistentTouchpadModeActive
                 if (PointerTracker.sPersistentTouchpadModeActive) {
