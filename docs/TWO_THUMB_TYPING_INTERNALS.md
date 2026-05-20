@@ -39,6 +39,7 @@ The PR landed in four architectural waves. The current state reflects wave 4 —
 | 2 | `72acb111`, `37f45e67` | Tap-promotion refactor (drop deferred multi-tap chain in `PointerTracker`, move "extend" decision to `InputLogic`) + visual flash on autospace | Flash later replaced by progress bar |
 | 3 | `b921c58f`–`f53a8e97` | **Unified combining-mode state machine** (replaces wave-1/2's split grace + tap-promotion + flash) | Current production design |
 | 4 | `3330dfd4`–`f2d66c3d` | Toolbar toggles (AUTOSPACE / AUTO_CAP / FORCE_AUTO_CAP), forward-delete keycode, daily-driver fixes (PHANTOM after auto-commit, auto-cap gesture results) | Current |
+| 5 | `fedd3932`–`4040e755` | **Multi-part word composition** (swipe+swipe, tap+swipe, swipe+tap → one composing word) on `copilot/multi-part-words`, merged into `main` as `791344b3` | Current |
 
 The rest of this guide walks through waves 3 and 4 in detail, calling out the wave 1/2 mechanisms they superseded so a reviewer can match what's in the code to what the design ended up wanting.
 
@@ -310,6 +311,313 @@ branch (`add-autocap-toolbar-toggles`) and merged into `main` first, then
 forward-merged into `copilot/improve-two-thumb-typing` — the conflict
 resolution was uniformly "both branches added an entry in the same enum / when
 / icon map", concatenated trivially.
+
+---
+
+## 4. Multi-part word composition (wave 5)
+
+### 4.1 Goal
+
+Compose ONE word from multiple input fragments — `tech` (swipe) + `nology`
+(swipe) → `technology`, `tech` (swipe) + `y` (tap) → `Techy`, `te` (tap) +
+`chnology` (swipe) → `technology`. Backspace pops the last fragment so
+fixing a misjoined word is one keystroke. Triggered by combining mode: as
+long as the grace timer is running, the next input extends the current
+composing word.
+
+Wave 3's combining-mode gave us the timing; the remaining work was making
+the gesture lib actually *recognise* the joined word. Wave-1 manual-spacing
+had the same architecture (concat `prevTypedWord` + new batch result) but
+inherited the same bug — the recognizer only sees the new fragment and
+returns nonsense for it (`biology` for the `nology` half of `technology`).
+
+### 4.2 New prefs
+
+| Pref key | Default | Purpose |
+| --- | :---: | --- |
+| `PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING` | true | Combining mode implies extend for next input |
+| `PREF_MULTIPART_TAP_SEED_GESTURE` | true | Seed the next gesture's pointer trail from the previous fragment |
+| `PREF_MULTIPART_FULL_WORD_SUGGESTIONS` | true | Strip shows alternatives for the whole composing word (not the last fragment) |
+| `PREF_MULTIPART_JOIN_KEY_MODE` | `"off"` | Explicit "join next" modifier — scaffolded, UX TBD |
+
+`PREF_GESTURE_FRAGMENT_BACKSPACE` was bumped from default-off to default-on
+so backspace-pops-fragment "just works" once multi-part composition is on.
+
+### 4.3 Extending via combining mode (todo 1 — `combining-extend-swipes`)
+
+The wave-3 gesture-extend decision had two gates (`mGestureManualSpacing` /
+`mGestureExtendsByTapPromotion`). Wave 5 adds a third:
+
+```java
+final boolean combiningExtendsSwipe = sv.mMultipartAutoExtendInCombining
+        && sv.mCombiningGraceMs > 0
+        && mInCombiningMode;
+final boolean extendExistingCompose = (sv.mGestureManualSpacing
+                || mGestureExtendsByTapPromotion
+                || combiningExtendsSwipe)
+        && mWordComposer.isComposingWord()
+        && !mWordComposer.isCursorFrontOrMiddleOfComposingWord();
+```
+
+That same condition is mirrored at `onStartBatchInput` (so the lib gets the
+right snapshot at gesture-start) and at `onUpdateTailBatchInputCompleted`
+(where the concat happens).
+
+### 4.4 Full-word suggestions (todo 4 — `suggestion-strip-full-word`)
+
+Wave 1's extend path called `setSuggestedWords(EMPTY)` after concat. That
+felt safer ("the gesture lib's suggestions are for one fragment so we'd
+mislead the user by showing them"). But it meant after every multi-part
+gesture the strip went blank, and the user had no way to recover from a bad
+recognition without a backspace dance. Wave 5 replaces the blank with a
+normal suggestion run over the new full composing word:
+
+```java
+if (sv.mMultipartFullWordSuggestions) {
+    performUpdateSuggestionStripSync(sv, SuggestedWords.INPUT_STYLE_TYPING);
+} else {
+    setSuggestedWords(SuggestedWords.getEmptyInstance());   // legacy
+}
+```
+
+This is what made the recognizer-accuracy problem survivable while we
+worked on the actual recogniser fix — even if `tech+nology` came out wrong,
+the strip now showed `technology` as an option.
+
+### 4.5 The merged-trail fix (todo 3 — `tap-then-swipe-seed`, the big one)
+
+Multiple attempts:
+
+1. **First try — concat only, trust top suggestion.** Got `techbiology`
+   because the lib was fed only the `nology` swipe's points in isolation.
+2. **Second try — prefer-seed-letter pick from the suggestion list.**
+   Scanned the lib's top-5 for a candidate starting with the seed letter.
+   Better but unreliable: the lib literally never produces continuation
+   words like `hnology`, so for `te+chnology` it returned things like
+   `[exhuming, echoing, ecology, ...]` — nothing actually scoreable as
+   "this is the continuation".
+3. **Third try — feed the lib both fragments' raw pointers via
+   `InputPointers.appendAll`.** Regressed `silo` (the lib output `I` because
+   the tap fragment's `time=0` synthetic coords created a huge time
+   discontinuity at the merge boundary).
+4. **Final fix — feed both fragments with *re-timed* pointers.** This is the
+   committed solution (`4040e755`).
+
+The mechanism lives in `WordComposer`:
+
+```java
+// Multi-part word composition (#1.6): snapshot of the prior fragment(s)
+// gesture trail. When set, every subsequent setBatchInputPointers call
+// PREPENDS this base with RE-TIMED coordinates so the merged stream looks
+// like one continuous stroke to the native gesture lib.
+private final InputPointers mExtendBatchInputBase = new InputPointers(MAX_WORD_LENGTH);
+private boolean mExtendBatchInputBaseSet;
+private static final int EXTEND_BASE_POINT_INTERVAL_MS = 25;
+private static final int EXTEND_BASE_GAP_BEFORE_NEW_MS  = 60;
+```
+
+`setBatchInputPointers` is the merge point. The lib calls it once per
+gesture-progress update; we transparently splice the prior trail in:
+
+```java
+public void setBatchInputPointers(final InputPointers batchPointers) {
+    if (mExtendBatchInputBaseSet && mExtendBatchInputBase.getPointerSize() > 0
+            && batchPointers.getPointerSize() > 0) {
+        final int baseSize = mExtendBatchInputBase.getPointerSize();
+        final int firstNewTime = batchPointers.getTimes()[0];
+        final int baseLastTime = firstNewTime - EXTEND_BASE_GAP_BEFORE_NEW_MS;
+        final int baseFirstTime = baseLastTime - (baseSize - 1) * EXTEND_BASE_POINT_INTERVAL_MS;
+        mInputPointers.reset();
+        for (int i = 0; i < baseSize; i++) {
+            mInputPointers.addPointer(baseX[i], baseY[i], 0,
+                    baseFirstTime + i * EXTEND_BASE_POINT_INTERVAL_MS);
+        }
+        mInputPointers.appendAll(batchPointers);
+    } else {
+        mInputPointers.set(batchPointers);
+    }
+    mIsBatchMode = true;
+}
+```
+
+Re-timing is the whole game. The 25 ms inter-point interval looks like a
+naturally hand-drawn swipe; the 60 ms gap before the new gesture's first
+point is well within the lib's "single continuous stroke" tolerance. Both
+constants were picked empirically — bigger gaps started looking like
+distinct strokes; smaller ones made the recognizer pick up spurious
+high-velocity glyphs at the merge boundary.
+
+The "extend base" gets set at `onStartBatchInput` when extending, *before*
+the lib runs, and cleared at `onUpdateTailBatchInputCompleted` after it's
+been consumed:
+
+```java
+// onStartBatchInput
+if (extendComposingWord
+        && sv.mMultipartAutoExtendInCombining
+        && sv.mCombiningGraceMs > 0) {
+    mWordComposer.setExtendBatchInputBase(mWordComposer.getInputPointers());
+}
+
+// onUpdateTailBatchInputCompleted
+final boolean usedMergedTrail = mWordComposer.isExtendBatchInputBaseSet();
+mWordComposer.setExtendBatchInputBase(null);
+final String prevTypedWord = (extendExistingCompose && !usedMergedTrail)
+        ? mWordComposer.getTypedWord() : "";
+```
+
+The `!usedMergedTrail` gate is critical: when the merged-trail path
+produces the *whole* word in the lib's output (e.g. `technology`),
+concatenating `prevTypedWord` ("tech") again would give `techtechnology`.
+The legacy wave-1 concat path still applies for manual-spacing mode (where
+the lib still sees only one fragment).
+
+### 4.6 Disabling the PointerTracker single-point seed under multi-part
+
+Wave 3's "silo" fix planted a single synthetic point at the previous tap's
+coordinate. With the wave-5 merged-trail approach that point would (a)
+duplicate context already in the extend base and (b) be at the merge
+boundary with a stale-time, exactly the kind of discontinuity that breaks
+the recognizer. So the seed is suppressed when multi-part is on:
+
+```java
+final boolean multipartExtendActive = sv.mMultipartAutoExtendInCombining
+        && sv.mCombiningGraceMs > 0;
+if (!multipartExtendActive
+        && sv.mCombiningGraceMs > 0
+        && sLastLetterTapCodepoint > 0 …) {
+    // wave-3 seed (now only used when multi-part is off)
+}
+```
+
+Result: `silo` still works (the merged-trail path covers the same case more
+robustly), and multi-part swipes don't fight the seed.
+
+### 4.7 Prefer plain-letter suggestions when extend-base is active
+
+The lib occasionally ranks obscure hyphenated/CamelCase dictionary entries
+above the obvious answer — for `te+chnology` we saw
+`[technon-U, technology, techMolly, techbiology, techmollify]`. When the
+merged-trail path is active and the top suggestion looks "weird" (contains
+non-letters or mid-word capitals), walk the list and prefer the
+highest-ranked plain-letter candidate:
+
+```java
+private static boolean isPlainLetterWord(final String s) {
+    for (int i = 0; i < s.length(); ) {
+        final int cp = s.codePointAt(i);
+        if (cp == '\'') {
+            // apostrophes ok
+        } else if (!Character.isLetter(cp)) {
+            return false;
+        } else if (i > 0 && Character.isUpperCase(cp)) {
+            return false;   // mid-word capital
+        }
+        i += Character.charCount(cp);
+    }
+    return true;
+}
+
+if (mWordComposer.isExtendBatchInputBaseSet()
+        && !TextUtils.isEmpty(batchInputText)
+        && !isPlainLetterWord(batchInputText)) {
+    for (int i = 1; i < suggestedWords.size(); i++) {
+        final String cand = suggestedWords.getWord(i);
+        if (cand != null && !cand.isEmpty() && isPlainLetterWord(cand)) {
+            batchInputText = cand;
+            break;
+        }
+    }
+}
+```
+
+Only kicks in when the merged-trail path is active, so single-fragment
+gestures aren't affected.
+
+### 4.8 Fragment-boundary backspace under multi-part (todo 5)
+
+Wave 1's `recordFragmentBoundaryIfTracking` and `tryFragmentBackspace`
+required *both* `mGestureManualSpacing` and `mGestureFragmentBackspace`.
+Wave 5 adds a second eligibility path so multi-part composition (no
+manual-spacing required) also tracks + pops boundaries:
+
+```java
+final boolean legacyTracking = sv.mGestureManualSpacing
+        && sv.mGestureFragmentBackspace;
+final boolean multipartTracking = sv.mMultipartAutoExtendInCombining
+        && sv.mCombiningGraceMs > 0
+        && sv.mGestureFragmentBackspace;
+if (!legacyTracking && !multipartTracking) return;
+```
+
+This wired through both `recordFragmentBoundaryIfTracking` (the producer,
+already called from `handleNonSeparatorEvent` for tap-extensions and from
+`onUpdateTailBatchInputCompleted` for gesture-extensions) and
+`tryFragmentBackspace` (the consumer in `handleBackspaceEvent`). Backspace
+now snaps the composing word back to the previous boundary in one tap, no
+matter whether the fragment was a tap or a swipe.
+
+### 4.9 The PHANTOM-race fix (related, from end of wave 4)
+
+A subtle bug that the multi-part work exposed: with `mAutospaceAfterGestureTyping`
+on, gesture-end set `mSpaceState = SpaceState.PHANTOM`. When the user
+immediately tapped the next letter (e.g. `tech` → `y`),
+`handleNonSpecialCharacterEvent`'s PHANTOM branch would commit the
+composing word ("tech"), insert an autospace, and only THEN start a new
+composing word for `y` — giving `tech y` instead of `Techy`.
+
+The fix gates the PHANTOM-set on `mCombiningGraceMs <= 0`. When combining
+mode is on, it owns post-gesture autospace timing via the grace timer —
+there shouldn't be a parallel PHANTOM mechanism setting up a race:
+
+```java
+if (sv.mAutospaceAfterGestureTyping && !extendExistingCompose
+        && sv.mCombiningGraceMs <= 0) {
+    mSpaceState = SpaceState.PHANTOM;
+}
+```
+
+Committed as `a63e9ea3` on `copilot/improve-two-thumb-typing` and carried
+through into wave 5.
+
+### 4.10 Settings UI
+
+All four new prefs sit under the existing Two-Thumb Typing screen, grouped
+with the existing combining-mode prefs. `PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING`
+gates visibility of the other three (no point showing
+seed-gesture / full-word-suggestions / join-key options if extension itself
+is off). `PREF_GESTURE_FRAGMENT_BACKSPACE` is surfaced in *both* the
+multi-part group and the manual-spacing group; `SettingsContainer` dedupes
+on key so we don't get duplicate entries.
+
+### 4.11 What's deliberately not done
+
+`PREF_MULTIPART_JOIN_KEY_MODE` is scaffolded (Settings/Defaults/SettingsValues/
+strings.xml/UI entry) but no input handler is wired up yet. The intent was
+an explicit "force-extend the next input" modifier (long-press space, or a
+dedicated symbols-layer key) for cases where the grace window times out
+but the user still wants to extend. Pending a UX decision; the pref slot
+exists so we don't have to revisit the scaffolding later.
+
+`indicator-armed-state` (a distinct visual indicator for "explicit join
+armed" vs "grace window open") is similarly deferred — comes with the
+join-key UX work.
+
+---
+
+## 5. Test matrix (manual, on-device)
+
+The intended-behaviour matrix that wave 5 validated against, in case a
+future refactor needs to re-check it:
+
+| Input | Combining grace = 0 | Combining grace > 0 |
+| --- | --- | --- |
+| `silo` (tap `s` + swipe `ilo`) | `s ilo` (legacy) | `silo` ✓ |
+| `tech` + `nology` (swipe + swipe) | `tech nology` | `technology` ✓ |
+| `tech` + `y` (swipe + tap) | `tech y` (PHANTOM bug, fixed in `a63e9ea3`) | `Techy` ✓ |
+| `te` + `chnology` (tap + swipe) | `te chnology` | `technology` ✓ |
+| Multi-part word + backspace | char-delete | pops last fragment ✓ (with `PREF_GESTURE_FRAGMENT_BACKSPACE` on, now default) |
+
 
 ### Forward-delete keycode
 
