@@ -63,6 +63,9 @@ fun GestureTypingScreen(
             add(R.string.settings_category_behavior)
             add(Settings.PREF_GESTURE_SPACE_AWARE)
             add(Settings.PREF_GESTURE_FAST_TYPING_COOLDOWN)
+            // Two-thumb typing settings have moved to their own screen
+            // (see TwoThumbTypingScreen / SettingsDestination.TwoThumbTyping); deliberately
+            // not duplicated here to keep the gesture screen focused.
         }
 
         add(R.string.settings_category_gestures_advanced)

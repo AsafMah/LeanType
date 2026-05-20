@@ -40,6 +40,7 @@ fun MainSettingsScreen(
     onClickPreferences: () -> Unit,
     onClickToolbar: () -> Unit,
     onClickGestureTyping: () -> Unit,
+    onClickTwoThumbTyping: () -> Unit,
     onClickAdvanced: () -> Unit,
     onClickAppearance: () -> Unit,
     onClickLanguage: () -> Unit,
@@ -124,6 +125,16 @@ fun MainSettingsScreen(
                             onClick = onClickGestureTyping,
                             icon = R.drawable.ic_settings_gesture
                         ) { NextScreenIcon() }
+                        // Dedicated entry for the experimental two-thumb typing features so
+                        // they're discoverable without spelunking through Gesture Typing's
+                        // sub-options. The screen itself short-circuits to empty when gesture
+                        // typing is off / the lib isn't loaded — see TwoThumbTypingScreen.
+                        Preference(
+                            name = stringResource(R.string.settings_screen_two_thumb_typing),
+                            description = stringResource(R.string.settings_screen_two_thumb_typing_summary),
+                            onClick = onClickTwoThumbTyping,
+                            icon = R.drawable.ic_settings_gesture
+                        ) { NextScreenIcon() }
                         Preference(
                             name = stringResource(R.string.settings_screen_correction),
                             onClick = onClickTextCorrection,
@@ -170,7 +181,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
         }
     }
 }

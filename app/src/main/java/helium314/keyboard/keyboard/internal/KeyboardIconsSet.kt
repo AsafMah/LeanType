@@ -143,6 +143,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.INCOGNITO -> R.drawable.ic_incognito_final
                     ToolbarKey.TOUCHPAD -> R.drawable.ic_touchpad
                     ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect
+                    ToolbarKey.AUTOSPACE -> R.drawable.ic_autospace
                     ToolbarKey.AUTO_CAP -> R.drawable.ic_auto_cap
                     ToolbarKey.FORCE_AUTO_CAP -> R.drawable.ic_force_auto_cap
                     ToolbarKey.CLEAR_CLIPBOARD -> R.drawable.sym_keyboard_clear_clipboard_holo
@@ -221,6 +222,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.INCOGNITO -> R.drawable.ic_incognito_final
                     ToolbarKey.TOUCHPAD -> R.drawable.ic_touchpad
                     ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect
+                    ToolbarKey.AUTOSPACE -> R.drawable.ic_autospace
                     ToolbarKey.AUTO_CAP -> R.drawable.ic_auto_cap
                     ToolbarKey.FORCE_AUTO_CAP -> R.drawable.ic_force_auto_cap
                     ToolbarKey.CLEAR_CLIPBOARD -> R.drawable.sym_keyboard_clear_clipboard_lxx
@@ -299,6 +301,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.INCOGNITO -> R.drawable.ic_incognito_final
                     ToolbarKey.TOUCHPAD -> R.drawable.ic_touchpad_rounded
                     ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect_rounded
+                    ToolbarKey.AUTOSPACE -> R.drawable.ic_autospace_rounded
                     ToolbarKey.AUTO_CAP -> R.drawable.ic_auto_cap_rounded
                     ToolbarKey.FORCE_AUTO_CAP -> R.drawable.ic_force_auto_cap_rounded
                     ToolbarKey.CLEAR_CLIPBOARD -> R.drawable.sym_keyboard_clear_clipboard_rounded

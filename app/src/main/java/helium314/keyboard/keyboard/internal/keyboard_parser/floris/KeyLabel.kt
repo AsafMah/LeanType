@@ -40,6 +40,7 @@ object KeyLabel {
     const val META = "meta"
     const val TAB = "tab"
     const val ESCAPE = "esc"
+    const val DEL = "del"
     const val TIMESTAMP = "timestamp"
 
     /** to make sure a FlorisBoard label works when reading a JSON layout */
@@ -108,6 +109,7 @@ object KeyLabel {
             CURRENCY4 -> params.mLocaleKeyboardInfos.currencyKey.second[3]
             CURRENCY5 -> params.mLocaleKeyboardInfos.currencyKey.second[4]
             CTRL, ALT, FN, META, ESCAPE -> label.uppercase(Locale.US)
+            DEL -> "Del"
             TAB -> "!icon/tab_key|!code/${KeyCode.TAB}"
             TIMESTAMP -> "⌚"
             else -> if (label in toolbarKeyStrings.values)
@@ -123,6 +125,7 @@ object KeyLabel {
             FN           -> KeyCode.FN
             META         -> KeyCode.META
             ESCAPE       -> KeyCode.ESCAPE
+            DEL          -> KeyCode.FORWARD_DELETE
             TIMESTAMP    -> KeyCode.TIMESTAMP
             else         -> null
         }
