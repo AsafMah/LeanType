@@ -105,69 +105,6 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical"/>
 
-            <!-- Editor panel: shown only while editing a clip. Replaces the list view. -->
-            <LinearLayout
-                android:id="@+id/clipboard_edit_panel"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="4dp">
-
-                    <ImageButton
-                        android:id="@+id/clipboard_edit_cancel"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:src="@drawable/ic_close"
-                        android:background="?android:attr/selectableItemBackgroundBorderless"
-                        android:padding="10dp"
-                        android:contentDescription="@android:string/cancel" />
-
-                    <TextView
-                        android:id="@+id/clipboard_edit_title"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:gravity="center"
-                        android:text="@string/clipboard_edit_dialog_title"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <ImageButton
-                        android:id="@+id/clipboard_edit_save"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:src="@drawable/ic_arrow_back"
-                        android:scaleX="-1"
-                        android:background="?android:attr/selectableItemBackgroundBorderless"
-                        android:padding="10dp"
-                        android:contentDescription="@android:string/ok" />
-                </LinearLayout>
-
-                <EditText
-                    android:id="@+id/clipboard_edit_text"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:gravity="top|start"
-                    android:padding="12dp"
-                    android:textSize="16sp"
-                    android:background="@android:color/transparent"
-                    android:inputType="textMultiLine|textNoSuggestions"
-                    android:hint="@string/clipboard_edit_dialog_hint"
-                    android:scrollbars="vertical"
-                    android:overScrollMode="ifContentScrolls"
-                    android:cursorVisible="true"
-                    tools:ignore="LabelFor" />
-            </LinearLayout>
-
             <!-- Undo bar shown after swipe-to-delete -->
             <LinearLayout
                 android:id="@+id/clipboard_undo_bar"

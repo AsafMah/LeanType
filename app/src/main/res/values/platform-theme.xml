@@ -24,4 +24,16 @@
         <item name="android:textColorAlertDialogListItem">@color/foreground</item>
         <item name="android:colorForeground">@color/foreground</item>
     </style>
+
+    <style name="ClipboardClipEditActivityTheme" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowCloseOnTouchOutside">true</item>
+        <item name="android:windowMinWidthMajor">90%</item>
+        <item name="android:windowMinWidthMinor">92%</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:background">@color/action_bar_color</item>
+        <item name="android:textColor">@color/foreground</item>
+        <item name="android:textColorPrimary">@color/foreground</item>
+        <item name="android:colorForeground">@color/foreground</item>
+    </style>
 </resources>

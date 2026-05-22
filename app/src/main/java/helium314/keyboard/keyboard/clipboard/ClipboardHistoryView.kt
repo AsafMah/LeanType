@@ -80,12 +80,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val res = context.resources
         val width = ResourceUtils.getKeyboardWidth(context, Settings.getValues()) + paddingLeft + paddingRight
-        val baseHeight = if (inEditMode) {
-            ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues()) +
-                resources.getDimensionPixelSize(R.dimen.config_clipboard_edit_panel_extra_height)
-        } else {
-            ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues())
-        }
+        val baseHeight = ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues())
         val finalHeight = baseHeight + paddingTop + paddingBottom
         // Measure children against the dimensions we'll actually report. If we just call
         // super with the parent's spec (which may be much larger), children get measured
@@ -201,15 +196,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
     private var searchQuery = StringBuilder()
     private var backButton: ImageButton? = null
 
-    // ---- Edit mode state ----
-    private var editingClipId: Long? = null
-    private var editPanel: View? = null
-    private var editText: android.widget.EditText? = null
-    private var editSaveButton: ImageButton? = null
-    private var editCancelButton: ImageButton? = null
-    private var editTitleView: TextView? = null
-    private val inEditMode: Boolean get() = editingClipId != null
-    
     private fun startSearchMode() {
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         clipboardStrip.removeAllViews()
@@ -292,60 +278,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
 
-        if (inEditMode) {
-            val et = editText ?: return
-            val editable = et.editableText
-            val selStart = et.selectionStart.coerceAtLeast(0)
-            val selEnd = et.selectionEnd.coerceAtLeast(selStart)
-            when {
-                primaryCode == KeyCode.DELETE -> {
-                    if (selStart != selEnd) {
-                        editable.delete(selStart, selEnd)
-                    } else if (selStart > 0) {
-                        editable.delete(selStart - 1, selStart)
-                    }
-                }
-                primaryCode == Constants.CODE_ENTER -> {
-                    // Newline inside multi-line editor; Save is on the explicit button.
-                    editable.replace(selStart, selEnd, "\n")
-                }
-                primaryCode == Constants.CODE_SPACE -> {
-                    editable.replace(selStart, selEnd, " ")
-                }
-                primaryCode > 0 -> {
-                    editable.replace(selStart, selEnd, primaryCode.toChar().toString())
-                }
-                // The 123 / ABC / symbols-shifted keys want to switch the keyboard mode.
-                // Letting them propagate to LatinIME's central listener can crash because
-                // that path expects the MAIN keyboard view to be the active one, while we
-                // are hosting our own bottom-row keyboard. Handle the swap locally.
-                primaryCode == KeyCode.SYMBOL || primaryCode == KeyCode.SYMBOL_ALPHA -> {
-                    setBottomRowLayout(KeyboardId.ELEMENT_SYMBOLS)
-                }
-                primaryCode == KeyCode.ALPHA -> {
-                    setBottomRowLayout(KeyboardId.ELEMENT_ALPHABET)
-                }
-                primaryCode == KeyCode.SHIFT -> {
-                    // Cycle through shift states: alphabet -> shifted -> shift-locked -> alphabet.
-                    val current = (findViewById<MainKeyboardView>(R.id.bottom_row_keyboard))?.keyboard?.mId?.mElementId
-                    val next = when (current) {
-                        KeyboardId.ELEMENT_ALPHABET -> KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED
-                        KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED,
-                        KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED -> KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED
-                        KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED -> KeyboardId.ELEMENT_ALPHABET
-                        else -> KeyboardId.ELEMENT_ALPHABET
-                    }
-                    setBottomRowLayout(next)
-                }
-                else -> {
-                    // Any other unhandled key (settings, language switch, etc.) is just
-                    // ignored while editing -- they would normally swap layouts on the
-                    // main keyboard view, which we are not using.
-                }
-            }
-            return
-        }
-
         if (inSearchMode) {
             val char = if (primaryCode > 0) primaryCode.toChar() else null
             
@@ -389,13 +321,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
          val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
          val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
 
-         if (inEditMode) {
-             val et = editText ?: return
-             val selStart = et.selectionStart.coerceAtLeast(0)
-             val selEnd = et.selectionEnd.coerceAtLeast(selStart)
-             et.editableText.replace(selStart, selEnd, text)
-             return
-         }
          if (inSearchMode) {
              searchQuery.append(text)
              searchBarTextView.text = searchQuery.toString()
@@ -435,17 +360,12 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onFinishSlidingInput() { keyboardActionListener.onFinishSlidingInput() }
     override fun onCustomRequest(requestCode: Int): Boolean { return keyboardActionListener.onCustomRequest(requestCode) }
     override fun onHorizontalSpaceSwipe(steps: Int): Boolean {
-        // Suppress gestures during edit mode -- they (e.g. touchpad mode) replace the
-        // main IME view, which yanks our editor out from under the user.
-        if (inEditMode) return false
         return keyboardActionListener.onHorizontalSpaceSwipe(steps)
     }
     override fun onVerticalSpaceSwipe(steps: Int): Boolean {
-        if (inEditMode) return false
         return keyboardActionListener.onVerticalSpaceSwipe(steps)
     }
     override fun onEndSpaceSwipe() {
-        if (inEditMode) return
         keyboardActionListener.onEndSpaceSwipe()
     }
     override fun toggleNumpad(w: Boolean, f: Boolean): Boolean { return keyboardActionListener.toggleNumpad(w, f) }
@@ -453,114 +373,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onUpWithDeletePointerActive() { keyboardActionListener.onUpWithDeletePointerActive() }
     override fun resetMetaState() { keyboardActionListener.resetMetaState() }
     
-    // ---- Inline edit mode (used by the long-press "Edit" action) ----
-
-    private fun ensureEditPanelInitialized() {
-        if (editPanel != null) return
-        editPanel = findViewById(R.id.clipboard_edit_panel)
-        editText = findViewById(R.id.clipboard_edit_text)
-        editCancelButton = findViewById(R.id.clipboard_edit_cancel)
-        editSaveButton = findViewById(R.id.clipboard_edit_save)
-        editTitleView = findViewById(R.id.clipboard_edit_title)
-
-        val colors = Settings.getValues().mColors
-        // Disable the system IME for our local EditText. We're already the IME — typing
-        // into a focused EditText inside our own view would normally try to launch
-        // another IME (or, in practice, just silently swallow keys). Instead we make
-        // it a non-system-editable text view that still renders a cursor, supports
-        // tap-to-position, and lets us programmatically insert/delete from
-        // onCodeInput / onTextInput.
-        editText?.apply {
-            // Disable the system IME for our local EditText. We're already the IME — typing
-            // into a focused EditText inside our own view would normally try to launch
-            // another IME. Instead we keep the EditText as a regular text widget that
-            // renders a blinking cursor, supports tap-to-position, multi-line scrolling,
-            // and long-press selection, but we feed characters from onCodeInput /
-            // onTextInput instead of from the system IME.
-            showSoftInputOnFocus = false
-            isFocusable = true
-            isFocusableInTouchMode = true
-            isCursorVisible = true
-            setTextColor(colors.get(ColorType.KEY_TEXT))
-            setHintTextColor((colors.get(ColorType.KEY_TEXT) and 0x00FFFFFF) or 0x80000000.toInt())
-            Settings.getInstance().getCustomTypeface()?.let { typeface = it }
-        }
-        editTitleView?.setTextColor(colors.get(ColorType.KEY_TEXT))
-        editCancelButton?.let {
-            it.setColorFilter(colors.get(ColorType.KEY_ICON))
-            it.setOnClickListener { stopEditMode(commit = false) }
-        }
-        editSaveButton?.let {
-            it.setColorFilter(colors.get(ColorType.KEY_ICON))
-            it.setOnClickListener { stopEditMode(commit = true) }
-        }
-        colors.setBackground(editPanel!!, ColorType.MAIN_BACKGROUND)
-    }
-
-    private fun startEditMode(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
-        if (entry.imageUri != null) return // image clips are not editable
-        // If we're somehow already in search mode, exit it first.
-        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
-        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
-        if (inSearchMode) stopSearchMode()
-
-        ensureEditPanelInitialized()
-
-        editingClipId = entry.id
-        editText?.apply {
-            setText(entry.text)
-            setSelection(text.length)
-            requestFocus()
-        }
-
-        // Show the editor panel, hide the list/empty view.
-        editPanel?.visibility = View.VISIBLE
-        clipboardRecyclerView.visibility = View.GONE
-        emptyViewContainer.visibility = View.GONE
-
-        // Switch the bottom row to the standard alphabet keyboard so the user can type.
-        setBottomRowLayout(KeyboardId.ELEMENT_ALPHABET)
-
-        // Pin the bottom-row keyboard's height to match the geometry we passed to
-        // setKeyboardGeometry. wrap_content can resolve to 0 before the keyboard object
-        // is measured, which would make the keyboard invisible.
-        val bottomRow = findViewById<View>(R.id.bottom_row_keyboard)
-        val kbHeight = ResourceUtils.getSecondaryKeyboardHeight(context.resources, Settings.getValues())
-        bottomRow?.layoutParams = bottomRow?.layoutParams?.also { it.height = kbHeight }
-
-        // Edit mode wants a taller IME than the clipboard pane normally uses; re-measure.
-        requestLayout()
-    }
-
-    private fun stopEditMode(commit: Boolean) {
-        val id = editingClipId ?: return
-        val newText = editText?.text?.toString() ?: ""
-        editingClipId = null
-
-        editPanel?.visibility = View.GONE
-        editText?.setText("") // free the text reference
-
-        // Restore the bottom-row keyboard to its original wrap_content height.
-        val bottomRow = findViewById<View>(R.id.bottom_row_keyboard)
-        bottomRow?.layoutParams = bottomRow?.layoutParams?.also {
-            it.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-        }
-
-        // Restore the clipboard keyboard bottom row.
-        setBottomRowLayout(KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW)
-        clipboardRecyclerView.visibility = View.VISIBLE
-        updateEmptyView(clipboardAdapter.isFiltering)
-        // Re-measure to restore the regular (shorter) clipboard pane height.
-        requestLayout()
-
-        if (commit) {
-            val deleted = clipboardHistoryManager.updateClipText(id, newText)
-            if (deleted != null) {
-                clipboardRecyclerView.showUndoForDeletedEntry(deleted)
-            }
-        }
-    }
-
     private fun setupClipKey(params: KeyDrawParams) {
         clipboardAdapter.apply {
             itemBackgroundId = keyBackgroundId
@@ -713,7 +525,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         data class Option(val labelRes: Int, val action: () -> Unit)
         val options = mutableListOf<Option>()
         if (!isImage) {
-            options += Option(R.string.clipboard_action_edit) { showEditDialog(entry, anchor) }
+            options += Option(R.string.clipboard_action_edit) { showEditActivity(entry) }
         }
         options += Option(pinLabelRes) { clipboardHistoryManager.toggleClipPinned(entry.id) }
         if (!isImage) {
@@ -733,12 +545,13 @@ class ClipboardHistoryView @JvmOverloads constructor(
         dialog.show()
     }
 
-    private fun showEditDialog(entry: helium314.keyboard.latin.ClipboardHistoryEntry, anchor: View) {
-        // Editing happens inline (not in an AlertDialog) because EditText cannot reliably
-        // receive input from inside the IME's own window. Instead we mirror the existing
-        // search-mode pattern: take over the clipboard strip with an editor UI and
-        // intercept keyboard codes in onCodeInput.
-        startEditMode(entry)
+    private fun showEditActivity(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
+        try {
+            KeyboardSwitcher.getInstance().setAlphabetKeyboard()
+            context.startActivity(ClipboardClipEditActivity.createIntent(context, entry.id))
+        } catch (e: android.content.ActivityNotFoundException) {
+            helium314.keyboard.latin.utils.Log.w("ClipboardHistoryView", "No activity to edit clip: ${e.message}")
+        }
     }
 
     private fun copyEntryToSystemClipboard(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
@@ -791,10 +604,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
     fun stopClipboardHistory() {
         if (!this::clipboardAdapter.isInitialized) return
 
-        // Also ensure edit/search modes are stopped if we explicitly leave clipboard history
-        if (inEditMode && isAttachedToWindow) {
-            stopEditMode(commit = false)
-        }
+        // Also ensure search mode is stopped if we explicitly leave clipboard history
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
         if (inSearchMode && isAttachedToWindow) {
