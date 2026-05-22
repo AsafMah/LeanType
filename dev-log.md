@@ -185,8 +185,50 @@ The user requested that Cancel also return to the clipboard page, and that the r
 
 ### Open Questions / Next Steps
 - User should verify the Save and Cancel transitions on-device.
+
 ---
 
-## 2026-05-22 — Replace clipboard inline editor with normal editor activity
+## 2026-05-22 — Resolve merge conflicts in PR #3
 
 ### Context
+The user requested resolution of merge conflicts in PR #3 (`copilot/improve-two-thumb-typing-again`). The PR had `mergeable_state: "dirty"` due to conflicts with changes merged into main from the clipboard editability work.
+
+### Actions Taken
+- Fetched the latest `main` branch from origin.
+- Attempted merge of `origin/main` into `copilot/improve-two-thumb-typing-again`.
+- Identified conflict in `dev-log.md` where both branches had added new session entries.
+- Resolved conflict by preserving both session entries (one-shot toolbar spacing keys from current branch, clipboard editor improvements from main).
+- Completed merge commit `eae5f8b7`.
+- Pushed resolved merge to origin.
+- Verified PR now shows `mergeable_state: "clean"`.
+
+### Decisions Made
+- Kept all dev-log entries from both branches in chronological order, as both represent valid work done in parallel branches.
+- Used standard git merge workflow rather than rebase to preserve the full history of both branches.
+
+### Open Questions / Next Steps
+- PR #3 is now ready for final review and merge into main.
+
+---
+
+## 2026-05-22 — Cache toolbar state background allocations (review comment r3289683508)
+
+### Context
+Review comment r3289683508 on PR #3 noted that `createToolbarStateBackground()` allocates new `GradientDrawable`/`StateListDrawable` instances every time toolbar state is refreshed (potentially frequently during typing). The reviewer suggested caching the drawable per Context/theme to reduce allocations/GC.
+
+### Actions Taken
+- Added `ToolbarStateBackgroundCache` data class to hold radius, activeColor, and drawable `ConstantState`.
+- Modified `createToolbarStateBackground()` to check cache validity (matching radius and activeColor) before creating new drawables.
+- When cache is valid, clone from `constantState.newDrawable()` and mutate to avoid shared state.
+- When cache is invalid or empty, create new drawables and update cache with the new `constantState`.
+- Ran `parallel_validation` (CodeQL: no alerts, Code Review: noted potential concurrency issue but acceptable for UI-thread-only usage).
+- Pushed changes in commit `fcd7c1d4`.
+
+### Decisions Made
+- Used `ConstantState` cloning pattern (standard Android drawable caching approach) rather than direct drawable reuse to avoid shared-state bugs.
+- Did not add synchronization because toolbar state updates run on the main/UI thread in current usage.
+- Keyed cache on both radius and activeColor so theme changes invalidate the cache automatically.
+
+### Open Questions / Next Steps
+- If toolbar state updates ever move off the main thread, add `@Volatile` or synchronization to the cache variable.
+
