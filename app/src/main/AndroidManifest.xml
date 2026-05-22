@@ -89,6 +89,12 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
             </intent-filter>
         </activity>
 
+        <activity android:name="helium314.keyboard.keyboard.clipboard.ClipboardClipEditActivity"
+                android:theme="@style/ClipboardClipEditActivityTheme"
+                android:label="@string/clipboard_edit_dialog_title"
+                android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
+                android:exported="false" />
+
         <!-- Broadcast receivers -->
         <receiver android:name="SystemBroadcastReceiver"
                 android:exported="true">

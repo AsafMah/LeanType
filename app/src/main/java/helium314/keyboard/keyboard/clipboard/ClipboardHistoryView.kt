@@ -78,12 +78,18 @@ class ClipboardHistoryView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         val res = context.resources
-        // The main keyboard expands to the entire this {@link KeyboardView}.
         val width = ResourceUtils.getKeyboardWidth(context, Settings.getValues()) + paddingLeft + paddingRight
-        val height = ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues()) + paddingTop + paddingBottom
-        setMeasuredDimension(width, height)
+        val baseHeight = ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues())
+        val finalHeight = baseHeight + paddingTop + paddingBottom
+        // Measure children against the dimensions we'll actually report. If we just call
+        // super with the parent's spec (which may be much larger), children get measured
+        // against that larger size and overflow our final height -- pushing the
+        // bottom-row keyboard off-screen below the editor panel.
+        val exactW = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY)
+        val exactH = MeasureSpec.makeMeasureSpec(finalHeight, MeasureSpec.EXACTLY)
+        super.onMeasure(exactW, exactH)
+        setMeasuredDimension(width, finalHeight)
     }
 
     private lateinit var searchBar: android.widget.EditText
@@ -189,14 +195,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
     private lateinit var searchBarTextView: TextView
     private var searchQuery = StringBuilder()
     private var backButton: ImageButton? = null
-    
-    // We reuse searchWatcher logic but applied manually or to a hidden text view if needed.
-    // Actually we just filter manually now.
-    
-    // ... initialize ...
-    // Note: XML elements for search overlay are now unused, we should eventually remove them from XML.
-    // For now, we just ignore them.
-    
+
     private fun startSearchMode() {
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         clipboardStrip.removeAllViews()
@@ -278,7 +277,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
-        
+
         if (inSearchMode) {
             val char = if (primaryCode > 0) primaryCode.toChar() else null
             
@@ -321,7 +320,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onTextInput(text: String) {
          val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
          val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
-         
+
          if (inSearchMode) {
              searchQuery.append(text)
              searchBarTextView.text = searchQuery.toString()
@@ -360,9 +359,15 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onCancelInput() { keyboardActionListener.onCancelInput() }
     override fun onFinishSlidingInput() { keyboardActionListener.onFinishSlidingInput() }
     override fun onCustomRequest(requestCode: Int): Boolean { return keyboardActionListener.onCustomRequest(requestCode) }
-    override fun onHorizontalSpaceSwipe(steps: Int): Boolean { return keyboardActionListener.onHorizontalSpaceSwipe(steps) }
-    override fun onVerticalSpaceSwipe(steps: Int): Boolean { return keyboardActionListener.onVerticalSpaceSwipe(steps) }
-    override fun onEndSpaceSwipe() { keyboardActionListener.onEndSpaceSwipe() }
+    override fun onHorizontalSpaceSwipe(steps: Int): Boolean {
+        return keyboardActionListener.onHorizontalSpaceSwipe(steps)
+    }
+    override fun onVerticalSpaceSwipe(steps: Int): Boolean {
+        return keyboardActionListener.onVerticalSpaceSwipe(steps)
+    }
+    override fun onEndSpaceSwipe() {
+        keyboardActionListener.onEndSpaceSwipe()
+    }
     override fun toggleNumpad(w: Boolean, f: Boolean): Boolean { return keyboardActionListener.toggleNumpad(w, f) }
     override fun onMoveDeletePointer(steps: Int) { keyboardActionListener.onMoveDeletePointer(steps) }
     override fun onUpWithDeletePointerActive() { keyboardActionListener.onUpWithDeletePointerActive() }
@@ -398,11 +403,26 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val keyboardView = findViewById<MainKeyboardView>(R.id.bottom_row_keyboard)
         keyboardView.setKeyboardActionListener(this)  // Set 'this' as listener to intercept
         PointerTracker.switchTo(keyboardView)
-        // Use Builder to get correct layout
+        // Use Builder to get correct layout. Match EmojiPalettesView's search-mode setup
+        // exactly so we get the same theming the user already accepts as "their"
+        // keyboard there: pass secondary-keyboard-height for the geometry instead of the
+        // full keyboard height. The full-height geometry made the inner keys mismatch
+        // the user's main keyboard visually.
+        val isAlphaOrSymbols = elementId == KeyboardId.ELEMENT_ALPHABET ||
+                elementId == KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED ||
+                elementId == KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED ||
+                elementId == KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED ||
+                elementId == KeyboardId.ELEMENT_SYMBOLS ||
+                elementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED
+        val geometryHeight = if (isAlphaOrSymbols) {
+            ResourceUtils.getSecondaryKeyboardHeight(context.resources, Settings.getValues())
+        } else {
+            ResourceUtils.getKeyboardHeight(context.resources, Settings.getValues())
+        }
         val builder = KeyboardLayoutSet.Builder(context, editorInfo)
             .setSubtype(RichInputMethodManager.getInstance().currentSubtype)
-            .setKeyboardGeometry(ResourceUtils.getKeyboardWidth(context, Settings.getValues()), ResourceUtils.getKeyboardHeight(context.resources, Settings.getValues()))
-        
+            .setKeyboardGeometry(ResourceUtils.getKeyboardWidth(context, Settings.getValues()), geometryHeight)
+
         val kls = builder.build()
         val keyboard = kls.getKeyboard(elementId)
         keyboardView.setKeyboard(keyboard)
@@ -412,6 +432,9 @@ class ClipboardHistoryView @JvmOverloads constructor(
         if (!enabled) return
         // TODO: Should use LAYER_TYPE_SOFTWARE when hardware acceleration is off?
         setLayerType(LAYER_TYPE_HARDWARE, null)
+        // Propagate to the bottom-row keyboard so it matches the main keyboard's
+        // hardware-accelerated drawing (otherwise key rendering can look different).
+        findViewById<MainKeyboardView>(R.id.bottom_row_keyboard)?.setHardwareAcceleratedDrawingEnabled(true)
     }
 
     fun startClipboardHistory(
@@ -485,12 +508,102 @@ class ClipboardHistoryView @JvmOverloads constructor(
         if (Settings.getValues().mAlphaAfterClipHistoryEntry)
             keyboardActionListener.onCodeInput(KeyCode.ALPHA, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
     }
+
+    override fun onKeyLongPress(clipId: Long, anchor: View): Boolean {
+        val entry = clipboardHistoryManager.getHistoryEntryContent(clipId) ?: return false
+        AudioAndHapticFeedbackManager.getInstance()
+            .performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, this, HapticEvent.KEY_LONG_PRESS)
+        showClipContextMenu(entry, anchor)
+        return true
+    }
+
+    private fun showClipContextMenu(entry: helium314.keyboard.latin.ClipboardHistoryEntry, anchor: View) {
+        val isImage = entry.imageUri != null
+        val pinLabelRes = if (entry.isPinned) R.string.clipboard_action_unpin else R.string.clipboard_action_pin
+
+        // Build option list dynamically; Edit is omitted for image clips.
+        data class Option(val labelRes: Int, val action: () -> Unit)
+        val options = mutableListOf<Option>()
+        if (!isImage) {
+            options += Option(R.string.clipboard_action_edit) { showEditActivity(entry) }
+        }
+        options += Option(pinLabelRes) { clipboardHistoryManager.toggleClipPinned(entry.id) }
+        if (!isImage) {
+            options += Option(R.string.clipboard_action_copy) { copyEntryToSystemClipboard(entry) }
+            options += Option(R.string.clipboard_action_share) { shareEntry(entry) }
+        }
+        options += Option(R.string.clipboard_action_delete) { deleteEntry(entry) }
+
+        val labels = options.map { context.getString(it.labelRes) }.toTypedArray()
+        val dialog = android.app.AlertDialog.Builder(context)
+            .setItems(labels) { d, which ->
+                d.dismiss()
+                options[which].action()
+            }
+            .create()
+        attachDialogToKeyboard(dialog, anchor)
+        dialog.show()
+    }
+
+    private fun showEditActivity(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
+        try {
+            KeyboardSwitcher.getInstance().setAlphabetKeyboard()
+            context.startActivity(ClipboardClipEditActivity.createIntent(context, entry.id))
+        } catch (e: android.content.ActivityNotFoundException) {
+            helium314.keyboard.latin.utils.Log.w("ClipboardHistoryView", "No activity to edit clip: ${e.message}")
+        }
+    }
+
+    private fun copyEntryToSystemClipboard(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
+        try {
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("clipboard", entry.text))
+        } catch (e: SecurityException) {
+            helium314.keyboard.latin.utils.Log.w("ClipboardHistoryView", "Failed to set primary clip: ${e.message}")
+        }
+    }
+
+    private fun shareEntry(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
+        try {
+            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, entry.text)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            val chooser = android.content.Intent.createChooser(send, null).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+        } catch (e: android.content.ActivityNotFoundException) {
+            helium314.keyboard.latin.utils.Log.w("ClipboardHistoryView", "No activity to handle share: ${e.message}")
+        }
+    }
+
+    private fun deleteEntry(entry: helium314.keyboard.latin.ClipboardHistoryEntry) {
+        // Pinned items can't be removed; unpin first so they behave like any other entry.
+        if (entry.isPinned) clipboardHistoryManager.toggleClipPinned(entry.id)
+        val index = clipboardHistoryManager.getClips().indexOfFirst { it.id == entry.id }
+        if (index < 0) return
+        val deleted = clipboardHistoryManager.removeEntry(index) ?: return
+        clipboardAdapter.notifyItemRemoved(index)
+        clipboardRecyclerView.showUndoForDeletedEntry(deleted)
+    }
+
+    private fun attachDialogToKeyboard(dialog: android.app.AlertDialog, anchor: View) {
+        // Same pattern used in EmojiPalettesView so the dialog appears above the IME window.
+        val window = dialog.window ?: return
+        val lp = window.attributes
+        lp.token = anchor.windowToken
+        lp.type = android.view.WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+        window.attributes = lp
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+    }
  
 
 
     fun stopClipboardHistory() {
         if (!this::clipboardAdapter.isInitialized) return
-        
+
         // Also ensure search mode is stopped if we explicitly leave clipboard history
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
