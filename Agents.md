@@ -167,7 +167,7 @@ The GitHub Actions workflow (`.github/workflows/build-test-auto.yml`) runs `comp
 | Layout popup keys (per language) | `assets/locale_key_texts/` |
 | Touch/swipe input | `keyboard/PointerTracker.java` |
 | Key input handling | `latin/inputlogic/InputLogic.java` |
-| Suggestions | `latin/DictionaryFacilitatorImpl.kt`, `latin/Suggest.kt`, `latin/inputlogic/InputLogic.java`, `keyboard/emoji/SuggestionStripView` |
+| Suggestions | `latin/DictionaryFacilitatorImpl.kt`, `latin/Suggest.kt`, `latin/inputlogic/InputLogic.java`, `latin/suggestions/SuggestionStripView.kt` |
 | Text committed to editor | `latin/RichInputConnection.java` |
 | Events from the editor | `latin/LatinIME.java` |
 | Settings values (runtime) | `latin/settings/SettingsValues.java` |
