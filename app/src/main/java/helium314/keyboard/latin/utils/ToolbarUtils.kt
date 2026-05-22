@@ -4,6 +4,7 @@ package helium314.keyboard.latin.utils
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.ViewGroup
@@ -97,26 +98,46 @@ private fun setToolbarButtonActivatedState(button: ImageButton) {
 }
 
 private fun createToolbarStateBackground(context: Context): StateListDrawable {
-    val radius = 8.dpToPx(context.resources).toFloat()
+    val radius = 8.dpToPx(context.resources)
     val activeColor = ColorUtils.setAlphaComponent(
         Settings.getValues().mColors.get(ColorType.TOOL_BAR_KEY_ENABLED_BACKGROUND),
         0x44
     )
+    toolbarStateBackgroundCache
+        ?.takeIf { it.radius == radius && it.activeColor == activeColor }
+        ?.constantState
+        ?.newDrawable(context.resources)
+        ?.mutate()
+        ?.let { return it as StateListDrawable }
+
     val active = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
-        cornerRadius = radius
+        cornerRadius = radius.toFloat()
         setColor(activeColor)
     }
     val normal = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
-        cornerRadius = radius
+        cornerRadius = radius.toFloat()
         setColor(Color.TRANSPARENT)
     }
     return StateListDrawable().apply {
         addState(intArrayOf(android.R.attr.state_activated), active)
         addState(intArrayOf(), normal)
+        toolbarStateBackgroundCache = ToolbarStateBackgroundCache(
+            radius = radius,
+            activeColor = activeColor,
+            constantState = constantState
+        )
     }
 }
+
+private data class ToolbarStateBackgroundCache(
+    val radius: Int,
+    val activeColor: Int,
+    val constantState: Drawable.ConstantState?
+)
+
+private var toolbarStateBackgroundCache: ToolbarStateBackgroundCache? = null
 
 fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomToolbarKeyCode(key) ?: when (key) {
     VOICE -> KeyCode.VOICE_INPUT
