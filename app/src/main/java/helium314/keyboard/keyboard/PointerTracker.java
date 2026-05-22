@@ -217,6 +217,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private boolean mKeySwipeAllowed = false;
     private static boolean sInKeySwipe = false;
     private boolean mShortcutSwipeConsumed = false;
+    private boolean mStartedOnTopRow = false;
 
     // Touchpad mode for cursor control
     public static boolean sPersistentTouchpadModeActive = false;
@@ -968,6 +969,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             sInKeySwipe = true;
         }
         mShortcutSwipeConsumed = false;
+        mStartedOnTopRow = false;
         mKeyboardLayoutHasBeenChanged = false;
         mIsTrackingForActionDisabled = false;
         resetKeySelectionByDraggingFinger();
@@ -985,6 +987,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 key = onDownKey(x, y + yOffset, eventTime);
             }
 
+            mStartedOnTopRow = isTopVisibleRowKey(key);
             startRepeatKey(key);
             startLongPressTimer(key);
             setPressedKeyGraphics(key, eventTime);
@@ -1359,7 +1362,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return true;
         }
         final int actionCode = Settings.getValues().mTopRowSwipeUpKeyCode;
-        if (actionCode == KeyCode.UNSPECIFIED || !isTopVisibleRowKey(key) || sInGesture) {
+        if (actionCode == KeyCode.UNSPECIFIED || !mStartedOnTopRow || sInGesture) {
             return false;
         }
         final int dX = x - mStartX;
@@ -1380,15 +1383,18 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
         // todo (later): move key swipe stuff to KeyboardActionListener (and finally
         // extend it)
-        if (oldKey != null && tryHandleTopRowSwipe(oldKey, x, y)) {
-            return;
-        }
-        if (mKeySwipeAllowed) {
-            if (oldKey == null) {
+        if (oldKey == null) {
+            if (mKeySwipeAllowed) {
                 return;
             }
-            onKeySwipe(oldKey.getCode(), x, y, eventTime);
-            return;
+        } else {
+            if (tryHandleTopRowSwipe(oldKey, x, y)) {
+                return;
+            }
+            if (mKeySwipeAllowed) {
+                onKeySwipe(oldKey.getCode(), x, y, eventTime);
+                return;
+            }
         }
 
         final Key newKey = onMoveKey(x, y);
