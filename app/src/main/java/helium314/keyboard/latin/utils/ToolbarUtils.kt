@@ -13,6 +13,7 @@ import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.Constants.Separators
+import helium314.keyboard.latin.inputlogic.OneShotSpaceAction
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ToolbarKey.*
@@ -49,9 +50,13 @@ fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: St
     GlobalScope.launch {
         delay(10) // need to wait until SettingsValues are reloaded
         withContext(Dispatchers.Main) {
-            buttonsGroup.forEach { if (it is ImageButton) setToolbarButtonActivatedState(it) }
+            setToolbarButtonsActivatedState(buttonsGroup)
         }
     }
+}
+
+fun setToolbarButtonsActivatedState(buttonsGroup: ViewGroup) {
+    buttonsGroup.forEach { if (it is ImageButton) setToolbarButtonActivatedState(it) }
 }
 
 private fun setToolbarButtonActivatedState(button: ImageButton) {
@@ -66,6 +71,8 @@ private fun setToolbarButtonActivatedState(button: ImageButton) {
         AUTOSPACE -> Settings.getValues().shouldInsertSpacesAutomatically()
         AUTO_CAP -> Settings.getValues().mAutoCap
         FORCE_AUTO_CAP -> Settings.getValues().mForceAutoCaps
+        JOIN_NEXT -> OneShotSpaceAction.isJoinNextArmed()
+        FORCE_NEXT_SPACE -> OneShotSpaceAction.isForceNextSpaceArmed()
         else -> true
     }
 }
@@ -91,6 +98,8 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     AUTOSPACE -> KeyCode.TOGGLE_AUTOSPACE
     AUTO_CAP -> KeyCode.TOGGLE_AUTO_CAP
     FORCE_AUTO_CAP -> KeyCode.TOGGLE_FORCE_AUTO_CAP
+    JOIN_NEXT -> KeyCode.JOIN_NEXT
+    FORCE_NEXT_SPACE -> KeyCode.FORCE_NEXT_SPACE
     CLEAR_CLIPBOARD -> KeyCode.CLIPBOARD_CLEAR_HISTORY
     CLOSE_HISTORY -> KeyCode.ALPHA
     EMOJI -> KeyCode.EMOJI
@@ -145,7 +154,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 enum class ToolbarKey {
     VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
     INCOGNITO, TOUCHPAD, AUTOCORRECT, AUTOSPACE, AUTO_CAP, FORCE_AUTO_CAP, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
-    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, PROOFREAD, TRANSLATE,
+    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, JOIN_NEXT, FORCE_NEXT_SPACE, PROOFREAD, TRANSLATE,
     CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, CUSTOM_AI_4, CUSTOM_AI_5,
     CUSTOM_AI_6, CUSTOM_AI_7, CUSTOM_AI_8, CUSTOM_AI_9, CUSTOM_AI_10
 }

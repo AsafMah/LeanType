@@ -220,6 +220,9 @@ public final class InputLogic {
      * @param settingsValues the current settings values
      */
     public void startInput(final String combiningSpec, final SettingsValues settingsValues) {
+        if (OneShotSpaceAction.clear()) {
+            mLatinIME.onOneShotSpaceActionStateChanged();
+        }
         mEnteredText = null;
         mWordBeingCorrectedByCursor = null;
         mConnection.onStartInput();
@@ -283,6 +286,9 @@ public final class InputLogic {
      * Clean up the input logic after input is finished.
      */
     public void finishInput() {
+        if (OneShotSpaceAction.clear()) {
+            mLatinIME.onOneShotSpaceActionStateChanged();
+        }
         if (mWordComposer.isComposingWord()) {
             mConnection.finishComposingText();
             StatsUtils.onWordCommitUserTyped(mWordComposer.getTypedWord(), mWordComposer.isBatchMode());
@@ -484,6 +490,9 @@ public final class InputLogic {
     public boolean onUpdateSelection(final int oldSelStart, final int oldSelEnd, final int newSelStart,
             final int newSelEnd, final int composingSpanStart, final int composingSpanEnd,
             final SettingsValues settingsValues) {
+        if (OneShotSpaceAction.clear()) {
+            mLatinIME.onOneShotSpaceActionStateChanged();
+        }
         if (mConnection.isBelatedExpectedUpdate(oldSelStart, newSelStart, oldSelEnd, newSelEnd, composingSpanStart,
                 composingSpanEnd)) {
             return false;
@@ -797,6 +806,9 @@ public final class InputLogic {
 
     public void onCancelBatchInput(final LatinIME.UIHandler handler) {
         mInputLogicHandler.onCancelBatchInput();
+        if (OneShotSpaceAction.clear()) {
+            mLatinIME.onOneShotSpaceActionStateChanged();
+        }
         // Combining mode: cancelled gesture wipes the would-be-fragment from the composing
         // word — drop the timer so we don't fire an autospace based on stale state.
         cancelCombiningMode();
@@ -1420,6 +1432,18 @@ public final class InputLogic {
             case KeyCode.ACTION_PREVIOUS:
                 performEditorAction(EditorInfo.IME_ACTION_PREVIOUS, inputTransaction.getSettingsValues(), handler);
                 break;
+            case KeyCode.JOIN_NEXT:
+                OneShotSpaceAction.armJoinNext();
+                mLatinIME.onOneShotSpaceActionStateChanged();
+                break;
+            case KeyCode.FORCE_NEXT_SPACE: {
+                final Event forcedSpaceEvent = Event.createSoftwareKeypressEvent(Constants.CODE_SPACE,
+                        event.getMetaState(), event.getX(), event.getY(), event.isKeyRepeat());
+                handleNonSpecialCharacterEvent(forcedSpaceEvent, inputTransaction, handler);
+                OneShotSpaceAction.armForceNextSpace();
+                mLatinIME.onOneShotSpaceActionStateChanged();
+                break;
+            }
             case KeyCode.LANGUAGE_SWITCH:
                 handleLanguageSwitchKey();
                 break;
@@ -1945,6 +1969,9 @@ public final class InputLogic {
         // grace timer — the user is committing the word themselves.
         cancelCombiningMode();
         final int codePoint = event.getCodePoint();
+        if (Constants.CODE_SPACE == codePoint && OneShotSpaceAction.clear()) {
+            mLatinIME.onOneShotSpaceActionStateChanged();
+        }
         final SettingsValues settingsValues = inputTransaction.getSettingsValues();
         if (justAutoSpaced
                 && Constants.CODE_SPACE != codePoint
@@ -2100,6 +2127,9 @@ public final class InputLogic {
         // Combining mode: a backspace always cancels the pending commit. The user is
         // explicitly retracting input; we don't want the timer to fire mid-correction.
         cancelCombiningMode();
+        if (OneShotSpaceAction.clear()) {
+            mLatinIME.onOneShotSpaceActionStateChanged();
+        }
         final String currentKeyboardScript = inputTransaction.getSettingsValues().mCurrentKeyboardScript;
         // Two-thumb typing (#1.1, PREF_GESTURE_FRAGMENT_BACKSPACE): try to pop the most-recent
         // fragment from the composing word as one keystroke. Returns true if handled — in
@@ -3062,6 +3092,9 @@ public final class InputLogic {
      */
     private void performEditorAction(final int actionId, final SettingsValues settingsValues,
             final LatinIME.UIHandler handler) {
+        if (OneShotSpaceAction.clear()) {
+            mLatinIME.onOneShotSpaceActionStateChanged();
+        }
         if (mWordComposer.isComposingWord()) {
             commitCurrentAutoCorrection(settingsValues, LastComposedWord.NOT_A_SEPARATOR, handler);
         }
@@ -3276,6 +3309,13 @@ public final class InputLogic {
      * @param settingsValues the current values of the settings.
      */
     private void insertAutomaticSpaceIfOptionsAndTextAllow(final SettingsValues settingsValues) {
+        // JOIN_NEXT and FORCE_NEXT_SPACE both suppress exactly one automatic spacing decision.
+        // consumeAction() returns the current armed action AND clears it, so suppression is one-shot.
+        // At this point we only care whether any one-shot action is armed, not which one.
+        if (OneShotSpaceAction.consumeAction() != OneShotSpaceAction.NONE) {
+            mLatinIME.onOneShotSpaceActionStateChanged();
+            return;
+        }
         if (settingsValues.shouldInsertSpacesAutomatically()
                 && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
                 && !textBeforeCursorMayBeUrlOrSimilar(settingsValues, true)

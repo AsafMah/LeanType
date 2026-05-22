@@ -1760,6 +1760,16 @@ public class LatinIME extends InputMethodService implements
         }
     }
 
+    public void onOneShotSpaceActionStateChanged() {
+        if (mSuggestionStripView != null) {
+            mSuggestionStripView.refreshToolbarButtonsActivation();
+        }
+        final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
+        if (mainKeyboardView != null) {
+            mainKeyboardView.invalidateAllKeys();
+        }
+    }
+
     @Override
     public void removeSuggestion(final String word) {
         mDictionaryFacilitator.removeWord(word);
