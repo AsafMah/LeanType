@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Message
 import android.text.InputType
+import android.text.TextUtils
 import android.view.KeyEvent
 import android.view.inputmethod.*
 import androidx.core.content.edit
@@ -64,6 +65,7 @@ class InputLogicTest {
     private val connectionTextBeforeComposingText get() = (beforeComposingReader.get(connection) as CharSequence).toString()
     private val composingReader = RichInputConnection::class.java.getDeclaredField("mComposingText").apply { isAccessible = true }
     private val connectionComposingText get() = (composingReader.get(connection) as CharSequence).toString()
+    private val combiningGraceExpired = InputLogic::class.java.getDeclaredMethod("onCombiningGraceExpired").apply { isAccessible = true }
 
     @BeforeTest
     fun setUp() {
@@ -243,6 +245,90 @@ class InputLogicTest {
         input('.')
         input('b')
         assertEquals("hello world.a. b", textBeforeCursor)
+    }
+
+    @Test fun joinNextAfterCombiningAutospaceResumesWordForNextGesture() {
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING, true)
+        }
+        chainInput("tech")
+        expireCombiningGrace()
+        assertEquals("tech ", textBeforeCursor)
+
+        functionalKeyPress(KeyCode.JOIN_NEXT)
+        assertEquals("tech", textBeforeCursor)
+        gestureInput("technology")
+        assertEquals("technology", textBeforeCursor)
+        assertEquals("technology", composingText)
+
+        expireCombiningGrace()
+        assertEquals("technology ", textBeforeCursor)
+    }
+
+    @Test fun forceNextSpaceAfterCombiningAutospaceDoesNotDoubleSpaceAndSuppressesNextAutospace() {
+        reset()
+        latinIME.prefs().edit { putInt(Settings.PREF_COMBINING_GRACE_MS, 1000) }
+        chainInput("hello")
+        expireCombiningGrace()
+        assertEquals("hello ", textBeforeCursor)
+
+        functionalKeyPress(KeyCode.FORCE_NEXT_SPACE)
+        assertEquals("hello ", textBeforeCursor)
+        gestureInput("world")
+        assertEquals("hello world", textBeforeCursor)
+
+        expireCombiningGrace()
+        assertEquals("hello world", textBeforeCursor)
+    }
+
+    @Test fun forceNextSpaceDuringCombiningCommitsSpaceAndSuppressesNextAutospace() {
+        reset()
+        latinIME.prefs().edit { putInt(Settings.PREF_COMBINING_GRACE_MS, 1000) }
+        chainInput("hello")
+        functionalKeyPress(KeyCode.FORCE_NEXT_SPACE)
+        assertEquals("hello ", textBeforeCursor)
+
+        gestureInput("world")
+        assertEquals("hello world", textBeforeCursor)
+
+        expireCombiningGrace()
+        assertEquals("hello world", textBeforeCursor)
+    }
+
+    @Test fun forceNextSpaceSurvivesExpectedSelectionUpdateAfterInsertedSpace() {
+        reset()
+        latinIME.prefs().edit { putInt(Settings.PREF_COMBINING_GRACE_MS, 1000) }
+        chainInput("hello")
+        val oldCursor = cursor
+        functionalKeyPress(KeyCode.FORCE_NEXT_SPACE)
+        latinIME.onUpdateSelection(oldCursor, oldCursor, cursor, cursor, -1, -1)
+        assertEquals("hello ", textBeforeCursor)
+
+        gestureInput("world")
+        expireCombiningGrace()
+        assertEquals("hello world", textBeforeCursor)
+    }
+
+    @Test fun forceAutoCapWorksWhenAutoCapIsOff() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_AUTO_CAP, false)
+            putBoolean(Settings.PREF_FORCE_AUTO_CAPS, true)
+        }
+        setText("")
+        assertEquals(TextUtils.CAP_MODE_SENTENCES, inputLogic.getCurrentAutoCapsState(settingsValues))
+    }
+
+    @Test fun forceAutoCapDoesNotOverridePasswordFields() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_AUTO_CAP, false)
+            putBoolean(Settings.PREF_FORCE_AUTO_CAPS, true)
+        }
+        setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        assertEquals(Constants.TextUtils.CAP_MODE_OFF, inputLogic.getCurrentAutoCapsState(settingsValues))
     }
 
     @Test fun noAutospaceInUrlField() {
@@ -912,6 +998,19 @@ class InputLogicTest {
         val info = SuggestedWordInfo(word, "", 0, 0, null, 0, 0)
         val sw = SuggestedWords(ArrayList(listOf(info)), null, info, true, false, false, 0, 0)
         latinIME.mInputLogic.onUpdateTailBatchInputCompleted(settingsValues, sw, KeyboardSwitcher.getInstance())
+    }
+
+    private fun gestureInput(word: String) {
+        latinIME.mInputLogic.onStartBatchInput(settingsValues, KeyboardSwitcher.getInstance(), latinIME.mHandler)
+        glideTypingInput(word)
+        handleMessages()
+        checkConnectionConsistency()
+    }
+
+    private fun expireCombiningGrace() {
+        combiningGraceExpired.invoke(inputLogic)
+        handleMessages()
+        checkConnectionConsistency()
     }
 
     private fun checkConnectionConsistency() {

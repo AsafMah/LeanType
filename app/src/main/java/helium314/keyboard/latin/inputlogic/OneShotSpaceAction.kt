@@ -42,6 +42,14 @@ object OneShotSpaceAction {
 
     @JvmStatic
     @Synchronized
+    fun consumeJoinNext(): Boolean {
+        if (action != JOIN_NEXT) return false
+        action = NONE
+        return true
+    }
+
+    @JvmStatic
+    @Synchronized
     fun consumeAction(): Int {
         val current = action
         if (current != NONE) action = NONE

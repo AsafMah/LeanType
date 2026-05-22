@@ -210,9 +210,29 @@ public final class InputLogic {
     }
 
     private void clearOneShotSpaceActionAndNotifyIfChanged() {
+        mForceNextSpacePendingWord = false;
+        mSuppressAutospaceForForceNextSpace = false;
         if (OneShotSpaceAction.clear()) {
             mLatinIME.onOneShotSpaceActionStateChanged();
         }
+    }
+
+    private void consumeJoinNextActionAndNotifyIfChanged() {
+        if (OneShotSpaceAction.consumeJoinNext()) {
+            mLatinIME.onOneShotSpaceActionStateChanged();
+        }
+    }
+
+    private void markForceNextSpaceWordStarted() {
+        if (mForceNextSpacePendingWord) {
+            mForceNextSpacePendingWord = false;
+            mSuppressAutospaceForForceNextSpace = true;
+        }
+    }
+
+    public void hideCombiningModeIndicator() {
+        final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+        if (kv != null) kv.setCombiningMode(false, 0L, 0);
     }
 
     /**
@@ -492,11 +512,11 @@ public final class InputLogic {
     public boolean onUpdateSelection(final int oldSelStart, final int oldSelEnd, final int newSelStart,
             final int newSelEnd, final int composingSpanStart, final int composingSpanEnd,
             final SettingsValues settingsValues) {
-        clearOneShotSpaceActionAndNotifyIfChanged();
         if (mConnection.isBelatedExpectedUpdate(oldSelStart, newSelStart, oldSelEnd, newSelEnd, composingSpanStart,
                 composingSpanEnd)) {
             return false;
         }
+        clearOneShotSpaceActionAndNotifyIfChanged();
         // TODO: the following is probably better done in resetEntireInputState().
         // it should only happen when the cursor moved, and the very purpose of the
         // test below is to narrow down whether this happened or not. Likewise with
@@ -658,6 +678,7 @@ public final class InputLogic {
 
     public void onStartBatchInput(final SettingsValues settingsValues,
             final KeyboardSwitcher keyboardSwitcher, final LatinIME.UIHandler handler) {
+        markForceNextSpaceWordStarted();
         // Snapshot the keyboard's shift mode BEFORE any state mutates — the shifted indicator
         // typically auto-clears once the gesture starts moving, so by the time
         // onUpdateTailBatchInputCompleted fires the live mode reads as UNSHIFTED.
@@ -686,7 +707,13 @@ public final class InputLogic {
                 && !mWordComposer.isCursorFrontOrMiddleOfComposingWord();
         final boolean manualSpacingExtend = settingsValues.mGestureManualSpacing
                 && cursorAtEndOfComposingWord;
-        final boolean combiningExtend = wasInCombiningMode && cursorAtEndOfComposingWord;
+        final boolean joinNextExtend = OneShotSpaceAction.isJoinNextArmed()
+                && cursorAtEndOfComposingWord;
+        final boolean combiningExtend = (wasInCombiningMode || joinNextExtend)
+                && cursorAtEndOfComposingWord;
+        if (joinNextExtend) {
+            consumeJoinNextActionAndNotifyIfChanged();
+        }
         // Legacy tap-promotion flag retained so onUpdateTailBatchInputCompleted reuses the
         // same decision (kept here so a long gesture doesn't fall out of the window between
         // start and end). When combining mode supersedes tap-promotion the flag just tracks
@@ -896,7 +923,66 @@ public final class InputLogic {
         mPendingCombiningCommit = () -> onCombiningGraceExpired();
         mCombiningHandler.postDelayed(mPendingCombiningCommit, graceMs);
         final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
-        if (kv != null) kv.setCombiningMode(true, startTime, graceMs);
+        if (kv != null) {
+            final boolean showAutospaceIndicator = settingsValues.shouldInsertSpacesAutomatically()
+                    && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
+                    && !mSuppressAutospaceForForceNextSpace;
+            kv.setCombiningMode(showAutospaceIndicator, startTime, graceMs);
+        }
+    }
+
+    private void enterJoinNextMode(final SettingsValues settingsValues) {
+        OneShotSpaceAction.armJoinNext();
+        mAutospaceAlternativesPending = false;
+        mAutoCommitRevertLength = 0;
+        mLastGestureCommittedLength = 0;
+        mAutospaceJustWritten = false;
+        if (Constants.CODE_SPACE == mConnection.getCodePointBeforeCursor()
+                && !mWordComposer.isComposingWord()) {
+            mConnection.removeTrailingSpace();
+        }
+        mSpaceState = SpaceState.NONE;
+        if (!mWordComposer.isComposingWord()) {
+            resumeWordAtCursorForJoining(settingsValues);
+        }
+        cancelCombiningTimerOnly();
+        if (mWordComposer.isComposingWord()) {
+            mInCombiningMode = true;
+            final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+            if (kv != null) {
+                final boolean showAutospaceIndicator = settingsValues.shouldInsertSpacesAutomatically()
+                        && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces;
+                kv.setCombiningMode(showAutospaceIndicator, SystemClock.uptimeMillis(),
+                        Math.max(0, settingsValues.mCombiningGraceMs));
+            }
+        }
+    }
+
+    private void resumeWordAtCursorForJoining(final SettingsValues settingsValues) {
+        final TextRange range = mConnection.getWordRangeAtCursor(settingsValues.mSpacingAndPunctuations,
+                settingsValues.mCurrentKeyboardScript);
+        if (range == null || range.length() <= 0 || range.mHasUrlSpans
+                || !isResumableWord(settingsValues, range.mWord.toString())) {
+            return;
+        }
+        restartSuggestions(range);
+    }
+
+    private void forceSpaceBeforeNextWord(final Event event, final InputTransaction inputTransaction,
+            final LatinIME.UIHandler handler) {
+        final boolean alreadyHasTrailingSpace = Constants.CODE_SPACE == mConnection.getCodePointBeforeCursor();
+        if (mWordComposer.isComposingWord() || !alreadyHasTrailingSpace) {
+            final Event forcedSpaceEvent = Event.createSoftwareKeypressEvent(Constants.CODE_SPACE,
+                    event.getMetaState(), event.getX(), event.getY(), event.isKeyRepeat());
+            handleNonSpecialCharacterEvent(forcedSpaceEvent, inputTransaction, handler);
+        } else {
+            cancelCombiningMode();
+            mSpaceState = SpaceState.WEAK;
+        }
+        mForceNextSpacePendingWord = true;
+        mSuppressAutospaceForForceNextSpace = false;
+        OneShotSpaceAction.armForceNextSpace();
+        mLatinIME.onOneShotSpaceActionStateChanged();
     }
 
     /**
@@ -965,6 +1051,8 @@ public final class InputLogic {
      *  word; consumed at the bottom of the same method to insert a visible trailing space so
      *  the cursor lands at "the |" instead of "the|". */
     private boolean mInsertTrailingSpaceAfterPick;
+    private boolean mForceNextSpacePendingWord;
+    private boolean mSuppressAutospaceForForceNextSpace;
 
     /**
      * Fired by the Handler when the grace timer expires. Commit the current composing word
@@ -1431,17 +1519,12 @@ public final class InputLogic {
                 performEditorAction(EditorInfo.IME_ACTION_PREVIOUS, inputTransaction.getSettingsValues(), handler);
                 break;
             case KeyCode.JOIN_NEXT:
-                OneShotSpaceAction.armJoinNext();
+                enterJoinNextMode(inputTransaction.getSettingsValues());
                 mLatinIME.onOneShotSpaceActionStateChanged();
                 break;
-            case KeyCode.FORCE_NEXT_SPACE: {
-                final Event forcedSpaceEvent = Event.createSoftwareKeypressEvent(Constants.CODE_SPACE,
-                        event.getMetaState(), event.getX(), event.getY(), event.isKeyRepeat());
-                handleNonSpecialCharacterEvent(forcedSpaceEvent, inputTransaction, handler);
-                OneShotSpaceAction.armForceNextSpace();
-                mLatinIME.onOneShotSpaceActionStateChanged();
+            case KeyCode.FORCE_NEXT_SPACE:
+                forceSpaceBeforeNextWord(event, inputTransaction, handler);
                 break;
-            }
             case KeyCode.LANGUAGE_SWITCH:
                 handleLanguageSwitchKey();
                 break;
@@ -1593,6 +1676,7 @@ public final class InputLogic {
                 break;
             case KeyCode.SPLIT_LAYOUT:
                 KeyboardSwitcher.getInstance().toggleSplitKeyboardMode();
+                mLatinIME.onOneShotSpaceActionStateChanged();
                 break;
             case KeyCode.TIMESTAMP:
                 mLatinIME.onTextInput(TimestampKt.getTimestamp(mLatinIME));
@@ -1799,6 +1883,9 @@ public final class InputLogic {
         // not the same.
         boolean isComposingWord = mWordComposer.isComposingWord();
         mWordComposer.unsetBatchMode(); // relevant in case we continue a batch word with normal typing
+        if (settingsValues.isWordCodePoint(codePoint)) {
+            markForceNextSpaceWordStarted();
+        }
 
         // if we continue directly after a sometimesWordConnector, restart suggestions
         // for the whole word
@@ -1901,6 +1988,7 @@ public final class InputLogic {
             // Two-thumb typing (#1.1): record this tap as a fragment boundary so a future
             // backspace under PREF_GESTURE_FRAGMENT_BACKSPACE can pop the whole tap.
             recordFragmentBoundaryIfTracking(settingsValues);
+            consumeJoinNextActionAndNotifyIfChanged();
             // Combining mode: arm/refresh the grace timer for the next input.
             enterCombiningMode(settingsValues, true /* fromTap, unused — kept for clarity */);
         } else {
@@ -3007,13 +3095,17 @@ public final class InputLogic {
      *         Constants.TextUtils.CAP_MODE_OFF.
      */
     public int getCurrentAutoCapsState(final SettingsValues settingsValues) {
-        if (!settingsValues.mAutoCap)
-            return Constants.TextUtils.CAP_MODE_OFF;
-
         final EditorInfo ei = getCurrentInputEditorInfo();
         if (ei == null)
             return Constants.TextUtils.CAP_MODE_OFF;
         int inputType = ei.inputType;
+        if (!settingsValues.mAutoCap) {
+            if (!settingsValues.mForceAutoCaps || InputTypeUtils.isPasswordInputType(inputType)
+                    || InputTypeUtils.isVisiblePasswordInputType(inputType)) {
+                return Constants.TextUtils.CAP_MODE_OFF;
+            }
+            inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
+        }
         if (settingsValues.mForceAutoCaps && !InputTypeUtils.isPasswordInputType(inputType)
                 && !InputTypeUtils.isVisiblePasswordInputType(inputType)) {
             inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
@@ -3303,10 +3395,14 @@ public final class InputLogic {
      * @param settingsValues the current values of the settings.
      */
     private void insertAutomaticSpaceIfOptionsAndTextAllow(final SettingsValues settingsValues) {
-        // JOIN_NEXT and FORCE_NEXT_SPACE both suppress exactly one automatic spacing decision.
-        // consumeAction() returns the current armed action AND clears it, so suppression is one-shot.
-        // At this point we only care whether any one-shot action is armed, not which one.
-        if (OneShotSpaceAction.consumeAction() != OneShotSpaceAction.NONE) {
+        if (mSuppressAutospaceForForceNextSpace) {
+            mSuppressAutospaceForForceNextSpace = false;
+            mForceNextSpacePendingWord = false;
+            OneShotSpaceAction.clear();
+            mLatinIME.onOneShotSpaceActionStateChanged();
+            return;
+        }
+        if (OneShotSpaceAction.consumeJoinNext()) {
             mLatinIME.onOneShotSpaceActionStateChanged();
             return;
         }

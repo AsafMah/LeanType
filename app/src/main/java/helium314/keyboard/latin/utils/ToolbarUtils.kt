@@ -3,15 +3,20 @@ package helium314.keyboard.latin.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.core.content.edit
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.forEach
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Constants.Separators
 import helium314.keyboard.latin.inputlogic.OneShotSpaceAction
 import helium314.keyboard.latin.settings.Defaults
@@ -22,6 +27,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.EnumSet
 import java.util.EnumMap
 import java.util.Locale
 
@@ -37,6 +43,11 @@ fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     return button
 }
 
+private val toolbarStateKeys = EnumSet.of(
+    INCOGNITO, ONE_HANDED, SPLIT, AUTOCORRECT, AUTO_CAP, FORCE_AUTO_CAP,
+    AUTOSPACE, JOIN_NEXT, FORCE_NEXT_SPACE
+)
+
 fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: String?) {
     // settings need to be updated when buttons change
     if (key != Settings.PREF_AUTO_CORRECTION
@@ -44,6 +55,8 @@ fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: St
         && key != Settings.PREF_AUTO_CAP
         && key != Settings.PREF_FORCE_AUTO_CAPS
         && key != Settings.PREF_ALWAYS_INCOGNITO_MODE
+        && key != Settings.PREF_ENABLE_SPLIT_KEYBOARD
+        && key != Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE
         && key?.startsWith(Settings.PREF_ONE_HANDED_MODE_PREFIX) == false)
         return
 
@@ -60,7 +73,7 @@ fun setToolbarButtonsActivatedState(buttonsGroup: ViewGroup) {
 }
 
 private fun setToolbarButtonActivatedState(button: ImageButton) {
-    button.isActivated = when (button.tag) {
+    val activated = when (button.tag) {
         INCOGNITO -> button.context.prefs().getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE)
         ONE_HANDED -> Settings.getValues().mOneHandedModeEnabled
         SPLIT -> Settings.getValues().mIsSplitKeyboardEnabled
@@ -69,11 +82,39 @@ private fun setToolbarButtonActivatedState(button: ImageButton) {
         // with the input-type guard. So in a password / email / URL field the button shows
         // as inactive even when the user has the master toggle on, which matches reality.
         AUTOSPACE -> Settings.getValues().shouldInsertSpacesAutomatically()
+                && !OneShotSpaceAction.isForceNextSpaceArmed()
         AUTO_CAP -> Settings.getValues().mAutoCap
         FORCE_AUTO_CAP -> Settings.getValues().mForceAutoCaps
         JOIN_NEXT -> OneShotSpaceAction.isJoinNextArmed()
         FORCE_NEXT_SPACE -> OneShotSpaceAction.isForceNextSpaceArmed()
         else -> true
+    }
+    button.isActivated = activated
+    val toolbarKey = button.tag as? ToolbarKey
+    if (toolbarKey != null && toolbarKey in toolbarStateKeys) {
+        button.background = createToolbarStateBackground(button.context)
+    }
+}
+
+private fun createToolbarStateBackground(context: Context): StateListDrawable {
+    val radius = 8.dpToPx(context.resources).toFloat()
+    val activeColor = ColorUtils.setAlphaComponent(
+        Settings.getValues().mColors.get(ColorType.TOOL_BAR_KEY_ENABLED_BACKGROUND),
+        0x44
+    )
+    val active = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        cornerRadius = radius
+        setColor(activeColor)
+    }
+    val normal = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        cornerRadius = radius
+        setColor(Color.TRANSPARENT)
+    }
+    return StateListDrawable().apply {
+        addState(intArrayOf(android.R.attr.state_activated), active)
+        addState(intArrayOf(), normal)
     }
 }
 
