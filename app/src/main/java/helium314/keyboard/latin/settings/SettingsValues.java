@@ -83,6 +83,9 @@ public class SettingsValues {
         public final int mTouchpadSensitivity;
         public final boolean mForceAutoCaps;
         public final boolean mDeleteSwipeEnabled;
+        // Master autospace switch (see Settings.PREF_AUTOSPACE_ENABLED). Final gating happens
+        // in shouldInsertSpacesAutomatically() so this works alongside the input-type guard.
+        public final boolean mAutospaceEnabled;
         public final boolean mAutospaceAfterPunctuation;
         public final boolean mAutospaceAfterSuggestion;
         public final boolean mAutospaceAfterGestureTyping;
@@ -111,6 +114,31 @@ public class SettingsValues {
         public final boolean mGestureFloatingPreviewDynamicEnabled;
         public final int mGestureFastTypingCooldown;
         public final int mGestureTrailFadeoutDuration;
+        // Two-thumb typing settings (see plan in PR #improve-two-thumb-typing).
+        // Wired into preferences here; behaviour for each is implemented in follow-up changes.
+        public final boolean mGestureManualSpacing;
+        public final boolean mGestureFragmentBackspace;
+        public final int mGestureAutospaceGraceMs;
+        public final boolean mGestureTapDuringSwipe;
+        public final int mGestureTapAsSwipeWindowMs;
+        public final int mGestureTapPromotionMs;
+        public final boolean mGestureDualThumbHinting;
+        public final int mGestureDualThumbMidlinePct;
+        public final boolean mGestureDebugDrawPoints;
+        public final boolean mGestureApostropheKey;
+        public final boolean mAutospaceVisualHint;
+        // Unified combining-mode (replaces gesture-only grace + tap-promotion). Default 0 = off.
+        public final int mCombiningGraceMs;
+        public final boolean mCombiningAutocorrectOnAutospace;
+        public final int mCombiningTapExtraMs;
+        // Raw string value: "keep_alternatives" | "next_word" | "alternatives_then_next_word"
+        public final String mCombiningAutospaceSuggestions;
+        public final boolean mCombiningBackspaceDeletesGestureWord;
+        // Multi-part word composition (this branch).
+        public final boolean mMultipartAutoExtendInCombining;
+        public final boolean mMultipartFullWordSuggestions;
+        public final boolean mMultipartTapSeedGesture;
+        public final String mMultipartJoinKeyMode;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -297,6 +325,52 @@ public class SettingsValues {
                                 Defaults.PREF_GESTURE_FAST_TYPING_COOLDOWN);
                 mGestureTrailFadeoutDuration = prefs.getInt(Settings.PREF_GESTURE_TRAIL_FADEOUT_DURATION,
                                 Defaults.PREF_GESTURE_TRAIL_FADEOUT_DURATION);
+                // Two-thumb typing prefs (defaults preserve current behaviour).
+                mGestureManualSpacing = prefs.getBoolean(Settings.PREF_GESTURE_MANUAL_SPACING,
+                                Defaults.PREF_GESTURE_MANUAL_SPACING);
+                mGestureFragmentBackspace = prefs.getBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE,
+                                Defaults.PREF_GESTURE_FRAGMENT_BACKSPACE);
+                mGestureAutospaceGraceMs = prefs.getInt(Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS,
+                                Defaults.PREF_GESTURE_AUTOSPACE_GRACE_MS);
+                mGestureTapDuringSwipe = prefs.getBoolean(Settings.PREF_GESTURE_TAP_DURING_SWIPE,
+                                Defaults.PREF_GESTURE_TAP_DURING_SWIPE);
+                mGestureTapAsSwipeWindowMs = prefs.getInt(Settings.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS,
+                                Defaults.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS);
+                mGestureTapPromotionMs = prefs.getInt(Settings.PREF_GESTURE_TAP_PROMOTION_MS,
+                                Defaults.PREF_GESTURE_TAP_PROMOTION_MS);
+                mGestureDualThumbHinting = prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
+                                Defaults.PREF_GESTURE_DUAL_THUMB_HINTING);
+                mGestureDualThumbMidlinePct = prefs.getInt(Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT,
+                                Defaults.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT);
+                mGestureDebugDrawPoints = prefs.getBoolean(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS,
+                                Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS);
+                mGestureApostropheKey = prefs.getBoolean(Settings.PREF_GESTURE_APOSTROPHE_KEY,
+                                Defaults.PREF_GESTURE_APOSTROPHE_KEY);
+                mAutospaceVisualHint = prefs.getBoolean(Settings.PREF_AUTOSPACE_VISUAL_HINT,
+                                Defaults.PREF_AUTOSPACE_VISUAL_HINT);
+                mCombiningGraceMs = prefs.getInt(Settings.PREF_COMBINING_GRACE_MS,
+                                Defaults.PREF_COMBINING_GRACE_MS);
+                mCombiningAutocorrectOnAutospace = prefs.getBoolean(
+                                Settings.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE,
+                                Defaults.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE);
+                mCombiningTapExtraMs = prefs.getInt(Settings.PREF_COMBINING_TAP_EXTRA_MS,
+                                Defaults.PREF_COMBINING_TAP_EXTRA_MS);
+                mCombiningAutospaceSuggestions = prefs.getString(Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS,
+                                Defaults.PREF_COMBINING_AUTOSPACE_SUGGESTIONS);
+                mCombiningBackspaceDeletesGestureWord = prefs.getBoolean(
+                                Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD,
+                                Defaults.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD);
+                mMultipartAutoExtendInCombining = prefs.getBoolean(
+                                Settings.PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING,
+                                Defaults.PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING);
+                mMultipartFullWordSuggestions = prefs.getBoolean(
+                                Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS,
+                                Defaults.PREF_MULTIPART_FULL_WORD_SUGGESTIONS);
+                mMultipartTapSeedGesture = prefs.getBoolean(
+                                Settings.PREF_MULTIPART_TAP_SEED_GESTURE,
+                                Defaults.PREF_MULTIPART_TAP_SEED_GESTURE);
+                mMultipartJoinKeyMode = prefs.getString(Settings.PREF_MULTIPART_JOIN_KEY_MODE,
+                                Defaults.PREF_MULTIPART_JOIN_KEY_MODE);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions
@@ -325,6 +399,8 @@ public class SettingsValues {
                                 Defaults.PREF_TOUCHPAD_SENSITIVITY);
                 mForceAutoCaps = prefs.getBoolean(Settings.PREF_FORCE_AUTO_CAPS, Defaults.PREF_FORCE_AUTO_CAPS);
                 mDeleteSwipeEnabled = prefs.getBoolean(Settings.PREF_DELETE_SWIPE, Defaults.PREF_DELETE_SWIPE);
+                mAutospaceEnabled = prefs.getBoolean(Settings.PREF_AUTOSPACE_ENABLED,
+                                Defaults.PREF_AUTOSPACE_ENABLED);
                 mAutospaceAfterPunctuation = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION,
                                 Defaults.PREF_AUTOSPACE_AFTER_PUNCTUATION);
                 mAutospaceAfterSuggestion = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_SUGGESTION,
@@ -444,7 +520,12 @@ public class SettingsValues {
         }
 
         public boolean shouldInsertSpacesAutomatically() {
-                return mInputAttributes.mShouldInsertSpacesAutomatically;
+                // AND of:
+                //   * master toggle (PREF_AUTOSPACE_ENABLED, toggleable from the toolbar
+                //     AUTOSPACE key) — user-controlled global on/off.
+                //   * input-type guard (mShouldInsertSpacesAutomatically) — automatically off
+                //     for password / email / URL fields regardless of the master toggle.
+                return mAutospaceEnabled && mInputAttributes.mShouldInsertSpacesAutomatically;
         }
 
         public boolean isLanguageSwitchKeyEnabled() {

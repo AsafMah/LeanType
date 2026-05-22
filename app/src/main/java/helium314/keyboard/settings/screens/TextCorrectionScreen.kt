@@ -58,6 +58,10 @@ fun TextCorrectionScreen(
     val suggestionsVisible = Settings.readToolbarMode(prefs) in setOf(ToolbarMode.SUGGESTION_STRIP, ToolbarMode.EXPANDABLE)
     val suggestionsEnabled = suggestionsVisible && prefs.getBoolean(Settings.PREF_SHOW_SUGGESTIONS, Defaults.PREF_SHOW_SUGGESTIONS)
     val gestureEnabled = JniUtils.sHaveGestureLib && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
+    // Two-thumb typing (#1.1): when manual spacing is on, the autospace-around-gesture
+    // toggles are no-ops at runtime. Hide them so the UI doesn't pretend they do something.
+    val manualGestureSpacing = gestureEnabled
+            && prefs.getBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, Defaults.PREF_GESTURE_MANUAL_SPACING)
     val items = listOf(
 
         R.string.settings_category_correction,
@@ -73,8 +77,8 @@ fun TextCorrectionScreen(
         Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD,
         Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION,
         Settings.PREF_AUTOSPACE_AFTER_SUGGESTION,
-        if (gestureEnabled) Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING else null,
-        if (gestureEnabled) Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING else null,
+        if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING else null,
+        if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING else null,
         Settings.PREF_SHIFT_REMOVES_AUTOSPACE,
         R.string.settings_category_suggestions,
         if (suggestionsVisible) Settings.PREF_SHOW_SUGGESTIONS else null,
