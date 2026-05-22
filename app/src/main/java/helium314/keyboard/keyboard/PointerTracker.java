@@ -1348,13 +1348,18 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (key == null || mKeyboard == null || key.isSpacer() || !key.isEnabled()) {
             return false;
         }
-        int top = Integer.MAX_VALUE;
+        if (Settings.getValues().mTopRowSwipeUpKeyCode == KeyCode.UNSPECIFIED) {
+            return false;
+        }
+        // getSortedKeys() is sorted top-left to bottom-right; the first eligible key gives the top row Y.
+        // We only need the first match, so we return immediately upon finding it.
         for (final Key candidate : mKeyboard.getSortedKeys()) {
             if (!candidate.isSpacer() && candidate.isEnabled() && candidate.getHeight() > 0) {
-                top = Math.min(top, candidate.getY());
+                final int topRowY = candidate.getY();
+                return key.getY() == topRowY;
             }
         }
-        return top != Integer.MAX_VALUE && key.getY() == top;
+        return false;
     }
 
     private boolean tryHandleTopRowSwipe(final Key key, final int x, final int y) {
@@ -1363,6 +1368,11 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
         final int actionCode = Settings.getValues().mTopRowSwipeUpKeyCode;
         if (actionCode == KeyCode.UNSPECIFIED || !mStartedOnTopRow || sInGesture) {
+            return false;
+        }
+        // Modifier keys (SHIFT, SYMBOL, ALPHA, NUMPAD, etc.) must go through their normal
+        // press/release flow to maintain correct keyboard state transitions; don't consume their swipe.
+        if (key != null && key.isModifier()) {
             return false;
         }
         final int dX = x - mStartX;
