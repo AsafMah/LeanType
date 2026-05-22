@@ -51,6 +51,9 @@ class ClipboardHistoryRecyclerView @JvmOverloads constructor(
         }
     }).attachToRecyclerView(this)
 
+    /** Public entry point so callers outside the swipe-to-delete flow can offer undo. */
+    fun showUndoForDeletedEntry(entry: ClipboardHistoryEntry) = showUndoBar(entry)
+
     private fun showUndoBar(entry: ClipboardHistoryEntry) {
         // Cancel any pending dismiss from a previous undo
         undoHandler.removeCallbacks(undoDismissRunnable)

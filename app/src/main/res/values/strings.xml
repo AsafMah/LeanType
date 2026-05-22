@@ -316,6 +316,22 @@
     <string name="clipboard_empty_text">No items found</string>
     <!-- Text for clipboard item deleted undo bar -->
     <string name="clipboard_item_deleted">Item deleted</string>
+    <!-- Long-press menu action: edit the text of a clipboard entry -->
+    <string name="clipboard_action_edit">Edit</string>
+    <!-- Long-press menu action: pin a clipboard entry -->
+    <string name="clipboard_action_pin">Pin</string>
+    <!-- Long-press menu action: remove the pin from a clipboard entry -->
+    <string name="clipboard_action_unpin">Unpin</string>
+    <!-- Long-press menu action: copy a clipboard entry back to the system clipboard -->
+    <string name="clipboard_action_copy">Copy</string>
+    <!-- Long-press menu action: share a clipboard entry via the Android share sheet -->
+    <string name="clipboard_action_share">Share</string>
+    <!-- Long-press menu action: delete a clipboard entry -->
+    <string name="clipboard_action_delete">Delete</string>
+    <!-- Title of the dialog used to edit a clipboard entry's text -->
+    <string name="clipboard_edit_dialog_title">Edit clip</string>
+    <!-- Hint shown in the edit clip dialog when the text is empty -->
+    <string name="clipboard_edit_dialog_hint">Clip text</string>
     <!-- Text for no search results -->
     <string name="clipboard_no_search_results">No results found</string>
     <!-- Preferences item for enabling swipe deletion -->

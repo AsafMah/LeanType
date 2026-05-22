@@ -145,7 +145,12 @@ class ClipboardAdapter(
         }
 
         override fun onLongClick(view: View): Boolean {
-            clipboardHistoryManager?.toggleClipPinned(view.tag as Long)
+            val id = view.tag as? Long ?: return false
+            // Delegate to host view which shows the context menu.
+            // Fallback to legacy "toggle pin" if the host doesn't handle the event,
+            // preserving behaviour for any caller that hasn't been updated.
+            if (keyEventListener.onKeyLongPress(id, view)) return true
+            clipboardHistoryManager?.toggleClipPinned(id)
             return true
         }
     }

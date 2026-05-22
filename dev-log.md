@@ -86,3 +86,107 @@ The user requested a plan and implementation for visible on/off state indicators
 
 ### Open Questions / Next Steps
 - Full `InputLogicTest` class execution still has pre-existing failures under the standard debug unit-test variant (`insertLetterIntoWordHangulFails`, `revert autocorrect on delete`); the targeted one-shot key tests pass.
+
+---
+
+## 2026-05-22 — Replace clipboard inline editor with normal editor activity
+
+### Context
+The branch `copilot/improve-clipboard-editability` implemented clipboard clip editing inside the IME by embedding an edit panel and secondary keyboard in `ClipboardHistoryView`. The user clarified that edit mode is only worthwhile if it behaves like a normal text box using the user's regular selected keyboard.
+
+### Actions Taken
+- Removed the inline edit panel from `app/src/main/res/layout/clipboard_history_view.xml`.
+- Removed edit-mode state, local text insertion, and local Shift/Symbol keyboard handling from `ClipboardHistoryView.kt`.
+- Added `ClipboardClipEditActivity.kt`, a non-exported Activity with a normal focused `EditText`.
+- Registered `ClipboardClipEditActivity` in `AndroidManifest.xml` with `stateAlwaysVisible|adjustResize`.
+- Wired the clipboard long-press **Edit** action to launch the Activity with the clip id.
+- Added `ClipboardDaoTest.kt` covering normal edit, empty-delete, duplicate merge, missing clip, and image-clip ignore behavior.
+- Built `:app:assembleStandardDebug` and installed the standard debug APK on the connected phone.
+
+### Decisions Made
+- Chose an Activity instead of an IME-hosted view because Android only routes the selected user keyboard normally to a real focused app editor, not to a child editor inside the IME window.
+- Passed only the clip id to the Activity and reloaded from `ClipboardDao`, so the Activity edits the latest stored clip content.
+- Kept existing `ClipboardDao.updateText()` semantics: empty text deletes, duplicate text merges, image clips are ignored, and normal edits bump timestamp.
+
+### Manual Tests — Clipboard Clip Editing
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Open the clipboard view, long-press a text clip, and tap **Edit**. | A normal edit screen opens with the clip text focused. |
+| 2 | Type using the keyboard that appears, including Shift and Symbols. | The user's normal keyboard handles input and stays in edit mode. |
+| 3 | Tap **Save** after changing the text. | The clipboard clip updates and returns to the prior flow. |
+| 4 | Tap **Cancel** after changing the text. | The clipboard clip remains unchanged. |
+| 5 | Save an empty clip. | The clip is deleted through existing clipboard storage semantics. |
+
+### Open Questions / Next Steps
+- User should confirm on-device whether launching a normal Activity is acceptable visually, since the editor no longer lives inside the clipboard panel.
+
+## 2026-05-22 — Make clipboard editor dialog-sized
+
+### Context
+After the Activity-based clipboard editor was installed, the user asked whether it could avoid covering the entire screen.
+
+### Actions Taken
+- Added `ClipboardClipEditActivityTheme` in `platform-theme.xml` using a dialog-style Activity theme.
+- Switched `ClipboardClipEditActivity` to the dialog theme in `AndroidManifest.xml`.
+- Changed the editor content layout to wrap height with a fixed-height multi-line `EditText`, so the editor is a floating dialog instead of fullscreen.
+- Rebuilt `:app:assembleStandardDebug` and installed the APK on the connected phone.
+
+### Decisions Made
+- Kept the editor as an Activity, not an IME child view, so it remains a normal focused text box and continues to use the user's selected keyboard.
+
+### Open Questions / Next Steps
+- User should verify whether the dialog height is comfortable on the target phone; it is currently a 280dp editor area.
+
+## 2026-05-22 — Reset keyboard around clipboard clip editing
+
+### Context
+The dialog-sized editor still opened with LeanType's clipboard panel as the active keyboard. The user asked for the keyboard to return from clipboard to default when the editor appears, and to return to the clipboard menu after saving.
+
+### Actions Taken
+- Updated `ClipboardHistoryView.showEditActivity()` to call `KeyboardSwitcher.setAlphabetKeyboard()` before launching `ClipboardClipEditActivity`.
+- Updated the editor Activity save action to persist the edit, call `KeyboardSwitcher.setClipboardKeyboard()`, and then finish.
+- Rebuilt `:app:assembleStandardDebug` and installed the APK on the connected phone.
+
+### Decisions Made
+- Used `setAlphabetKeyboard()` / `setClipboardKeyboard()` directly instead of key-event simulation so the editor flow does not accidentally type into the target app or depend on current key layout state.
+
+### Open Questions / Next Steps
+- User should verify the visible transition: Edit opens with the alphabet keyboard; Save closes the editor and restores clipboard history.
+
+## 2026-05-22 — Smooth clipboard editor transitions
+
+### Context
+The user reported the Activity-based clipboard edit flow still felt janky after switching between alphabet and clipboard modes.
+
+### Actions Taken
+- Disabled Activity open/close transitions for `ClipboardClipEditActivity`.
+- Delayed returning to the clipboard keyboard until shortly after save starts closing the editor, rather than swapping keyboard content underneath the still-visible dialog.
+- Rebuilt `:app:assembleStandardDebug` and installed the APK on the connected phone.
+
+### Decisions Made
+- Kept the alphabet-before-edit and clipboard-after-save behavior, but changed the timing to reduce visible flicker.
+
+### Open Questions / Next Steps
+- User should verify whether the transition now feels acceptable on-device.
+
+## 2026-05-22 — Return to clipboard on cancel without delay
+
+### Context
+The user requested that Cancel also return to the clipboard page, and that the return-to-clipboard animation/flicker be skipped.
+
+### Actions Taken
+- Changed Cancel to use the same close-and-return-to-clipboard path as Save.
+- Removed the delayed clipboard restore; clipboard mode is now posted immediately after the no-animation Activity finish.
+- Rebuilt `:app:assembleStandardDebug` and installed the APK on the connected phone.
+
+### Decisions Made
+- Kept `overridePendingTransition(0, 0)` on open/close and removed the artificial delay so returning to clipboard does not visibly animate through the normal keyboard first.
+
+### Open Questions / Next Steps
+- User should verify the Save and Cancel transitions on-device.
+---
+
+## 2026-05-22 — Replace clipboard inline editor with normal editor activity
+
+### Context

@@ -102,6 +102,76 @@ class ClipboardDao private constructor(private val db: Database) {
 
     fun sort() = cache.sort()
 
+    /**
+     * Update the text of an existing clip identified by [id].
+     * - If [newText] is empty, the clip is deleted (caller can use [restoreClip] for undo).
+     * - If another (non-image) clip already has the same text, the duplicate is removed
+     *   and the edited entry is kept (pin status of the kept entry is preserved).
+     * - Editing always bumps the timestamp to "now" so the entry moves to the top.
+     * - Only text clips can be edited; image clips are ignored.
+     *
+     * Returns the new position of the entry in the cache, or -1 if the entry was deleted
+     * (empty text or not found). If the entry was deleted because of empty text, the
+     * deleted [ClipboardHistoryEntry] is returned via [deletedOut] for undo support.
+     */
+    fun updateText(id: Long, newText: String, deletedOut: Array<ClipboardHistoryEntry?>? = null): Int {
+        val index = cache.indexOfFirst { it.id == id }
+        if (index < 0) return -1
+        val entry = cache[index]
+        if (entry.imageUri != null) return -1 // image clips are not editable
+
+        // Empty text -> delete (let caller offer undo).
+        if (newText.isEmpty()) {
+            val deleted = deleteClipAt(index)
+            if (deleted != null) {
+                listener?.onClipsRemoved(index, 1)
+                deletedOut?.set(0, deleted)
+            }
+            return -1
+        }
+
+        // No actual change -> nothing to do.
+        if (newText == entry.text) return index
+
+        // Look for an existing duplicate (different id, same text, also non-image).
+        val duplicateIndex = cache.indexOfFirst { it.id != id && it.imageUri == null && it.text == newText }
+        if (duplicateIndex >= 0) {
+            val duplicate = cache[duplicateIndex]
+            // Preserve a pin if the duplicate was pinned and the edited entry was not.
+            val keepPinned = entry.isPinned || duplicate.isPinned
+            cache.removeAt(duplicateIndex)
+            db.writableDatabase.delete(TABLE, "$COLUMN_ID = ${duplicate.id}", null)
+            listener?.onClipsRemoved(duplicateIndex, 1)
+            // The edited entry's index may have shifted by one if duplicate was before it.
+            val newIndexAfterRemove = cache.indexOf(entry)
+            entry.text = newText
+            entry.isPinned = keepPinned
+            entry.timeStamp = System.currentTimeMillis()
+            val cv = ContentValues(3)
+            cv.put(COLUMN_TEXT, newText)
+            cv.put(COLUMN_PINNED, keepPinned)
+            cv.put(COLUMN_TIMESTAMP, entry.timeStamp)
+            db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null)
+            cache.sort()
+            val finalIndex = cache.indexOf(entry)
+            listener?.onClipMoved(newIndexAfterRemove, finalIndex)
+            return finalIndex
+        }
+
+        // Normal edit: update text + bump timestamp.
+        entry.text = newText
+        val oldPos = index
+        entry.timeStamp = System.currentTimeMillis()
+        cache.sort()
+        val newPos = cache.indexOf(entry)
+        val cv = ContentValues(2)
+        cv.put(COLUMN_TEXT, newText)
+        cv.put(COLUMN_TIMESTAMP, entry.timeStamp)
+        db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null)
+        listener?.onClipMoved(oldPos, newPos)
+        return newPos
+    }
+
     fun togglePinned(id: Long) {
         val entry = cache.first { it.id == id }
         entry.isPinned = !entry.isPinned
