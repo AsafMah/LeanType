@@ -14,7 +14,7 @@
 | Offline AI | ONNX Runtime with T5-based grammar-correction models (Offline build only) |
 | Custom AI Keys | 10 toolbar keys with user-defined prompts and hashtag personas |
 | Floating Keyboard | Detachable draggable overlay window |
-| Two-thumb Typing | Nintype-style combining mode, tap-during-swipe, manual spacing, autospace grace |
+| Two-thumb Typing | Nintype-style combining mode, manual spacing, autospace grace, point hinting |
 | UI / UX | Squircle key backgrounds, Split toolbar, Incognito icon, Clipboard search & undo, Screenshot suggestion, Emoji search |
 | Build flavors | `standard` (AI + internet), `offline` (ONNX, no internet), `offlinelite` (no AI at all) |
 

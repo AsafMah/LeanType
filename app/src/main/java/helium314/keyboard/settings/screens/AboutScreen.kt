@@ -58,6 +58,7 @@ fun AboutScreen(
         SettingsWithoutKey.HIDDEN_FEATURES,
         SettingsWithoutKey.GITHUB_WIKI,
         SettingsWithoutKey.GITHUB,
+        SettingsWithoutKey.SPONSOR,
         SettingsWithoutKey.SAVE_LOG,
     )
     SearchSettingsScreen(
@@ -157,6 +158,21 @@ fun createAboutSettings(context: Context) = listOf(
                 intent.action = Intent.ACTION_VIEW
                 ctx.startActivity(intent)
             },
+            icon = R.drawable.ic_settings_about_github
+        )
+    },
+    Setting(context, SettingsWithoutKey.SPONSOR, R.string.about_sponsor_link, R.string.about_sponsor_link_description) {
+        val ctx = LocalContext.current
+        Preference(
+            name = it.title,
+            description = it.description,
+            onClick = {
+                val intent = Intent()
+                intent.data = Links.SPONSOR.toUri()
+                intent.action = Intent.ACTION_VIEW
+                ctx.startActivity(intent)
+            },
+            // Re-using the github icon or using a generic heart/sponsor icon if available. We will use ic_settings_about_github for now or a generic one. Let's see what icons we have. Let's try R.drawable.ic_keyboard_settings or similar, actually R.drawable.ic_settings_about_github might be okay if we don't have a sponsor one. Wait, let's look for a heart icon. Let's just use ic_settings_about_github for now and change it if needed.
             icon = R.drawable.ic_settings_about_github
         )
     },

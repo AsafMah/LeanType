@@ -137,6 +137,38 @@
                     android:background="?android:attr/selectableItemBackground" />
             </LinearLayout>
 
+            <!-- Confirmation bar shown after pressing clear all -->
+            <LinearLayout
+                android:id="@+id/clipboard_confirmation_bar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/clipboard_confirmation_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/clipboard_clear_all_confirmation"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/clipboard_confirmation_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/clear_all"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:background="?android:attr/selectableItemBackground" />
+            </LinearLayout>
+
         </FrameLayout>
     </LinearLayout>
 

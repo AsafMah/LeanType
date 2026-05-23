@@ -122,21 +122,22 @@ public class SettingsValues {
         public final boolean mGestureManualSpacing;
         public final boolean mGestureFragmentBackspace;
         public final int mGestureAutospaceGraceMs;
-        public final boolean mGestureTapDuringSwipe;
-        public final int mGestureTapAsSwipeWindowMs;
         public final int mGestureTapPromotionMs;
         public final boolean mGestureDualThumbHinting;
         public final int mGestureDualThumbMidlinePct;
         public final boolean mGestureDebugDrawPoints;
+        public final boolean mGestureDebugAccumulateFragments;
         public final boolean mGestureApostropheKey;
         public final boolean mAutospaceVisualHint;
         // Unified combining-mode (replaces gesture-only grace + tap-promotion). Default 0 = off.
         public final int mCombiningGraceMs;
         public final boolean mCombiningAutocorrectOnAutospace;
         public final int mCombiningTapExtraMs;
+        public final boolean mCombiningAutospaceOnlyAfterGesture;
         // Raw string value: "keep_alternatives" | "next_word" | "alternatives_then_next_word"
         public final String mCombiningAutospaceSuggestions;
         public final boolean mCombiningBackspaceDeletesGestureWord;
+        public final boolean mCombiningBackspaceDeletesComposingText;
         // Multi-part word composition (this branch).
         public final boolean mMultipartAutoExtendInCombining;
         public final boolean mMultipartFullWordSuggestions;
@@ -187,9 +188,10 @@ public class SettingsValues {
         public final boolean mAutoCorrectionEnabledPerUserSettings;
         public final boolean mAutoCorrectEnabled;
         public final float mAutoCorrectionThreshold;
+        public final boolean mAutoCorrectShortcuts;
+        public final boolean mPersistFloatingKeyboard;
         public final boolean mBackspaceRevertsAutocorrect;
         public final int mScoreLimitForAutocorrect;
-        public final boolean mAutoCorrectShortcuts;
         private final boolean mSuggestionsEnabledPerUserSettings;
         private final boolean mOverrideShowingSuggestions;
         public final boolean mSuggestClipboardContent;
@@ -281,6 +283,8 @@ public class SettingsValues {
                                 : (mAutoCorrectionThreshold < 0.07 ? 800000 : 950000); // aggressive or modest
                 mAutoCorrectShortcuts = prefs.getBoolean(Settings.PREF_AUTOCORRECT_SHORTCUTS,
                                 Defaults.PREF_AUTOCORRECT_SHORTCUTS);
+                mPersistFloatingKeyboard = prefs.getBoolean(Settings.PREF_PERSIST_FLOATING_KEYBOARD,
+                                Defaults.PREF_PERSIST_FLOATING_KEYBOARD);
                 mBackspaceRevertsAutocorrect = prefs.getBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT,
                                 Defaults.PREF_BACKSPACE_REVERTS_AUTOCORRECT);
                 mBigramPredictionEnabled = prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS,
@@ -335,10 +339,6 @@ public class SettingsValues {
                                 Defaults.PREF_GESTURE_FRAGMENT_BACKSPACE);
                 mGestureAutospaceGraceMs = prefs.getInt(Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS,
                                 Defaults.PREF_GESTURE_AUTOSPACE_GRACE_MS);
-                mGestureTapDuringSwipe = prefs.getBoolean(Settings.PREF_GESTURE_TAP_DURING_SWIPE,
-                                Defaults.PREF_GESTURE_TAP_DURING_SWIPE);
-                mGestureTapAsSwipeWindowMs = prefs.getInt(Settings.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS,
-                                Defaults.PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS);
                 mGestureTapPromotionMs = prefs.getInt(Settings.PREF_GESTURE_TAP_PROMOTION_MS,
                                 Defaults.PREF_GESTURE_TAP_PROMOTION_MS);
                 mGestureDualThumbHinting = prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
@@ -347,6 +347,9 @@ public class SettingsValues {
                                 Defaults.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT);
                 mGestureDebugDrawPoints = prefs.getBoolean(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS,
                                 Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS);
+                mGestureDebugAccumulateFragments = prefs.getBoolean(
+                                Settings.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS,
+                                Defaults.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS);
                 mGestureApostropheKey = prefs.getBoolean(Settings.PREF_GESTURE_APOSTROPHE_KEY,
                                 Defaults.PREF_GESTURE_APOSTROPHE_KEY);
                 mAutospaceVisualHint = prefs.getBoolean(Settings.PREF_AUTOSPACE_VISUAL_HINT,
@@ -358,18 +361,25 @@ public class SettingsValues {
                                 Defaults.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE);
                 mCombiningTapExtraMs = prefs.getInt(Settings.PREF_COMBINING_TAP_EXTRA_MS,
                                 Defaults.PREF_COMBINING_TAP_EXTRA_MS);
+                mCombiningAutospaceOnlyAfterGesture = prefs.getBoolean(
+                                Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE,
+                                Defaults.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE);
                 mCombiningAutospaceSuggestions = prefs.getString(Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS,
                                 Defaults.PREF_COMBINING_AUTOSPACE_SUGGESTIONS);
+                final boolean nonNormalTwoThumbSpacing = mGestureManualSpacing || mCombiningGraceMs > 0;
                 mCombiningBackspaceDeletesGestureWord = prefs.getBoolean(
                                 Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD,
                                 Defaults.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD);
-                mMultipartAutoExtendInCombining = prefs.getBoolean(
+                mCombiningBackspaceDeletesComposingText = prefs.getBoolean(
+                                Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT,
+                                Defaults.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT);
+                mMultipartAutoExtendInCombining = nonNormalTwoThumbSpacing || prefs.getBoolean(
                                 Settings.PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING,
                                 Defaults.PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING);
                 mMultipartFullWordSuggestions = prefs.getBoolean(
                                 Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS,
                                 Defaults.PREF_MULTIPART_FULL_WORD_SUGGESTIONS);
-                mMultipartTapSeedGesture = prefs.getBoolean(
+                mMultipartTapSeedGesture = nonNormalTwoThumbSpacing || prefs.getBoolean(
                                 Settings.PREF_MULTIPART_TAP_SEED_GESTURE,
                                 Defaults.PREF_MULTIPART_TAP_SEED_GESTURE);
                 mMultipartJoinKeyMode = prefs.getString(Settings.PREF_MULTIPART_JOIN_KEY_MODE,

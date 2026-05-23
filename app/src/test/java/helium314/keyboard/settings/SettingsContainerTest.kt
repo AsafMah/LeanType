@@ -2,7 +2,9 @@ package helium314.keyboard.settings
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import helium314.keyboard.latin.settings.Settings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -49,5 +51,26 @@ class SettingsContainerTest {
             }
         }
         println("Filter performance: ${time / 1_000_000} ms")
+    }
+
+    @Test
+    fun twoThumbGestureGatedAutospaceSettingIsRegistered() {
+        assertEquals(Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE,
+            container[Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE]?.key)
+    }
+
+    @Test
+    fun twoThumbLowLevelBackspaceSettingIsHiddenFromSearchRegistry() {
+        assertNull(container[Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD])
+    }
+
+    @Test
+    fun twoThumbAdvancedTogglesAreRegistered() {
+        assertEquals(Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT,
+            container[Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT]?.key)
+        assertEquals(Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS,
+            container[Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS]?.key)
+        assertEquals(Settings.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS,
+            container[Settings.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS]?.key)
     }
 }

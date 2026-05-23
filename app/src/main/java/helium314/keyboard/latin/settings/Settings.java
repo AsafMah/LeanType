@@ -138,22 +138,23 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GESTURE_MANUAL_SPACING = "gesture_manual_spacing";
     public static final String PREF_GESTURE_FRAGMENT_BACKSPACE = "gesture_fragment_backspace";
     public static final String PREF_GESTURE_AUTOSPACE_GRACE_MS = "gesture_autospace_grace_ms";
-    public static final String PREF_GESTURE_TAP_DURING_SWIPE = "gesture_tap_during_swipe";
-    public static final String PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS = "gesture_tap_as_swipe_window_ms";
     public static final String PREF_GESTURE_TAP_PROMOTION_MS = "gesture_tap_promotion_ms";
     public static final String PREF_GESTURE_DUAL_THUMB_HINTING = "gesture_dual_thumb_hinting";
     public static final String PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT = "gesture_dual_thumb_midline_pct";
     public static final String PREF_GESTURE_DEBUG_DRAW_POINTS = "gesture_debug_draw_points";
+    public static final String PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS = "gesture_debug_accumulate_fragments";
     public static final String PREF_GESTURE_APOSTROPHE_KEY = "gesture_apostrophe_key";
     public static final String PREF_AUTOSPACE_VISUAL_HINT = "autospace_visual_hint";
     // Unified "combining-mode" model: after every composing-word-extending event (tap OR
     // gesture), wait this many milliseconds; any new tap/gesture within the window EXTENDS
     // the same composing word, anything else (or expiry) commits + autospaces. 0 disables.
     public static final String PREF_COMBINING_GRACE_MS = "combining_grace_ms";
+    public static final String PREF_COMBINING_LAST_AUTOSPACE_GRACE_MS = "combining_last_autospace_grace_ms";
     public static final String PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE = "combining_autocorrect_on_autospace";
     // Additional grace added on top of PREF_COMBINING_GRACE_MS when the most recent input
     // was a tap (peck-typists need more headroom than swipers between letters). 0 = no extra.
     public static final String PREF_COMBINING_TAP_EXTRA_MS = "combining_tap_extra_ms";
+    public static final String PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE = "combining_autospace_only_after_gesture";
     // What the suggestion strip shows after the combining grace timer auto-commits a word.
     // Values: "keep_alternatives" (1) | "next_word" (2, default) | "alternatives_then_next_word" (3).
     public static final String PREF_COMBINING_AUTOSPACE_SUGGESTIONS = "combining_autospace_suggestions";
@@ -161,6 +162,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // in one keystroke (unless an autocorrect-revert applies — that always goes first). Tap
     // typing is unaffected; this only kicks in when the just-committed word came from a swipe.
     public static final String PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD = "combining_backspace_deletes_gesture_word";
+    public static final String PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT = "combining_backspace_deletes_composing_text";
     // Multi-part word composition: when combining mode is armed (grace timer running), the
     // next swipe/tap concatenates onto the existing composing word rather than starting a
     // new one. Allows tech+nology -> technology and tech+y -> Techy without an explicit
@@ -203,6 +205,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SPACE_TO_CHANGE_LANG = "prefs_long_press_keyboard_to_change_lang";
     public static final String PREF_LANGUAGE_SWIPE_DISTANCE = "language_swipe_distance";
     public static final String PREF_TOUCHPAD_SENSITIVITY = "touchpad_sensitivity";
+    public static final String PREF_PERSIST_FLOATING_KEYBOARD = "persist_floating_keyboard";
     public static final String PREF_FORCE_AUTO_CAPS = "force_auto_caps";
     public static final String PREF_OFFLINE_TEMP = "offline_temp";
     public static final String PREF_OFFLINE_TOP_P = "offline_top_p";

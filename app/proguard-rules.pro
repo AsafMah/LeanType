@@ -1,5 +1,5 @@
-# Keep native methods
--keepclassmembers class * {
+# Keep classes that contain native methods
+-keep class * {
     native <methods>;
 }
 
@@ -34,3 +34,8 @@
 
 # Fix correct service name
 -keep class helium314.keyboard.latin.utils.ProofreadService { *; }
+
+# Suppress warnings for missing library dependencies in R8 Full Mode
+-dontwarn com.google.api.client.**
+-dontwarn java.lang.management.**
+-dontwarn org.joda.time.**

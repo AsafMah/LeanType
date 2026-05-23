@@ -50,12 +50,28 @@ This fork adds **optional AI-powered features** using Gemini, Groq, and OpenAI-c
 
 ## Download
 
-<a href="https://github.com/LeanBitLab/HeliboardL/releases/latest">
-  <img alt="Get it on GitHub" src="docs/images/get-it-on-github.png" height="80">
-</a>
-<a href="https://f-droid.org/en/packages/com.leanbitlab.leantype/index.html">
-  <img alt="Get it on F-Droid" src="docs/images/get-it-on-fdroid.png" height="80">
-</a>
+<table border="0">
+  <tr>
+    <td align="center" valign="middle">
+      <a href="https://github.com/LeanBitLab/HeliboardL/releases/latest">
+        <img alt="Get it on GitHub" src="docs/images/get-it-on-github.png" height="90">
+      </a>
+    </td>
+    <td align="center" valign="middle">
+      <a href="https://f-droid.org/en/packages/com.leanbitlab.leantype/index.html">
+        <img alt="Get it on F-Droid" src="docs/images/get-it-on-fdroid.png" height="90">
+      </a>
+    </td>
+    <td align="center" valign="middle">
+      <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/LeanBitLab/HeliboardL">
+        <img alt="Get it on Obtainium" src="docs/images/get-it-on-obtainium.png" height="60">
+      </a>
+    </td>
+  </tr>
+</table>
+
+> [!NOTE]
+> F-Droid is currently stuck on v3.7.6 due to baseline profile issues. For the latest version, use GitHub or Obtainium.
 
 ### 📦 Choose Your Version
 
