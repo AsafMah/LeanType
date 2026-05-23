@@ -908,6 +908,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             }
         }
         updateVoiceKey()
+        setToolbarButtonsActivatedState(toolbar)
+        setToolbarButtonsActivatedState(pinnedKeys)
     }
 
     private fun updateSplitToolbarState() {

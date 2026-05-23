@@ -470,6 +470,24 @@ The user pointed out that the tap-during-swipe behavior had been made hardcoded,
 
 ---
 
+## 2026-05-23 — Fix initial toolbar toggle highlighting
+
+### Context
+After PR #6 was merged to `main`, the user asked to ensure this worktree was on `main` and reported that toolbar toggle highlighting only appeared after changing a toggle, instead of reflecting active defaults immediately.
+
+### Actions Taken
+- Freed the local `main` branch from another worktree, checked this worktree out on `main`, and fast-forwarded it to the merged PR #6 commit.
+- Fixed toolbar construction so state-key activation is reapplied after `setupKey()` assigns the normal toolbar background.
+- Built and installed the updated standard debug APK on the connected device.
+
+### Decisions Made
+- Kept the existing state computation in `ToolbarUtils`; the bug was ordering during initial button setup, not the active-state logic.
+
+### Open Questions / Next Steps
+- Commit and push the fix on `main`.
+
+---
+
 ## 2026-05-23 — Address follow-up PR review comments
 
 ### Context
