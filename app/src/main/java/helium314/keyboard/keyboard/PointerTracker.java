@@ -1332,15 +1332,18 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         final Key oldKey = mCurrentKey;
 
         if (mPendingTapFragmentDuringGesture) {
-            final int dX = x - mStartX;
-            final int dY = y - mStartY;
-            if (dX * dX + dY * dY < sPointerStep * sPointerStep) {
+            final Key keyOnMove = getKeyOn(x, y);
+            if (keyOnMove == oldKey) {
                 return;
             }
+            final int dX = x - mStartX;
+            final int dY = y - mStartY;
             if (DEBUG_MODE || Settings.getValues().mGestureDebugDrawPoints) {
                 Log.d(TAG, String.format(Locale.US,
-                        "[%d] promote tap-fragment to gesture dX=%d dY=%d",
-                        mPointerId, dX, dY));
+                        "[%d] promote tap-fragment to gesture dX=%d dY=%d from=%s to=%s",
+                        mPointerId, dX, dY,
+                        oldKey == null ? "none" : Constants.printableCode(oldKey.getCode()),
+                        keyOnMove == null ? "none" : Constants.printableCode(keyOnMove.getCode())));
             }
             mPendingTapFragmentDuringGesture = false;
             mBatchInputArbiter.addDownEventPoint(mStartX, mStartY, mDownTime,
