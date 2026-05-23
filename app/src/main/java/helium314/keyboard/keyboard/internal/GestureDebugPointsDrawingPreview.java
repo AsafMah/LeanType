@@ -68,13 +68,13 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private static final float END_MARKER_RADIUS_PX = 8f;
     private static final int TAP_MAX_POINTS = 5;
     private static final int TAP_MAX_DURATION_MS = 80;
-    private static final int[] BASE_FRAGMENT_COLORS = {
-            Color.rgb(244, 67, 54),    // red
-            Color.rgb(33, 150, 243),   // blue
-            Color.rgb(76, 175, 80),    // green
-            Color.rgb(255, 152, 0),    // orange
-            Color.rgb(156, 39, 176),   // purple
-            Color.rgb(0, 188, 212),    // cyan
+    private static final float[][] FRAGMENT_HSV = {
+            { 0f, 0.95f, 1.00f },      // red
+            { 210f, 0.90f, 1.00f },    // blue
+            { 120f, 0.85f, 0.95f },    // green
+            { 35f, 0.95f, 1.00f },     // orange
+            { 285f, 0.85f, 0.95f },    // purple
+            { 180f, 0.90f, 0.95f },    // cyan
     };
 
     public GestureDebugPointsDrawingPreview() {
@@ -166,6 +166,10 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         mSyntheticFragments = null;
         mNextFragmentId = 0;
         invalidateDrawingView();
+    }
+
+    public boolean hasSnapshot() {
+        return mRawXs != null || mSyntheticXs != null;
     }
 
     @Override
@@ -261,13 +265,10 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     }
 
     private static int colorForFragment(final int fragmentId) {
-        final int baseColor = BASE_FRAGMENT_COLORS[(fragmentId & 0x7fffffff)
-                % BASE_FRAGMENT_COLORS.length];
-        final float factor = Math.max(0.35f, 1.0f - 0.12f * fragmentId);
-        return Color.rgb(
-                (int)(Color.red(baseColor) * factor),
-                (int)(Color.green(baseColor) * factor),
-                (int)(Color.blue(baseColor) * factor));
+        final int positiveId = fragmentId & 0x7fffffff;
+        final float[] hsv = FRAGMENT_HSV[positiveId % FRAGMENT_HSV.length].clone();
+        hsv[2] *= Math.max(0.45f, 1.0f - 0.16f * (positiveId / FRAGMENT_HSV.length));
+        return Color.HSVToColor(hsv);
     }
 
     private static int[] append(final int[] existing, final int[] src, final int length) {

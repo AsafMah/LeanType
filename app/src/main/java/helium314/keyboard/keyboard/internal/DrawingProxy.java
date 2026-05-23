@@ -85,6 +85,9 @@ public interface DrawingProxy {
     /** Whether debug overlay fragments should be preserved across the next gesture start. */
     boolean isCombiningModeActiveForDebug();
 
+    /** True when there are debug points currently visible on the overlay. */
+    boolean hasGestureDebugPoints();
+
     /**
      * Toggle a "commit pending" visual indicator on the gesture floating preview text
      * (feature #1.2). Shown during the autospace grace window so the user has a visible cue

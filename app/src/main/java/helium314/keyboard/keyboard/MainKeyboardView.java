@@ -561,6 +561,11 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     }
 
     @Override
+    public boolean hasGestureDebugPoints() {
+        return mGestureDebugPointsDrawingPreview.hasSnapshot();
+    }
+
+    @Override
     public void setGestureCommitPending(final boolean pending) {
         mGestureFloatingTextDrawingPreview.setCommitPending(pending);
     }

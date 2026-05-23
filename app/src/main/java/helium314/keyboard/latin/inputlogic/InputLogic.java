@@ -217,6 +217,17 @@ public final class InputLogic {
         }
     }
 
+    private void clearGestureDebugOverlayAfterSpaceIfStartingWord(final int spaceState) {
+        final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+        if (kv == null || !kv.hasGestureDebugPoints()) return;
+        if (mAutospaceJustWritten
+                || SpaceState.PHANTOM == spaceState
+                || SpaceState.WEAK == spaceState
+                || Constants.CODE_SPACE == mConnection.getCodePointBeforeCursor()) {
+            kv.clearGestureDebugPoints();
+        }
+    }
+
     private void consumeJoinNextActionAndNotifyIfChanged() {
         if (OneShotSpaceAction.consumeJoinNext()) {
             mLatinIME.onOneShotSpaceActionStateChanged();
@@ -625,6 +636,10 @@ public final class InputLogic {
         final InputTransaction inputTransaction = new InputTransaction(settingsValues,
                 processedEvent, SystemClock.uptimeMillis(), mSpaceState,
                 getActualCapsMode(settingsValues, keyboardShiftMode));
+        if (!processedEvent.isFunctionalKeyEvent()
+                && settingsValues.isWordCodePoint(processedEvent.getCodePoint())) {
+            clearGestureDebugOverlayAfterSpaceIfStartingWord(inputTransaction.getSpaceState());
+        }
         if (processedEvent.getKeyCode() != KeyCode.DELETE
                 || inputTransaction.getTimestamp() > mLastKeyTime + Constants.LONG_PRESS_MILLISECONDS) {
             mDeleteCount = 0;
@@ -678,6 +693,7 @@ public final class InputLogic {
 
     public void onStartBatchInput(final SettingsValues settingsValues,
             final KeyboardSwitcher keyboardSwitcher, final LatinIME.UIHandler handler) {
+        clearGestureDebugOverlayAfterSpaceIfStartingWord(mSpaceState);
         markForceNextSpaceWordStarted();
         // Snapshot the keyboard's shift mode BEFORE any state mutates — the shifted indicator
         // typically auto-clears once the gesture starts moving, so by the time
