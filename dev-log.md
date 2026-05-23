@@ -234,6 +234,161 @@ Review comment r3289683508 on PR #3 noted that `createToolbarStateBackground()` 
 
 ---
 
+## 2026-05-23 — Reorganize two-thumb typing settings
+
+### Context
+The two-thumb typing settings screen mixed current user-facing features, legacy/manual-spacing controls, debugging options, and future/unimplemented toggles. Some settings were confusingly named after implementation details, while `gesture_apostrophe_key` and `multipart_join_key_mode` were exposed even though they are not wired to runtime behavior.
+
+### Actions Taken
+- Created branch `copilot/organize-two-thumb-settings` from `origin/main`.
+- Reorganized `TwoThumbTypingScreen.kt` into clearer user-facing sections:
+  - Build words from taps and swipes
+  - Manual spacing mode
+  - Two-finger input
+  - Recognition tuning
+  - Troubleshooting
+- Renamed visible labels/summaries for the main combining grace, tap extra time, multi-part joining, and typed-prefix swipe continuation options.
+- Removed unimplemented/dead settings from the screen and global search registry:
+  - `PREF_GESTURE_APOSTROPHE_KEY`
+  - `PREF_MULTIPART_JOIN_KEY_MODE`
+- Kept existing preference keys/defaults/runtime reads in place for compatibility; only the user-facing settings registry was changed.
+- Built `:app:assembleStandardDebug` and ran `SettingsContainerTest`.
+
+### Decisions Made
+- Kept the existing runtime behavior unchanged and only reorganized/renamed the UI.
+- Left legacy manual spacing visible but moved it into its own advanced-feeling section so it is not confused with the recommended combining-mode flow.
+- Left debug point drawing visible under **Troubleshooting** rather than mixing it with recognition settings.
+- Did not remove old strings yet, because other docs/translations may still refer to them and keeping them is safer than a broad cleanup.
+
+### Manual Tests — Two-thumb Settings Organization
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Open **Settings → Two-thumb typing** with gesture typing disabled. | Screen shows a simple “Enable gesture typing first” hint instead of confusing no-op toggles. |
+| 2 | Enable gesture typing, then open **Two-thumb typing**. | Settings are grouped into the new user-facing sections. |
+| 3 | Set **Wait for next input** to 0 ms. | Advanced combining options are hidden. |
+| 4 | Set **Wait for next input** above 0 ms. | Follow-up timing, word joining, backspace, autocorrect, and suggestion options appear. |
+| 5 | Disable **Join word parts**. | Sub-options for full-word suggestions, typed-prefix swipe, and fragment backspace are hidden unless manual spacing needs fragment backspace. |
+| 6 | Enable **Manual spacing**. | Manual-spacing-related fragment backspace appears when not already shown under word joining. |
+| 7 | Enable **Tap letters while swiping**. | **Maximum tap length** appears. |
+| 8 | Enable **Two-thumb point hinting**. | **Left/right hand split** appears. |
+| 9 | Search settings for “apostrophe” or “join next modifier”. | The removed unimplemented controls do not appear. |
+
+### Open Questions / Next Steps
+- User should review the new wording on-device and decide whether debug point drawing should remain visible or move behind the separate debug settings screen later.
+
+---
+
+## 2026-05-23 — Convert two-thumb settings to mode selectors
+
+### Context
+After trying the first reorganization, the user clarified the desired structure: a single spacing-mode selector should drive normal/manual/autospace behavior, backspace should be a single behavior selector, and implementation details like multi-part joining should be enabled automatically instead of exposed as separate confusing toggles.
+
+### Actions Taken
+- Added a synthetic **Spacing mode** radio/list setting with Normal spacing, Manual spacing, and Auto-space after a delay.
+- Added a synthetic **Backspace behavior** radio/list setting shown only for manual/autospace modes.
+- Mapped the spacing selector onto the existing `PREF_GESTURE_MANUAL_SPACING` and `PREF_COMBINING_GRACE_MS` runtime preferences.
+- Mapped backspace behavior onto existing fragment-backspace and whole-word-backspace preferences.
+- Added whole composing-word deletion for the new **Delete whole word** behavior when manual spacing or autospace mode is active.
+- Forced multi-part internals (join word parts, full-word suggestions, typed-prefix continuation) on whenever non-normal spacing is active, removing those implementation toggles from the user-facing screen.
+- Changed the default after-autospace suggestion behavior to **Alternatives, then next word on space**.
+- Renamed autospace timing and tap timing labels to clearer user-facing wording.
+- Rebuilt `:app:assembleStandardDebug` and ran `SettingsContainerTest`.
+
+### Decisions Made
+- Kept underlying preference keys for compatibility but made the UI present modes instead of exposing each low-level boolean.
+- Defaulted the autospace mode transition to a 500 ms grace when switching from Normal/Manual to Autospace.
+- Left **Tap letters while swiping** as a separate opt-in feature for now because it is a distinct runtime path; only the timing label/summary was clarified.
+- Left **Improve two-thumb recognition** off by default and described the possible tradeoff, because the midline can hurt recognition if configured poorly.
+
+### Manual Tests — Two-thumb Mode Selectors
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Open **Settings → Two-thumb typing**. | First control is **Spacing mode** with Normal, Manual, and Auto-space choices. |
+| 2 | Select **Normal spacing**. | Autospace duration/backspace behavior controls are hidden; typing behaves normally. |
+| 3 | Select **Manual spacing**. | Backspace behavior appears; no autospace duration controls appear. |
+| 4 | Select **Auto-space after a delay**. | Duration, tap delay, autocorrect, after-autospace suggestions, and backspace behavior appear. |
+| 5 | In Auto-space mode, check **After auto-space, show…** default. | New default is **Alternatives, then next-word on space** unless an older saved value exists. |
+| 6 | Try each backspace behavior in Manual/Autospace modes. | Normal deletes characters, last part removes the latest fragment, whole word removes the composing/last swiped word. |
+| 7 | Search settings for “join word parts”, “typed prefix”, or “full composing”. | These implementation toggles no longer appear separately. |
+
+### Open Questions / Next Steps
+- User should confirm whether **Tap letters while swiping** should remain user-facing or be folded into the spacing mode later.
+- Debug overlay expansion (different colors/shapes for fragments, taps, fingers, start/end) is still future work.
+
+---
+
+## 2026-05-23 — Remove obsolete tap-during-swipe setting
+
+### Context
+The user tested several tap/swipe word combinations and found they worked without the old tap-during-swipe flag. The newer combining/multi-part word system appears to cover the useful behavior, while the old flag only suppressed quick child taps and added confusion.
+
+### Actions Taken
+- Removed the tap-during-swipe setting and timing setting from the two-thumb settings screen and global settings registry.
+- Removed the corresponding `Settings` constants, defaults, `SettingsValues` fields, and `PointerTracker` suppression path.
+- Updated docs and user-facing references so the removed setting is no longer advertised.
+- Built `:app:compileStandardDebugKotlin`.
+
+### Decisions Made
+- Kept combining/multi-part tap seeding intact; only the obsolete simultaneous tap suppression flag was removed.
+- Left the observed “giraffe” gesture-recognition issue as a separate investigation target, likely around gesture recognition/hinting rather than settings UI.
+
+### Open Questions / Next Steps
+- Investigate why some `giraffe` attempts stop swipe detection after the second letter.
+- Investigate why first attempts often recognize unrelated long words before learning improves.
+
+## 2026-05-23 — Gate autospace on swiped words
+
+### Context
+The user wanted an opt-in autospace behavior for two-thumb Auto-space mode: tap-only words should commit without inserting an automatic space, while words that include a swipe should keep the existing autospace flow.
+
+### Actions Taken
+- Added `PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE` across the settings 5-file pattern: `Settings.java`, `Defaults.kt`, `SettingsValues.java`, `strings.xml`, and `TwoThumbTypingScreen.kt`.
+- Added the setting to the Auto-space mode group as **Only auto-space after swipes**, defaulting off to preserve existing behavior.
+- Updated `InputLogic.java` to track whether the current combining word has received a gesture fragment, including tap-then-swipe words where the composer is later downgraded out of batch mode.
+- Suppressed timer-driven autospace for tap-only words when the new setting is enabled, while still committing the word and preserving suggestion-revert behavior.
+- Added `InputLogicTest` coverage for tap-only suppression, gesture autospace, tap-then-gesture autospace, and `SettingsContainerTest` coverage for setting registration.
+- Built `:app:assembleStandardDebug` and installed the APK on the connected device.
+
+### Decisions Made
+- Kept explicit spaces, punctuation, Join Next, and Force Next Space paths on their existing behavior; the new setting only gates the timer's automatic space after committing a combining word.
+- Used a dedicated per-word gesture flag instead of relying only on `WordComposer.isBatchMode()`, because tap-then-swipe composition can unset batch mode after merging fragments.
+- When autospace is skipped, kept the suggestion strip in an alternatives/revert-friendly state instead of requesting next-word predictions, since there is no trailing space yet.
+
+### Manual Tests — Gesture-gated Autospace
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Open **Settings → Two-thumb typing**, select **Auto-space after a delay**, and enable **Only auto-space after swipes**. | Toggle turns on; no crash. |
+| 2 | Tap a word letter-by-letter and pause past the autospace delay. | Word commits, but no automatic space is inserted. |
+| 3 | Swipe a word and pause past the autospace delay. | Word commits with the normal automatic space. |
+| 4 | Tap a prefix, then swipe the rest of the word before the delay expires. | Combined word commits with the normal automatic space. |
+| 5 | Disable **Only auto-space after swipes** and repeat a tap-only word. | Existing autospace behavior returns. |
+
+### Open Questions / Next Steps
+- The targeted new unit tests pass. A full `InputLogicTest` run in the standard debug variant still reports unrelated existing failures (`insertLetterIntoWordHangulFails`, `revert autocorrect on delete`).
+
+---
+
+## 2026-05-23 — Hide tap-only autospace indicator
+
+### Context
+After enabling gesture-gated autospace, tap-only words no longer inserted an automatic space, but the first tapped letter still showed the autospace progress bar even though no autospace would happen.
+
+### Actions Taken
+- Updated `InputLogic.enterCombiningMode()` so the spacebar autospace progress indicator only appears when autospace can actually be inserted under the current settings.
+- Added regression coverage in `InputLogicTest` verifying tap-only input with **Only auto-space after swipes** enabled arms the combining timer without showing an autospace indicator.
+- Rebuilt `:app:assembleStandardDebug`.
+
+### Decisions Made
+- Kept the underlying combining commit timer active for tap-only words; only the autospace visual indicator is hidden until the current word includes a gesture fragment.
+
+### Open Questions / Next Steps
+- APK install was not completed because ADB reported no connected devices.
+
+---
+
 ## 2026-05-23 — Merge upstream main into origin main branch
 
 ### Context
@@ -251,3 +406,139 @@ The user asked for a new PR based on `main` that merges changes from the configu
 
 ### Open Questions / Next Steps
 - Build validation and PR creation should complete before merging.
+
+---
+
+## 2026-05-23 — Address PR #6 review comments
+
+### Context
+The user asked to return to PR #6, merge current `main`, and resolve the review comments on the two-thumb settings PR. Merging `origin/main` into `copilot/organize-two-thumb-settings` conflicted only in this dev log.
+
+### Actions Taken
+- Merged `origin/main` into `copilot/organize-two-thumb-settings` and preserved both branches' dev-log entries.
+- Updated `TwoThumbTypingScreen.kt` so the "Enable gesture typing first" hint renders as screen content instead of an empty settings category.
+- Removed the low-level whole-word backspace toggle from the settings search registry, leaving only the synthetic Backspace behavior selector visible.
+- Fixed `InputLogic.java` so whole-word backspace in manual/autospace composing mode deletes the composing text from the editor before resetting the composer.
+- Reduced `GestureDebugPointsDrawingPreview.java` allocation churn by growing snapshot arrays amortized and reusing HSV color storage during drawing.
+- Added regression coverage for whole-word backspace deleting composing text and for hiding the low-level backspace setting from the registry.
+
+### Decisions Made
+- Kept the user-facing Backspace behavior mode selector as the only visible control for whole-word backspace semantics.
+- Preserved the accumulated debug overlay behavior while changing its storage strategy to avoid repeated full-array copies per fragment.
+
+### Open Questions / Next Steps
+- Run targeted tests and push the review fixes to PR #6.
+
+---
+
+## 2026-05-23 — Restore advanced two-thumb toggles
+
+### Context
+After testing the PR branch, the user asked to make the live composing-text deletion and debug overlay accumulation behavior toggleable, and to restore the removed full-word suggestion setting.
+
+### Actions Taken
+- Added a `Delete live composing text` switch shown when Backspace behavior is set to whole-word deletion.
+- Added an `Accumulate debug fragments` switch under the gesture debug overlay setting.
+- Restored the `Suggestions for full composing word` setting to the two-thumb screen and made the runtime value respect the switch instead of forcing it on for all non-normal spacing modes.
+- Added tests covering the new setting registration and the new whole-word backspace toggle behavior.
+
+### Decisions Made
+- Defaults preserve the current PR behavior: live composing text deletion, debug fragment accumulation, and full-word suggestions are all enabled unless the user turns them off.
+
+### Open Questions / Next Steps
+- Run targeted tests and rebuild/install before handing back for device testing.
+
+---
+
+## 2026-05-23 — Restore tap-during-swipe toggle
+
+### Context
+The user pointed out that the tap-during-swipe behavior had been made hardcoded, but they had asked for it to remain a toggleable option.
+
+### Actions Taken
+- Restored `PREF_GESTURE_TAP_DURING_SWIPE` as a settings key/default/runtime value.
+- Added the `Tap during swipe` switch back to the two-thumb settings screen.
+- Gated `PointerTracker`'s pending tap-fragment behavior behind the restored preference.
+- Added settings registry coverage for the restored toggle.
+- Built and installed the updated standard debug APK on the connected device after fully uninstalling the mismatched existing debug package.
+
+### Decisions Made
+- Defaulted the toggle to enabled so existing PR behavior remains unchanged unless the user turns it off.
+
+### Open Questions / Next Steps
+- Commit and push the PR update.
+
+---
+
+## 2026-05-23 — Address follow-up PR review comments
+
+### Context
+Copilot review comments on PR #6 flagged that debug overlay accumulation depended on the visual autospace indicator state, and that changing spacing modes discarded the user's configured autospace duration.
+
+### Actions Taken
+- Separated the debug accumulation state in `MainKeyboardView` from the visible spacebar combining indicator.
+- Preserved debug overlay accumulation for manual-spacing composition as well as hidden-indicator combining mode.
+- Added a hidden last-autospace-duration preference and restored it when switching back to Auto-space mode.
+- Ran targeted settings test, built the standard debug APK, and installed it on the connected device.
+
+### Decisions Made
+- Kept the visual indicator behavior unchanged; only the debug overlay preservation decision now uses the dedicated composition/debug state.
+- Preserved the user's last positive autospace duration when switching to Normal or Manual spacing, then restored it when Auto-space is selected again.
+
+### Open Questions / Next Steps
+- Commit, push, and resolve the PR review threads.
+
+---
+
+## 2026-05-23 — Fix two-thumb enabled gate
+
+### Context
+After installing PR #6, the user reported the two-thumb settings screen showed "Enable gesture typing first" even though gesture typing was enabled.
+
+### Actions Taken
+- Changed `TwoThumbTypingScreen.kt` to gate the "Enable gesture typing first" hint only on `PREF_GESTURE_INPUT`, not `JniUtils.sHaveGestureLib`.
+- Built and installed the updated standard debug APK on the connected device.
+
+### Decisions Made
+- Kept gesture-library availability checks on the dedicated Gesture typing screen, where the library loader is shown; the two-thumb screen now reflects the actual user-facing enable toggle.
+
+### Open Questions / Next Steps
+- Commit and push the fix.
+
+---
+
+## 2026-05-23 — Restore gesture library after reinstall
+
+### Context
+After the debug app was fully uninstalled to fix a signature mismatch, gesture typing stopped working. The reinstall preserved the gesture preference, but the user-supplied native gesture library in app files was gone.
+
+### Actions Taken
+- Confirmed the device app files did not contain `libjni_latinime.so`.
+- Downloaded the arm64 OpenBoard `libjni_latinimegoogle.so`, verified its expected SHA-256 checksum, copied it into the app files as `libjni_latinime.so`, and force-stopped the app so it reloads.
+- Updated the two-thumb settings gate to distinguish between "gesture toggle is off" and "gesture library is missing".
+- Built and installed the updated standard debug APK while preserving the restored gesture library file.
+
+### Decisions Made
+- Kept the library availability gate for the two-thumb screen, but changed the missing-library message so it no longer incorrectly says only "Enable gesture typing first".
+
+### Open Questions / Next Steps
+- Commit and push the corrected screen text.
+
+---
+
+## 2026-05-23 — Remove tap-during-swipe fragments
+
+### Context
+After testing, the user confirmed the tap-during-swipe fragment behavior was causing the typing problem and asked to remove both the implementation and the setting.
+
+### Actions Taken
+- Removed the pending tap-fragment state machine from `PointerTracker`.
+- Removed the `Tap during swipe` setting from the two-thumb screen and settings registry coverage.
+- Removed the preference key/default/runtime read and the now-unused strings.
+- Built and installed the updated standard debug APK on the connected device.
+
+### Decisions Made
+- Kept the rest of two-thumb composing, autospace, backspace, and debug overlay options unchanged.
+
+### Open Questions / Next Steps
+- Commit and push the PR update.

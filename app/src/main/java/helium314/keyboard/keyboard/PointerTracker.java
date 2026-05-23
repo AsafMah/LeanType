@@ -129,12 +129,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     private boolean mIsDetectingGesture = false; // per PointerTracker.
     private static boolean sInGesture = false;
-    // True for this pointer when its down-event happened while another pointer's batch gesture
-    // was already in progress (sInGesture==true) and the pref PREF_GESTURE_TAP_DURING_SWIPE is on.
-    // Used in onUpEventInternal to suppress an accidental tap-keystroke if the parent gesture
-    // committed between this pointer's down and up.
-    private boolean mIsTapDuringSwipe = false;
-
     // ---- Combining-mode tap seeding ------------------------------------------------------
     // When the user taps a letter and within the combining-grace window starts a swipe, the
     // pure concat path ("s" + recognizer-of-"ilo") produces unreliable results because the
@@ -365,7 +359,22 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private static void pushGestureDebugSnapshot(
             final InputPointers raw, final InputPointers syntheticOnly) {
         if (!Settings.getValues().mGestureDebugDrawPoints) return;
+        Log.d(TAG, "debug gesture fragment raw=" + raw.getPointerSize()
+                + " synthetic=" + syntheticOnly.getPointerSize());
         sDrawingProxy.setGestureDebugPoints(raw, syntheticOnly);
+    }
+
+    private static void pushTapDebugPoint(final int x, final int y, final int pointerId,
+            final long eventTime) {
+        final SettingsValues sv = Settings.getValues();
+        if (!sv.mGestureDebugDrawPoints
+                || (sv.mCombiningGraceMs <= 0 && !sv.mGestureManualSpacing)) {
+            return;
+        }
+        final InputPointers tap = new InputPointers(1);
+        tap.addPointer(x, y, pointerId, 0);
+        Log.d(TAG, "debug tap fragment x=" + x + " y=" + y + " pointer=" + pointerId);
+        sDrawingProxy.setGestureDebugPoints(tap, new InputPointers(0));
     }
 
 
@@ -696,9 +705,15 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (DEBUG_LISTENER) {
             Log.d(TAG, String.format(Locale.US, "[%d] onStartBatchInput", mPointerId));
         }
-        // Two-thumb typing (#2.1): a fresh gesture starts — wipe the previous batch's debug
-        // overlay so it doesn't visually mix with the in-flight gesture.
-        sDrawingProxy.clearGestureDebugPoints();
+        // Two-thumb typing debug overlay: clear only when this is a new word. While combining
+        // mode is active, a fresh gesture is another fragment of the same word and should remain
+        // visible alongside earlier fragments.
+        final SettingsValues settingsValues = Settings.getValues();
+        if (!settingsValues.mGestureDebugAccumulateFragments
+                || (!sDrawingProxy.isCombiningModeActiveForDebug()
+                        && !settingsValues.mGestureManualSpacing)) {
+            sDrawingProxy.clearGestureDebugPoints();
+        }
         sListener.onStartBatchInput();
         dismissAllPopupKeysPanels();
         sTimerProxy.cancelLongPressTimersOf(this);
@@ -930,12 +945,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                     sTypingTimeRecorder.getLastLetterTypingTime(), getActivePointerTrackerCount());
             mGestureStrokeDrawingPoints.onDownEvent(
                     seedX, seedY, mBatchInputArbiter.getElapsedTimeSinceFirstDown(seedTime));
-            // Two-thumb typing: remember whether this pointer started while another pointer's
-            // batch gesture was already in progress. Used in onUpEventInternal to suppress a
-            // stray tap-keystroke if the parent gesture commits before this pointer lifts.
-            mIsTapDuringSwipe = sInGesture
-                    && sv.mGestureTapDuringSwipe
-                    && key != null && Character.isLetter(key.getCode());
         }
     }
 
@@ -1394,8 +1403,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         sTimerProxy.cancelKeyTimersOf(this);
         final boolean isInDraggingFinger = mIsInDraggingFinger;
         final boolean isInSlidingKeyInput = mIsInSlidingKeyInput;
-        final boolean wasTapDuringSwipe = mIsTapDuringSwipe;
-        mIsTapDuringSwipe = false;
         resetKeySelectionByDraggingFinger();
         mIsDetectingGesture = false;
         final Key currentKey = mCurrentKey;
@@ -1489,15 +1496,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 && (currentKey.getCode() == currentRepeatingKeyCode) && !isInDraggingFinger) {
             return;
         }
-        // Two-thumb typing (#1.3): if this pointer went down as a child of an in-progress
-        // batch gesture but the parent gesture committed before our up-event, suppress the
-        // tap-keystroke so we don't append a stray letter to the just-committed word.
-        // Long-press taps (longer than PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS) fall through to
-        // normal behaviour so the user can still type characters after a gesture commits.
-        if (wasTapDuringSwipe && !sInGesture
-                && eventTime - mDownTime <= Settings.getValues().mGestureTapAsSwipeWindowMs) {
-            return;
-        }
         detectAndSendKey(currentKey, mKeyX, mKeyY, eventTime);
         // Combining-mode seeding: remember the last letter tap so a follow-up gesture can
         // seed its first pointer event with this position and time. Only letter taps qualify
@@ -1510,6 +1508,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 sLastLetterTapY = mKeyY;
                 sLastLetterTapTime = eventTime;
                 sLastLetterTapCodepoint = code;
+                pushTapDebugPoint(mKeyX, mKeyY, mPointerId, eventTime);
             }
         }
         if (isInSlidingKeyInput) {

@@ -236,12 +236,10 @@ LeanType ships a set of opt-in tweaks for typing with two thumbs at once — mix
 
 > Side effect: when Manual spacing is on, the **Autospace before/after gesture typing** toggles under **Settings → Text correction → Space** are hidden — they become runtime no-ops.
 
-### Tap + swipe interactions
+### Combining taps and swipes
 
 | Pref | Behaviour |
 | :--- | :--- |
-| **Tap during swipe** (`gesture_tap_during_swipe`) | When ON, a quick tap with one finger while the other is mid-swipe is treated as part of the same word — fixes the "stray letter committed before the gesture finishes" pain when typing with two thumbs simultaneously. |
-| **Tap-as-swipe window** (`gesture_tap_as_swipe_window_ms`, 0–200 ms) | Only visible when Tap during swipe is on. How quickly the tap must complete to count as part of the swipe. Default 60 ms. Long-presses fall through to normal behaviour so you can still type a letter after a gesture commits. |
 | **Tap-then-swipe window** (`gesture_tap_promotion_ms`, 0–200 ms) | When > 0, lets you **tap one or more letters** then immediately **swipe** the rest, getting one merged word. Example: tap `p`, tap `a`, swipe `ul` → `paul`. Set to 0 to disable. The window is measured against the *last letter input* — chains grow naturally as long as each new tap arrives within the window of the previous one. |
 
 ### Visual feedback

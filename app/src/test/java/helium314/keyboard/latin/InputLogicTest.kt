@@ -69,6 +69,7 @@ class InputLogicTest {
 
     @BeforeTest
     fun setUp() {
+        mainKeyboardView = Mockito.mock(MainKeyboardView::class.java)
         latinIME = Robolectric.setupService(LatinIME::class.java)
         // start logging only after latinIME is created, avoids showing the stack traces if library is not found
         ShadowLog.setupLogging()
@@ -309,6 +310,103 @@ class InputLogicTest {
         gestureInput("world")
         expireCombiningGrace()
         assertEquals("hello world", textBeforeCursor)
+    }
+
+    @Test fun tapOnlyCombiningWordDoesNotAutospaceWhenGestureGateEnabled() {
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE, true)
+        }
+
+        chainInput("hello")
+        expireCombiningGrace()
+
+        assertEquals("hello", textBeforeCursor)
+        assertEquals("", composingText)
+
+        input(' ')
+        assertEquals("hello ", textBeforeCursor)
+    }
+
+    @Test fun tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled() {
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE, true)
+        }
+
+        input('h')
+
+        Mockito.verify(mainKeyboardView, Mockito.atLeastOnce())
+            .setCombiningMode(Mockito.eq(false), Mockito.anyLong(), Mockito.anyInt())
+        Mockito.verify(mainKeyboardView, Mockito.never())
+            .setCombiningMode(Mockito.eq(true), Mockito.anyLong(), Mockito.anyInt())
+    }
+
+    @Test fun gestureCombiningWordStillAutospacesWhenGestureGateEnabled() {
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE, true)
+        }
+
+        gestureInput("hello")
+        expireCombiningGrace()
+
+        assertEquals("hello ", textBeforeCursor)
+    }
+
+    @Test fun tapThenGestureCombiningWordStillAutospacesWhenGestureGateEnabled() {
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE, true)
+            putBoolean(Settings.PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING, true)
+        }
+
+        chainInput("fire")
+        gestureInput("firetruck")
+        expireCombiningGrace()
+
+        assertEquals("firetruck ", textBeforeCursor)
+    }
+
+    @Test fun wholeWordBackspaceDeletesManualSpacingComposingWord() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE, false)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, true)
+        }
+
+        chainInput("hello")
+        assertEquals("hello", textBeforeCursor)
+        assertEquals("hello", composingText)
+
+        functionalKeyPress(KeyCode.DELETE)
+
+        assertEquals("", textBeforeCursor)
+        assertEquals("", composingText)
+    }
+
+    @Test fun wholeWordBackspaceCanKeepManualSpacingComposingTextInEditor() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE, false)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT, false)
+        }
+
+        chainInput("hello")
+        assertEquals("hello", textBeforeCursor)
+        assertEquals("hello", composingText)
+
+        functionalKeyPress(KeyCode.DELETE)
+
+        assertEquals("hello", textBeforeCursor)
+        assertEquals("", composingText)
     }
 
     @Test fun forceAutoCapWorksWhenAutoCapIsOff() {
@@ -1066,6 +1164,7 @@ class InputLogicTest {
 
 private var currentInputType = InputType.TYPE_CLASS_TEXT
 private var currentScript = ScriptUtils.SCRIPT_LATIN
+private lateinit var mainKeyboardView: MainKeyboardView
 private val messages = mutableListOf<Message>() // for latinIME / ShadowInputMethodService
 private val delayedMessages = mutableListOf<Message>() // for latinIME / ShadowInputMethodService
 // inputconnection stuff
@@ -1283,7 +1382,7 @@ class ShadowHandler {
 class ShadowKeyboardSwitcher {
     @Implementation
     // basically only needed for null check
-    fun getMainKeyboardView(): MainKeyboardView = Mockito.mock(MainKeyboardView::class.java)
+    fun getMainKeyboardView(): MainKeyboardView = mainKeyboardView
     @Implementation
     // only affects view
     fun setKeyboard(keyboardId: Int, toggleState: KeyboardSwitcher.KeyboardSwitchState) = Unit

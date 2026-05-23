@@ -12,6 +12,9 @@ import androidx.annotation.NonNull;
 
 import helium314.keyboard.keyboard.PointerTracker;
 import helium314.keyboard.latin.common.InputPointers;
+import helium314.keyboard.latin.utils.Log;
+
+import java.util.Arrays;
 
 /**
  * Visual debug overlay (feature #2.1). Draws the points the gesture library actually sees,
@@ -21,11 +24,14 @@ import helium314.keyboard.latin.common.InputPointers;
  *
  * <p>The overlay snapshots the inputs at each batch-end (immediate or grace-deferred) and keeps
  * them visible until the next batch starts, so the trail is still on screen when the user
- * compares it with the suggestion strip. Two colour bands distinguish the streams:
+ * compares it with the suggestion strip. The overlay distinguishes the streams and gesture
+ * structure:
  * <ul>
- *   <li>raw samples → small red dots, semi-transparent (60 % opaque),</li>
- *   <li>synthetic samples added by {@link DualThumbHinter} → slightly larger blue dots, fully
- *       opaque so they pop against the raw points.</li>
+ *   <li>raw samples and connecting segments are colour-coded by word fragment, with later
+ *       fragments drawn darker,</li>
+ *   <li>short tap-like runs are outlined as squares,</li>
+ *   <li>each pointer run has a green start ring and black end marker,</li>
+ *   <li>synthetic samples added by {@link DualThumbHinter} are drawn as blue crosses.</li>
  * </ul>
  *
  * <p>Everything is single-threaded on the UI / main-looper thread: {@link #updateSnapshot} is
@@ -35,30 +41,79 @@ import helium314.keyboard.latin.common.InputPointers;
  * invariant holds.
  */
 public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPreview {
+    private static final String TAG = "GestureDebugOverlay";
     // Snapshot of the most recent batch's points. Held as primitive int[] copies so the
     // upstream BatchInputArbiter is free to reset its aggregate without affecting us.
     private int[] mRawXs;
     private int[] mRawYs;
+    private int[] mRawIds;
+    private int[] mRawTimes;
+    private int[] mRawFragments;
+    private int mRawSize;
     private int[] mSyntheticXs;
     private int[] mSyntheticYs;
+    private int[] mSyntheticIds;
+    private int[] mSyntheticTimes;
+    private int[] mSyntheticFragments;
+    private int mSyntheticSize;
+    private int mNextFragmentId;
 
     private final Paint mRawPaint = new Paint();
+    private final Paint mLinePaint = new Paint();
     private final Paint mSyntheticPaint = new Paint();
+    private final Paint mStartPaint = new Paint();
+    private final Paint mEndPaint = new Paint();
+    private final Paint mTapPaint = new Paint();
+    private final float[] mColorHsv = new float[3];
     /** Radius in pixels for a "raw" sample dot. Picked so dots remain visible at typical DPIs. */
     private static final float RAW_RADIUS_PX = 4f;
-    /** Radius for "synthetic" sample dots — deliberately larger so the diff is obvious. */
-    private static final float SYNTHETIC_RADIUS_PX = 7f;
+    private static final float SYNTHETIC_CROSS_RADIUS_PX = 8f;
+    private static final float TAP_MARKER_RADIUS_PX = 10f;
+    private static final float START_MARKER_RADIUS_PX = 9f;
+    private static final float END_MARKER_RADIUS_PX = 8f;
+    private static final int TAP_MAX_POINTS = 5;
+    private static final int TAP_MAX_DURATION_MS = 80;
+    private static final float[][] FRAGMENT_HSV = {
+            { 0f, 0.95f, 1.00f },      // red
+            { 210f, 0.90f, 1.00f },    // blue
+            { 120f, 0.85f, 0.95f },    // green
+            { 35f, 0.95f, 1.00f },     // orange
+            { 285f, 0.85f, 0.95f },    // purple
+            { 180f, 0.90f, 0.95f },    // cyan
+    };
 
     public GestureDebugPointsDrawingPreview() {
         mRawPaint.setAntiAlias(true);
-        mRawPaint.setColor(Color.RED);
         mRawPaint.setAlpha(0x99); // 60 % opaque — raw stream is dense, so visually a wash
         mRawPaint.setStyle(Paint.Style.FILL);
+
+        mLinePaint.setAntiAlias(true);
+        mLinePaint.setAlpha(0x77);
+        mLinePaint.setStrokeWidth(3f);
+        mLinePaint.setStyle(Paint.Style.STROKE);
 
         mSyntheticPaint.setAntiAlias(true);
         mSyntheticPaint.setColor(Color.BLUE);
         mSyntheticPaint.setAlpha(0xFF);
-        mSyntheticPaint.setStyle(Paint.Style.FILL);
+        mSyntheticPaint.setStrokeWidth(4f);
+        mSyntheticPaint.setStyle(Paint.Style.STROKE);
+
+        mStartPaint.setAntiAlias(true);
+        mStartPaint.setColor(Color.rgb(0, 200, 83));
+        mStartPaint.setAlpha(0xFF);
+        mStartPaint.setStrokeWidth(4f);
+        mStartPaint.setStyle(Paint.Style.STROKE);
+
+        mEndPaint.setAntiAlias(true);
+        mEndPaint.setColor(Color.BLACK);
+        mEndPaint.setAlpha(0xCC);
+        mEndPaint.setStyle(Paint.Style.FILL);
+
+        mTapPaint.setAntiAlias(true);
+        mTapPaint.setColor(Color.WHITE);
+        mTapPaint.setAlpha(0xDD);
+        mTapPaint.setStrokeWidth(3f);
+        mTapPaint.setStyle(Paint.Style.STROKE);
     }
 
     /**
@@ -74,25 +129,61 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
      *     {@link InputPointers} or {@code null} (treated identically — nothing blue drawn).
      */
     public void updateSnapshot(@NonNull final InputPointers raw, final InputPointers synthetic) {
-        mRawXs = copyOfLength(raw.getXCoordinates(), raw.getPointerSize());
-        mRawYs = copyOfLength(raw.getYCoordinates(), raw.getPointerSize());
-        if (synthetic != null && synthetic.getPointerSize() > 0) {
-            mSyntheticXs = copyOfLength(synthetic.getXCoordinates(), synthetic.getPointerSize());
-            mSyntheticYs = copyOfLength(synthetic.getYCoordinates(), synthetic.getPointerSize());
-        } else {
-            mSyntheticXs = null;
-            mSyntheticYs = null;
+        final int fragmentId = mNextFragmentId++;
+        final int rawSize = raw.getPointerSize();
+        final int syntheticSize = synthetic == null ? 0 : synthetic.getPointerSize();
+        Log.d(TAG, "fragment=" + fragmentId
+                + " raw=" + rawSize
+                + " synthetic=" + syntheticSize
+                + " totalBefore=" + mRawSize
+                + " tapLike=" + isTapLike(raw));
+        mRawXs = append(mRawXs, mRawSize, raw.getXCoordinates(), rawSize);
+        mRawYs = append(mRawYs, mRawSize, raw.getYCoordinates(), rawSize);
+        mRawIds = append(mRawIds, mRawSize, raw.getPointerIds(), rawSize);
+        mRawTimes = append(mRawTimes, mRawSize, raw.getTimes(), rawSize);
+        mRawFragments = appendFilled(mRawFragments, mRawSize, fragmentId, rawSize);
+        mRawSize += rawSize;
+        if (syntheticSize > 0) {
+            mSyntheticXs = append(mSyntheticXs, mSyntheticSize,
+                    synthetic.getXCoordinates(), syntheticSize);
+            mSyntheticYs = append(mSyntheticYs, mSyntheticSize,
+                    synthetic.getYCoordinates(), syntheticSize);
+            mSyntheticIds = append(mSyntheticIds, mSyntheticSize,
+                    synthetic.getPointerIds(), syntheticSize);
+            mSyntheticTimes = append(mSyntheticTimes, mSyntheticSize,
+                    synthetic.getTimes(), syntheticSize);
+            mSyntheticFragments = appendFilled(mSyntheticFragments, mSyntheticSize,
+                    fragmentId, syntheticSize);
+            mSyntheticSize += syntheticSize;
         }
         invalidateDrawingView();
     }
 
     /** Drop the overlay (e.g. on gesture cancel or view teardown). */
     public void clear() {
+        if (mRawXs != null || mSyntheticXs != null) {
+            Log.d(TAG, "clear fragments=" + mNextFragmentId
+                    + " rawTotal=" + mRawSize
+                    + " syntheticTotal=" + mSyntheticSize);
+        }
         mRawXs = null;
         mRawYs = null;
+        mRawIds = null;
+        mRawTimes = null;
+        mRawFragments = null;
+        mRawSize = 0;
         mSyntheticXs = null;
         mSyntheticYs = null;
+        mSyntheticIds = null;
+        mSyntheticTimes = null;
+        mSyntheticFragments = null;
+        mSyntheticSize = 0;
+        mNextFragmentId = 0;
         invalidateDrawingView();
+    }
+
+    public boolean hasSnapshot() {
+        return mRawSize > 0 || mSyntheticSize > 0;
     }
 
     @Override
@@ -103,9 +194,10 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     @Override
     public void drawPreview(@NonNull final Canvas canvas) {
         if (!isPreviewEnabled()) return;
-        // Raw first so synthetic dots draw on top.
-        drawPoints(canvas, mRawXs, mRawYs, mRawPaint, RAW_RADIUS_PX);
-        drawPoints(canvas, mSyntheticXs, mSyntheticYs, mSyntheticPaint, SYNTHETIC_RADIUS_PX);
+        drawPointerLines(canvas);
+        drawRawPoints(canvas);
+        drawRunMarkers(canvas);
+        drawSyntheticPoints(canvas);
     }
 
     @Override
@@ -114,19 +206,118 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         // a single pointer the way the trail / floating-text previews do.
     }
 
-    private static void drawPoints(final Canvas canvas, final int[] xs, final int[] ys,
-            final Paint paint, final float radiusPx) {
-        if (xs == null || ys == null) return;
-        final int n = Math.min(xs.length, ys.length);
-        for (int i = 0; i < n; i++) {
-            canvas.drawCircle(xs[i], ys[i], radiusPx, paint);
+    private void drawPointerLines(final Canvas canvas) {
+        if (mRawXs == null || mRawYs == null || mRawIds == null || mRawFragments == null) return;
+        final int n = Math.min(mRawSize, Math.min(Math.min(mRawXs.length, mRawYs.length),
+                Math.min(mRawIds.length, mRawFragments.length)));
+        for (int i = 1; i < n; i++) {
+            if (mRawIds[i] != mRawIds[i - 1]
+                    || mRawFragments[i] != mRawFragments[i - 1]) continue;
+            mLinePaint.setColor(colorForFragment(mRawFragments[i]));
+            canvas.drawLine(mRawXs[i - 1], mRawYs[i - 1], mRawXs[i], mRawYs[i], mLinePaint);
         }
     }
 
-    private static int[] copyOfLength(final int[] src, final int length) {
-        if (length <= 0) return null;
-        final int[] copy = new int[length];
-        System.arraycopy(src, 0, copy, 0, length);
-        return copy;
+    private void drawRawPoints(final Canvas canvas) {
+        if (mRawXs == null || mRawYs == null || mRawFragments == null) return;
+        final int n = Math.min(mRawSize,
+                Math.min(Math.min(mRawXs.length, mRawYs.length), mRawFragments.length));
+        for (int i = 0; i < n; i++) {
+            mRawPaint.setColor(colorForFragment(mRawFragments[i]));
+            canvas.drawCircle(mRawXs[i], mRawYs[i], RAW_RADIUS_PX, mRawPaint);
+        }
+    }
+
+    private void drawRunMarkers(final Canvas canvas) {
+        if (mRawXs == null || mRawYs == null || mRawIds == null || mRawTimes == null
+                || mRawFragments == null) return;
+        final int n = Math.min(mRawSize, Math.min(Math.min(mRawXs.length, mRawYs.length),
+                Math.min(Math.min(mRawIds.length, mRawTimes.length), mRawFragments.length)));
+        int start = 0;
+        while (start < n) {
+            int end = start + 1;
+            while (end < n && mRawIds[end] == mRawIds[start]
+                    && mRawFragments[end] == mRawFragments[start]) {
+                end++;
+            }
+            drawRunMarker(canvas, start, end);
+            start = end;
+        }
+    }
+
+    private void drawRunMarker(final Canvas canvas, final int start, final int end) {
+        canvas.drawCircle(mRawXs[start], mRawYs[start], START_MARKER_RADIUS_PX, mStartPaint);
+        canvas.drawRect(
+                mRawXs[end - 1] - END_MARKER_RADIUS_PX,
+                mRawYs[end - 1] - END_MARKER_RADIUS_PX,
+                mRawXs[end - 1] + END_MARKER_RADIUS_PX,
+                mRawYs[end - 1] + END_MARKER_RADIUS_PX,
+                mEndPaint);
+        final int pointCount = end - start;
+        final int duration = mRawTimes[end - 1] - mRawTimes[start];
+        if (pointCount <= TAP_MAX_POINTS && duration <= TAP_MAX_DURATION_MS) {
+            final int mid = start + pointCount / 2;
+            canvas.drawRect(
+                    mRawXs[mid] - TAP_MARKER_RADIUS_PX,
+                    mRawYs[mid] - TAP_MARKER_RADIUS_PX,
+                    mRawXs[mid] + TAP_MARKER_RADIUS_PX,
+                    mRawYs[mid] + TAP_MARKER_RADIUS_PX,
+                    mTapPaint);
+        }
+    }
+
+    private void drawSyntheticPoints(final Canvas canvas) {
+        if (mSyntheticXs == null || mSyntheticYs == null) return;
+        final int n = Math.min(mSyntheticSize, Math.min(mSyntheticXs.length, mSyntheticYs.length));
+        for (int i = 0; i < n; i++) {
+            final int x = mSyntheticXs[i];
+            final int y = mSyntheticYs[i];
+            canvas.drawLine(x - SYNTHETIC_CROSS_RADIUS_PX, y, x + SYNTHETIC_CROSS_RADIUS_PX,
+                    y, mSyntheticPaint);
+            canvas.drawLine(x, y - SYNTHETIC_CROSS_RADIUS_PX, x,
+                    y + SYNTHETIC_CROSS_RADIUS_PX, mSyntheticPaint);
+        }
+    }
+
+    private int colorForFragment(final int fragmentId) {
+        final int positiveId = fragmentId & 0x7fffffff;
+        final float[] baseHsv = FRAGMENT_HSV[positiveId % FRAGMENT_HSV.length];
+        mColorHsv[0] = baseHsv[0];
+        mColorHsv[1] = baseHsv[1];
+        mColorHsv[2] = baseHsv[2]
+                * Math.max(0.45f, 1.0f - 0.16f * (positiveId / FRAGMENT_HSV.length));
+        return Color.HSVToColor(mColorHsv);
+    }
+
+    private static int[] append(final int[] existing, final int offset,
+            final int[] src, final int length) {
+        if (length <= 0) return existing;
+        final int[] result = ensureCapacity(existing, offset + length);
+        System.arraycopy(src, 0, result, offset, length);
+        return result;
+    }
+
+    private static int[] appendFilled(final int[] existing, final int offset,
+            final int value, final int length) {
+        if (length <= 0) return existing;
+        final int[] result = ensureCapacity(existing, offset + length);
+        Arrays.fill(result, offset, offset + length, value);
+        return result;
+    }
+
+    private static int[] ensureCapacity(final int[] existing, final int neededLength) {
+        if (existing != null && existing.length >= neededLength) return existing;
+        int newLength = existing == null ? 8 : existing.length;
+        while (newLength < neededLength) {
+            newLength *= 2;
+        }
+        return existing == null ? new int[newLength] : Arrays.copyOf(existing, newLength);
+    }
+
+    private static boolean isTapLike(@NonNull final InputPointers pointers) {
+        final int size = pointers.getPointerSize();
+        if (size == 0 || size > TAP_MAX_POINTS) return false;
+        final int[] times = pointers.getTimes();
+        return times[size - 1] - times[0] <= TAP_MAX_DURATION_MS;
     }
 }
