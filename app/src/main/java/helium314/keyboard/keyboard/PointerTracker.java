@@ -129,7 +129,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     private boolean mIsDetectingGesture = false; // per PointerTracker.
     private static boolean sInGesture = false;
-    private boolean mPendingTapFragmentDuringGesture = false;
     // ---- Combining-mode tap seeding ------------------------------------------------------
     // When the user taps a letter and within the combining-grace window starts a swipe, the
     // pure concat path ("s" + recognizer-of-"ilo") produces unreliable results because the
@@ -837,7 +836,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
 
         final Key key = getKeyOn(x, y);
-        final boolean wasInGestureOnDown = sInGesture;
         mBogusMoveEventDetector.onActualDownEvent(x, y);
         if (key != null && key.isModifier()) {
             if (sInGesture) {
@@ -895,16 +893,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         // disabled when the key is repeating.
         mIsDetectingGesture = (mKeyboard != null) && mKeyboard.mId.isAlphabetKeyboard()
                 && key != null && !key.isModifier() && !mKeySwipeAllowed && !sInKeySwipe;
-        final SettingsValues sv = Settings.getValues();
-        mPendingTapFragmentDuringGesture = sv.mGestureTapDuringSwipe
-                && wasInGestureOnDown
-                && mIsDetectingGesture
-                && key != null
-                && Character.isLetter(key.getCode());
         if (mIsDetectingGesture) {
-            if (mPendingTapFragmentDuringGesture) {
-                return;
-            }
             // Combining-mode tap seeding: if the user just tapped a letter within the
             // (base + tap-extra) combining grace window, prepend that tap's position+time as
             // the down-event for this gesture. The recognizer sees a continuous stroke from
@@ -924,6 +913,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             int seedY = y;
             long seedTime = eventTime;
             sCurrentGestureSeedCodepoint = 0;
+            final SettingsValues sv = Settings.getValues();
             // Multi-part composition (#1.6): when the WordComposer extend-base path is
             // active, it already feeds the lib the full prior-fragment trail with proper
             // re-timed pointers. The single-point seed here would duplicate context and,
@@ -1040,7 +1030,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     private void onGestureMoveEvent(final int x, final int y, final long eventTime,
             final boolean isMajorEvent, final Key key) {
-        if (!mIsDetectingGesture || mPendingTapFragmentDuringGesture || sInKeySwipe) {
+        if (!mIsDetectingGesture || sInKeySwipe) {
             return;
         }
         final boolean onValidArea = mBatchInputArbiter.addMoveEventPoint(
@@ -1080,7 +1070,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return;
         }
 
-        if (sGestureEnabler.shouldHandleGesture() && me != null && !mPendingTapFragmentDuringGesture) {
+        if (sGestureEnabler.shouldHandleGesture() && me != null) {
             // Add historical points to gesture path.
             final int pointerIndex = me.findPointerIndex(mPointerId);
             final int historicalSize = me.getHistorySize();
@@ -1333,27 +1323,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private void onMoveEventInternal(final int x, final int y, final long eventTime) {
         final Key oldKey = mCurrentKey;
 
-        if (mPendingTapFragmentDuringGesture) {
-            final Key keyOnMove = getKeyOn(x, y);
-            if (keyOnMove == oldKey) {
-                return;
-            }
-            final int dX = x - mStartX;
-            final int dY = y - mStartY;
-            if (DEBUG_MODE || Settings.getValues().mGestureDebugDrawPoints) {
-                Log.d(TAG, String.format(Locale.US,
-                        "[%d] promote tap-fragment to gesture dX=%d dY=%d from=%s to=%s",
-                        mPointerId, dX, dY,
-                        oldKey == null ? "none" : Constants.printableCode(oldKey.getCode()),
-                        keyOnMove == null ? "none" : Constants.printableCode(keyOnMove.getCode())));
-            }
-            mPendingTapFragmentDuringGesture = false;
-            mBatchInputArbiter.addDownEventPoint(mStartX, mStartY, mDownTime,
-                    sTypingTimeRecorder.getLastLetterTypingTime(), getActivePointerTrackerCount());
-            mGestureStrokeDrawingPoints.onDownEvent(
-                    mStartX, mStartY, mBatchInputArbiter.getElapsedTimeSinceFirstDown(mDownTime));
-        }
-
         // todo (later): move key swipe stuff to KeyboardActionListener (and finally
         // extend it)
         if (mKeySwipeAllowed) {
@@ -1440,27 +1409,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         mCurrentRepeatingKeyCode = Constants.NOT_A_CODE;
         // Release the last pressed key.
         setReleasedKeyGraphics(currentKey, true);
-
-        if (mPendingTapFragmentDuringGesture) {
-            mPendingTapFragmentDuringGesture = false;
-            if (!mIsTrackingForActionDisabled && currentKey != null) {
-                final int code = currentKey.getCode();
-                if (code > 0 && Character.isLetter(code)) {
-                    if (Settings.getValues().mGestureDebugDrawPoints) {
-                        Log.d(TAG, String.format(Locale.US,
-                                "[%d] commit tap-fragment during gesture: %s",
-                                mPointerId, Constants.printableCode(code)));
-                    }
-                    callListenerOnCodeInput(currentKey, code, mKeyX, mKeyY, eventTime, false);
-                    sLastLetterTapX = mKeyX;
-                    sLastLetterTapY = mKeyY;
-                    sLastLetterTapTime = eventTime;
-                    sLastLetterTapCodepoint = code;
-                    pushTapDebugPoint(mKeyX, mKeyY, mPointerId, eventTime);
-                }
-            }
-            return;
-        }
 
         if (mInHorizontalSwipe && currentKey.getCode() == KeyCode.DELETE) {
             sListener.onUpWithDeletePointerActive();
@@ -1650,7 +1598,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     private void onCancelEventInternal() {
         sTimerProxy.cancelKeyTimersOf(this);
-        mPendingTapFragmentDuringGesture = false;
         setReleasedKeyGraphics(mCurrentKey, true);
         resetKeySelectionByDraggingFinger();
         dismissPopupKeysPanel();

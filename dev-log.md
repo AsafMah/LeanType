@@ -467,3 +467,22 @@ The user pointed out that the tap-during-swipe behavior had been made hardcoded,
 
 ### Open Questions / Next Steps
 - Commit and push the PR update.
+
+---
+
+## 2026-05-23 — Remove tap-during-swipe fragments
+
+### Context
+After testing, the user confirmed the tap-during-swipe fragment behavior was causing the typing problem and asked to remove both the implementation and the setting.
+
+### Actions Taken
+- Removed the pending tap-fragment state machine from `PointerTracker`.
+- Removed the `Tap during swipe` setting from the two-thumb screen and settings registry coverage.
+- Removed the preference key/default/runtime read and the now-unused strings.
+- Built and installed the updated standard debug APK on the connected device.
+
+### Decisions Made
+- Kept the rest of two-thumb composing, autospace, backspace, and debug overlay options unchanged.
+
+### Open Questions / Next Steps
+- Commit and push the PR update.

@@ -130,7 +130,6 @@ object Defaults {
     const val PREF_GESTURE_FRAGMENT_BACKSPACE = true
     const val PREF_GESTURE_AUTOSPACE_GRACE_MS = 0
     const val PREF_GESTURE_TAP_PROMOTION_MS = 0
-    const val PREF_GESTURE_TAP_DURING_SWIPE = true
     const val PREF_GESTURE_DUAL_THUMB_HINTING = false
     const val PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT = 50
     const val PREF_GESTURE_DEBUG_DRAW_POINTS = false

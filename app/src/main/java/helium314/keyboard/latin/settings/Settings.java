@@ -136,7 +136,6 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GESTURE_FRAGMENT_BACKSPACE = "gesture_fragment_backspace";
     public static final String PREF_GESTURE_AUTOSPACE_GRACE_MS = "gesture_autospace_grace_ms";
     public static final String PREF_GESTURE_TAP_PROMOTION_MS = "gesture_tap_promotion_ms";
-    public static final String PREF_GESTURE_TAP_DURING_SWIPE = "gesture_tap_during_swipe";
     public static final String PREF_GESTURE_DUAL_THUMB_HINTING = "gesture_dual_thumb_hinting";
     public static final String PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT = "gesture_dual_thumb_midline_pct";
     public static final String PREF_GESTURE_DEBUG_DRAW_POINTS = "gesture_debug_draw_points";
