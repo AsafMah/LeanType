@@ -2,6 +2,7 @@ package helium314.keyboard.settings
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import helium314.keyboard.latin.settings.Settings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -49,5 +50,11 @@ class SettingsContainerTest {
             }
         }
         println("Filter performance: ${time / 1_000_000} ms")
+    }
+
+    @Test
+    fun twoThumbGestureGatedAutospaceSettingIsRegistered() {
+        assertEquals(Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE,
+            container[Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE]?.key)
     }
 }

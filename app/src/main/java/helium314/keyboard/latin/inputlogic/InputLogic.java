@@ -153,6 +153,7 @@ public final class InputLogic {
     private final Handler mCombiningHandler = new Handler(Looper.getMainLooper());
     @Nullable private Runnable mPendingCombiningCommit;
     private boolean mInCombiningMode;
+    private boolean mCombiningWordHasGestureFragment;
 
     // Keeps track of most recently inserted text (multi-character key) for
     // reverting
@@ -942,6 +943,8 @@ public final class InputLogic {
         if (kv != null) {
             final boolean showAutospaceIndicator = settingsValues.shouldInsertSpacesAutomatically()
                     && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
+                    && (!settingsValues.mCombiningAutospaceOnlyAfterGesture
+                            || mCombiningWordHasGestureFragment)
                     && !mSuppressAutospaceForForceNextSpace;
             kv.setCombiningMode(showAutospaceIndicator, startTime, graceMs);
         }
@@ -1015,6 +1018,7 @@ public final class InputLogic {
         mAutoCommitRevertLength = 0;
         mLastGestureCommittedLength = 0;
         mAutospaceJustWritten = false;
+        mCombiningWordHasGestureFragment = false;
         if (mInCombiningMode) {
             mInCombiningMode = false;
             final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
@@ -1085,7 +1089,7 @@ public final class InputLogic {
         // Capture whether the word being committed by this timer came from a gesture. We
         // use this AFTER commit to decide whether to arm the "backspace deletes whole word"
         // behavior. Tap-only words don't qualify — char-by-char backspace is fine for those.
-        final boolean wasBatchMode = mWordComposer.isBatchMode();
+        final boolean wordHadGestureFragment = mCombiningWordHasGestureFragment || mWordComposer.isBatchMode();
         // Snapshot the typed word's length BEFORE commit — the composing text is already in
         // the editor (added via setComposingTextInternal during the tap/gesture path), so the
         // commit itself doesn't move the cursor. We need the typed-word length plus whatever
@@ -1102,7 +1106,11 @@ public final class InputLogic {
         }
         // Track whether the helper actually wrote a space (skipped for URL / e-mail / phantom).
         final int beforeSpace = mConnection.getExpectedSelectionEnd();
-        insertAutomaticSpaceIfOptionsAndTextAllow(sv);
+        if (!sv.mCombiningAutospaceOnlyAfterGesture || wordHadGestureFragment) {
+            insertAutomaticSpaceIfOptionsAndTextAllow(sv);
+        } else {
+            clearOneShotSpaceActionAndNotifyIfChanged();
+        }
         final boolean autospaceInserted = mConnection.getExpectedSelectionEnd() > beforeSpace;
         // If we DID insert an autospace, fix up mLastComposedWord so revertCommit (backspace +
         // PREF_BACKSPACE_REVERTS_AUTOCORRECT) deletes the space along with the word. Without
@@ -1155,16 +1163,16 @@ public final class InputLogic {
         mAutospaceAlternativesPending = false;
         mAutoCommitRevertLength = 0;
         final String mode = sv.mCombiningAutospaceSuggestions;
-        if ("next_word".equals(mode)) {
+        if (autospaceInserted && "next_word".equals(mode)) {
             if (mSuggestionStripViewAccessor != null) {
                 setSuggestedWords(SuggestedWords.getEmptyInstance());
             }
             mLatinIME.mHandler.postUpdateSuggestionStrip(SuggestedWords.INPUT_STYLE_NONE);
-        } else if ("alternatives_then_next_word".equals(mode)) {
+        } else if (autospaceInserted && "alternatives_then_next_word".equals(mode)) {
             // Leave the strip alone; arm the swap-on-next-space behavior AND the revert window.
             mAutospaceAlternativesPending = true;
             mAutoCommitRevertLength = writtenChars;
-        } else if ("keep_alternatives".equals(mode)) {
+        } else if ("keep_alternatives".equals(mode) || !autospaceInserted) {
             // Arm the revert window so the next suggestion pick replaces the auto-committed
             // word rather than appending to it.
             mAutoCommitRevertLength = writtenChars;
@@ -1172,7 +1180,7 @@ public final class InputLogic {
         // Independent of the strip behavior: if the timer just committed a GESTURE word,
         // arm "first backspace deletes the whole word" — see handleBackspaceEvent. Stays
         // 0 for tap-only commits, where char-by-char delete is the right behavior.
-        if (wasBatchMode) {
+        if (wordHadGestureFragment) {
             mLastGestureCommittedLength = writtenChars;
         }
         // "keep_alternatives" — fall through, do nothing.
@@ -3290,6 +3298,7 @@ public final class InputLogic {
         mWordComposer.reset();
         // Two-thumb typing (#1.1): composing word is wiped — drop the matching boundaries.
         clearFragmentBoundaries();
+        mCombiningWordHasGestureFragment = false;
         // Combining mode is keyed on a composing word existing; if we're wiping it, the
         // pending timer would commit nothing useful, so cancel.
         cancelCombiningMode();
@@ -3559,6 +3568,7 @@ public final class InputLogic {
             }
         }
         if (batchInputText.isEmpty()) return;
+        mCombiningWordHasGestureFragment = true;
         mConnection.beginBatchEdit();
         // Two-thumb typing (#1.1 + #1.4): when either manual spacing OR tap-promotion-extend
         // applies, a follow-up gesture EXTENDS the existing composing word rather than
@@ -3867,6 +3877,7 @@ public final class InputLogic {
         // Two-thumb typing (#1.1): the composing word is gone — any tracked fragment
         // boundaries are now stale and would point past the end of the (empty) word.
         clearFragmentBoundaries();
+        mCombiningWordHasGestureFragment = false;
         if (DebugFlags.DEBUG_ENABLED) {
             long runTimeMillis = System.currentTimeMillis() - startTimeMillis;
             Log.d(TAG, "commitChosenWord() : " + runTimeMillis + " ms to run "

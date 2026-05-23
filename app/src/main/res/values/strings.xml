@@ -268,6 +268,8 @@
     <string name="combining_tap_extra">Extra grace after a tap</string>
     <string name="two_thumb_tap_autospace_grace">Extra autospace delay after taps</string>
     <string name="two_thumb_tap_autospace_grace_summary">Add this much extra time when the last input was a tapped letter, so tap-then-swipe combinations are easier to continue.</string>
+    <string name="combining_autospace_only_after_gesture">Only auto-space after swipes</string>
+    <string name="combining_autospace_only_after_gesture_summary">When enabled, tap-only words are committed without an automatic space. Words that include a swipe still auto-space.</string>
     <!-- Title of the toggle that makes the first backspace after a gesture delete the whole word. -->
     <string name="combining_backspace_deletes_gesture_word">Backspace deletes last swipe</string>
     <!-- Description for combining_backspace_deletes_gesture_word. -->

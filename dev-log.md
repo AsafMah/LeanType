@@ -337,3 +337,52 @@ The user tested several tap/swipe word combinations and found they worked withou
 ### Open Questions / Next Steps
 - Investigate why some `giraffe` attempts stop swipe detection after the second letter.
 - Investigate why first attempts often recognize unrelated long words before learning improves.
+
+## 2026-05-23 — Gate autospace on swiped words
+
+### Context
+The user wanted an opt-in autospace behavior for two-thumb Auto-space mode: tap-only words should commit without inserting an automatic space, while words that include a swipe should keep the existing autospace flow.
+
+### Actions Taken
+- Added `PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE` across the settings 5-file pattern: `Settings.java`, `Defaults.kt`, `SettingsValues.java`, `strings.xml`, and `TwoThumbTypingScreen.kt`.
+- Added the setting to the Auto-space mode group as **Only auto-space after swipes**, defaulting off to preserve existing behavior.
+- Updated `InputLogic.java` to track whether the current combining word has received a gesture fragment, including tap-then-swipe words where the composer is later downgraded out of batch mode.
+- Suppressed timer-driven autospace for tap-only words when the new setting is enabled, while still committing the word and preserving suggestion-revert behavior.
+- Added `InputLogicTest` coverage for tap-only suppression, gesture autospace, tap-then-gesture autospace, and `SettingsContainerTest` coverage for setting registration.
+- Built `:app:assembleStandardDebug` and installed the APK on the connected device.
+
+### Decisions Made
+- Kept explicit spaces, punctuation, Join Next, and Force Next Space paths on their existing behavior; the new setting only gates the timer's automatic space after committing a combining word.
+- Used a dedicated per-word gesture flag instead of relying only on `WordComposer.isBatchMode()`, because tap-then-swipe composition can unset batch mode after merging fragments.
+- When autospace is skipped, kept the suggestion strip in an alternatives/revert-friendly state instead of requesting next-word predictions, since there is no trailing space yet.
+
+### Manual Tests — Gesture-gated Autospace
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Open **Settings → Two-thumb typing**, select **Auto-space after a delay**, and enable **Only auto-space after swipes**. | Toggle turns on; no crash. |
+| 2 | Tap a word letter-by-letter and pause past the autospace delay. | Word commits, but no automatic space is inserted. |
+| 3 | Swipe a word and pause past the autospace delay. | Word commits with the normal automatic space. |
+| 4 | Tap a prefix, then swipe the rest of the word before the delay expires. | Combined word commits with the normal automatic space. |
+| 5 | Disable **Only auto-space after swipes** and repeat a tap-only word. | Existing autospace behavior returns. |
+
+### Open Questions / Next Steps
+- The targeted new unit tests pass. A full `InputLogicTest` run in the standard debug variant still reports unrelated existing failures (`insertLetterIntoWordHangulFails`, `revert autocorrect on delete`).
+
+---
+
+## 2026-05-23 — Hide tap-only autospace indicator
+
+### Context
+After enabling gesture-gated autospace, tap-only words no longer inserted an automatic space, but the first tapped letter still showed the autospace progress bar even though no autospace would happen.
+
+### Actions Taken
+- Updated `InputLogic.enterCombiningMode()` so the spacebar autospace progress indicator only appears when autospace can actually be inserted under the current settings.
+- Added regression coverage in `InputLogicTest` verifying tap-only input with **Only auto-space after swipes** enabled arms the combining timer without showing an autospace indicator.
+- Rebuilt `:app:assembleStandardDebug`.
+
+### Decisions Made
+- Kept the underlying combining commit timer active for tap-only words; only the autospace visual indicator is hidden until the current word includes a gesture fragment.
+
+### Open Questions / Next Steps
+- APK install was not completed because ADB reported no connected devices.

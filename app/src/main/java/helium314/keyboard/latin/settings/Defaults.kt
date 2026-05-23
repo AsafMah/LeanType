@@ -138,6 +138,7 @@ object Defaults {
     const val PREF_COMBINING_GRACE_MS = 0
     const val PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE = true
     const val PREF_COMBINING_TAP_EXTRA_MS = 250
+    const val PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE = false
     const val PREF_COMBINING_AUTOSPACE_SUGGESTIONS = "alternatives_then_next_word"
     const val PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD = true
     // Multi-part word composition (this branch). All default-on except the explicit join key.

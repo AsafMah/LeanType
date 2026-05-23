@@ -129,6 +129,7 @@ public class SettingsValues {
         public final int mCombiningGraceMs;
         public final boolean mCombiningAutocorrectOnAutospace;
         public final int mCombiningTapExtraMs;
+        public final boolean mCombiningAutospaceOnlyAfterGesture;
         // Raw string value: "keep_alternatives" | "next_word" | "alternatives_then_next_word"
         public final String mCombiningAutospaceSuggestions;
         public final boolean mCombiningBackspaceDeletesGestureWord;
@@ -349,6 +350,9 @@ public class SettingsValues {
                                 Defaults.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE);
                 mCombiningTapExtraMs = prefs.getInt(Settings.PREF_COMBINING_TAP_EXTRA_MS,
                                 Defaults.PREF_COMBINING_TAP_EXTRA_MS);
+                mCombiningAutospaceOnlyAfterGesture = prefs.getBoolean(
+                                Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE,
+                                Defaults.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE);
                 mCombiningAutospaceSuggestions = prefs.getString(Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS,
                                 Defaults.PREF_COMBINING_AUTOSPACE_SUGGESTIONS);
                 final boolean nonNormalTwoThumbSpacing = mGestureManualSpacing || mCombiningGraceMs > 0;
