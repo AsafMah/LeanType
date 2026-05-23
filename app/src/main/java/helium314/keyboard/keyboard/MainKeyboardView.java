@@ -338,10 +338,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         // clears immediately — invalidateKey() in the animator only refreshes the space
         // key's bounds, which isn't enough for the keyboard-wide tint.
         invalidate();
-        if (!mCombiningModeActive) {
-            mGestureDebugPointsDrawingPreview.clear();
-            return;
-        }
+        if (!mCombiningModeActive) return;
         if (mSpaceKey == null) return;
         final ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
         animator.setDuration(graceMs);

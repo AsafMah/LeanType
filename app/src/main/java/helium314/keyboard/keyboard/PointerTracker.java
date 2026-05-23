@@ -359,6 +359,8 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private static void pushGestureDebugSnapshot(
             final InputPointers raw, final InputPointers syntheticOnly) {
         if (!Settings.getValues().mGestureDebugDrawPoints) return;
+        Log.d(TAG, "debug gesture fragment raw=" + raw.getPointerSize()
+                + " synthetic=" + syntheticOnly.getPointerSize());
         sDrawingProxy.setGestureDebugPoints(raw, syntheticOnly);
     }
 
@@ -371,6 +373,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
         final InputPointers tap = new InputPointers(1);
         tap.addPointer(x, y, pointerId, 0);
+        Log.d(TAG, "debug tap fragment x=" + x + " y=" + y + " pointer=" + pointerId);
         sDrawingProxy.setGestureDebugPoints(tap, new InputPointers(0));
     }
 

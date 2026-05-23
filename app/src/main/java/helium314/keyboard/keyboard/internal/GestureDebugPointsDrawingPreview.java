@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 
 import helium314.keyboard.keyboard.PointerTracker;
 import helium314.keyboard.latin.common.InputPointers;
+import helium314.keyboard.latin.utils.Log;
 
 /**
  * Visual debug overlay (feature #2.1). Draws the points the gesture library actually sees,
@@ -24,7 +25,8 @@ import helium314.keyboard.latin.common.InputPointers;
  * compares it with the suggestion strip. The overlay distinguishes the streams and gesture
  * structure:
  * <ul>
- *   <li>raw samples and connecting segments are colour-coded by word fragment,</li>
+ *   <li>raw samples and connecting segments are colour-coded by word fragment, with later
+ *       fragments drawn darker,</li>
  *   <li>short tap-like runs are outlined as squares,</li>
  *   <li>each pointer run has a green start ring and black end marker,</li>
  *   <li>synthetic samples added by {@link DualThumbHinter} are drawn as blue crosses.</li>
@@ -37,6 +39,7 @@ import helium314.keyboard.latin.common.InputPointers;
  * invariant holds.
  */
 public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPreview {
+    private static final String TAG = "GestureDebugOverlay";
     // Snapshot of the most recent batch's points. Held as primitive int[] copies so the
     // upstream BatchInputArbiter is free to reset its aggregate without affecting us.
     private int[] mRawXs;
@@ -65,13 +68,13 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private static final float END_MARKER_RADIUS_PX = 8f;
     private static final int TAP_MAX_POINTS = 5;
     private static final int TAP_MAX_DURATION_MS = 80;
-    private static final int[] FRAGMENT_COLORS = {
-            Color.rgb(244, 67, 54),   // red
-            Color.rgb(76, 175, 80),   // green
-            Color.rgb(255, 152, 0),   // orange
-            Color.rgb(156, 39, 176),  // purple
-            Color.rgb(0, 188, 212),   // cyan
-            Color.rgb(255, 235, 59),  // yellow
+    private static final int[] BASE_FRAGMENT_COLORS = {
+            Color.rgb(244, 67, 54),    // red
+            Color.rgb(33, 150, 243),   // blue
+            Color.rgb(76, 175, 80),    // green
+            Color.rgb(255, 152, 0),    // orange
+            Color.rgb(156, 39, 176),   // purple
+            Color.rgb(0, 188, 212),    // cyan
     };
 
     public GestureDebugPointsDrawingPreview() {
@@ -123,13 +126,18 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     public void updateSnapshot(@NonNull final InputPointers raw, final InputPointers synthetic) {
         final int fragmentId = mNextFragmentId++;
         final int rawSize = raw.getPointerSize();
+        final int syntheticSize = synthetic == null ? 0 : synthetic.getPointerSize();
+        Log.d(TAG, "fragment=" + fragmentId
+                + " raw=" + rawSize
+                + " synthetic=" + syntheticSize
+                + " totalBefore=" + (mRawXs == null ? 0 : mRawXs.length)
+                + " tapLike=" + isTapLike(raw));
         mRawXs = append(mRawXs, raw.getXCoordinates(), rawSize);
         mRawYs = append(mRawYs, raw.getYCoordinates(), rawSize);
         mRawIds = append(mRawIds, raw.getPointerIds(), rawSize);
         mRawTimes = append(mRawTimes, raw.getTimes(), rawSize);
         mRawFragments = appendFilled(mRawFragments, fragmentId, rawSize);
-        if (synthetic != null && synthetic.getPointerSize() > 0) {
-            final int syntheticSize = synthetic.getPointerSize();
+        if (syntheticSize > 0) {
             mSyntheticXs = append(mSyntheticXs, synthetic.getXCoordinates(), syntheticSize);
             mSyntheticYs = append(mSyntheticYs, synthetic.getYCoordinates(), syntheticSize);
             mSyntheticIds = append(mSyntheticIds, synthetic.getPointerIds(), syntheticSize);
@@ -141,6 +149,11 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
 
     /** Drop the overlay (e.g. on gesture cancel or view teardown). */
     public void clear() {
+        if (mRawXs != null || mSyntheticXs != null) {
+            Log.d(TAG, "clear fragments=" + mNextFragmentId
+                    + " rawTotal=" + (mRawXs == null ? 0 : mRawXs.length)
+                    + " syntheticTotal=" + (mSyntheticXs == null ? 0 : mSyntheticXs.length));
+        }
         mRawXs = null;
         mRawYs = null;
         mRawIds = null;
@@ -248,7 +261,13 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     }
 
     private static int colorForFragment(final int fragmentId) {
-        return FRAGMENT_COLORS[(fragmentId & 0x7fffffff) % FRAGMENT_COLORS.length];
+        final int baseColor = BASE_FRAGMENT_COLORS[(fragmentId & 0x7fffffff)
+                % BASE_FRAGMENT_COLORS.length];
+        final float factor = Math.max(0.35f, 1.0f - 0.12f * fragmentId);
+        return Color.rgb(
+                (int)(Color.red(baseColor) * factor),
+                (int)(Color.green(baseColor) * factor),
+                (int)(Color.blue(baseColor) * factor));
     }
 
     private static int[] append(final int[] existing, final int[] src, final int length) {
@@ -273,5 +292,12 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
             result[i] = value;
         }
         return result;
+    }
+
+    private static boolean isTapLike(@NonNull final InputPointers pointers) {
+        final int size = pointers.getPointerSize();
+        if (size == 0 || size > TAP_MAX_POINTS) return false;
+        final int[] times = pointers.getTimes();
+        return times[size - 1] - times[0] <= TAP_MAX_DURATION_MS;
     }
 }
