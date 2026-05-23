@@ -126,3 +126,39 @@ The user requested that Cancel also return to the clipboard page, and that the r
 
 ### Open Questions / Next Steps
 - User should verify the Save and Cancel transitions on-device.
+
+## 2026-05-23 — Add layout-driven shortcut rows
+
+### Context
+The prior direct-action shortcut implementation was reverted because it did not match the requested Nintype-style behavior. The corrected approach is opt-in, layout-driven shortcut rows: a vertical swipe from an eligible source row opens a temporary one-row panel, and releasing on a panel key dispatches that key through the normal keyboard action path.
+
+### Actions Taken
+- Added `SHORTCUT_TOP` and `SHORTCUT_BOTTOM` layout types and default JSON row layouts under `app/src/main/assets/layouts/shortcut_top/` and `app/src/main/assets/layouts/shortcut_bottom/`.
+- Added opt-in gesture settings for shortcut rows, top-row shortcut swipe, and bottom-row shortcut swipe.
+- Added `ShortcutRowKeys.kt` to parse shortcut-row layouts into popup-key specs so the feature reuses existing slide-to-select popup panel behavior.
+- Extended `DrawingProxy` and `MainKeyboardView` with `showShortcutRowKeyboard(...)`.
+- Extended `PointerTracker` with shortcut-row swipe state, top/bottom source-row eligibility, vertical-dominant trigger thresholds, and panel open/commit/cancel handling.
+- Added a parser test verifying shortcut row layouts produce expected functional key codes.
+
+### Decisions Made
+- Reused `PopupKeysPanel` / `PopupKeysKeyboardView` for the temporary row surface instead of adding a new full keyboard layer or hardcoded actions.
+- Kept the feature off by default behind a master toggle and separate top/bottom toggles.
+- Excluded modifier keys and existing key swipers (space/delete) from shortcut-row source eligibility so shift/symbol/numpad chording and existing swipe behaviors keep their current release paths.
+- Used existing layout/default/per-subtype infrastructure for row contents, so future customization can happen through layout files instead of serialized action maps.
+
+### Manual Tests — Shortcut Rows
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Open **Settings → Gesture typing**, enable **Shortcut rows**, then enable **Top shortcut row swipe**. | Toggles persist; no crash. |
+| 2 | In a text field, swipe up from a top normal typing-row key. | A temporary shortcut row appears; releasing on **Undo**, **Redo**, **Copy**, **Paste**, **Select word**, **Select all**, or **Emoji** triggers that key/action. |
+| 3 | With number row enabled, swipe up from the number row. | The number row is treated as the top source row and opens the top shortcut row. |
+| 4 | Swipe up from shift, symbol/alpha, numpad, space, or delete. | Shortcut row does not open; existing modifier/key-swipe behavior remains unchanged. |
+| 5 | Enable **Bottom shortcut row swipe** and swipe down from the bottom normal typing row. | The bottom shortcut row appears and selected keys dispatch normally. |
+| 6 | Start a normal gesture-typing word from a letter with horizontal/diagonal motion. | Gesture typing still works; shortcut row only opens for clear vertical-dominant movement. |
+| 7 | Long-press comma or period. | Existing popup menus still open. |
+| 8 | Hold/slide from numpad or symbol keys to pick a symbol. | Existing momentary symbol/numpad behavior still returns to the correct keyboard state. |
+| 9 | Disable **Shortcut rows**. | No shortcut rows open from top/bottom swipes. |
+
+### Open Questions / Next Steps
+- On-device testing should confirm the popup-row placement feels correct for top-row and bottom-row swipes; if full-width positioning is not comfortable, a dedicated `ShortcutRowPanel` can replace the popup surface without changing the layout model.
