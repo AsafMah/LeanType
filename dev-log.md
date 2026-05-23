@@ -490,6 +490,23 @@ Copilot review comments on PR #6 flagged that debug overlay accumulation depende
 
 ---
 
+## 2026-05-23 — Fix two-thumb enabled gate
+
+### Context
+After installing PR #6, the user reported the two-thumb settings screen showed "Enable gesture typing first" even though gesture typing was enabled.
+
+### Actions Taken
+- Changed `TwoThumbTypingScreen.kt` to gate the "Enable gesture typing first" hint only on `PREF_GESTURE_INPUT`, not `JniUtils.sHaveGestureLib`.
+- Built and installed the updated standard debug APK on the connected device.
+
+### Decisions Made
+- Kept gesture-library availability checks on the dedicated Gesture typing screen, where the library loader is shown; the two-thumb screen now reflects the actual user-facing enable toggle.
+
+### Open Questions / Next Steps
+- Commit and push the fix.
+
+---
+
 ## 2026-05-23 — Remove tap-during-swipe fragments
 
 ### Context
