@@ -232,3 +232,22 @@ Review comment r3289683508 on PR #3 noted that `createToolbarStateBackground()` 
 ### Open Questions / Next Steps
 - If toolbar state updates ever move off the main thread, add `@Volatile` or synchronization to the cache variable.
 
+---
+
+## 2026-05-23 — Merge upstream main into origin main branch
+
+### Context
+The user asked for a new PR based on `main` that merges changes from the configured `upstream` remote. `origin/main` and `upstream/main` had diverged, with upstream containing build, README, symbol-row, floating-keyboard persistence, clipboard icon, touchpad, and release/version updates.
+
+### Actions Taken
+- Created branch `copilot/merge-upstream-main` from `origin/main`.
+- Merged `upstream/main` into the branch.
+- Resolved conflicts in `KeyboardIconsSet.kt` by preserving LeanType toolbar state icons while keeping the merge compatible with upstream's icon mapping changes.
+- Resolved conflicts in `ClipboardDao.kt` by preserving clipboard edit support and upstream synchronization around pin toggling.
+
+### Decisions Made
+- Used a merge branch instead of rebasing so the PR clearly represents an upstream sync into `main`.
+- Preserved LeanType-specific clipboard editing and toolbar state-key behavior where it overlapped with upstream changes.
+
+### Open Questions / Next Steps
+- Build validation and PR creation should complete before merging.

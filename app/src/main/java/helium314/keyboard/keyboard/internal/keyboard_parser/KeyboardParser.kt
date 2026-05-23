@@ -264,15 +264,19 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
     }
 
     private fun addNumberRowOrPopupKeys(baseKeys: MutableList<MutableList<KeyData>>, numberRow: MutableList<KeyData>) {
-        if (!params.mId.mNumberRowEnabled && params.mId.mNumberRowInSymbols && params.mId.mElementId == KeyboardId.ELEMENT_SYMBOLS) {
+        if (!params.mId.mNumberRowEnabled && params.mId.mNumberRowInSymbols && (params.mId.mElementId == KeyboardId.ELEMENT_SYMBOLS || params.mId.mElementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED)) {
             // replace first symbols row with number row, but use the labels as popupKeys
+            val symbolsRow = baseKeys.getOrNull(0) ?: return
             val numberRowCopy = numberRow.toMutableList()
             numberRowCopy.forEachIndexed { index, keyData ->
-                val symbolKey = baseKeys[0].getOrNull(index) ?: return@forEachIndexed
+                val symbolKey = symbolsRow.getOrNull(index) ?: return@forEachIndexed
                 val symbols = mutableListOf<String>()
                 symbolKey.label.takeIf { it.isNotEmpty() }?.let { symbols.add(it) }
                 symbolKey.popup.getPopupKeyLabels(params)?.let { symbols.addAll(it) }
                 if (symbols.isNotEmpty()) keyData.popup.symbols = symbols
+            }
+            if (symbolsRow.size > numberRowCopy.size) {
+                numberRowCopy.addAll(symbolsRow.subList(numberRowCopy.size, symbolsRow.size))
             }
             baseKeys[0] = numberRowCopy
         } else if (!params.mId.mNumberRowEnabled && params.mId.isAlphabetKeyboard && !hasBuiltInNumbers()) {

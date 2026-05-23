@@ -78,6 +78,7 @@ public class TouchpadView extends LinearLayout {
         // Consume all touches so nothing passes through to views behind
         setClickable(true);
         setFocusable(true);
+        setFitsSystemWindows(true);
 
         LayoutInflater.from(context).inflate(R.layout.touchpad_view, this, true);
         mTouchpadSurface = findViewById(R.id.touchpad_surface);

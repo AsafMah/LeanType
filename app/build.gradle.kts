@@ -22,8 +22,8 @@ android {
         applicationId = "com.leanbitlab.leantype"
         minSdk = 21
         targetSdk = 35
-        versionCode = 3709
-        versionName = "3.7.9"
+        versionCode = 3800
+        versionName = "3.8.0"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
@@ -140,6 +140,10 @@ android {
             // false is required for Android 16+ 16-KB page alignment compatibility on prebuilts.
             useLegacyPackaging = false
         }
+        resources {
+            excludes += "assets/dexopt/baseline.prof"
+            excludes += "assets/dexopt/baseline.profm"
+        }
     }
 
 
@@ -217,4 +221,11 @@ dependencies {
     testImplementation("androidx.test.ext:junit:1.1.5")
     testImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+// Disable baseline/ART profile tasks to guarantee deterministic reproducible builds
+tasks.configureEach {
+    if (name.contains("ArtProfile", ignoreCase = true)) {
+        enabled = false
+    }
 }

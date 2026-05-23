@@ -846,7 +846,9 @@ public class LatinIME extends InputMethodService implements
         // Auto-dismiss floating keyboard when the input session ends
         // (user navigated away from text input)
         if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
-            mFloatingKeyboardManager.hide(false);
+            if (!Settings.getInstance().getCurrent().mPersistFloatingKeyboard) {
+                mFloatingKeyboardManager.hide(false);
+            }
         }
     }
 

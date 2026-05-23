@@ -335,7 +335,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mStripContainer.setVisibility(stripVisibility);
         PointerTracker.switchTo(mKeyboardView);
         if (PointerTracker.sPersistentTouchpadModeActive) {
-            mKeyboardView.setVisibility(View.GONE);
+            mKeyboardView.setVisibility(visibility == View.VISIBLE ? View.INVISIBLE : View.GONE);
         } else {
             mKeyboardView.setVisibility(visibility);
         }
@@ -357,6 +357,12 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             if (mTouchpadView != null) {
                 mTouchpadView.setVisibility(visibility);
                 mTouchpadView.applyColors(Settings.getValues().mColors);
+                mTouchpadView.setPadding(
+                    mKeyboardView.getPaddingLeft(),
+                    mKeyboardView.getPaddingTop(),
+                    mKeyboardView.getPaddingRight(),
+                    mKeyboardView.getPaddingBottom()
+                );
             }
         } else {
             if (mTouchpadView != null) mTouchpadView.setVisibility(View.GONE);
@@ -557,30 +563,20 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
     public void showTouchpadView() {
         if (mTouchpadView == null) return;
-        // Get keyboard height before hiding it
-        int keyboardHeight = mKeyboardView.getHeight();
-        if (keyboardHeight <= 0) {
-            keyboardHeight = mKeyboardView.getMeasuredHeight();
-        }
-        mKeyboardView.setVisibility(View.GONE);
+        mKeyboardView.setVisibility(View.INVISIBLE);
         mEmojiPalettesView.setVisibility(View.GONE);
         mClipboardHistoryView.setVisibility(View.GONE);
         // Hide one-handed mode buttons to prevent overlap
         mKeyboardViewWrapper.findViewById(R.id.btn_stop_one_handed_mode).setVisibility(View.GONE);
         mKeyboardViewWrapper.findViewById(R.id.btn_switch_one_handed_mode).setVisibility(View.GONE);
         mKeyboardViewWrapper.findViewById(R.id.btn_resize_one_handed_mode).setVisibility(View.GONE);
-        // Set touchpad height to match the keyboard
-        if (keyboardHeight > 0) {
-            mTouchpadView.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT, keyboardHeight));
-            // Apply bottom padding to avoid overlapping the navigation bar
-            mTouchpadView.setPadding(
-                mKeyboardView.getPaddingLeft(),
-                mKeyboardView.getPaddingTop(),
-                mKeyboardView.getPaddingRight(),
-                mKeyboardView.getPaddingBottom()
-            );
-        }
+        // Apply bottom padding to avoid overlapping the navigation bar
+        mTouchpadView.setPadding(
+            mKeyboardView.getPaddingLeft(),
+            mKeyboardView.getPaddingTop(),
+            mKeyboardView.getPaddingRight(),
+            mKeyboardView.getPaddingBottom()
+        );
         mTouchpadView.applyColors(Settings.getValues().mColors);
         mTouchpadView.setVisibility(View.VISIBLE);
         mMainKeyboardFrame.setVisibility(View.VISIBLE);
@@ -851,6 +847,22 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         PointerTracker.switchTo(mKeyboardView);
 
         mTouchpadView = mCurrentInputView.findViewById(R.id.touchpad_view);
+        if (PointerTracker.sPersistentTouchpadModeActive && mTouchpadView != null) {
+            if (mLatinIME.mKeyboardActionListener instanceof KeyboardActionListenerImpl) {
+                ((KeyboardActionListenerImpl) mLatinIME.mKeyboardActionListener).setupTouchpadListener(mTouchpadView);
+            }
+        }
+
+        mKeyboardView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (mTouchpadView != null && mTouchpadView.getVisibility() == View.VISIBLE) {
+                mTouchpadView.setPadding(
+                        mKeyboardView.getPaddingLeft(),
+                        mKeyboardView.getPaddingTop(),
+                        mKeyboardView.getPaddingRight(),
+                        mKeyboardView.getPaddingBottom()
+                );
+            }
+        });
 
         return mCurrentInputView;
     }
