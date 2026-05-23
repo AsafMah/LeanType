@@ -82,6 +82,9 @@ public interface DrawingProxy {
     /** Clear the debug-points overlay (e.g. on gesture start or cancel). */
     void clearGestureDebugPoints();
 
+    /** Whether debug overlay fragments should be preserved across the next gesture start. */
+    boolean isCombiningModeActiveForDebug();
+
     /**
      * Toggle a "commit pending" visual indicator on the gesture floating preview text
      * (feature #1.2). Shown during the autospace grace window so the user has a visible cue

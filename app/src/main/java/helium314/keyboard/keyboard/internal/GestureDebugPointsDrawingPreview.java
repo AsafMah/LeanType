@@ -24,7 +24,7 @@ import helium314.keyboard.latin.common.InputPointers;
  * compares it with the suggestion strip. The overlay distinguishes the streams and gesture
  * structure:
  * <ul>
- *   <li>raw samples and connecting segments are colour-coded by pointer/finger id,</li>
+ *   <li>raw samples and connecting segments are colour-coded by word fragment,</li>
  *   <li>short tap-like runs are outlined as squares,</li>
  *   <li>each pointer run has a green start ring and black end marker,</li>
  *   <li>synthetic samples added by {@link DualThumbHinter} are drawn as blue crosses.</li>
@@ -43,10 +43,13 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private int[] mRawYs;
     private int[] mRawIds;
     private int[] mRawTimes;
+    private int[] mRawFragments;
     private int[] mSyntheticXs;
     private int[] mSyntheticYs;
     private int[] mSyntheticIds;
     private int[] mSyntheticTimes;
+    private int[] mSyntheticFragments;
+    private int mNextFragmentId;
 
     private final Paint mRawPaint = new Paint();
     private final Paint mLinePaint = new Paint();
@@ -62,7 +65,7 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private static final float END_MARKER_RADIUS_PX = 8f;
     private static final int TAP_MAX_POINTS = 5;
     private static final int TAP_MAX_DURATION_MS = 80;
-    private static final int[] POINTER_COLORS = {
+    private static final int[] FRAGMENT_COLORS = {
             Color.rgb(244, 67, 54),   // red
             Color.rgb(76, 175, 80),   // green
             Color.rgb(255, 152, 0),   // orange
@@ -118,20 +121,20 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
      *     {@link InputPointers} or {@code null} (treated identically — nothing blue drawn).
      */
     public void updateSnapshot(@NonNull final InputPointers raw, final InputPointers synthetic) {
-        mRawXs = copyOfLength(raw.getXCoordinates(), raw.getPointerSize());
-        mRawYs = copyOfLength(raw.getYCoordinates(), raw.getPointerSize());
-        mRawIds = copyOfLength(raw.getPointerIds(), raw.getPointerSize());
-        mRawTimes = copyOfLength(raw.getTimes(), raw.getPointerSize());
+        final int fragmentId = mNextFragmentId++;
+        final int rawSize = raw.getPointerSize();
+        mRawXs = append(mRawXs, raw.getXCoordinates(), rawSize);
+        mRawYs = append(mRawYs, raw.getYCoordinates(), rawSize);
+        mRawIds = append(mRawIds, raw.getPointerIds(), rawSize);
+        mRawTimes = append(mRawTimes, raw.getTimes(), rawSize);
+        mRawFragments = appendFilled(mRawFragments, fragmentId, rawSize);
         if (synthetic != null && synthetic.getPointerSize() > 0) {
-            mSyntheticXs = copyOfLength(synthetic.getXCoordinates(), synthetic.getPointerSize());
-            mSyntheticYs = copyOfLength(synthetic.getYCoordinates(), synthetic.getPointerSize());
-            mSyntheticIds = copyOfLength(synthetic.getPointerIds(), synthetic.getPointerSize());
-            mSyntheticTimes = copyOfLength(synthetic.getTimes(), synthetic.getPointerSize());
-        } else {
-            mSyntheticXs = null;
-            mSyntheticYs = null;
-            mSyntheticIds = null;
-            mSyntheticTimes = null;
+            final int syntheticSize = synthetic.getPointerSize();
+            mSyntheticXs = append(mSyntheticXs, synthetic.getXCoordinates(), syntheticSize);
+            mSyntheticYs = append(mSyntheticYs, synthetic.getYCoordinates(), syntheticSize);
+            mSyntheticIds = append(mSyntheticIds, synthetic.getPointerIds(), syntheticSize);
+            mSyntheticTimes = append(mSyntheticTimes, synthetic.getTimes(), syntheticSize);
+            mSyntheticFragments = appendFilled(mSyntheticFragments, fragmentId, syntheticSize);
         }
         invalidateDrawingView();
     }
@@ -142,10 +145,13 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         mRawYs = null;
         mRawIds = null;
         mRawTimes = null;
+        mRawFragments = null;
         mSyntheticXs = null;
         mSyntheticYs = null;
         mSyntheticIds = null;
         mSyntheticTimes = null;
+        mSyntheticFragments = null;
+        mNextFragmentId = 0;
         invalidateDrawingView();
     }
 
@@ -170,32 +176,36 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     }
 
     private void drawPointerLines(final Canvas canvas) {
-        if (mRawXs == null || mRawYs == null || mRawIds == null) return;
-        final int n = Math.min(Math.min(mRawXs.length, mRawYs.length), mRawIds.length);
+        if (mRawXs == null || mRawYs == null || mRawIds == null || mRawFragments == null) return;
+        final int n = Math.min(Math.min(mRawXs.length, mRawYs.length),
+                Math.min(mRawIds.length, mRawFragments.length));
         for (int i = 1; i < n; i++) {
-            if (mRawIds[i] != mRawIds[i - 1]) continue;
-            mLinePaint.setColor(colorForPointer(mRawIds[i]));
+            if (mRawIds[i] != mRawIds[i - 1]
+                    || mRawFragments[i] != mRawFragments[i - 1]) continue;
+            mLinePaint.setColor(colorForFragment(mRawFragments[i]));
             canvas.drawLine(mRawXs[i - 1], mRawYs[i - 1], mRawXs[i], mRawYs[i], mLinePaint);
         }
     }
 
     private void drawRawPoints(final Canvas canvas) {
-        if (mRawXs == null || mRawYs == null || mRawIds == null) return;
-        final int n = Math.min(Math.min(mRawXs.length, mRawYs.length), mRawIds.length);
+        if (mRawXs == null || mRawYs == null || mRawFragments == null) return;
+        final int n = Math.min(Math.min(mRawXs.length, mRawYs.length), mRawFragments.length);
         for (int i = 0; i < n; i++) {
-            mRawPaint.setColor(colorForPointer(mRawIds[i]));
+            mRawPaint.setColor(colorForFragment(mRawFragments[i]));
             canvas.drawCircle(mRawXs[i], mRawYs[i], RAW_RADIUS_PX, mRawPaint);
         }
     }
 
     private void drawRunMarkers(final Canvas canvas) {
-        if (mRawXs == null || mRawYs == null || mRawIds == null || mRawTimes == null) return;
+        if (mRawXs == null || mRawYs == null || mRawIds == null || mRawTimes == null
+                || mRawFragments == null) return;
         final int n = Math.min(Math.min(mRawXs.length, mRawYs.length),
-                Math.min(mRawIds.length, mRawTimes.length));
+                Math.min(Math.min(mRawIds.length, mRawTimes.length), mRawFragments.length));
         int start = 0;
         while (start < n) {
             int end = start + 1;
-            while (end < n && mRawIds[end] == mRawIds[start]) {
+            while (end < n && mRawIds[end] == mRawIds[start]
+                    && mRawFragments[end] == mRawFragments[start]) {
                 end++;
             }
             drawRunMarker(canvas, start, end);
@@ -237,14 +247,31 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         }
     }
 
-    private static int colorForPointer(final int pointerId) {
-        return POINTER_COLORS[(pointerId & 0x7fffffff) % POINTER_COLORS.length];
+    private static int colorForFragment(final int fragmentId) {
+        return FRAGMENT_COLORS[(fragmentId & 0x7fffffff) % FRAGMENT_COLORS.length];
     }
 
-    private static int[] copyOfLength(final int[] src, final int length) {
-        if (length <= 0) return null;
-        final int[] copy = new int[length];
-        System.arraycopy(src, 0, copy, 0, length);
-        return copy;
+    private static int[] append(final int[] existing, final int[] src, final int length) {
+        if (length <= 0) return existing;
+        final int oldLength = existing == null ? 0 : existing.length;
+        final int[] result = new int[oldLength + length];
+        if (existing != null) {
+            System.arraycopy(existing, 0, result, 0, oldLength);
+        }
+        System.arraycopy(src, 0, result, oldLength, length);
+        return result;
+    }
+
+    private static int[] appendFilled(final int[] existing, final int value, final int length) {
+        if (length <= 0) return existing;
+        final int oldLength = existing == null ? 0 : existing.length;
+        final int[] result = new int[oldLength + length];
+        if (existing != null) {
+            System.arraycopy(existing, 0, result, 0, oldLength);
+        }
+        for (int i = oldLength; i < result.length; i++) {
+            result[i] = value;
+        }
+        return result;
     }
 }

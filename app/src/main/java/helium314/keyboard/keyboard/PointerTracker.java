@@ -362,6 +362,18 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         sDrawingProxy.setGestureDebugPoints(raw, syntheticOnly);
     }
 
+    private static void pushTapDebugPoint(final int x, final int y, final int pointerId,
+            final long eventTime) {
+        final SettingsValues sv = Settings.getValues();
+        if (!sv.mGestureDebugDrawPoints
+                || (sv.mCombiningGraceMs <= 0 && !sv.mGestureManualSpacing)) {
+            return;
+        }
+        final InputPointers tap = new InputPointers(1);
+        tap.addPointer(x, y, pointerId, 0);
+        sDrawingProxy.setGestureDebugPoints(tap, new InputPointers(0));
+    }
+
 
     public static void setKeyboardActionListener(final KeyboardActionListener listener) {
         sListener = listener;
@@ -690,9 +702,12 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (DEBUG_LISTENER) {
             Log.d(TAG, String.format(Locale.US, "[%d] onStartBatchInput", mPointerId));
         }
-        // Two-thumb typing (#2.1): a fresh gesture starts — wipe the previous batch's debug
-        // overlay so it doesn't visually mix with the in-flight gesture.
-        sDrawingProxy.clearGestureDebugPoints();
+        // Two-thumb typing debug overlay: clear only when this is a new word. While combining
+        // mode is active, a fresh gesture is another fragment of the same word and should remain
+        // visible alongside earlier fragments.
+        if (!sDrawingProxy.isCombiningModeActiveForDebug()) {
+            sDrawingProxy.clearGestureDebugPoints();
+        }
         sListener.onStartBatchInput();
         dismissAllPopupKeysPanels();
         sTimerProxy.cancelLongPressTimersOf(this);
@@ -1487,6 +1502,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 sLastLetterTapY = mKeyY;
                 sLastLetterTapTime = eventTime;
                 sLastLetterTapCodepoint = code;
+                pushTapDebugPoint(mKeyX, mKeyY, mPointerId, eventTime);
             }
         }
         if (isInSlidingKeyInput) {
