@@ -507,6 +507,25 @@ After installing PR #6, the user reported the two-thumb settings screen showed "
 
 ---
 
+## 2026-05-23 — Restore gesture library after reinstall
+
+### Context
+After the debug app was fully uninstalled to fix a signature mismatch, gesture typing stopped working. The reinstall preserved the gesture preference, but the user-supplied native gesture library in app files was gone.
+
+### Actions Taken
+- Confirmed the device app files did not contain `libjni_latinime.so`.
+- Downloaded the arm64 OpenBoard `libjni_latinimegoogle.so`, verified its expected SHA-256 checksum, copied it into the app files as `libjni_latinime.so`, and force-stopped the app so it reloads.
+- Updated the two-thumb settings gate to distinguish between "gesture toggle is off" and "gesture library is missing".
+- Built and installed the updated standard debug APK while preserving the restored gesture library file.
+
+### Decisions Made
+- Kept the library availability gate for the two-thumb screen, but changed the missing-library message so it no longer incorrectly says only "Enable gesture typing first".
+
+### Open Questions / Next Steps
+- Commit and push the corrected screen text.
+
+---
+
 ## 2026-05-23 — Remove tap-during-swipe fragments
 
 ### Context

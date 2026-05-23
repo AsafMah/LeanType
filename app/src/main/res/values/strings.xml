@@ -212,6 +212,7 @@
     <!-- Section header for two-thumb / simultaneous gesture typing settings (multi-finger glide typing improvements). -->
     <string name="settings_category_two_thumb_typing">Two-thumb typing</string>
     <string name="two_thumb_typing_requires_gesture">Enable gesture typing first</string>
+    <string name="two_thumb_typing_requires_gesture_library">Load the gesture typing library first</string>
     <string name="settings_category_two_thumb_typing_words">Build words from taps and swipes</string>
     <string name="settings_category_two_thumb_typing_recognition">Recognition tuning</string>
     <string name="settings_category_two_thumb_typing_troubleshooting">Troubleshooting</string>
