@@ -895,7 +895,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         // disabled when the key is repeating.
         mIsDetectingGesture = (mKeyboard != null) && mKeyboard.mId.isAlphabetKeyboard()
                 && key != null && !key.isModifier() && !mKeySwipeAllowed && !sInKeySwipe;
-        mPendingTapFragmentDuringGesture = wasInGestureOnDown
+        final SettingsValues sv = Settings.getValues();
+        mPendingTapFragmentDuringGesture = sv.mGestureTapDuringSwipe
+                && wasInGestureOnDown
                 && mIsDetectingGesture
                 && key != null
                 && Character.isLetter(key.getCode());
@@ -922,7 +924,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             int seedY = y;
             long seedTime = eventTime;
             sCurrentGestureSeedCodepoint = 0;
-            final SettingsValues sv = Settings.getValues();
             // Multi-part composition (#1.6): when the WordComposer extend-base path is
             // active, it already feeds the lib the full prior-fragment trail with proper
             // re-timed pointers. The single-point seed here would duplicate context and,

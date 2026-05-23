@@ -62,6 +62,7 @@ fun TwoThumbTypingScreen(
     val items = buildList {
         add(R.string.settings_category_two_thumb_typing_words)
         add(SettingsWithoutKey.TWO_THUMB_SPACING_MODE)
+        add(Settings.PREF_GESTURE_TAP_DURING_SWIPE)
         if (autospaceMode) {
             add(Settings.PREF_COMBINING_GRACE_MS)
             add(Settings.PREF_COMBINING_TAP_EXTRA_MS)
@@ -174,6 +175,10 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS,
         R.string.multipart_full_word_suggestions, R.string.multipart_full_word_suggestions_summary) {
         SwitchPreference(it, Defaults.PREF_MULTIPART_FULL_WORD_SUGGESTIONS)
+    },
+    Setting(context, Settings.PREF_GESTURE_TAP_DURING_SWIPE,
+        R.string.gesture_tap_during_swipe, R.string.gesture_tap_during_swipe_summary) {
+        SwitchPreference(it, Defaults.PREF_GESTURE_TAP_DURING_SWIPE)
     },
     Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
         R.string.two_thumb_point_hinting, R.string.two_thumb_point_hinting_summary) {

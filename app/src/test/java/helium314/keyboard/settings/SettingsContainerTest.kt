@@ -70,6 +70,8 @@ class SettingsContainerTest {
             container[Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT]?.key)
         assertEquals(Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS,
             container[Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS]?.key)
+        assertEquals(Settings.PREF_GESTURE_TAP_DURING_SWIPE,
+            container[Settings.PREF_GESTURE_TAP_DURING_SWIPE]?.key)
         assertEquals(Settings.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS,
             container[Settings.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS]?.key)
     }

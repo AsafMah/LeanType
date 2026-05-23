@@ -447,3 +447,23 @@ After testing the PR branch, the user asked to make the live composing-text dele
 
 ### Open Questions / Next Steps
 - Run targeted tests and rebuild/install before handing back for device testing.
+
+---
+
+## 2026-05-23 — Restore tap-during-swipe toggle
+
+### Context
+The user pointed out that the tap-during-swipe behavior had been made hardcoded, but they had asked for it to remain a toggleable option.
+
+### Actions Taken
+- Restored `PREF_GESTURE_TAP_DURING_SWIPE` as a settings key/default/runtime value.
+- Added the `Tap during swipe` switch back to the two-thumb settings screen.
+- Gated `PointerTracker`'s pending tap-fragment behavior behind the restored preference.
+- Added settings registry coverage for the restored toggle.
+- Built and installed the updated standard debug APK on the connected device after fully uninstalling the mismatched existing debug package.
+
+### Decisions Made
+- Defaulted the toggle to enabled so existing PR behavior remains unchanged unless the user turns it off.
+
+### Open Questions / Next Steps
+- Commit and push the PR update.

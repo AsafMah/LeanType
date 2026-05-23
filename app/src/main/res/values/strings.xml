@@ -286,6 +286,8 @@
     <string name="two_thumb_multi_part_words_summary">During the countdown, the next tap or swipe extends the current word instead of starting a new one (tech + nology → technology).</string>
     <string name="multipart_full_word_suggestions">Suggestions for full composing word</string>
     <string name="multipart_full_word_suggestions_summary">During multi-part composition, the suggestion strip shows alternatives for the entire word so far, not just the most recent fragment.</string>
+    <string name="gesture_tap_during_swipe">Tap during swipe</string>
+    <string name="gesture_tap_during_swipe_summary">A quick tap with another finger while swiping adds that letter to the same word.</string>
     <string name="multipart_tap_seed_gesture">Seed swipe from typed prefix</string>
     <string name="multipart_tap_seed_gesture_summary">When you type some letters and then swipe while combining mode is armed, treat the swipe as a continuation of the typed prefix.</string>
     <string name="two_thumb_typed_prefix_swipe">Swipe continues typed prefix</string>
