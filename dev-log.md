@@ -428,3 +428,22 @@ The user asked to return to PR #6, merge current `main`, and resolve the review 
 
 ### Open Questions / Next Steps
 - Run targeted tests and push the review fixes to PR #6.
+
+---
+
+## 2026-05-23 — Restore advanced two-thumb toggles
+
+### Context
+After testing the PR branch, the user asked to make the live composing-text deletion and debug overlay accumulation behavior toggleable, and to restore the removed full-word suggestion setting.
+
+### Actions Taken
+- Added a `Delete live composing text` switch shown when Backspace behavior is set to whole-word deletion.
+- Added an `Accumulate debug fragments` switch under the gesture debug overlay setting.
+- Restored the `Suggestions for full composing word` setting to the two-thumb screen and made the runtime value respect the switch instead of forcing it on for all non-normal spacing modes.
+- Added tests covering the new setting registration and the new whole-word backspace toggle behavior.
+
+### Decisions Made
+- Defaults preserve the current PR behavior: live composing text deletion, debug fragment accumulation, and full-word suggestions are all enabled unless the user turns them off.
+
+### Open Questions / Next Steps
+- Run targeted tests and rebuild/install before handing back for device testing.

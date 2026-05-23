@@ -709,7 +709,8 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         // Two-thumb typing debug overlay: clear only when this is a new word. While combining
         // mode is active, a fresh gesture is another fragment of the same word and should remain
         // visible alongside earlier fragments.
-        if (!sDrawingProxy.isCombiningModeActiveForDebug()) {
+        if (!Settings.getValues().mGestureDebugAccumulateFragments
+                || !sDrawingProxy.isCombiningModeActiveForDebug()) {
             sDrawingProxy.clearGestureDebugPoints();
         }
         sListener.onStartBatchInput();

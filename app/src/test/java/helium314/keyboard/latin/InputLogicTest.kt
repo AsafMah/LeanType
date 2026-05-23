@@ -390,6 +390,25 @@ class InputLogicTest {
         assertEquals("", composingText)
     }
 
+    @Test fun wholeWordBackspaceCanKeepManualSpacingComposingTextInEditor() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE, false)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT, false)
+        }
+
+        chainInput("hello")
+        assertEquals("hello", textBeforeCursor)
+        assertEquals("hello", composingText)
+
+        functionalKeyPress(KeyCode.DELETE)
+
+        assertEquals("hello", textBeforeCursor)
+        assertEquals("", composingText)
+    }
+
     @Test fun forceAutoCapWorksWhenAutoCapIsOff() {
         reset()
         latinIME.prefs().edit {

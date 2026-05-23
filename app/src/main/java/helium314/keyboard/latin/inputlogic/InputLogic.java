@@ -2298,9 +2298,13 @@ public final class InputLogic {
                     || inputTransaction.getSettingsValues().mCombiningGraceMs > 0)
                     && inputTransaction.getSettingsValues().mCombiningBackspaceDeletesGestureWord) {
                 final int wordLength = mWordComposer.getTypedWord().length();
-                mConnection.beginBatchEdit();
-                mConnection.deleteTextBeforeCursor(wordLength);
-                mConnection.endBatchEdit();
+                if (inputTransaction.getSettingsValues().mCombiningBackspaceDeletesComposingText) {
+                    mConnection.beginBatchEdit();
+                    mConnection.deleteTextBeforeCursor(wordLength);
+                    mConnection.endBatchEdit();
+                } else {
+                    mConnection.finishComposingText();
+                }
                 mWordComposer.reset();
                 deletedWholeComposingWord = true;
                 StatsUtils.onBackspaceWordDelete(wordLength);
