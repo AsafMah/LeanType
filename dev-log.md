@@ -276,3 +276,43 @@ The two-thumb typing settings screen mixed current user-facing features, legacy/
 
 ### Open Questions / Next Steps
 - User should review the new wording on-device and decide whether debug point drawing should remain visible or move behind the separate debug settings screen later.
+
+---
+
+## 2026-05-23 — Convert two-thumb settings to mode selectors
+
+### Context
+After trying the first reorganization, the user clarified the desired structure: a single spacing-mode selector should drive normal/manual/autospace behavior, backspace should be a single behavior selector, and implementation details like multi-part joining should be enabled automatically instead of exposed as separate confusing toggles.
+
+### Actions Taken
+- Added a synthetic **Spacing mode** radio/list setting with Normal spacing, Manual spacing, and Auto-space after a delay.
+- Added a synthetic **Backspace behavior** radio/list setting shown only for manual/autospace modes.
+- Mapped the spacing selector onto the existing `PREF_GESTURE_MANUAL_SPACING` and `PREF_COMBINING_GRACE_MS` runtime preferences.
+- Mapped backspace behavior onto existing fragment-backspace and whole-word-backspace preferences.
+- Added whole composing-word deletion for the new **Delete whole word** behavior when manual spacing or autospace mode is active.
+- Forced multi-part internals (join word parts, full-word suggestions, typed-prefix continuation) on whenever non-normal spacing is active, removing those implementation toggles from the user-facing screen.
+- Changed the default after-autospace suggestion behavior to **Alternatives, then next word on space**.
+- Renamed autospace timing and tap timing labels to clearer user-facing wording.
+- Rebuilt `:app:assembleStandardDebug` and ran `SettingsContainerTest`.
+
+### Decisions Made
+- Kept underlying preference keys for compatibility but made the UI present modes instead of exposing each low-level boolean.
+- Defaulted the autospace mode transition to a 500 ms grace when switching from Normal/Manual to Autospace.
+- Left **Tap letters while swiping** as a separate opt-in feature for now because it is a distinct runtime path; only the timing label/summary was clarified.
+- Left **Improve two-thumb recognition** off by default and described the possible tradeoff, because the midline can hurt recognition if configured poorly.
+
+### Manual Tests — Two-thumb Mode Selectors
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Open **Settings → Two-thumb typing**. | First control is **Spacing mode** with Normal, Manual, and Auto-space choices. |
+| 2 | Select **Normal spacing**. | Autospace duration/backspace behavior controls are hidden; typing behaves normally. |
+| 3 | Select **Manual spacing**. | Backspace behavior appears; no autospace duration controls appear. |
+| 4 | Select **Auto-space after a delay**. | Duration, tap delay, autocorrect, after-autospace suggestions, and backspace behavior appear. |
+| 5 | In Auto-space mode, check **After auto-space, show…** default. | New default is **Alternatives, then next-word on space** unless an older saved value exists. |
+| 6 | Try each backspace behavior in Manual/Autospace modes. | Normal deletes characters, last part removes the latest fragment, whole word removes the composing/last swiped word. |
+| 7 | Search settings for “join word parts”, “typed prefix”, or “full composing”. | These implementation toggles no longer appear separately. |
+
+### Open Questions / Next Steps
+- User should confirm whether **Tap letters while swiping** should remain user-facing or be folded into the spacing mode later.
+- Debug overlay expansion (different colors/shapes for fragments, taps, fingers, start/end) is still future work.
