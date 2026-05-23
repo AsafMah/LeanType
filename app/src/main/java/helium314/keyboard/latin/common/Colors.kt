@@ -149,8 +149,7 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
     private val stripBackgroundList: ColorStateList
     private val toolbarKeyStateList = activatedStateList(
         keyText,
-        if (isBrightColor(keyText)) darken(darken(keyText))
-        else brighten(brighten(keyText))
+        keyText
     )
 
     /** darkened variant of [accent] because the accent color is always light for dynamic colors */
@@ -404,8 +403,7 @@ class DefaultColors (
     private val stripBackgroundList: ColorStateList
     private val toolbarKeyStateList = activatedStateList(
         suggestionText,
-        if (isBrightColor(suggestionText)) darken(darken(suggestionText))
-        else brighten(brighten(suggestionText))
+        suggestionText
     )
     private var backgroundSetupDone = false
 

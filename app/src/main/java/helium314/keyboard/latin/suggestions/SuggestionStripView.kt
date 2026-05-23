@@ -59,6 +59,7 @@ import helium314.keyboard.latin.utils.getPinnedToolbarKeys
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.removeFirst
 import helium314.keyboard.latin.utils.removePinnedKey
+import helium314.keyboard.latin.utils.setToolbarButtonsActivatedState
 import helium314.keyboard.latin.utils.setToolbarButtonsActivatedStateOnPrefChange
 import helium314.keyboard.settings.SettingsWithoutKey
 import java.util.concurrent.atomic.AtomicBoolean
@@ -806,6 +807,11 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // Show the selector
         translateLanguageSelector.isVisible = true
         isTranslateLanguageSelectorVisible = true
+    }
+
+    fun refreshToolbarButtonsActivation() {
+        setToolbarButtonsActivatedState(pinnedKeys)
+        setToolbarButtonsActivatedState(toolbar)
     }
 
     fun hideTranslateLanguageSelector() {

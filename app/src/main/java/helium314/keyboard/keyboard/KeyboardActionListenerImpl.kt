@@ -100,9 +100,17 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
 
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         when (primaryCode) {
-            KeyCode.TOGGLE_AUTOCORRECT -> return settings.toggleAutoCorrect()
+            KeyCode.TOGGLE_AUTOCORRECT -> {
+                settings.toggleAutoCorrect()
+                latinIME.onOneShotSpaceActionStateChanged()
+                return
+            }
             KeyCode.TOGGLE_AUTOSPACE -> {
+                val wasAutospaceEnabled = settings.current.mAutospaceEnabled
                 settings.toggleAutospace()
+                if (wasAutospaceEnabled)
+                    inputLogic.hideCombiningModeIndicator()
+                latinIME.onOneShotSpaceActionStateChanged()
                 // Refresh the toolbar so the AUTOSPACE button's activated state updates;
                 // shouldInsertSpacesAutomatically() is re-read on the next draw.
                 keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
@@ -110,16 +118,19 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
             }
             KeyCode.TOGGLE_AUTO_CAP -> {
                 settings.toggleAutoCap()
+                latinIME.onOneShotSpaceActionStateChanged()
                 keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
                 return
             }
             KeyCode.TOGGLE_FORCE_AUTO_CAP -> {
                 settings.toggleForceAutoCaps()
+                latinIME.onOneShotSpaceActionStateChanged()
                 keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
                 return
             }
             KeyCode.TOGGLE_INCOGNITO_MODE -> {
             settings.toggleAlwaysIncognitoMode()
+            latinIME.onOneShotSpaceActionStateChanged()
             // Invalidate keyboard to update spacebar incognito icon immediately
             keyboardSwitcher.mainKeyboardView?.invalidateAllKeys()
             return

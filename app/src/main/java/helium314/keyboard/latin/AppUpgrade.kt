@@ -52,6 +52,8 @@ object AppUpgrade {
     fun checkVersionUpgrade(context: Context) {
         val prefs = context.prefs()
         val oldVersion = prefs.getInt(Settings.PREF_VERSION_CODE, 0)
+        // always run toolbar upgrade to handle backup restore with missing new keys
+        upgradeToolbarPrefs(prefs)
         if (oldVersion == BuildConfig.VERSION_CODE)
             return
         // clear extracted dictionaries, in case updated version contains newer ones

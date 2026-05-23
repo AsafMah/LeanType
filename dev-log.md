@@ -30,6 +30,65 @@ The repository had no `Agents.md` or `dev-log.md`. The working branch is `copilo
 - If the user has specific preferences about which AI providers or model IDs to highlight (e.g., a recommended default), those should be clarified and added to §8.
 - The `dev-log.md` format is a proposal; adjust the template in `Agents.md §7.4` if a different structure is preferred.
 
+---
+
+## 2026-05-22 — Fix one-shot toolbar spacing keys
+
+### Context
+The standard debug APK was built and installed on a paired Android device from branch `copilot/improve-two-thumb-typing-again`. After restoring a backup, the new toolbar keys appeared, but **Join Next** only suppressed autospace and **Force Next Space** did not reliably suppress autospace after the following word.
+
+### Actions Taken
+- Updated `app/src/main/java/helium314/keyboard/latin/inputlogic/InputLogic.java` so **Join Next** resumes/removes a trailing autospace, restores the previous word as composing text when needed, and enters an explicit join mode for the next tap or gesture.
+- Updated `InputLogic.java` so **Force Next Space** avoids inserting a duplicate space when an autospace already exists, then arms suppression for the next automatic spacing decision.
+- Revised **Force Next Space** to track the next word explicitly (`mForceNextSpacePendingWord` / `mSuppressAutospaceForForceNextSpace`) so unrelated spacing helper calls cannot consume the one-shot before that word's own autospace is due.
+- Moved the Force Next Space transition from "combining mode entered" to actual next tap/gesture start (`markForceNextSpaceWordStarted`) so real input paths arm suppression before the next word is committed.
+- Fixed real-editor selection callback timing: `onUpdateSelection()` now ignores belated/expected updates before clearing one-shot state, so the normal cursor update after Force Next Space inserts a space does not erase the pending force action.
+- Gated the spacebar combining/autospace progress indicator on `shouldInsertSpacesAutomatically()` and the current language's spacing support, and hide it immediately when the toolbar Autospace toggle is turned off.
+
+---
+
+## 2026-05-22 — Toolbar state indicators and force auto-cap
+
+### Context
+The user requested a plan and implementation for visible on/off state indicators on toolbar state keys, plus making **Force Auto-Capitalize** work even when normal Auto-Capitalize is off. The approved UX was an explicit active tint/background, normal icon appearance when inactive, and Autospace showing effective state including temporary suppression from **Force Next Space**.
+
+### Actions Taken
+- Updated `ToolbarUtils.kt` so the requested state keys get a translucent accent active background while inactive icons remain normal.
+- Updated toolbar state refresh coverage for split-keyboard prefs and immediate toggle handlers for autocorrect, autospace, auto-cap, force auto-cap, and incognito.
+- Updated Autospace state mapping so it shows inactive while **Force Next Space** is armed.
+- Updated `Colors.kt` so toolbar icon color does not dim for inactive state keys; the active background now carries the state indication.
+- Updated `InputLogic.getCurrentAutoCapsState()` so **Force Auto-Capitalize** can force sentence caps when normal Auto-Capitalize is off, while preserving password/visible-password guards.
+- Added targeted `InputLogicTest` coverage for Force Auto-Capitalize with Auto-Cap off and password fields.
+- Rebuilt `:app:assembleStandardDebug` and installed the APK on the paired device.
+
+### Decisions Made
+- Kept state indication centralized in `ToolbarUtils` rather than adding separate icon assets for each state key.
+- Used effective Autospace state for the toolbar button, including Force Next Space suppression, matching the user's requested behavior.
+
+### Manual Tests — Toolbar State Indicators / Force Auto-Cap
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Add/pin Incognito, One-handed, Split, Autocorrect, Auto-cap, Force Auto-cap, Autospace, Join Next, and Force Next Space toolbar keys. Toggle each state. | Active states show an accent background; inactive states show a normal icon without the active background. |
+| 2 | Tap **Force Next Space**. | Force Next Space shows active and Autospace shows inactive until the one-shot is consumed/cancelled. |
+| 3 | Turn Auto-Capitalize off, then turn Force Auto-Capitalize on. Type at the start of a sentence in a normal text field. | Sentence-start capitalization still occurs. |
+| 4 | Repeat Force Auto-Capitalize in a password/visible-password field. | Force capitalization does not apply. |
+
+### Open Questions / Next Steps
+- If the accent background is too subtle or too strong on a specific theme, tune the active background alpha in `ToolbarUtils.createToolbarStateBackground()`.
+- Updated `app/src/main/java/helium314/keyboard/latin/inputlogic/OneShotSpaceAction.kt` with a targeted `consumeJoinNext()` helper so join-mode consumption does not clear unrelated one-shot state.
+- Added regression coverage in `app/src/test/java/helium314/keyboard/latin/InputLogicTest.kt` for joining after a timer autospace and forcing a space after an existing autospace.
+- Rebuilt `:app:assembleStandardDebug` and installed the APK on the paired device with `adb install -r`.
+
+### Decisions Made
+- Kept **Join Next** as a one-shot action, but consumed it when the next tap or gesture actually joins, so the combined word can still autospace normally afterward.
+- Made **Force Next Space** idempotent around an existing trailing space, because the toolbar action should mean "ensure a space before the next word", not "always add another space".
+
+### Open Questions / Next Steps
+- Full `InputLogicTest` class execution still has pre-existing failures under the standard debug unit-test variant (`insertLetterIntoWordHangulFails`, `revert autocorrect on delete`); the targeted one-shot key tests pass.
+
+---
+
 ## 2026-05-22 — Replace clipboard inline editor with normal editor activity
 
 ### Context
@@ -126,6 +185,54 @@ The user requested that Cancel also return to the clipboard page, and that the r
 
 ### Open Questions / Next Steps
 - User should verify the Save and Cancel transitions on-device.
+
+---
+
+## 2026-05-22 — Resolve merge conflicts in PR #3
+
+### Context
+The user requested resolution of merge conflicts in PR #3 (`copilot/improve-two-thumb-typing-again`). The PR had `mergeable_state: "dirty"` due to conflicts with changes merged into main from the clipboard editability work.
+
+### Actions Taken
+- Fetched the latest `main` branch from origin.
+- Attempted merge of `origin/main` into `copilot/improve-two-thumb-typing-again`.
+- Identified conflict in `dev-log.md` where both branches had added new session entries.
+- Resolved conflict by preserving both session entries (one-shot toolbar spacing keys from current branch, clipboard editor improvements from main).
+- Completed merge commit `eae5f8b7`.
+- Pushed resolved merge to origin.
+- Verified PR now shows `mergeable_state: "clean"`.
+
+### Decisions Made
+- Kept all dev-log entries from both branches in chronological order, as both represent valid work done in parallel branches.
+- Used standard git merge workflow rather than rebase to preserve the full history of both branches.
+
+### Open Questions / Next Steps
+- PR #3 is now ready for final review and merge into main.
+
+---
+
+## 2026-05-22 — Cache toolbar state background allocations (review comment r3289683508)
+
+### Context
+Review comment r3289683508 on PR #3 noted that `createToolbarStateBackground()` allocates new `GradientDrawable`/`StateListDrawable` instances every time toolbar state is refreshed (potentially frequently during typing). The reviewer suggested caching the drawable per Context/theme to reduce allocations/GC.
+
+### Actions Taken
+- Added `ToolbarStateBackgroundCache` data class to hold radius, activeColor, and drawable `ConstantState`.
+- Modified `createToolbarStateBackground()` to check cache validity (matching radius and activeColor) before creating new drawables.
+- When cache is valid, clone from `constantState.newDrawable()` and mutate to avoid shared state.
+- When cache is invalid or empty, create new drawables and update cache with the new `constantState`.
+- Ran `parallel_validation` (CodeQL: no alerts, Code Review: noted potential concurrency issue but acceptable for UI-thread-only usage).
+- Pushed changes in commit `fcd7c1d4`.
+
+### Decisions Made
+- Used `ConstantState` cloning pattern (standard Android drawable caching approach) rather than direct drawable reuse to avoid shared-state bugs.
+- Did not add synchronization because toolbar state updates run on the main/UI thread in current usage.
+- Keyed cache on both radius and activeColor so theme changes invalidate the cache automatically.
+
+### Open Questions / Next Steps
+- If toolbar state updates ever move off the main thread, add `@Volatile` or synchronization to the cache variable.
+
+---
 
 ## 2026-05-23 — Add layout-driven shortcut rows
 

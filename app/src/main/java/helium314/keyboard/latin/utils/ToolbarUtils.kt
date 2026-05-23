@@ -3,16 +3,23 @@ package helium314.keyboard.latin.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Color
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.core.content.edit
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.forEach
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Constants.Separators
+import helium314.keyboard.latin.inputlogic.OneShotSpaceAction
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ToolbarKey.*
@@ -21,6 +28,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.EnumSet
 import java.util.EnumMap
 import java.util.Locale
 
@@ -36,6 +44,11 @@ fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     return button
 }
 
+private val toolbarStateKeys = EnumSet.of(
+    INCOGNITO, ONE_HANDED, SPLIT, AUTOCORRECT, AUTO_CAP, FORCE_AUTO_CAP,
+    AUTOSPACE, JOIN_NEXT, FORCE_NEXT_SPACE
+)
+
 fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: String?) {
     // settings need to be updated when buttons change
     if (key != Settings.PREF_AUTO_CORRECTION
@@ -43,19 +56,25 @@ fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: St
         && key != Settings.PREF_AUTO_CAP
         && key != Settings.PREF_FORCE_AUTO_CAPS
         && key != Settings.PREF_ALWAYS_INCOGNITO_MODE
+        && key != Settings.PREF_ENABLE_SPLIT_KEYBOARD
+        && key != Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE
         && key?.startsWith(Settings.PREF_ONE_HANDED_MODE_PREFIX) == false)
         return
 
     GlobalScope.launch {
         delay(10) // need to wait until SettingsValues are reloaded
         withContext(Dispatchers.Main) {
-            buttonsGroup.forEach { if (it is ImageButton) setToolbarButtonActivatedState(it) }
+            setToolbarButtonsActivatedState(buttonsGroup)
         }
     }
 }
 
+fun setToolbarButtonsActivatedState(buttonsGroup: ViewGroup) {
+    buttonsGroup.forEach { if (it is ImageButton) setToolbarButtonActivatedState(it) }
+}
+
 private fun setToolbarButtonActivatedState(button: ImageButton) {
-    button.isActivated = when (button.tag) {
+    val activated = when (button.tag) {
         INCOGNITO -> button.context.prefs().getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE)
         ONE_HANDED -> Settings.getValues().mOneHandedModeEnabled
         SPLIT -> Settings.getValues().mIsSplitKeyboardEnabled
@@ -64,11 +83,61 @@ private fun setToolbarButtonActivatedState(button: ImageButton) {
         // with the input-type guard. So in a password / email / URL field the button shows
         // as inactive even when the user has the master toggle on, which matches reality.
         AUTOSPACE -> Settings.getValues().shouldInsertSpacesAutomatically()
+                && !OneShotSpaceAction.isForceNextSpaceArmed()
         AUTO_CAP -> Settings.getValues().mAutoCap
         FORCE_AUTO_CAP -> Settings.getValues().mForceAutoCaps
+        JOIN_NEXT -> OneShotSpaceAction.isJoinNextArmed()
+        FORCE_NEXT_SPACE -> OneShotSpaceAction.isForceNextSpaceArmed()
         else -> true
     }
+    button.isActivated = activated
+    val toolbarKey = button.tag as? ToolbarKey
+    if (toolbarKey != null && toolbarKey in toolbarStateKeys) {
+        button.background = createToolbarStateBackground(button.context)
+    }
 }
+
+private fun createToolbarStateBackground(context: Context): StateListDrawable {
+    val radius = 8.dpToPx(context.resources)
+    val activeColor = ColorUtils.setAlphaComponent(
+        Settings.getValues().mColors.get(ColorType.TOOL_BAR_KEY_ENABLED_BACKGROUND),
+        0x44
+    )
+    toolbarStateBackgroundCache
+        ?.takeIf { it.radius == radius && it.activeColor == activeColor }
+        ?.constantState
+        ?.newDrawable(context.resources)
+        ?.mutate()
+        ?.let { return it as StateListDrawable }
+
+    val active = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        cornerRadius = radius.toFloat()
+        setColor(activeColor)
+    }
+    val normal = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        cornerRadius = radius.toFloat()
+        setColor(Color.TRANSPARENT)
+    }
+    return StateListDrawable().apply {
+        addState(intArrayOf(android.R.attr.state_activated), active)
+        addState(intArrayOf(), normal)
+        toolbarStateBackgroundCache = ToolbarStateBackgroundCache(
+            radius = radius,
+            activeColor = activeColor,
+            constantState = constantState
+        )
+    }
+}
+
+private data class ToolbarStateBackgroundCache(
+    val radius: Int,
+    val activeColor: Int,
+    val constantState: Drawable.ConstantState?
+)
+
+private var toolbarStateBackgroundCache: ToolbarStateBackgroundCache? = null
 
 fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomToolbarKeyCode(key) ?: when (key) {
     VOICE -> KeyCode.VOICE_INPUT
@@ -91,6 +160,8 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     AUTOSPACE -> KeyCode.TOGGLE_AUTOSPACE
     AUTO_CAP -> KeyCode.TOGGLE_AUTO_CAP
     FORCE_AUTO_CAP -> KeyCode.TOGGLE_FORCE_AUTO_CAP
+    JOIN_NEXT -> KeyCode.JOIN_NEXT
+    FORCE_NEXT_SPACE -> KeyCode.FORCE_NEXT_SPACE
     CLEAR_CLIPBOARD -> KeyCode.CLIPBOARD_CLEAR_HISTORY
     CLOSE_HISTORY -> KeyCode.ALPHA
     EMOJI -> KeyCode.EMOJI
@@ -145,7 +216,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 enum class ToolbarKey {
     VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
     INCOGNITO, TOUCHPAD, AUTOCORRECT, AUTOSPACE, AUTO_CAP, FORCE_AUTO_CAP, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
-    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, PROOFREAD, TRANSLATE,
+    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, JOIN_NEXT, FORCE_NEXT_SPACE, PROOFREAD, TRANSLATE,
     CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, CUSTOM_AI_4, CUSTOM_AI_5,
     CUSTOM_AI_6, CUSTOM_AI_7, CUSTOM_AI_8, CUSTOM_AI_9, CUSTOM_AI_10
 }
