@@ -344,6 +344,8 @@
     <string name="clipboard_edit_dialog_hint">Clip text</string>
     <!-- Text for no search results -->
     <string name="clipboard_no_search_results">No results found</string>
+    <string name="clipboard_clear_all_confirmation">Are you sure you want to clear all history?</string>
+    <string name="clear_all">Clear All</string>
     <!-- Preferences item for enabling swipe deletion -->
     <string name="delete_swipe">Delete swipe</string>
     <!-- Description for "delete_swipe" option. -->
@@ -1095,6 +1097,10 @@ New dictionary:
     <string name="version">Version</string>
     <!-- github repo link for about screen -->
     <string name="about_github_link">View on GitHub</string>
+    <!-- sponsor link for about screen -->
+    <string name="about_sponsor_link">Sponsor project</string>
+    <!-- description for sponsor link -->
+    <string name="about_sponsor_link_description">Support the development of LeanType</string>
     <!-- link to the wiki for about screen -->
     <string name="about_wiki_link">Go to Wiki</string>
     <!-- description for wiki link -->
@@ -1312,4 +1318,6 @@ New dictionary:
     <string name="clear_emoji_history_message">Are you sure you want to clear your recently used emojis?</string>
     <string name="floating_keyboard_drag_handle">Drag to move keyboard</string>
     <string name="floating_keyboard_resize_handle">Drag to resize keyboard</string>
+    <string name="persist_floating_keyboard_title">Persist floating keyboard</string>
+    <string name="persist_floating_keyboard_summary">Do not hide floating keyboard when input finishes</string>
 </resources>

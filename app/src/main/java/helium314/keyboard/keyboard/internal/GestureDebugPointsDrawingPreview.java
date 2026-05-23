@@ -14,6 +14,8 @@ import helium314.keyboard.keyboard.PointerTracker;
 import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.utils.Log;
 
+import java.util.Arrays;
+
 /**
  * Visual debug overlay (feature #2.1). Draws the points the gesture library actually sees,
  * superimposed on the keyboard. Helpful when iterating on {@link DualThumbHinter} and similar
@@ -47,11 +49,13 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private int[] mRawIds;
     private int[] mRawTimes;
     private int[] mRawFragments;
+    private int mRawSize;
     private int[] mSyntheticXs;
     private int[] mSyntheticYs;
     private int[] mSyntheticIds;
     private int[] mSyntheticTimes;
     private int[] mSyntheticFragments;
+    private int mSyntheticSize;
     private int mNextFragmentId;
 
     private final Paint mRawPaint = new Paint();
@@ -60,6 +64,7 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private final Paint mStartPaint = new Paint();
     private final Paint mEndPaint = new Paint();
     private final Paint mTapPaint = new Paint();
+    private final float[] mColorHsv = new float[3];
     /** Radius in pixels for a "raw" sample dot. Picked so dots remain visible at typical DPIs. */
     private static final float RAW_RADIUS_PX = 4f;
     private static final float SYNTHETIC_CROSS_RADIUS_PX = 8f;
@@ -130,19 +135,26 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         Log.d(TAG, "fragment=" + fragmentId
                 + " raw=" + rawSize
                 + " synthetic=" + syntheticSize
-                + " totalBefore=" + (mRawXs == null ? 0 : mRawXs.length)
+                + " totalBefore=" + mRawSize
                 + " tapLike=" + isTapLike(raw));
-        mRawXs = append(mRawXs, raw.getXCoordinates(), rawSize);
-        mRawYs = append(mRawYs, raw.getYCoordinates(), rawSize);
-        mRawIds = append(mRawIds, raw.getPointerIds(), rawSize);
-        mRawTimes = append(mRawTimes, raw.getTimes(), rawSize);
-        mRawFragments = appendFilled(mRawFragments, fragmentId, rawSize);
+        mRawXs = append(mRawXs, mRawSize, raw.getXCoordinates(), rawSize);
+        mRawYs = append(mRawYs, mRawSize, raw.getYCoordinates(), rawSize);
+        mRawIds = append(mRawIds, mRawSize, raw.getPointerIds(), rawSize);
+        mRawTimes = append(mRawTimes, mRawSize, raw.getTimes(), rawSize);
+        mRawFragments = appendFilled(mRawFragments, mRawSize, fragmentId, rawSize);
+        mRawSize += rawSize;
         if (syntheticSize > 0) {
-            mSyntheticXs = append(mSyntheticXs, synthetic.getXCoordinates(), syntheticSize);
-            mSyntheticYs = append(mSyntheticYs, synthetic.getYCoordinates(), syntheticSize);
-            mSyntheticIds = append(mSyntheticIds, synthetic.getPointerIds(), syntheticSize);
-            mSyntheticTimes = append(mSyntheticTimes, synthetic.getTimes(), syntheticSize);
-            mSyntheticFragments = appendFilled(mSyntheticFragments, fragmentId, syntheticSize);
+            mSyntheticXs = append(mSyntheticXs, mSyntheticSize,
+                    synthetic.getXCoordinates(), syntheticSize);
+            mSyntheticYs = append(mSyntheticYs, mSyntheticSize,
+                    synthetic.getYCoordinates(), syntheticSize);
+            mSyntheticIds = append(mSyntheticIds, mSyntheticSize,
+                    synthetic.getPointerIds(), syntheticSize);
+            mSyntheticTimes = append(mSyntheticTimes, mSyntheticSize,
+                    synthetic.getTimes(), syntheticSize);
+            mSyntheticFragments = appendFilled(mSyntheticFragments, mSyntheticSize,
+                    fragmentId, syntheticSize);
+            mSyntheticSize += syntheticSize;
         }
         invalidateDrawingView();
     }
@@ -151,25 +163,27 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     public void clear() {
         if (mRawXs != null || mSyntheticXs != null) {
             Log.d(TAG, "clear fragments=" + mNextFragmentId
-                    + " rawTotal=" + (mRawXs == null ? 0 : mRawXs.length)
-                    + " syntheticTotal=" + (mSyntheticXs == null ? 0 : mSyntheticXs.length));
+                    + " rawTotal=" + mRawSize
+                    + " syntheticTotal=" + mSyntheticSize);
         }
         mRawXs = null;
         mRawYs = null;
         mRawIds = null;
         mRawTimes = null;
         mRawFragments = null;
+        mRawSize = 0;
         mSyntheticXs = null;
         mSyntheticYs = null;
         mSyntheticIds = null;
         mSyntheticTimes = null;
         mSyntheticFragments = null;
+        mSyntheticSize = 0;
         mNextFragmentId = 0;
         invalidateDrawingView();
     }
 
     public boolean hasSnapshot() {
-        return mRawXs != null || mSyntheticXs != null;
+        return mRawSize > 0 || mSyntheticSize > 0;
     }
 
     @Override
@@ -194,8 +208,8 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
 
     private void drawPointerLines(final Canvas canvas) {
         if (mRawXs == null || mRawYs == null || mRawIds == null || mRawFragments == null) return;
-        final int n = Math.min(Math.min(mRawXs.length, mRawYs.length),
-                Math.min(mRawIds.length, mRawFragments.length));
+        final int n = Math.min(mRawSize, Math.min(Math.min(mRawXs.length, mRawYs.length),
+                Math.min(mRawIds.length, mRawFragments.length)));
         for (int i = 1; i < n; i++) {
             if (mRawIds[i] != mRawIds[i - 1]
                     || mRawFragments[i] != mRawFragments[i - 1]) continue;
@@ -206,7 +220,8 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
 
     private void drawRawPoints(final Canvas canvas) {
         if (mRawXs == null || mRawYs == null || mRawFragments == null) return;
-        final int n = Math.min(Math.min(mRawXs.length, mRawYs.length), mRawFragments.length);
+        final int n = Math.min(mRawSize,
+                Math.min(Math.min(mRawXs.length, mRawYs.length), mRawFragments.length));
         for (int i = 0; i < n; i++) {
             mRawPaint.setColor(colorForFragment(mRawFragments[i]));
             canvas.drawCircle(mRawXs[i], mRawYs[i], RAW_RADIUS_PX, mRawPaint);
@@ -216,8 +231,8 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private void drawRunMarkers(final Canvas canvas) {
         if (mRawXs == null || mRawYs == null || mRawIds == null || mRawTimes == null
                 || mRawFragments == null) return;
-        final int n = Math.min(Math.min(mRawXs.length, mRawYs.length),
-                Math.min(Math.min(mRawIds.length, mRawTimes.length), mRawFragments.length));
+        final int n = Math.min(mRawSize, Math.min(Math.min(mRawXs.length, mRawYs.length),
+                Math.min(Math.min(mRawIds.length, mRawTimes.length), mRawFragments.length)));
         int start = 0;
         while (start < n) {
             int end = start + 1;
@@ -253,7 +268,7 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
 
     private void drawSyntheticPoints(final Canvas canvas) {
         if (mSyntheticXs == null || mSyntheticYs == null) return;
-        final int n = Math.min(mSyntheticXs.length, mSyntheticYs.length);
+        final int n = Math.min(mSyntheticSize, Math.min(mSyntheticXs.length, mSyntheticYs.length));
         for (int i = 0; i < n; i++) {
             final int x = mSyntheticXs[i];
             final int y = mSyntheticYs[i];
@@ -264,35 +279,39 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         }
     }
 
-    private static int colorForFragment(final int fragmentId) {
+    private int colorForFragment(final int fragmentId) {
         final int positiveId = fragmentId & 0x7fffffff;
-        final float[] hsv = FRAGMENT_HSV[positiveId % FRAGMENT_HSV.length].clone();
-        hsv[2] *= Math.max(0.45f, 1.0f - 0.16f * (positiveId / FRAGMENT_HSV.length));
-        return Color.HSVToColor(hsv);
+        final float[] baseHsv = FRAGMENT_HSV[positiveId % FRAGMENT_HSV.length];
+        mColorHsv[0] = baseHsv[0];
+        mColorHsv[1] = baseHsv[1];
+        mColorHsv[2] = baseHsv[2]
+                * Math.max(0.45f, 1.0f - 0.16f * (positiveId / FRAGMENT_HSV.length));
+        return Color.HSVToColor(mColorHsv);
     }
 
-    private static int[] append(final int[] existing, final int[] src, final int length) {
+    private static int[] append(final int[] existing, final int offset,
+            final int[] src, final int length) {
         if (length <= 0) return existing;
-        final int oldLength = existing == null ? 0 : existing.length;
-        final int[] result = new int[oldLength + length];
-        if (existing != null) {
-            System.arraycopy(existing, 0, result, 0, oldLength);
-        }
-        System.arraycopy(src, 0, result, oldLength, length);
+        final int[] result = ensureCapacity(existing, offset + length);
+        System.arraycopy(src, 0, result, offset, length);
         return result;
     }
 
-    private static int[] appendFilled(final int[] existing, final int value, final int length) {
+    private static int[] appendFilled(final int[] existing, final int offset,
+            final int value, final int length) {
         if (length <= 0) return existing;
-        final int oldLength = existing == null ? 0 : existing.length;
-        final int[] result = new int[oldLength + length];
-        if (existing != null) {
-            System.arraycopy(existing, 0, result, 0, oldLength);
-        }
-        for (int i = oldLength; i < result.length; i++) {
-            result[i] = value;
-        }
+        final int[] result = ensureCapacity(existing, offset + length);
+        Arrays.fill(result, offset, offset + length, value);
         return result;
+    }
+
+    private static int[] ensureCapacity(final int[] existing, final int neededLength) {
+        if (existing != null && existing.length >= neededLength) return existing;
+        int newLength = existing == null ? 8 : existing.length;
+        while (newLength < neededLength) {
+            newLength *= 2;
+        }
+        return existing == null ? new int[newLength] : Arrays.copyOf(existing, newLength);
     }
 
     private static boolean isTapLike(@NonNull final InputPointers pointers) {

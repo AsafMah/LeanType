@@ -386,3 +386,45 @@ After enabling gesture-gated autospace, tap-only words no longer inserted an aut
 
 ### Open Questions / Next Steps
 - APK install was not completed because ADB reported no connected devices.
+
+---
+
+## 2026-05-23 — Merge upstream main into origin main branch
+
+### Context
+The user asked for a new PR based on `main` that merges changes from the configured `upstream` remote. `origin/main` and `upstream/main` had diverged, with upstream containing build, README, symbol-row, floating-keyboard persistence, clipboard icon, touchpad, and release/version updates.
+
+### Actions Taken
+- Created branch `copilot/merge-upstream-main` from `origin/main`.
+- Merged `upstream/main` into the branch.
+- Resolved conflicts in `KeyboardIconsSet.kt` by preserving LeanType toolbar state icons while keeping the merge compatible with upstream's icon mapping changes.
+- Resolved conflicts in `ClipboardDao.kt` by preserving clipboard edit support and upstream synchronization around pin toggling.
+
+### Decisions Made
+- Used a merge branch instead of rebasing so the PR clearly represents an upstream sync into `main`.
+- Preserved LeanType-specific clipboard editing and toolbar state-key behavior where it overlapped with upstream changes.
+
+### Open Questions / Next Steps
+- Build validation and PR creation should complete before merging.
+
+---
+
+## 2026-05-23 — Address PR #6 review comments
+
+### Context
+The user asked to return to PR #6, merge current `main`, and resolve the review comments on the two-thumb settings PR. Merging `origin/main` into `copilot/organize-two-thumb-settings` conflicted only in this dev log.
+
+### Actions Taken
+- Merged `origin/main` into `copilot/organize-two-thumb-settings` and preserved both branches' dev-log entries.
+- Updated `TwoThumbTypingScreen.kt` so the "Enable gesture typing first" hint renders as screen content instead of an empty settings category.
+- Removed the low-level whole-word backspace toggle from the settings search registry, leaving only the synthetic Backspace behavior selector visible.
+- Fixed `InputLogic.java` so whole-word backspace in manual/autospace composing mode deletes the composing text from the editor before resetting the composer.
+- Reduced `GestureDebugPointsDrawingPreview.java` allocation churn by growing snapshot arrays amortized and reusing HSV color storage during drawing.
+- Added regression coverage for whole-word backspace deleting composing text and for hiding the low-level backspace setting from the registry.
+
+### Decisions Made
+- Kept the user-facing Backspace behavior mode selector as the only visible control for whole-word backspace semantics.
+- Preserved the accumulated debug overlay behavior while changing its storage strategy to avoid repeated full-array copies per fragment.
+
+### Open Questions / Next Steps
+- Run targeted tests and push the review fixes to PR #6.

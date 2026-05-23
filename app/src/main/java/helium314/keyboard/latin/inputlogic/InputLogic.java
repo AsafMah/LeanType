@@ -2284,6 +2284,7 @@ public final class InputLogic {
             // false.
         }
         if (mWordComposer.isComposingWord()) {
+            boolean deletedWholeComposingWord = false;
             if (mWordComposer.isBatchMode()) {
                 final String rejectedSuggestion = mWordComposer.getTypedWord();
                 mWordComposer.reset();
@@ -2297,7 +2298,11 @@ public final class InputLogic {
                     || inputTransaction.getSettingsValues().mCombiningGraceMs > 0)
                     && inputTransaction.getSettingsValues().mCombiningBackspaceDeletesGestureWord) {
                 final int wordLength = mWordComposer.getTypedWord().length();
+                mConnection.beginBatchEdit();
+                mConnection.deleteTextBeforeCursor(wordLength);
+                mConnection.endBatchEdit();
                 mWordComposer.reset();
+                deletedWholeComposingWord = true;
                 StatsUtils.onBackspaceWordDelete(wordLength);
             } else {
                 mWordComposer.applyProcessedEvent(event);
@@ -2305,7 +2310,7 @@ public final class InputLogic {
             }
             if (mWordComposer.isComposingWord()) {
                 setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
-            } else {
+            } else if (!deletedWholeComposingWord) {
                 mConnection.commitText("", 1);
             }
             updateInlineEmojiSearch();

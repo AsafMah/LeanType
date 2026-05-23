@@ -18,6 +18,7 @@ import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.ResourceUtils
 import helium314.keyboard.latin.utils.prefs
 import kotlin.math.abs
 
@@ -129,6 +130,33 @@ class KeyboardWrapperView @JvmOverloads constructor(
             keyboardActionListener?.onCodeInput(KeyCode.SWITCH_ONE_HANDED_MODE,
                 Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE,
                 false /* isKeyRepeat */)
+        }
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val keyboardView = findViewById<View>(R.id.keyboard_view)
+        if (keyboardView == null) {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+            return
+        }
+
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+
+        val settingsValues = Settings.getValues()
+        val keyboardHeight = ResourceUtils.getKeyboardHeight(context.resources, settingsValues)
+        val padding = keyboardView.paddingTop + keyboardView.paddingBottom
+        val maxExpectedHeight = keyboardHeight + padding
+
+        if (measuredHeight > maxExpectedHeight && maxExpectedHeight > 0) {
+            setMeasuredDimension(measuredWidth, maxExpectedHeight)
+            // Re-measure children with the capped height
+            val exactHeightSpec = MeasureSpec.makeMeasureSpec(maxExpectedHeight, MeasureSpec.EXACTLY)
+            for (i in 0 until childCount) {
+                val child = getChildAt(i)
+                if (child.visibility != GONE) {
+                    measureChildWithMargins(child, widthMeasureSpec, 0, exactHeightSpec, 0)
+                }
+            }
         }
     }
 

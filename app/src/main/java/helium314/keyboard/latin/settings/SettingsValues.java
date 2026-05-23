@@ -183,9 +183,10 @@ public class SettingsValues {
         public final boolean mAutoCorrectionEnabledPerUserSettings;
         public final boolean mAutoCorrectEnabled;
         public final float mAutoCorrectionThreshold;
+        public final boolean mAutoCorrectShortcuts;
+        public final boolean mPersistFloatingKeyboard;
         public final boolean mBackspaceRevertsAutocorrect;
         public final int mScoreLimitForAutocorrect;
-        public final boolean mAutoCorrectShortcuts;
         private final boolean mSuggestionsEnabledPerUserSettings;
         private final boolean mOverrideShowingSuggestions;
         public final boolean mSuggestClipboardContent;
@@ -277,6 +278,8 @@ public class SettingsValues {
                                 : (mAutoCorrectionThreshold < 0.07 ? 800000 : 950000); // aggressive or modest
                 mAutoCorrectShortcuts = prefs.getBoolean(Settings.PREF_AUTOCORRECT_SHORTCUTS,
                                 Defaults.PREF_AUTOCORRECT_SHORTCUTS);
+                mPersistFloatingKeyboard = prefs.getBoolean(Settings.PREF_PERSIST_FLOATING_KEYBOARD,
+                                Defaults.PREF_PERSIST_FLOATING_KEYBOARD);
                 mBackspaceRevertsAutocorrect = prefs.getBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT,
                                 Defaults.PREF_BACKSPACE_REVERTS_AUTOCORRECT);
                 mBigramPredictionEnabled = prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS,

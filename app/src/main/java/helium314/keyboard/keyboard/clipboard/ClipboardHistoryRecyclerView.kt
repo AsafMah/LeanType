@@ -59,6 +59,9 @@ class ClipboardHistoryRecyclerView @JvmOverloads constructor(
         undoHandler.removeCallbacks(undoDismissRunnable)
         lastDeletedEntry = entry
 
+        // Dismiss confirmation bar if active
+        (parent as? View)?.findViewById<View>(R.id.clipboard_confirmation_bar)?.visibility = View.GONE
+
         // Find the undo bar from our parent hierarchy (it's a sibling in the FrameLayout)
         val bar = undoBar ?: (parent as? View)?.findViewById<View>(R.id.clipboard_undo_bar)
         undoBar = bar ?: return

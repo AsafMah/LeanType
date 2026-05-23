@@ -2,6 +2,9 @@
 package helium314.keyboard.settings.screens
 
 import android.content.Context
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -10,9 +13,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
@@ -53,11 +58,6 @@ fun TwoThumbTypingScreen(
     val dualThumbHinting = prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING, Defaults.PREF_GESTURE_DUAL_THUMB_HINTING)
 
     val items = buildList {
-        if (!gestureEnabled) {
-            add(R.string.two_thumb_typing_requires_gesture)
-            return@buildList
-        }
-
         add(R.string.settings_category_two_thumb_typing_words)
         add(SettingsWithoutKey.TWO_THUMB_SPACING_MODE)
         if (autospaceMode) {
@@ -84,7 +84,23 @@ fun TwoThumbTypingScreen(
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = stringResource(R.string.settings_screen_two_thumb_typing),
-        settings = items,
+        settings = if (gestureEnabled) items else emptyList(),
+        content = if (!gestureEnabled) {
+            {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = MaterialTheme.shapes.medium,
+                ) {
+                    Text(
+                        text = stringResource(R.string.two_thumb_typing_requires_gesture),
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+            }
+        } else null,
     )
 }
 
@@ -123,11 +139,6 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
             stringResource(R.string.combining_autospace_suggestions_keep_then_next) to "alternatives_then_next_word",
         )
         ListPreference(def, items, Defaults.PREF_COMBINING_AUTOSPACE_SUGGESTIONS)
-    },
-    Setting(context, Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD,
-        R.string.combining_backspace_deletes_gesture_word,
-        R.string.combining_backspace_deletes_gesture_word_summary) {
-        SwitchPreference(it, Defaults.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD)
     },
     Setting(context, Settings.PREF_COMBINING_TAP_EXTRA_MS,
         R.string.two_thumb_tap_autospace_grace, R.string.two_thumb_tap_autospace_grace_summary) { def ->
