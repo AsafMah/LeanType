@@ -36,6 +36,7 @@ fastlane/Appfile
 *.keystore
 keystore.properties
 signing.properties
+app/src/main/assets/adi-registration.properties
 
 # Build logs
 *.log

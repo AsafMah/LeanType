@@ -1,0 +1,2 @@
+- Disable non-deterministic baseline profiles for 100% reproducible F-Droid builds
+- Improve reliability of emoji search and layout stability

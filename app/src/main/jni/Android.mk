@@ -60,6 +60,10 @@ endif # FLAG_FULL_DBG
 endif # FLAG_DBG
 endif # FLAG_DO_PROFILE
 
+ifneq ($(FLAG_DBG), true)
+    LOCAL_CFLAGS += -flto
+endif
+
 LOCAL_MODULE := libjni_latinime_common_static
 LOCAL_MODULE_TAGS := optional
 
@@ -91,6 +95,11 @@ LOCAL_CLANG := true
 LOCAL_SDK_VERSION := 14
 LOCAL_NDK_STL_VARIANT := c++_static
 LOCAL_LDFLAGS += -ldl -Wl,-z,max-page-size=16384
+
+ifneq ($(FLAG_DBG), true)
+    LOCAL_CFLAGS += -flto
+    LOCAL_LDFLAGS += -flto
+endif
 
 # Avoid issues with reproducible builds, see https://gitlab.com/fdroid/rfp/-/issues/2662
 LOCAL_LDFLAGS += -Wl,--build-id=none

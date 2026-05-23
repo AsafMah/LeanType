@@ -10,6 +10,7 @@ object Links {
     // LeanBitBoard fork repo
     const val GITHUB = "https://github.com/LeanBitLab/HeliboardL"
     const val LICENSE = "$GITHUB/blob/main/LICENSE"
+    const val SPONSOR = "https://github.com/sponsors/LeanBitLab"
     // Original HeliBoard wiki and community links
     const val ORIGINAL_GITHUB = "https://github.com/Helium314/HeliBoard"
     const val LAYOUT_WIKI_URL = "$ORIGINAL_GITHUB/wiki/2.-Layouts"

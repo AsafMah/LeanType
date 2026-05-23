@@ -101,6 +101,10 @@ class ClipboardHistoryView @JvmOverloads constructor(
     private lateinit var emptyViewContainer: View
     private lateinit var listContainer: View
 
+    private var confirmationBar: View? = null
+    private val confirmationDismissRunnable = Runnable { dismissConfirmationBar() }
+    private val confirmationHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
     private var editorInfo: EditorInfo? = null
     // We already have keyboardActionListener property
 
@@ -181,6 +185,20 @@ class ClipboardHistoryView @JvmOverloads constructor(
             persistentDrawingCache = PERSISTENT_NO_CACHE
             clipboardLayoutParams.setListProperties(this)
         }
+
+        confirmationBar = findViewById(R.id.clipboard_confirmation_bar)
+        confirmationBar?.let { bar ->
+            try {
+                colors.setBackground(bar, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
+                bar.findViewById<TextView>(R.id.clipboard_confirmation_text)?.setTextColor(colors.get(ColorType.KEY_TEXT))
+                bar.findViewById<TextView>(R.id.clipboard_confirmation_button)?.setTextColor(colors.get(ColorType.KEY_TEXT))
+            } catch (_: Exception) {}
+            bar.findViewById<View>(R.id.clipboard_confirmation_button)?.setOnClickListener {
+                clipboardHistoryManager.clearHistory()
+                dismissConfirmationBar()
+            }
+        }
+
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         toolbarKeys.forEach {
             clipboardStrip.addView(it)
@@ -613,10 +631,24 @@ class ClipboardHistoryView @JvmOverloads constructor(
 
         // Dismiss any active undo bar
         clipboardRecyclerView.dismissUndoBar()
+        dismissConfirmationBar()
         
         clipboardRecyclerView.adapter = null
         clipboardHistoryManager.setHistoryChangeListener(null)
         clipboardAdapter.clipboardHistoryManager = null
+    }
+
+    fun showClearAllConfirmationBar() {
+        clipboardRecyclerView.dismissUndoBar()
+        val bar = confirmationBar ?: return
+        confirmationHandler.removeCallbacks(confirmationDismissRunnable)
+        bar.visibility = View.VISIBLE
+        confirmationHandler.postDelayed(confirmationDismissRunnable, 5000)
+    }
+
+    fun dismissConfirmationBar() {
+        confirmationHandler.removeCallbacks(confirmationDismissRunnable)
+        confirmationBar?.visibility = View.GONE
     }
 
     override fun onClick(view: View) {
@@ -627,6 +659,10 @@ class ClipboardHistoryView @JvmOverloads constructor(
             if (code == KeyCode.CLIPBOARD_SEARCH) {
                  startSearchMode()
                  return
+            }
+            if (code == KeyCode.CLIPBOARD_CLEAR_HISTORY) {
+                showClearAllConfirmationBar()
+                return
             }
             if (code != KeyCode.UNSPECIFIED) {
                 keyboardActionListener.onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
