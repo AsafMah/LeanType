@@ -946,7 +946,8 @@ public final class InputLogic {
                     && (!settingsValues.mCombiningAutospaceOnlyAfterGesture
                             || mCombiningWordHasGestureFragment)
                     && !mSuppressAutospaceForForceNextSpace;
-            kv.setCombiningMode(showAutospaceIndicator, startTime, graceMs);
+            kv.setCombiningMode(showAutospaceIndicator, startTime, graceMs,
+                    true /* compositionActiveForDebug */);
         }
     }
 
@@ -972,7 +973,8 @@ public final class InputLogic {
                 final boolean showAutospaceIndicator = settingsValues.shouldInsertSpacesAutomatically()
                         && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces;
                 kv.setCombiningMode(showAutospaceIndicator, SystemClock.uptimeMillis(),
-                        Math.max(0, settingsValues.mCombiningGraceMs));
+                        Math.max(0, settingsValues.mCombiningGraceMs),
+                        true /* compositionActiveForDebug */);
             }
         }
     }

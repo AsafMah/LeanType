@@ -470,6 +470,26 @@ The user pointed out that the tap-during-swipe behavior had been made hardcoded,
 
 ---
 
+## 2026-05-23 — Address follow-up PR review comments
+
+### Context
+Copilot review comments on PR #6 flagged that debug overlay accumulation depended on the visual autospace indicator state, and that changing spacing modes discarded the user's configured autospace duration.
+
+### Actions Taken
+- Separated the debug accumulation state in `MainKeyboardView` from the visible spacebar combining indicator.
+- Preserved debug overlay accumulation for manual-spacing composition as well as hidden-indicator combining mode.
+- Added a hidden last-autospace-duration preference and restored it when switching back to Auto-space mode.
+- Ran targeted settings test, built the standard debug APK, and installed it on the connected device.
+
+### Decisions Made
+- Kept the visual indicator behavior unchanged; only the debug overlay preservation decision now uses the dedicated composition/debug state.
+- Preserved the user's last positive autospace duration when switching to Normal or Manual spacing, then restored it when Auto-space is selected again.
+
+### Open Questions / Next Steps
+- Commit, push, and resolve the PR review threads.
+
+---
+
 ## 2026-05-23 — Remove tap-during-swipe fragments
 
 ### Context
