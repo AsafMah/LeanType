@@ -35,7 +35,7 @@ The PR landed in four architectural waves. The current state reflects wave 4 —
 
 | Wave | Commits | What it built | Status |
 | ---: | :--- | :--- | :--- |
-| 1 | `ea078058`–`13db794b` | Scaffolding + per-feature prefs (manual spacing, autospace grace, tap-during-swipe, tap-promotion, fragment backspace, apostrophe key, dual-thumb hinting, debug overlay) | Foundation; mostly still used |
+| 1 | `ea078058`–`13db794b` | Scaffolding + per-feature prefs (manual spacing, autospace grace, tap-promotion, fragment backspace, apostrophe key, dual-thumb hinting, debug overlay) | Foundation; mostly still used |
 | 2 | `72acb111`, `37f45e67` | Tap-promotion refactor (drop deferred multi-tap chain in `PointerTracker`, move "extend" decision to `InputLogic`) + visual flash on autospace | Flash later replaced by progress bar |
 | 3 | `b921c58f`–`f53a8e97` | **Unified combining-mode state machine** (replaces wave-1/2's split grace + tap-promotion + flash) | Current production design |
 | 4 | `3330dfd4`–`f2d66c3d` | Toolbar toggles (AUTOSPACE / AUTO_CAP / FORCE_AUTO_CAP), forward-delete keycode, daily-driver fixes (PHANTOM after auto-commit, auto-cap gesture results) | Current |
@@ -643,8 +643,6 @@ the raw key-event path. Useful for the user-imported "power" symbol layout
 | `PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD` | true | ✓ | First backspace after a gesture-auto-commit deletes the whole word + space |
 | `PREF_GESTURE_MANUAL_SPACING` | false | ✓ | Original Nintype-style "never auto-commit" mode (orthogonal to combining grace) |
 | `PREF_GESTURE_FRAGMENT_BACKSPACE` | false | ✓ | Sub-option of manual spacing — backspace pops one fragment instead of one char |
-| `PREF_GESTURE_TAP_DURING_SWIPE` | false | ✓ | When a finger taps mid-swipe of another finger, fold the tap into the swipe |
-| `PREF_GESTURE_TAP_AS_SWIPE_WINDOW_MS` | 60 | ✓ | Max tap duration before it stops counting as part of an ongoing swipe |
 | `PREF_GESTURE_DUAL_THUMB_HINTING` | false | ✓ | Post-process the gesture's points before handing to the recognizer (`DualThumbHinter`) |
 | `PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT` | 50 | ✓ | Left/right hand split for the hinter (proximity guard) |
 | `PREF_GESTURE_DEBUG_DRAW_POINTS` | false | ✓ | Overlay raw + synthetic gesture points (`GestureDebugPointsDrawingPreview`) |
@@ -678,7 +676,7 @@ the raw key-event path. Useful for the user-imported "power" symbol layout
 | `latin/settings/Defaults.kt` | Matching defaults (off / 0 for behaviour-changing prefs; `true` for the autocorrect-on-autospace toggle; `250` for tap-extra) |
 | `latin/settings/SettingsValues.java` | Matching `public final` fields + `prefs.get*` reads in the ctor |
 | `latin/inputlogic/InputLogic.java` | The combining-mode state machine itself (§3.2–§3.9). Hooks on `handleNonSeparatorEvent`, `onStartBatchInput`, `onUpdateTailBatchInputCompleted`, `handleSeparatorEvent`, `handleBackspaceEvent`, `onPickSuggestionManually`, `resetComposingState`, `onCancelBatchInput`. |
-| `keyboard/PointerTracker.java` | Tap-seeding statics + decision at `onDownEvent`; tap-during-swipe pointer marker + suppression at `onUpEventInternal`; `mayEndBatchInput` now always passes `graceMs = 0` so the wave-1 `BatchInputArbiter` grace path is dormant. |
+| `keyboard/PointerTracker.java` | Tap-seeding statics + decision at `onDownEvent`; `mayEndBatchInput` now always passes `graceMs = 0` so the wave-1 `BatchInputArbiter` grace path is dormant. |
 | `keyboard/MainKeyboardView.java` | Removed the flash overlay; added `setCombiningMode` + the spacebar progress bar; new field-set + `ValueAnimator`. |
 | `keyboard/internal/BatchInputArbiter.java` | Wave-1 added the static grace handler (`sPendingGraceRunnable`, `continuePendingGesture`, `flushGrace`, `isGracePending`). Wave 3 doesn't activate it (we pass `graceMs = 0`) but the API surface remains for the dual-thumb-hinter and dormant pref. |
 | `keyboard/internal/DrawingProxy.java` | Two interface additions (`clearGestureDebugPoints`, `setGestureCommitPending`) used by the hinter and the wave-1 ellipsis preview. The ellipsis is dormant in wave 3 but the API is left so `PointerTracker`'s defensive-cleanup paths stay intact. |
@@ -701,7 +699,7 @@ the raw key-event path. Useful for the user-imported "power" symbol layout
 ## 8. Known caveats / future work
 
 - **Gesture-recognition accuracy with two thumbs** is bounded by the native glide-typing library. The PR's seed + concat trick fixes the common single-thumb-tap-then-swipe case (`"silo"`, `"technology"`) but a simultaneous two-thumb gesture where one thumb taps mid-swipe of the other can still produce odd results — that's where `PREF_GESTURE_DUAL_THUMB_HINTING` and `PREF_GESTURE_DEBUG_DRAW_POINTS` come in, and they remain experimental.
-- **Tap-as-swipe** (`PREF_GESTURE_TAP_DURING_SWIPE`) doesn't yet seed the parent stroke with the tap's coordinates — it just suppresses the stray keystroke. Future work could add seeding here too.
+- **Simultaneous tap-while-swiping recognition** now relies on combining/multi-part composition and the experimental point hinter rather than a separate suppression preference. Remaining odd recognizer outputs should be investigated in the gesture data / hinting path.
 - **`alternatives_then_next_word` mode** eats the first space tap to swap the strip. The current implementation doesn't restart the combining-mode timer for that synthetic event (since no composing word exists at that point). Probably correct, but worth keeping an eye on.
 - **`tryFragmentBackspace`** (manual-spacing sub-feature) was kept from wave 1. It is independent of the combining-mode timer and only fires under manual spacing — no conflict, but it does mean two backspace-pop mechanisms coexist (one for fragments under manual spacing, one for the gesture-committed-whole-word under combining mode).
 

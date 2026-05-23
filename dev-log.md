@@ -247,7 +247,7 @@ The two-thumb typing settings screen mixed current user-facing features, legacy/
   - Two-finger input
   - Recognition tuning
   - Troubleshooting
-- Renamed visible labels/summaries for the main combining grace, tap extra time, multi-part joining, typed-prefix swipe continuation, and tap-during-swipe options.
+- Renamed visible labels/summaries for the main combining grace, tap extra time, multi-part joining, and typed-prefix swipe continuation options.
 - Removed unimplemented/dead settings from the screen and global search registry:
   - `PREF_GESTURE_APOSTROPHE_KEY`
   - `PREF_MULTIPART_JOIN_KEY_MODE`
@@ -316,3 +316,24 @@ After trying the first reorganization, the user clarified the desired structure:
 ### Open Questions / Next Steps
 - User should confirm whether **Tap letters while swiping** should remain user-facing or be folded into the spacing mode later.
 - Debug overlay expansion (different colors/shapes for fragments, taps, fingers, start/end) is still future work.
+
+---
+
+## 2026-05-23 — Remove obsolete tap-during-swipe setting
+
+### Context
+The user tested several tap/swipe word combinations and found they worked without the old tap-during-swipe flag. The newer combining/multi-part word system appears to cover the useful behavior, while the old flag only suppressed quick child taps and added confusion.
+
+### Actions Taken
+- Removed the tap-during-swipe setting and timing setting from the two-thumb settings screen and global settings registry.
+- Removed the corresponding `Settings` constants, defaults, `SettingsValues` fields, and `PointerTracker` suppression path.
+- Updated docs and user-facing references so the removed setting is no longer advertised.
+- Built `:app:compileStandardDebugKotlin`.
+
+### Decisions Made
+- Kept combining/multi-part tap seeding intact; only the obsolete simultaneous tap suppression flag was removed.
+- Left the observed “giraffe” gesture-recognition issue as a separate investigation target, likely around gesture recognition/hinting rather than settings UI.
+
+### Open Questions / Next Steps
+- Investigate why some `giraffe` attempts stop swipe detection after the second letter.
+- Investigate why first attempts often recognize unrelated long words before learning improves.
