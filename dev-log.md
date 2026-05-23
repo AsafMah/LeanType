@@ -232,3 +232,47 @@ Review comment r3289683508 on PR #3 noted that `createToolbarStateBackground()` 
 ### Open Questions / Next Steps
 - If toolbar state updates ever move off the main thread, add `@Volatile` or synchronization to the cache variable.
 
+---
+
+## 2026-05-23 — Reorganize two-thumb typing settings
+
+### Context
+The two-thumb typing settings screen mixed current user-facing features, legacy/manual-spacing controls, debugging options, and future/unimplemented toggles. Some settings were confusingly named after implementation details, while `gesture_apostrophe_key` and `multipart_join_key_mode` were exposed even though they are not wired to runtime behavior.
+
+### Actions Taken
+- Created branch `copilot/organize-two-thumb-settings` from `origin/main`.
+- Reorganized `TwoThumbTypingScreen.kt` into clearer user-facing sections:
+  - Build words from taps and swipes
+  - Manual spacing mode
+  - Two-finger input
+  - Recognition tuning
+  - Troubleshooting
+- Renamed visible labels/summaries for the main combining grace, tap extra time, multi-part joining, typed-prefix swipe continuation, and tap-during-swipe options.
+- Removed unimplemented/dead settings from the screen and global search registry:
+  - `PREF_GESTURE_APOSTROPHE_KEY`
+  - `PREF_MULTIPART_JOIN_KEY_MODE`
+- Kept existing preference keys/defaults/runtime reads in place for compatibility; only the user-facing settings registry was changed.
+- Built `:app:assembleStandardDebug` and ran `SettingsContainerTest`.
+
+### Decisions Made
+- Kept the existing runtime behavior unchanged and only reorganized/renamed the UI.
+- Left legacy manual spacing visible but moved it into its own advanced-feeling section so it is not confused with the recommended combining-mode flow.
+- Left debug point drawing visible under **Troubleshooting** rather than mixing it with recognition settings.
+- Did not remove old strings yet, because other docs/translations may still refer to them and keeping them is safer than a broad cleanup.
+
+### Manual Tests — Two-thumb Settings Organization
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Open **Settings → Two-thumb typing** with gesture typing disabled. | Screen shows a simple “Enable gesture typing first” hint instead of confusing no-op toggles. |
+| 2 | Enable gesture typing, then open **Two-thumb typing**. | Settings are grouped into the new user-facing sections. |
+| 3 | Set **Wait for next input** to 0 ms. | Advanced combining options are hidden. |
+| 4 | Set **Wait for next input** above 0 ms. | Follow-up timing, word joining, backspace, autocorrect, and suggestion options appear. |
+| 5 | Disable **Join word parts**. | Sub-options for full-word suggestions, typed-prefix swipe, and fragment backspace are hidden unless manual spacing needs fragment backspace. |
+| 6 | Enable **Manual spacing**. | Manual-spacing-related fragment backspace appears when not already shown under word joining. |
+| 7 | Enable **Tap letters while swiping**. | **Maximum tap length** appears. |
+| 8 | Enable **Two-thumb point hinting**. | **Left/right hand split** appears. |
+| 9 | Search settings for “apostrophe” or “join next modifier”. | The removed unimplemented controls do not appear. |
+
+### Open Questions / Next Steps
+- User should review the new wording on-device and decide whether debug point drawing should remain visible or move behind the separate debug settings screen later.
