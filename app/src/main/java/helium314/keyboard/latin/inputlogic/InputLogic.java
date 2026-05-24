@@ -2953,10 +2953,32 @@ public final class InputLogic {
         // https://github.com/lineageos/android_packages_inputmethods_LatinIME/commit/ee6de1466bc98e27bd414c9a7451f2aee3f9e721
         // can't find any drawback (performance, neither when setting nor when reading)
         String wordToCommit = chosenWord;
-        final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(chosenWord, mLatinIME);
-        final boolean isExpanded = expanded != null;
-        if (isExpanded) {
-            wordToCommit = expanded;
+        boolean isExpanded = false;
+        
+        final boolean isEnabled = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME);
+        if (isEnabled) {
+            final String prefix = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getPrefix(mLatinIME);
+            if (prefix.isEmpty()) {
+                final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(chosenWord, mLatinIME);
+                if (expanded != null) {
+                    wordToCommit = expanded;
+                    isExpanded = true;
+                }
+            } else {
+                final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+                if (textBefore != null) {
+                    final String textStr = textBefore.toString();
+                    final String targetSuffix = prefix + chosenWord;
+                    if (textStr.toLowerCase(java.util.Locale.US).endsWith(targetSuffix.toLowerCase(java.util.Locale.US))) {
+                        final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(targetSuffix, mLatinIME);
+                        if (expanded != null) {
+                            mConnection.deleteTextBeforeCursor(prefix.length());
+                            wordToCommit = expanded;
+                            isExpanded = true;
+                        }
+                    }
+                }
+            }
         }
         final CharSequence chosenWordWithSuggestions = getTextWithSuggestionSpan(mLatinIME, wordToCommit,
                 mSuggestedWords, getDictionaryFacilitatorLocale());
