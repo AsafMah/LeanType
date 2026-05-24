@@ -560,3 +560,40 @@ After testing, the user confirmed the tap-during-swipe fragment behavior was cau
 
 ### Open Questions / Next Steps
 - Commit and push the PR update.
+
+---
+
+## 2026-05-24 — Fix two-thumb backspace modes
+
+### Context
+The user reported that the two-thumb backspace selector had misleading wording and broken behavior: **Delete last word part** should be **Delete last fragment**, fragment mode behaved like normal character delete, and whole-word mode mishandled live composing text depending on the **Delete live composing text** sub-option.
+
+### Actions Taken
+- Renamed the fragment-mode label to **Delete last fragment**.
+- Updated fragment boundary tracking in `InputLogic.java` so the first swipe fragment is recorded and extended swipe fragments record both the previous boundary and the new fragment end.
+- Fixed fragment backspace so an end boundary equal to the current composing length is treated as the current fragment marker, not stale state.
+- Changed whole-word backspace with **Delete live composing text** disabled to fall back to normal one-character live composing deletion instead of consuming backspace as a no-op.
+- Cleared the editor composing span after whole-word live composing deletion to avoid stale composing state.
+- Preserved the committed fragment stack after delayed autospace commits so repeated **Delete last fragment** presses pop one committed fragment at a time instead of reverting to character deletion after the first pop.
+- Added focused JVM regression tests for live fragment backspace, repeated committed fragment backspace, whole-word live composing deletion on/off, and the renamed label.
+- Ran focused backspace/settings regression tests. `:app:installStandardDebug` built the standard APK but could not install because Gradle reported no connected devices.
+
+### Decisions Made
+- Kept default gesture/batch rejection behavior outside fragment mode unchanged; the fix is scoped to the two-thumb backspace selector and live composing option.
+- Added a single-fragment regression test because **Delete last fragment** should also delete a one-swipe composing word, not only the last piece of a multi-fragment word.
+
+### Manual Tests — Two-thumb Backspace Modes
+
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Open **Settings → Two-thumb typing → Backspace behavior**. | The fragment option is labeled **Delete last fragment**. |
+| 2 | Enable manual spacing, choose **Delete last fragment**, swipe one word, then press Backspace. | The whole swiped fragment is removed in one press. |
+| 3 | With **Delete last fragment**, swipe a word fragment and then swipe another fragment to extend it, then press Backspace. | Only the latest fragment is removed; the previous fragment remains composing. |
+| 4 | With **Delete last fragment**, wait for delayed autospace to commit the combined word, then press Backspace twice. | The first press removes the autospace and latest fragment; the second press removes the previous fragment. |
+| 5 | Choose **Delete whole word**, turn **Delete live composing text** off, type letters, then press Backspace. | One character is deleted and the remaining text stays live/composing. |
+| 6 | Choose **Delete whole word**, turn **Delete live composing text** on, type letters, then press Backspace. | The whole live composing word is removed in one press, and the next typed word deletes normally. |
+
+### Open Questions / Next Steps
+- Full `InputLogicTest` class execution still fails on existing unrelated tests (`tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`, `insertLetterIntoWordHangulFails`, `revert autocorrect on delete`); the focused backspace/settings tests pass.
+- Install still needs to be retried when a device is connected.
+- Open the bugfix PR from `fix-backspace-delete-options` into `main`.
