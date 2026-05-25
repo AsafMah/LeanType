@@ -632,3 +632,24 @@ The user reported that the two-thumb backspace selector had misleading wording a
 ### Open Questions / Next Steps
 - Full `InputLogicTest` class execution still fails on existing unrelated tests (`tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`, `insertLetterIntoWordHangulFails`, `revert autocorrect on delete`); the focused backspace/settings tests pass.
 - PR opened at https://github.com/AsafMah/LeanType/pull/8.
+
+---
+
+## 2026-05-25 — Sync main and update shortcuts PR
+
+### Context
+The backspace fixes were ready in PR #8, and the user asked to merge them to `main`, merge `upstream/main` into our `main`, then merge the updated `main` into the shortcuts PR branch and install it.
+
+### Actions Taken
+- Merged `fix-backspace-delete-options` into `main` and pushed `origin/main`.
+- Merged `upstream/main` into `main`, resolving conflicts in `ClipboardHistoryView.kt` and `KeyboardIconsSet.kt` by keeping LeanType's bottom-row geometry and clear-clipboard rounded icon while accepting upstream changes elsewhere.
+- Merged the updated `origin/main` into `copilot/implement-keyboard-shortcuts`.
+- Fixed a merge artifact in `ToolbarUtils.kt` where duplicate `Color` and `Drawable` imports broke Kotlin compilation.
+- Built and installed `:app:installStandardDebug` for the updated shortcuts branch on `SM-S936B`.
+
+### Decisions Made
+- Preserved LeanType-specific clipboard bottom-row layout behavior over upstream's new helper because the existing branch intentionally used secondary-keyboard geometry for alpha/symbol layouts.
+- Kept the rounded clear-clipboard toolbar icon to match LeanType toolbar icon styling.
+
+### Open Questions / Next Steps
+- Push the updated shortcuts PR branch.
