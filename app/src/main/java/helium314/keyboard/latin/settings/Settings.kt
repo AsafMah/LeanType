@@ -15,7 +15,7 @@ fun customIconNames(prefs: SharedPreferences) = runCatching {
 fun customIconIds(context: Context, prefs: SharedPreferences) = customIconNames(prefs)
     .mapNotNull { entry ->
         val id = runCatching { context.resources.getIdentifier(entry.value, "drawable", context.packageName) }.getOrNull()
-        id?.let { entry.key to it }
+        if (id != null && id != 0) entry.key to id else null
     }
 
 /** Derive an index from a number of boolean [settingValues], used to access the matching default value in a defaults arraY */

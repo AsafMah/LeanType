@@ -294,7 +294,7 @@
     <string name="two_thumb_backspace_behavior">Backspace behavior</string>
     <string name="two_thumb_backspace_behavior_summary">Choose what backspace removes while using manual spacing or delayed autospace.</string>
     <string name="two_thumb_backspace_normal">Delete one character</string>
-    <string name="two_thumb_backspace_fragment">Delete last word part</string>
+    <string name="two_thumb_backspace_fragment">Delete last fragment</string>
     <string name="two_thumb_backspace_word">Delete whole word</string>
     <string name="multipart_join_key_mode">Explicit "join next" modifier</string>
     <string name="multipart_join_key_mode_summary">Force the next input to extend the current word regardless of timing.</string>
@@ -325,6 +325,7 @@
     <string name="clipboard_history_retention_time">History retention time</string>
     <!-- Preferences item for showing pinned clipboard items first -->
     <string name="clipboard_history_pinned_first">Show pinned items on top</string>
+    <string name="clipboard_fold_pinned">Fold pinned items by default</string>
     <!-- Hint for clipboard search bar -->
     <string name="clipboard_search_hint">Search clips...</string>
     <!-- Text for empty clipboard state -->
@@ -901,6 +902,8 @@ language, hence "No language". -->
     <string name="day_or_night_night">Night</string>
     <!-- Title of the setting for keypress vibration duration -->
     <string name="prefs_keypress_vibration_duration_settings">Keypress vibration duration</string>
+    <!-- Title of the setting for keypress vibration strength -->
+    <string name="prefs_keypress_vibration_amplitude_settings">Keypress vibration strength</string>
     <!-- Title of the setting for keypress sound volume -->
     <string name="prefs_keypress_sound_volume_settings">Keypress sound volume</string>
     <!-- Title of the setting for key long press delay -->
@@ -1011,6 +1014,7 @@ New dictionary:
     <string name="user_dict_word_already_present">This word is already present in the %s user dictionary. Please type another one.</string>
     <!-- User dictionary settings. Text button to add a word -->
     <string name="user_dict_add_word_button">Add a word</string>
+    <string name="user_dict_clear_all_confirmation">Are you sure you want to clear all words from this dictionary?</string>
     <!-- Option for choosing theme style -->
     <string name="theme_style">Style</string>
     <!-- Option for choosing icon style (same options as theme_style) -->
@@ -1114,6 +1118,12 @@ New dictionary:
     <string name="about_sponsor_link">Sponsor project</string>
     <!-- description for sponsor link -->
     <string name="about_sponsor_link_description">Support the development of LeanType</string>
+    <!-- sponsor dialog -->
+    <string name="sponsor_dialog_title">Sponsor this project</string>
+    <string name="sponsor_dialog_message">This project is completely community-driven and relies on donations to keep development alive. If you find this keyboard useful, please consider sponsoring!</string>
+    <string name="sponsor_dialog_never_show_again">Never show again</string>
+    <string name="sponsor_dialog_sponsor">Sponsor</string>
+    <string name="sponsor_dialog_not_now">Not now</string>
     <!-- link to the wiki for about screen -->
     <string name="about_wiki_link">Go to Wiki</string>
     <!-- description for wiki link -->

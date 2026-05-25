@@ -445,6 +445,36 @@ class ClipboardHistoryManager(
         csv.isGone = true
     }
 
+    fun pasteLargeText(text: String) {
+        val primaryClip = try { clipboardManager.primaryClip } catch (e: Exception) { null }
+        
+        // Remove listener temporarily to avoid re-triggering history capture
+        clipboardManager.removePrimaryClipChangedListener(this)
+        
+        try {
+            clipboardManager.setPrimaryClip(android.content.ClipData.newPlainText("Clipboard", text))
+            latinIME.mInputLogic.connection.performContextMenuAction(android.R.id.paste)
+        } catch (e: Exception) {
+            // Fallback to standard commit if context paste fails
+            latinIME.onTextInput(text)
+        }
+        
+        // Restore original clip after a tiny delay to allow paste process to complete
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            try {
+                if (primaryClip != null) {
+                    clipboardManager.setPrimaryClip(primaryClip)
+                } else {
+                    ClipboardManagerCompat.clearPrimaryClip(clipboardManager)
+                }
+            } catch (e: Exception) {
+                // Ignore restore failures
+            } finally {
+                clipboardManager.addPrimaryClipChangedListener(this)
+            }
+        }, 200)
+    }
+
     companion object {
         const val RECENT_TIME_MILLIS = 3 * 60 * 1000L // 3 minutes (for clipboard suggestions)
         const val RECENT_SCREENSHOT_TIME_MILLIS = 4 * 60 * 1000L // 4 minutes

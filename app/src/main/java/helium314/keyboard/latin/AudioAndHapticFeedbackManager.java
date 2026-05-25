@@ -8,6 +8,8 @@ package helium314.keyboard.latin;
 
 import android.content.Context;
 import android.media.AudioManager;
+import android.os.Build;
+import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -64,11 +66,33 @@ public final class AudioAndHapticFeedbackManager {
         return mVibrator != null && mVibrator.hasVibrator();
     }
 
+    public boolean hasAmplitudeControl() {
+        return mVibrator != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mVibrator.hasAmplitudeControl();
+    }
+
     public void vibrate(final long milliseconds) {
+        vibrate(milliseconds, -1);
+    }
+
+    public void vibrate(final long milliseconds, final int amplitudePercent) {
         if (mVibrator == null || milliseconds <= 0) {
             return;
         }
-        mVibrator.vibrate(milliseconds);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            final int safeAmplitude;
+            if (amplitudePercent < 0) {
+                safeAmplitude = VibrationEffect.DEFAULT_AMPLITUDE;
+            } else {
+                safeAmplitude = Math.min(255, Math.max(1, (int) ((amplitudePercent / 100f) * 255)));
+            }
+            try {
+                mVibrator.vibrate(VibrationEffect.createOneShot(milliseconds, safeAmplitude));
+            } catch (Exception e) {
+                mVibrator.vibrate(milliseconds);
+            }
+        } else {
+            mVibrator.vibrate(milliseconds);
+        }
     }
 
     private boolean reevaluateIfSoundIsOn() {
@@ -106,8 +130,9 @@ public final class AudioAndHapticFeedbackManager {
             // Avoid surprises with the handling of HapticFeedbackConstants.NO_HAPTICS
             return;
         }
-        if (hapticEvent.allowCustomDuration && mSettingsValues.mKeypressVibrationDuration >= 0) {
-            vibrate(mSettingsValues.mKeypressVibrationDuration);
+        if (hapticEvent.allowCustomDuration && (mSettingsValues.mKeypressVibrationDuration >= 0 || mSettingsValues.mKeypressVibrationAmplitude >= 0)) {
+            final int duration = mSettingsValues.mKeypressVibrationDuration >= 0 ? mSettingsValues.mKeypressVibrationDuration : 15;
+            vibrate(duration, mSettingsValues.mKeypressVibrationAmplitude);
             return;
         }
         // Go ahead with the system default

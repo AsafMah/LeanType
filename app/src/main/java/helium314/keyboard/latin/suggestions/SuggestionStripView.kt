@@ -490,7 +490,13 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     override fun onSharedPreferenceChanged(prefs: SharedPreferences, key: String?) {
         setToolbarButtonsActivatedStateOnPrefChange(pinnedKeys, key)
         setToolbarButtonsActivatedStateOnPrefChange(toolbar, key)
-        if (key == Settings.PREF_PINNED_TOOLBAR_KEYS || key == Settings.PREF_TOOLBAR_KEYS || key == Settings.PREF_QUICK_PIN_TOOLBAR_KEYS || key == Settings.PREF_AUTO_HIDE_PINNED_KEYS || key == Settings.PREF_SPLIT_TOOLBAR) {
+        if (key == Settings.PREF_PINNED_TOOLBAR_KEYS 
+            || key == Settings.PREF_TOOLBAR_KEYS 
+            || key == Settings.PREF_QUICK_PIN_TOOLBAR_KEYS 
+            || key == Settings.PREF_AUTO_HIDE_PINNED_KEYS 
+            || key == Settings.PREF_SPLIT_TOOLBAR
+            || key == "pref_custom_ai_show_tags_on_toolbar"
+            || key?.startsWith("pref_custom_ai_tag_") == true) {
             rebuildToolbarKeys()
             // Update visibility with auto-hide logic
             setToolbarVisibility(isToolbarManuallyOpen, false)
@@ -915,6 +921,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private fun updateSplitToolbarState() {
         if (!Settings.getValues().mSplitToolbar) return
         if (isShowingEmojiSuggestions) {
+            suggestionsStrip.isVisible = true
+            return
+        }
+        // Clipboard/screenshot suggestions are LinearLayout roots, not TextViews —
+        // skip placeholder logic entirely so the external view is not obscured.
+        if (isExternalSuggestionVisible) {
             suggestionsStrip.isVisible = true
             return
         }
