@@ -576,7 +576,8 @@ The user reported that the two-thumb backspace selector had misleading wording a
 - Cleared the editor composing span after whole-word live composing deletion to avoid stale composing state.
 - Preserved the committed fragment stack after delayed autospace commits so repeated **Delete last fragment** presses pop one committed fragment at a time instead of reverting to character deletion after the first pop.
 - Added focused JVM regression tests for live fragment backspace, repeated committed fragment backspace, whole-word live composing deletion on/off, and the renamed label.
-- Ran focused backspace/settings regression tests. `:app:installStandardDebug` built the standard APK but could not install because Gradle reported no connected devices.
+- Ran focused backspace/settings regression tests.
+- Re-paired wireless ADB to `SM-S936B` and installed `:app:installStandardDebug`.
 
 ### Decisions Made
 - Kept default gesture/batch rejection behavior outside fragment mode unchanged; the fix is scoped to the two-thumb backspace selector and live composing option.
@@ -595,5 +596,4 @@ The user reported that the two-thumb backspace selector had misleading wording a
 
 ### Open Questions / Next Steps
 - Full `InputLogicTest` class execution still fails on existing unrelated tests (`tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`, `insertLetterIntoWordHangulFails`, `revert autocorrect on delete`); the focused backspace/settings tests pass.
-- Install still needs to be retried when a device is connected.
-- Open the bugfix PR from `fix-backspace-delete-options` into `main`.
+- PR opened at https://github.com/AsafMah/LeanType/pull/8.
