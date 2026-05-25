@@ -1,0 +1,7 @@
+- Fix F-Droid reproducible build packaging discrepancy
+- Fix large clipboard text truncation using native paste
+- Add customizable tags to Custom AI Keys with themed capsule
+- Fix clipboard suggestion in split toolbar mode
+- Redesign Sponsor Dialog with premium styling & timing
+- Add lag-free Text Expander with placeholders (%clipboard%, %day%, %day_short%, %time12%), guide, & FAB overlap fix
+- Add option to fold pinned clipboard items by default

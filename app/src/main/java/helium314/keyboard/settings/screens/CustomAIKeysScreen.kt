@@ -57,6 +57,7 @@ import helium314.keyboard.latin.utils.defaultToolbarPref
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.SearchScreen
 import helium314.keyboard.settings.dialogs.TextInputDialog
+import helium314.keyboard.settings.preferences.SwitchPreference
 
 @Composable
 fun CustomAIKeysScreen(onClickBack: () -> Unit, onNavigateToConfig: (Int) -> Unit) {
@@ -110,6 +111,13 @@ fun CustomAIKeysScreen(onClickBack: () -> Unit, onNavigateToConfig: (Int) -> Uni
                         )
                     }
                 }
+
+                SwitchPreference(
+                    name = "Show tags on keyboard",
+                    key = "pref_custom_ai_show_tags_on_toolbar",
+                    default = false,
+                    description = "When enabled, custom tags will show as themed capsules on the keyboard toolbar instead of the default AI icon."
+                )
                 
                 (1..10).forEach { index ->
                     CustomAIKeySlot(index, context, onNavigateToConfig)
@@ -127,6 +135,7 @@ private fun CustomAIKeySlot(index: Int, context: Context, onNavigateToConfig: (I
     val prefKey = "pref_custom_ai_prompt_$index"
     
     var currentPrompt by remember { mutableStateOf(prefs.getString(prefKey, "") ?: "") }
+    val currentTag = remember(currentPrompt) { prefs.getString("pref_custom_ai_tag_$index", "") ?: "" }
     val isSet = currentPrompt.isNotBlank()
     
     val keyEnum = CUSTOM_AI_KEY_ENUMS[index - 1]
@@ -168,7 +177,7 @@ private fun CustomAIKeySlot(index: Int, context: Context, onNavigateToConfig: (I
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Key $index",
+                    text = if (currentTag.isNotBlank()) currentTag else "Key $index",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -219,6 +228,7 @@ fun ConfigCustomAIKeyScreen(
     val prefs = context.prefs()
     val prefKey = "pref_custom_ai_prompt_$index"
     val initialPrompt = prefs.getString(prefKey, "") ?: ""
+    val initialTag = prefs.getString("pref_custom_ai_tag_$index", "") ?: ""
     val keyEnum = CUSTOM_AI_KEY_ENUMS[index - 1]
     
     val modes = listOf(
@@ -244,6 +254,7 @@ fun ConfigCustomAIKeyScreen(
     val initialCustomText = initialPrompt.split(" ").filter { it !in allKeywords }.joinToString(" ")
     
     var customText by remember { mutableStateOf(initialCustomText) }
+    var tagText by remember { mutableStateOf(initialTag) }
     var selectedKeywords by remember { mutableStateOf(initialKeywords) }
 
 
@@ -285,7 +296,10 @@ fun ConfigCustomAIKeyScreen(
                                 if (customText.isNotBlank() && selectedKeywords.isNotEmpty()) append(" ")
                                 append(selectedKeywords.joinToString(" "))
                             }
-                            prefs.edit { putString(prefKey, finalPrompt) }
+                            prefs.edit { 
+                                putString(prefKey, finalPrompt)
+                                putString("pref_custom_ai_tag_$index", tagText.trim())
+                            }
                             updateToolbarKeyStatus(context, keyEnum, finalPrompt.isNotEmpty())
                             onClickBack()
                         }
@@ -314,7 +328,10 @@ fun ConfigCustomAIKeyScreen(
                     if (initialPrompt.isNotBlank()) {
                         Button(
                             onClick = {
-                                prefs.edit { remove(prefKey) }
+                                prefs.edit { 
+                                    remove(prefKey)
+                                    remove("pref_custom_ai_tag_$index")
+                                }
                                 updateToolbarKeyStatus(context, keyEnum, false)
                                 onClickBack()
                             },
@@ -335,7 +352,10 @@ fun ConfigCustomAIKeyScreen(
                                 if (customText.isNotBlank() && selectedKeywords.isNotEmpty()) append(" ")
                                 append(selectedKeywords.joinToString(" "))
                             }
-                            prefs.edit { putString(prefKey, finalPrompt) }
+                            prefs.edit { 
+                                putString(prefKey, finalPrompt)
+                                putString("pref_custom_ai_tag_$index", tagText.trim())
+                            }
                             updateToolbarKeyStatus(context, keyEnum, finalPrompt.isNotEmpty())
                             onClickBack()
                         },
@@ -374,6 +394,16 @@ fun ConfigCustomAIKeyScreen(
                     .fillMaxWidth()
                     .heightIn(max = 200.dp)
                     .nestedScroll(consumeUnconsumedScrollConnection),
+                shape = RoundedCornerShape(16.dp)
+            )
+
+            // Custom tag input
+            androidx.compose.material3.OutlinedTextField(
+                value = tagText,
+                onValueChange = { if (it.length <= 12) tagText = it },
+                label = { Text("Tag / Label (e.g. 'French', 'Grammar', 'Rewrite')") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp)
             )
 

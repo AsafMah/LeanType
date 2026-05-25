@@ -480,7 +480,7 @@ class ProofreadService(private val context: Context) {
                 }
 
                 // CRITICAL FIX: Only use valid pastKeyValues if model actually accepts PKV inputs
-                val inputTokens = if (step > 0 && isValidPkv) {
+                val inputTokens = if (step > 0 && isValidPkv && hasPkvInputs) {
                     longArrayOf(generatedTokens.last())
                 } else {
                     generatedTokens.toLongArray()

@@ -1,0 +1,5 @@
+- Fix Resources$NotFoundException: Resource ID #0x0 crash caused by obsolete custom icon overrides mapping to missing drawables
+- Add "Clear All" option and confirmation dialog to personal dictionary settings screen, optimizing list refresh
+- Fix spacebar cursor movement swipe gesture and delete key swipe-to-delete gesture in emoji search input field
+- Fix squishing of custom keyboard background images by applying center-crop scaling
+- Add fine-grained vibration strength (amplitude) control to keypress haptics

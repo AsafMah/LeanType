@@ -31,6 +31,17 @@ import kotlinx.coroutines.withContext
 import java.util.EnumSet
 import java.util.EnumMap
 import java.util.Locale
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
+import android.graphics.drawable.Drawable
+import android.graphics.PixelFormat
+import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
+import android.content.res.ColorStateList
 
 fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     val button = ImageButton(context, null, R.attr.suggestionWordStyle)
@@ -40,8 +51,100 @@ fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     button.tag = key
     button.contentDescription = key.name.lowercase().getStringResourceOrName("", context)
     setToolbarButtonActivatedState(button)
-    button.setImageDrawable(KeyboardIconsSet.instance.getNewDrawable(key.name, context))
+    
+    val index = if (key.name.startsWith("CUSTOM_AI_")) {
+        key.name.removePrefix("CUSTOM_AI_").toIntOrNull()
+    } else null
+    
+    val showTags = context.prefs().getBoolean("pref_custom_ai_show_tags_on_toolbar", false)
+    val tag = if (index != null) {
+        context.prefs().getString("pref_custom_ai_tag_$index", "") ?: ""
+    } else ""
+    
+    if (showTags && tag.isNotBlank()) {
+        button.setImageDrawable(TagDrawable(tag.take(3).uppercase(Locale.US)))
+    } else {
+        button.setImageDrawable(KeyboardIconsSet.instance.getNewDrawable(key.name, context))
+    }
     return button
+}
+
+class TagDrawable(private val text: String) : Drawable() {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    private var tintList: ColorStateList? = null
+    private var tintMode: PorterDuff.Mode = PorterDuff.Mode.MULTIPLY
+    private var tintFilter: ColorFilter? = null
+    private var internalColorFilter: ColorFilter? = null
+
+    override fun setTintList(tint: ColorStateList?) {
+        tintList = tint
+        updateTintFilter()
+        invalidateSelf()
+    }
+
+    override fun setTintMode(tintMode: PorterDuff.Mode?) {
+        this.tintMode = tintMode ?: PorterDuff.Mode.MULTIPLY
+        updateTintFilter()
+        invalidateSelf()
+    }
+
+    override fun setColorFilter(colorFilter: ColorFilter?) {
+        internalColorFilter = colorFilter
+        updateTintFilter()
+        invalidateSelf()
+    }
+
+    override fun onStateChange(state: IntArray): Boolean {
+        if (tintList != null) {
+            updateTintFilter()
+            invalidateSelf()
+            return true
+        }
+        return super.onStateChange(state)
+    }
+
+    override fun isStateful(): Boolean {
+        return tintList?.isStateful == true || super.isStateful()
+    }
+
+    private fun updateTintFilter() {
+        val colors = tintList
+        if (colors != null) {
+            val color = colors.getColorForState(state, Color.WHITE)
+            tintFilter = PorterDuffColorFilter(color, tintMode)
+        } else {
+            tintFilter = null
+        }
+    }
+
+    override fun draw(canvas: Canvas) {
+        val bounds = bounds
+        val cx = bounds.exactCenterX()
+        val cy = bounds.exactCenterY()
+
+        // Apply theme's active color/tint filter dynamically to text paint
+        val activeFilter = tintFilter ?: internalColorFilter
+        paint.colorFilter = activeFilter
+
+        // Scaled text size based on height
+        paint.textSize = bounds.height() * 0.37f
+        
+        // Draw centered text
+        val textHeight = paint.descent() - paint.ascent()
+        val textOffset = textHeight / 2 - paint.descent()
+        canvas.drawText(text, cx, cy + textOffset, paint)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        paint.alpha = alpha
+    }
+
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }
 
 private val toolbarStateKeys = EnumSet.of(

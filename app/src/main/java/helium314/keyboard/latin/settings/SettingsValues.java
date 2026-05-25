@@ -94,6 +94,7 @@ public class SettingsValues {
         public final boolean mClipboardHistoryEnabled;
         public final long mClipboardHistoryRetentionTime;
         public final boolean mClipboardHistoryPinnedFirst;
+        public final boolean mClipboardFoldPinned;
         public final boolean mOneHandedModeEnabled;
         public final int mOneHandedModeGravity;
         public final float mOneHandedModeScale;
@@ -181,6 +182,7 @@ public class SettingsValues {
         public final boolean mSuggestionStripHiddenPerUserSettings;
         public final boolean mSecondaryStripVisible;
         public final int mKeypressVibrationDuration;
+        public final int mKeypressVibrationAmplitude;
         public final float mKeypressSoundVolume;
         public final boolean mAutoCorrectionEnabledPerUserSettings;
         public final boolean mAutoCorrectEnabled;
@@ -313,6 +315,8 @@ public class SettingsValues {
                                 Defaults.PREF_KEY_LONGPRESS_TIMEOUT);
                 mKeypressVibrationDuration = prefs.getInt(Settings.PREF_VIBRATION_DURATION_SETTINGS,
                                 Defaults.PREF_VIBRATION_DURATION_SETTINGS);
+                mKeypressVibrationAmplitude = prefs.getInt(Settings.PREF_VIBRATION_AMPLITUDE_SETTINGS,
+                                Defaults.PREF_VIBRATION_AMPLITUDE_SETTINGS);
                 mKeypressSoundVolume = prefs.getFloat(Settings.PREF_KEYPRESS_SOUND_VOLUME,
                                 Defaults.PREF_KEYPRESS_SOUND_VOLUME);
                 mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
@@ -427,6 +431,8 @@ public class SettingsValues {
                                 Defaults.PREF_CLIPBOARD_HISTORY_RETENTION_TIME);
                 mClipboardHistoryPinnedFirst = prefs.getBoolean(Settings.PREF_CLIPBOARD_HISTORY_PINNED_FIRST,
                                 Defaults.PREF_CLIPBOARD_HISTORY_PINNED_FIRST);
+                mClipboardFoldPinned = prefs.getBoolean(Settings.PREF_CLIPBOARD_FOLD_PINNED,
+                                Defaults.PREF_CLIPBOARD_FOLD_PINNED);
 
                 mOneHandedModeEnabled = Settings.readOneHandedModeEnabled(prefs, isLandscape, mIsSplitKeyboardEnabled);
                 mOneHandedModeGravity = Settings.readOneHandedModeGravity(prefs, isLandscape, mIsSplitKeyboardEnabled);
@@ -617,6 +623,8 @@ public class SettingsValues {
                 sb.append("" + mInputAttributes);
                 sb.append("\n   mKeypressVibrationDuration = ");
                 sb.append("" + mKeypressVibrationDuration);
+                sb.append("\n   mKeypressVibrationAmplitude = ");
+                sb.append("" + mKeypressVibrationAmplitude);
                 sb.append("\n   mKeypressSoundVolume = ");
                 sb.append("" + mKeypressSoundVolume);
                 sb.append("\n   mAutoCorrectEnabled = ");

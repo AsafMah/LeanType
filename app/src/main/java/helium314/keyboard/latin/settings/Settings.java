@@ -16,6 +16,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import helium314.keyboard.latin.utils.CenterCropDrawable;
 import android.view.ContextThemeWrapper;
 import android.view.inputmethod.EditorInfo;
 
@@ -121,6 +122,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SUGGEST_CLIPBOARD_CONTENT = "suggest_clipboard_content";
     public static final String PREF_GESTURE_INPUT = "gesture_input";
     public static final String PREF_VIBRATION_DURATION_SETTINGS = "vibration_duration_settings";
+    public static final String PREF_VIBRATION_AMPLITUDE_SETTINGS = "vibration_amplitude_settings";
     public static final String PREF_KEYPRESS_SOUND_VOLUME = "keypress_sound_volume";
     public static final String PREF_KEY_LONGPRESS_TIMEOUT = "key_longpress_timeout";
     public static final String PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = "enable_emoji_alt_physical_key";
@@ -215,6 +217,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SUGGEST_SCREENSHOTS = "suggest_screenshots";
     public static final String PREF_CLIPBOARD_HISTORY_RETENTION_TIME = "clipboard_history_retention_time";
     public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
+    public static final String PREF_CLIPBOARD_FOLD_PINNED = "clipboard_fold_pinned";
 
     public static final String PREF_ADD_TO_PERSONAL_DICTIONARY = "add_to_personal_dictionary";
     public static final String PREF_NAVBAR_COLOR = "navbar_color";
@@ -256,6 +259,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_LIBRARY_CHECKSUM = "lib_checksum";
     public static final String PREF_SAVE_SUBTYPE_PER_APP = "save_subtype_per_app";
     public static final String PREF_SAVED_APP_SUBTYPE_PREFIX = "saved_app_subtype_";
+    public static final String PREF_DONT_SHOW_SPONSOR_DIALOG = "dont_show_sponsor_dialog";
+    public static final String PREF_LAST_SPONSOR_DIALOG_SHOWN = "last_sponsor_dialog_shown";
 
     private Context mContext;
     private SharedPreferences mPrefs;
@@ -581,7 +586,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         if (!image.isFile())
             return null;
         try {
-            sCachedBackgroundImages[index] = new BitmapDrawable(context.getResources(),
+            sCachedBackgroundImages[index] = new CenterCropDrawable(
                     BitmapFactory.decodeFile(image.getAbsolutePath()));
             return sCachedBackgroundImages[index];
         } catch (Exception e) {

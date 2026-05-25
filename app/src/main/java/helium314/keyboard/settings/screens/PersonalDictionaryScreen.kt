@@ -42,6 +42,7 @@ import helium314.keyboard.latin.common.LocaleUtils.localizedDisplayName
 import helium314.keyboard.settings.DropDownField
 import helium314.keyboard.settings.SearchScreen
 import helium314.keyboard.settings.dialogs.ThreeButtonAlertDialog
+import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import java.util.Locale
 
 @Composable
@@ -49,8 +50,12 @@ fun PersonalDictionaryScreen(
     onClickBack: () -> Unit,
     locale: Locale?
 ) {
-    val words = getAll(locale, LocalContext.current)
+    val ctx = LocalContext.current
+    var refreshTrigger by remember { mutableStateOf(0) }
+    val words = remember(refreshTrigger, locale) { getAll(locale, ctx) }
     var selectedWord: Word? by remember { mutableStateOf(null) }
+    var showClearAllDialog by remember { mutableStateOf(false) }
+
     Box(Modifier.fillMaxSize()) {
         SearchScreen(
             onClickBack = onClickBack,
@@ -64,6 +69,9 @@ fun PersonalDictionaryScreen(
                     )
                 }
             },
+            menu = listOf(
+                stringResource(R.string.clear_all) to { showClearAllDialog = true }
+            ),
             filteredItems = { term ->
                 // we could maybe to this using a query and getting items by position
                 // requires adjusting the SearchScreen, likely not worth the effort
@@ -96,9 +104,29 @@ fun PersonalDictionaryScreen(
         )
     }
     if (selectedWord != null) {
-        EditWordDialog(selectedWord!!, locale) { selectedWord = null }
+        EditWordDialog(selectedWord!!, locale) {
+            selectedWord = null
+            refreshTrigger++
+        }
+    }
+    if (showClearAllDialog) {
+        ConfirmationDialog(
+            onDismissRequest = { showClearAllDialog = false },
+            onConfirmed = {
+                showClearAllDialog = false
+                val resolver = ctx.contentResolver
+                if (locale == null) {
+                    resolver.delete(UserDictionary.Words.CONTENT_URI, "${UserDictionary.Words.LOCALE} is null", null)
+                } else {
+                    resolver.delete(UserDictionary.Words.CONTENT_URI, "${UserDictionary.Words.LOCALE}=?", arrayOf(locale.toString()))
+                }
+                refreshTrigger++
+            },
+            content = { Text(stringResource(R.string.user_dict_clear_all_confirmation)) }
+        )
     }
 }
+
 
 @Composable
 private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> Unit) {

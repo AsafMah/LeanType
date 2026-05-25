@@ -1,2 +1,5 @@
 - Disable non-deterministic baseline profiles for 100% reproducible F-Droid builds
 - Improve reliability of emoji search and layout stability
+- Fix emoticon size scaling and overlapping in recents tab
+- Fix numpad row overlapping on clipboard layout in numpad mode
+- Change clear clipboard toolbar button icon to filled dustbin

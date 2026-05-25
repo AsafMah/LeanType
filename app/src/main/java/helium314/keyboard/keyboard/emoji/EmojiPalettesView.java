@@ -551,6 +551,9 @@ public final class EmojiPalettesView extends LinearLayout
 
         // Listener for input... (Kept same as before)
         bottomRow.setKeyboardActionListener(new KeyboardActionListener() {
+            private int mDeleteSwipeStartSel = -1;
+            private int mCurrentDeleteSwipeStart = -1;
+
             @Override
             public void onCodeInput(int primaryCode, int x, int y, boolean isKeyRepeat) {
                 if (primaryCode == KeyCode.DELETE) {
@@ -576,6 +579,8 @@ public final class EmojiPalettesView extends LinearLayout
 
             @Override
             public void onReleaseKey(int p, boolean w) {
+                mDeleteSwipeStartSel = -1;
+                mCurrentDeleteSwipeStart = -1;
                 mOriginalActionListener.onReleaseKey(p, w);
             }
 
@@ -621,6 +626,8 @@ public final class EmojiPalettesView extends LinearLayout
 
             @Override
             public void onCancelInput() {
+                mDeleteSwipeStartSel = -1;
+                mCurrentDeleteSwipeStart = -1;
             }
 
             @Override
@@ -634,7 +641,22 @@ public final class EmojiPalettesView extends LinearLayout
 
             @Override
             public boolean onHorizontalSpaceSwipe(int s) {
-                return false;
+                Editable text = mSearchBar.getText();
+                if (text == null) return false;
+                int len = text.length();
+                int selStart = mSearchBar.getSelectionStart();
+                int selEnd = mSearchBar.getSelectionEnd();
+                if (selStart < 0 || selEnd < 0) return false;
+
+                boolean rtl = RichInputMethodManager.getInstance().getCurrentSubtype().isRtlSubtype();
+                int steps = rtl ? -s : s;
+
+                int newSel = selStart + steps;
+                if (newSel < 0) newSel = 0;
+                if (newSel > len) newSel = len;
+
+                mSearchBar.setSelection(newSel);
+                return true;
             }
 
             @Override
@@ -653,10 +675,32 @@ public final class EmojiPalettesView extends LinearLayout
 
             @Override
             public void onMoveDeletePointer(int s) {
+                Editable text = mSearchBar.getText();
+                if (text == null) return;
+                if (mDeleteSwipeStartSel == -1) {
+                    mDeleteSwipeStartSel = mSearchBar.getSelectionEnd();
+                    mCurrentDeleteSwipeStart = mDeleteSwipeStartSel;
+                }
+                if (mDeleteSwipeStartSel < 0) return;
+
+                mCurrentDeleteSwipeStart += s;
+                if (mCurrentDeleteSwipeStart < 0) mCurrentDeleteSwipeStart = 0;
+                if (mCurrentDeleteSwipeStart > mDeleteSwipeStartSel) mCurrentDeleteSwipeStart = mDeleteSwipeStartSel;
+
+                mSearchBar.setSelection(mCurrentDeleteSwipeStart, mDeleteSwipeStartSel);
             }
 
             @Override
             public void onUpWithDeletePointerActive() {
+                Editable text = mSearchBar.getText();
+                if (text == null) return;
+                int selStart = mSearchBar.getSelectionStart();
+                int selEnd = mSearchBar.getSelectionEnd();
+                if (selStart >= 0 && selEnd > selStart) {
+                    text.delete(selStart, selEnd);
+                }
+                mDeleteSwipeStartSel = -1;
+                mCurrentDeleteSwipeStart = -1;
             }
 
             @Override

@@ -1390,7 +1390,12 @@ public final class InputLogic {
      */
     private void handleClipboardPaste() {
         final String clipboardContent = mLatinIME.getClipboardHistoryManager().retrieveClipboardContent().toString();
-        if (!clipboardContent.isEmpty()) {
+        if (clipboardContent.isEmpty()) {
+            return;
+        }
+        if (clipboardContent.length() > 1000) {
+            mConnection.performContextMenuAction(android.R.id.paste);
+        } else {
             mLatinIME.onTextInput(clipboardContent);
         }
     }
@@ -3922,6 +3927,34 @@ public final class InputLogic {
         // essentially reverted
         // https://github.com/lineageos/android_packages_inputmethods_LatinIME/commit/ee6de1466bc98e27bd414c9a7451f2aee3f9e721
         // can't find any drawback (performance, neither when setting nor when reading)
+        final boolean isEnabled = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME);
+        if (isEnabled) {
+            final String prefix = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getPrefix(mLatinIME);
+            if (prefix.isEmpty()) {
+                final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(chosenWord, mLatinIME);
+                if (expanded != null) {
+                    mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
+                    mConnection.deleteTextBeforeCursor(chosenWord.length());
+                    mConnection.commitText(expanded, 1);
+                    return;
+                }
+            } else {
+                final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+                if (textBefore != null) {
+                    final String textStr = textBefore.toString();
+                    final String targetSuffix = prefix + chosenWord;
+                    if (textStr.toLowerCase(java.util.Locale.US).endsWith(targetSuffix.toLowerCase(java.util.Locale.US))) {
+                        final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(targetSuffix, mLatinIME);
+                        if (expanded != null) {
+                            mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
+                            mConnection.deleteTextBeforeCursor(prefix.length() + chosenWord.length());
+                            mConnection.commitText(expanded, 1);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
         final CharSequence chosenWordWithSuggestions = getTextWithSuggestionSpan(mLatinIME, chosenWord,
                 mSuggestedWords, getDictionaryFacilitatorLocale());
         if (DebugFlags.DEBUG_ENABLED) {

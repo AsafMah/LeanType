@@ -912,6 +912,14 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         return reloadTextCache();
     }
 
+    public boolean performContextMenuAction(final int actionId) {
+        mIC = mParent.getCurrentInputConnection();
+        if (isConnected()) {
+            return mIC.performContextMenuAction(actionId);
+        }
+        return false;
+    }
+
     public void selectAll() {
         if (!isConnected())
             return;

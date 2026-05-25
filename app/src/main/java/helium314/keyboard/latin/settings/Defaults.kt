@@ -114,6 +114,7 @@ object Defaults {
     const val PREF_SUGGEST_SCREENSHOTS = false
     const val PREF_GESTURE_INPUT = true
     const val PREF_VIBRATION_DURATION_SETTINGS = -1
+    const val PREF_VIBRATION_AMPLITUDE_SETTINGS = -1
     const val PREF_KEYPRESS_SOUND_VOLUME = -0.01f
     const val PREF_KEY_LONGPRESS_TIMEOUT = 300
     const val PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = true
@@ -182,6 +183,7 @@ object Defaults {
     const val PREF_ENABLE_CLIPBOARD_HISTORY = true
     const val PREF_CLIPBOARD_HISTORY_RETENTION_TIME = 15 // minutes
     const val PREF_CLIPBOARD_HISTORY_PINNED_FIRST = true
+    const val PREF_CLIPBOARD_FOLD_PINNED = false
     const val PREF_ADD_TO_PERSONAL_DICTIONARY = true
     @JvmField
     val PREF_NAVBAR_COLOR = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
@@ -222,4 +224,6 @@ object Defaults {
     const val PREF_USER_MORE_COLORS = 0
     const val PREF_USER_ALL_COLORS = ""
     const val PREF_SAVE_SUBTYPE_PER_APP = false
+    const val PREF_DONT_SHOW_SPONSOR_DIALOG = false
+    const val PREF_LAST_SPONSOR_DIALOG_SHOWN = 0L
 }
