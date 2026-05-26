@@ -65,19 +65,33 @@ final class DynamicGridKeyboard extends Keyboard {
         final Key key1 = getTemplateKey(Constants.RECENTS_TEMPLATE_KEY_CODE_1);
         final int horizontalGap = Math.abs(key1.getX() - key0.getX()) - key0.getWidth();
         final float widthScale = determineWidthScale(key0.getWidth() + horizontalGap);
+        int columnsNumVal;
+        int horizontalStepVal;
+        int horizontalGapVal;
         if (categoryId == EmojiCategory.ID_EMOTICONS) {
             // Emoticons need more space, so we use approx half the columns
             final int standardColumns = mBaseWidth / (int) ((key0.getWidth() + horizontalGap) * widthScale);
-            mColumnsNum = Math.max(1, standardColumns / 2);
-            mHorizontalStep = mBaseWidth / mColumnsNum;
-            mHorizontalGap = (int) (horizontalGap * widthScale * 2);
+            columnsNumVal = Math.max(1, standardColumns / 2);
+            horizontalStepVal = mBaseWidth / columnsNumVal;
+            horizontalGapVal = (int) (horizontalGap * widthScale * 2);
         } else {
-            mHorizontalGap = (int) (horizontalGap * widthScale);
-            mHorizontalStep = (int) ((key0.getWidth() + horizontalGap) * widthScale);
-            mColumnsNum = mBaseWidth / mHorizontalStep;
+            horizontalGapVal = (int) (horizontalGap * widthScale);
+            horizontalStepVal = (int) ((key0.getWidth() + horizontalGap) * widthScale);
+            columnsNumVal = mBaseWidth / horizontalStepVal;
         }
-        mVerticalStep = (int) ((key0.getHeight() + mVerticalGap)
+        int verticalStepVal = (int) ((key0.getHeight() + mVerticalGap)
                 / Math.sqrt(Settings.getValues().mKeyboardHeightScale));
+        if (Settings.getValues().mEmojiKeyFit) {
+            final float scale = Settings.getValues().mFontSizeMultiplierEmoji;
+            horizontalGapVal = (int) (horizontalGapVal * scale);
+            horizontalStepVal = (int) (horizontalStepVal * scale);
+            columnsNumVal = Math.max(1, mBaseWidth / horizontalStepVal);
+            verticalStepVal = (int) (verticalStepVal * scale);
+        }
+        mHorizontalGap = horizontalGapVal;
+        mHorizontalStep = horizontalStepVal;
+        mColumnsNum = columnsNumVal;
+        mVerticalStep = verticalStepVal;
         if (spacerWidth > 0)
             setSpacerColumns(spacerWidth);
         mMaxKeyCount = maxKeyCount;
