@@ -653,3 +653,24 @@ The backspace fixes were ready in PR #8, and the user asked to merge them to `ma
 
 ### Open Questions / Next Steps
 - Push the updated shortcuts PR branch.
+
+---
+
+## 2026-05-26 — Sync with upstream LeanType main
+
+### Context
+The issue requested syncing from upstream LeanType (LeanBitLab/HeliboardL), not upstream HeliBoard.
+
+### Actions Taken
+- Repointed `upstream` remote to `https://github.com/LeanBitLab/HeliboardL.git` and fetched `upstream/main`.
+- Verified shared history and divergence between `origin/main` and `upstream/main`.
+- Merged `upstream/main` into `copilot/sync-with-upstream`.
+- Reviewed merged file changes (`DynamicGridKeyboard.java` and `.gitignore`).
+- Attempted to run `./gradlew compileOfflineRunTestsKotlin --no-daemon` for validation.
+
+### Decisions Made
+- Used a direct merge commit to preserve upstream LeanType history instead of cherry-picking.
+- Kept upstream's emoji grid scaling update as-is because it merged cleanly and is isolated.
+
+### Open Questions / Next Steps
+- Gradle validation is blocked in this environment because `dl.google.com` is unreachable during dependency resolution.
