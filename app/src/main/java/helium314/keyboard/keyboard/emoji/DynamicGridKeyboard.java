@@ -65,9 +65,9 @@ final class DynamicGridKeyboard extends Keyboard {
         final Key key1 = getTemplateKey(Constants.RECENTS_TEMPLATE_KEY_CODE_1);
         final int horizontalGap = Math.abs(key1.getX() - key0.getX()) - key0.getWidth();
         final float widthScale = determineWidthScale(key0.getWidth() + horizontalGap);
-        int columnsNumVal;
-        int horizontalStepVal;
-        int horizontalGapVal;
+        int columnsNumVal = 1;
+        int horizontalStepVal = 1;
+        int horizontalGapVal = 0;
         if (categoryId == EmojiCategory.ID_EMOTICONS) {
             // Emoticons need more space, so we use approx half the columns
             final int standardColumns = mBaseWidth / (int) ((key0.getWidth() + horizontalGap) * widthScale);
@@ -84,7 +84,7 @@ final class DynamicGridKeyboard extends Keyboard {
         if (Settings.getValues().mEmojiKeyFit) {
             final float scale = Settings.getValues().mFontSizeMultiplierEmoji;
             horizontalGapVal = (int) (horizontalGapVal * scale);
-            horizontalStepVal = (int) (horizontalStepVal * scale);
+            horizontalStepVal = Math.max(1, (int) (horizontalStepVal * scale));
             columnsNumVal = Math.max(1, mBaseWidth / horizontalStepVal);
             verticalStepVal = (int) (verticalStepVal * scale);
         }
