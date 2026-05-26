@@ -38,6 +38,7 @@ import helium314.keyboard.latin.define.DebugFlags;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.utils.KtxKt;
+import helium314.keyboard.latin.utils.LayoutType;
 import helium314.keyboard.latin.utils.Log;
 
 import java.util.ArrayList;
@@ -210,6 +211,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     // true if a keyswipe gesture is enabled and warranted.
     private boolean mKeySwipeAllowed = false;
     private static boolean sInKeySwipe = false;
+    private boolean mShortcutTopRowSwipeAllowed = false;
+    private boolean mShortcutBottomRowSwipeAllowed = false;
+    private boolean mInShortcutRowSwipe = false;
+    private static boolean sInShortcutRowSwipe = false;
 
     // Touchpad mode for cursor control
     public static boolean sPersistentTouchpadModeActive = false;
@@ -293,6 +298,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     public static void cancelAllPointerTrackers() {
         sPointerTrackerQueue.cancelAllPointerTrackers();
+        sInShortcutRowSwipe = false;
         // Two-thumb typing (#1.2): drop any pending grace-period commit during teardown so
         // the deferred runnable doesn't fire against a possibly-disposed view. If a commit
         // was indeed pending, the only thing keeping {@code sInGesture} true was the grace
@@ -894,7 +900,8 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         // detection is
         // disabled when the key is repeating.
         mIsDetectingGesture = (mKeyboard != null) && mKeyboard.mId.isAlphabetKeyboard()
-                && key != null && !key.isModifier() && !mKeySwipeAllowed && !sInKeySwipe;
+                && key != null && !key.isModifier() && !mKeySwipeAllowed && !sInKeySwipe
+                && !sInShortcutRowSwipe;
         if (mIsDetectingGesture) {
             // Combining-mode tap seeding: if the user just tapped a letter within the
             // (base + tap-extra) combining grace window, prepend that tap's position+time as
@@ -957,6 +964,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             mPopupKeysPanel.dismissPopupKeysPanel();
             mPopupKeysPanel = null;
         }
+        if (mInShortcutRowSwipe) {
+            mInShortcutRowSwipe = false;
+            sInShortcutRowSwipe = false;
+        }
     }
 
     private void onDownEventInternal(final int x, final int y, final long eventTime) {
@@ -975,6 +986,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             mKeySwipeAllowed = true;
             sInKeySwipe = true;
         }
+        mShortcutTopRowSwipeAllowed = isShortcutRowSource(key, true);
+        mShortcutBottomRowSwipeAllowed = isShortcutRowSource(key, false);
+        mInShortcutRowSwipe = false;
         mKeyboardLayoutHasBeenChanged = false;
         mIsTrackingForActionDisabled = false;
         resetKeySelectionByDraggingFinger();
@@ -1032,7 +1046,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     private void onGestureMoveEvent(final int x, final int y, final long eventTime,
             final boolean isMajorEvent, final Key key) {
-        if (!mIsDetectingGesture || sInKeySwipe) {
+        if (!mIsDetectingGesture || sInKeySwipe || sInShortcutRowSwipe) {
             return;
         }
         final boolean onValidArea = mBatchInputArbiter.addMoveEventPoint(
@@ -1072,6 +1086,20 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return;
         }
 
+        if (isShowingPopupKeysPanel()) {
+            final int translatedX = mPopupKeysPanel.translateX(x);
+            final int translatedY = mPopupKeysPanel.translateY(y);
+            mPopupKeysPanel.onMoveEvent(translatedX, translatedY, mPointerId, eventTime);
+            onMoveKey(x, y);
+            if (mIsInSlidingKeyInput) {
+                sDrawingProxy.showSlidingKeyInputPreview(this);
+            }
+            return;
+        }
+        if (tryStartShortcutRowSwipe(x, y, eventTime)) {
+            return;
+        }
+
         if (sGestureEnabler.shouldHandleGesture() && me != null) {
             // Add historical points to gesture path.
             final int pointerIndex = me.findPointerIndex(mPointerId);
@@ -1082,17 +1110,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 final long historicalTime = me.getHistoricalEventTime(h);
                 onGestureMoveEvent(historicalX, historicalY, historicalTime, false, null);
             }
-        }
-
-        if (isShowingPopupKeysPanel()) {
-            final int translatedX = mPopupKeysPanel.translateX(x);
-            final int translatedY = mPopupKeysPanel.translateY(y);
-            mPopupKeysPanel.onMoveEvent(translatedX, translatedY, mPointerId, eventTime);
-            onMoveKey(x, y);
-            if (mIsInSlidingKeyInput) {
-                sDrawingProxy.showSlidingKeyInputPreview(this);
-            }
-            return;
         }
         onMoveEventInternal(x, y, eventTime);
     }
@@ -1322,6 +1339,66 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
     }
 
+    private boolean isShortcutRowSource(final Key key, final boolean topRow) {
+        final SettingsValues sv = Settings.getValues();
+        if (!sv.mShortcutRowsEnabled
+                || (topRow && !sv.mShortcutTopRowEnabled)
+                || (!topRow && !sv.mShortcutBottomRowEnabled)
+                || key == null || mKeyboard == null || key.isSpacer() || !key.isEnabled()
+                || key.isModifier() || isSwiper(key.getCode())) {
+            return false;
+        }
+        final int sourceY = key.getY();
+        boolean foundEligibleRow = false;
+        int targetY = topRow ? Integer.MAX_VALUE : Integer.MIN_VALUE;
+        for (final Key candidate : mKeyboard.getSortedKeys()) {
+            if (candidate.isSpacer() || !candidate.isEnabled() || candidate.isModifier()
+                    || isSwiper(candidate.getCode())
+                    || candidate.getBackgroundType() != Key.BACKGROUND_TYPE_NORMAL) {
+                continue;
+            }
+            foundEligibleRow = true;
+            targetY = topRow ? Math.min(targetY, candidate.getY()) : Math.max(targetY, candidate.getY());
+        }
+        return foundEligibleRow && sourceY == targetY;
+    }
+
+    private boolean tryStartShortcutRowSwipe(final int x, final int y, final long eventTime) {
+        if (mInShortcutRowSwipe || isShowingPopupKeysPanel() || sInGesture || sInKeySwipe
+                || sInShortcutRowSwipe || mCurrentKey == null) {
+            return mInShortcutRowSwipe;
+        }
+        final int dX = x - mStartX;
+        final int dY = y - mStartY;
+        final LayoutType layoutType;
+        final boolean belowSourceKey;
+        if (mShortcutTopRowSwipeAllowed && dY <= -sPointerStep && abs(dY) > abs(dX)) {
+            layoutType = LayoutType.SHORTCUT_TOP;
+            belowSourceKey = false;
+        } else if (mShortcutBottomRowSwipeAllowed && dY >= sPointerStep && abs(dY) > abs(dX)) {
+            layoutType = LayoutType.SHORTCUT_BOTTOM;
+            belowSourceKey = true;
+        } else {
+            return false;
+        }
+
+        final PopupKeysPanel popupKeysPanel = sDrawingProxy.showShortcutRowKeyboard(
+                mCurrentKey, this, layoutType, belowSourceKey);
+        if (popupKeysPanel == null) {
+            return false;
+        }
+        sTimerProxy.cancelKeyTimersOf(this);
+        mIsDetectingGesture = false;
+        setReleasedKeyGraphics(mCurrentKey, true);
+        final int translatedX = popupKeysPanel.translateX(x);
+        final int translatedY = popupKeysPanel.translateY(y);
+        popupKeysPanel.onDownEvent(translatedX, translatedY, mPointerId, eventTime);
+        mPopupKeysPanel = popupKeysPanel;
+        mInShortcutRowSwipe = true;
+        sInShortcutRowSwipe = true;
+        return true;
+    }
+
     private void onMoveEventInternal(final int x, final int y, final long eventTime) {
         final Key oldKey = mCurrentKey;
 
@@ -1412,7 +1489,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         // Release the last pressed key.
         setReleasedKeyGraphics(currentKey, true);
 
-        if (mInHorizontalSwipe && currentKey.getCode() == KeyCode.DELETE) {
+        if (currentKey != null && mInHorizontalSwipe && currentKey.getCode() == KeyCode.DELETE) {
             sListener.onUpWithDeletePointerActive();
         }
 
@@ -1423,6 +1500,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 mPopupKeysPanel.onUpEvent(translatedX, translatedY, mPointerId, eventTime);
             }
             dismissPopupKeysPanel();
+            if (mInShortcutRowSwipe) {
+                mInShortcutRowSwipe = false;
+                sInShortcutRowSwipe = false;
+            }
             if (isInSlidingKeyInput)
                 callListenerOnFinishSlidingInput();
             return;
@@ -1603,6 +1684,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         setReleasedKeyGraphics(mCurrentKey, true);
         resetKeySelectionByDraggingFinger();
         dismissPopupKeysPanel();
+        if (mInShortcutRowSwipe) {
+            mInShortcutRowSwipe = false;
+            sInShortcutRowSwipe = false;
+        }
     }
 
     private boolean isMajorEnoughMoveToBeOnNewKey(final int x, final int y, final long eventTime,

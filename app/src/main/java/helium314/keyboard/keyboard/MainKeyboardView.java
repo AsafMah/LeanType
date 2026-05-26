@@ -64,6 +64,7 @@ import helium314.keyboard.latin.settings.Defaults;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LanguageOnSpacebarUtils;
+import helium314.keyboard.latin.utils.LayoutType;
 import helium314.keyboard.latin.utils.Log;
 import helium314.keyboard.latin.utils.ToolbarKey;
 import helium314.keyboard.latin.utils.TypefaceUtils;
@@ -608,6 +609,12 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     @Nullable
     public PopupKeysPanel showPopupKeysKeyboard(@NonNull final Key key,
             @NonNull final PointerTracker tracker) {
+        return showPopupKeysKeyboard(key, tracker, false);
+    }
+
+    @Nullable
+    private PopupKeysPanel showPopupKeysKeyboard(@NonNull final Key key,
+            @NonNull final PointerTracker tracker, final boolean belowSourceKey) {
         final PopupKeySpec[] popupKeys = key.getPopupKeys();
         if (popupKeys == null) {
             return null;
@@ -657,9 +664,28 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         // aligned with the bottom edge of the visible part of the key preview.
         // {@code mPreviewVisibleOffset} has been set appropriately in
         // {@link KeyboardView#showKeyPreview(PointerTracker)}.
-        final int pointY = key.getY() + mKeyPreviewDrawParams.getVisibleOffset();
+        final int pointY = belowSourceKey
+                ? key.getY() + key.getHeight() + container.getMeasuredHeight()
+                : key.getY() + mKeyPreviewDrawParams.getVisibleOffset();
         popupKeysKeyboardView.showPopupKeysPanel(this, this, pointX, pointY, mKeyboardActionListener);
         return popupKeysKeyboardView;
+    }
+
+    @Override
+    @Nullable
+    public PopupKeysPanel showShortcutRowKeyboard(@NonNull final Key key,
+            @NonNull final PointerTracker tracker, @NonNull final LayoutType layoutType,
+            final boolean belowSourceKey) {
+        final Keyboard keyboard = getKeyboard();
+        if (keyboard == null) {
+            return null;
+        }
+        final Key popupParentKey = ShortcutRowKeys.createPopupParentKey(
+                getContext(), key, keyboard, layoutType);
+        if (popupParentKey == null) {
+            return null;
+        }
+        return showPopupKeysKeyboard(popupParentKey, tracker, belowSourceKey);
     }
 
     public boolean isInDraggingFinger() {

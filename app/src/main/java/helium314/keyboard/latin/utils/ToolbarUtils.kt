@@ -33,14 +33,12 @@ import java.util.EnumMap
 import java.util.Locale
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.RectF
-import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.graphics.PixelFormat
-import android.graphics.Color
-import android.graphics.ColorFilter
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.RectF
+import android.graphics.Typeface
+import android.graphics.ColorFilter
 import android.content.res.ColorStateList
 
 fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
