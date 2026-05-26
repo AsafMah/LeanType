@@ -74,3 +74,5 @@ cline_docs/
 prompt_history.json
 chat.json
 docs/superpowers/
+.agents
+.antigravitycli/
