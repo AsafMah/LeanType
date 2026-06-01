@@ -1,29 +1,29 @@
-ctrl
-alt
-esc
-tab
-del
-redo
-up
-page_up page_start
-full_left word_left
-autospace
+% ctrl
+\ alt
+| esc
+= tab
+[ del
+] redo
+< up page_up
+> page_down page_end
+{ full_left page_start
+} autospace
 
-select_all
-select_word
-autocorrect
-page_down page_end
-full_right word_right
-left word_left
-down
-right word_right
-one_handed
-clipboard_search
+@ select_all
+# select_word
+$$$ autocorrect
+_ full_right
+& clipboard
+- left word_left
++ down
+( right word_right
+) one_handed
+/ clipboard_search
 
-undo
-cut
-copy
-paste
-clipboard
-incognito
-voice
+* undo
+" cut
+' copy
+: paste
+; clipboard
+! incognito
+? voice
