@@ -1,0 +1,7 @@
+- Fix swipe-to-delete clipboard crash & improve pinned section styling
+- Fix double-space period countdown cancellation on Korean & combiner layouts
+- Support custom "Clear clipboard" toolbar key icon styles (bin, sweep, slanted, legacy)
+- Support instant keyboard icon updates upon settings modification without restart
+- Support custom drawable picker selection highlights in Customize Icons settings grid
+- Support quick clear clipboard items on long press without confirmation dialog
+- Clean control characters from Russian localization resource files

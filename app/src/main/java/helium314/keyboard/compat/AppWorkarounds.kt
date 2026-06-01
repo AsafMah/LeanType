@@ -10,7 +10,10 @@ object AppWorkarounds {
         return when (packageName) {
             "org.mozilla.fennec_fdroid", "org.mozilla.fenix", "org.mozilla.firefox_beta", "org.mozilla.focus",
             "org.mozilla.klar", "org.mozilla.firefox", "org.ironfoxoss.ironfox", "net.waterfox.android.release",
-            "io.github.forkmaintainers.iceraven", "com.zen.web.tools.browser" -> {
+            "io.github.forkmaintainers.iceraven", "com.zen.web.tools.browser",
+            "com.android.chrome", "org.chromium.chrome", "com.chrome.beta", "com.chrome.dev", "com.chrome.canary",
+            "com.brave.browser", "com.vivaldi.browser", "com.kiwibrowser.browser", "com.opera.browser",
+            "mark.via.gp", "com.microsoft.emmx", "org.bromite.bromite", "com.duckduckgo.mobile.android" -> {
                 // Firefox and forks (assuming all of them) don't set these flags, so we want to force them for most text fields on websites
                 // missing TYPE_TEXT_VARIATION_WEB_EDIT_TEXT is strange, considering all text fields on web pages should set it
                 // missing TYPE_TEXT_FLAG_NO_SUGGESTIONS is horrible, because JS does not interact properly with composing region

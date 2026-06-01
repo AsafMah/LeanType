@@ -47,6 +47,9 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     private var initialSubtype: InputMethodSubtype? = null
     private var subtypeSwitchCount = 0
 
+    // space swipe state
+    private var isSpaceSwipeActive = false
+
     override fun onPressKey(primaryCode: Int, repeatCount: Int, isSinglePointer: Boolean, hapticEvent: HapticEvent) {
         metaOnPressKey(primaryCode)
         keyboardSwitcher.onPressKey(primaryCode, isSinglePointer, latinIME.currentAutoCapsState, latinIME.currentRecapitalizeState)
@@ -226,6 +229,10 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     override fun onEndSpaceSwipe(){
         initialSubtype = null
         subtypeSwitchCount = 0
+        if (isSpaceSwipeActive) {
+            isSpaceSwipeActive = false
+            inputLogic.restartSuggestionsOnWordTouchedByCursor(settings.current)
+        }
     }
 
     override fun toggleNumpad(withSliding: Boolean, forceReturnToAlpha: Boolean): Boolean {
@@ -318,6 +325,25 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
         // for RTL languages we want to invert pointer movement
         val rtl = RichInputMethodManager.getInstance().currentSubtype.isRtlSubtype
         val steps = if (rtl) -rawSteps else rawSteps
+
+        // Web editors (Chromium, Firefox, etc.) handle direct setSelection badly during fast swipes,
+        // often resulting in focus loss, caret hiding, or composition desynchronization.
+        // Fall back to sending simulated arrow keys, which is fast, asynchronous, and robust.
+        val isWebEditText = (InputType.TYPE_MASK_VARIATION and Settings.getValues().mInputAttributes.mInputType) == InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
+        if (isWebEditText) {
+            val code = if (steps < 0) {
+                gestureMoveBackHaptics()
+                if (rtl) KeyCode.ARROW_RIGHT else KeyCode.ARROW_LEFT
+            } else {
+                gestureMoveForwardHaptics(true)
+                if (rtl) KeyCode.ARROW_LEFT else KeyCode.ARROW_RIGHT
+            }
+            repeat(abs(steps)) {
+                onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+            }
+            return true
+        }
+
         val moveSteps: Int
         if (steps < 0) {
             val text = connection.getTextBeforeCursor(-steps * 4, 0) ?: return false
@@ -374,10 +400,12 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
             return true
         }
 
-        inputLogic.finishInput()
+        if (!isSpaceSwipeActive) {
+            isSpaceSwipeActive = true
+            inputLogic.finishInput()
+        }
         val newPosition = connection.expectedSelectionStart + moveSteps
         connection.setSelection(newPosition, newPosition)
-        inputLogic.restartSuggestionsOnWordTouchedByCursor(settings.current)
         return true
     }
 

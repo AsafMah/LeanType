@@ -66,6 +66,7 @@ public class SettingsValues {
         private final boolean mShowsLanguageSwitchKey;
         public final boolean mShowsNumberRow;
         public final boolean mShowsNumberRowInSymbols;
+        public final boolean mCompactNumberRowInSymbols;
         public final boolean mLocalizedNumberRow;
         public final boolean mShowNumberRowHints;
         public final boolean mShowsHints;
@@ -246,6 +247,8 @@ public class SettingsValues {
                 mShowsNumberRow = prefs.getBoolean(Settings.PREF_SHOW_NUMBER_ROW, Defaults.PREF_SHOW_NUMBER_ROW);
                 mShowsNumberRowInSymbols = prefs.getBoolean(Settings.PREF_SHOW_NUMBER_ROW_IN_SYMBOLS,
                                 Defaults.PREF_SHOW_NUMBER_ROW_IN_SYMBOLS);
+                mCompactNumberRowInSymbols = prefs.getBoolean(Settings.PREF_COMPACT_NUMBER_ROW_IN_SYMBOLS,
+                                Defaults.PREF_COMPACT_NUMBER_ROW_IN_SYMBOLS);
                 mLocalizedNumberRow = SubtypeUtilsKt.getHasLocalizedNumberRow(selectedSubtype, prefs);
                 mShowNumberRowHints = prefs.getBoolean(Settings.PREF_SHOW_NUMBER_ROW_HINTS,
                                 Defaults.PREF_SHOW_NUMBER_ROW_HINTS);

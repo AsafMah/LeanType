@@ -37,17 +37,30 @@ class ClipboardHistoryRecyclerView @JvmOverloads constructor(
     private val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
         override fun onMove(recyclerView: RecyclerView, viewHolder: ViewHolder, target: ViewHolder) = false
         override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: ViewHolder): Int {
-            if (historyManager?.canRemove(viewHolder.absoluteAdapterPosition) == false)
+            val position = viewHolder.absoluteAdapterPosition
+            val entry = (adapter as? ClipboardAdapter)?.getItem(position) ?: return 0
+            val cacheIndex = historyManager?.getClips()?.indexOfFirst { it.id == entry.id } ?: -1
+            if (cacheIndex == -1 || historyManager?.canRemove(cacheIndex) == false)
                 return 0 // block swipe for pinned items
             return super.getSwipeDirs(recyclerView, viewHolder)
         }
         override fun onSwiped(viewHolder: ViewHolder, dir: Int) {
             val position = viewHolder.absoluteAdapterPosition
-            val deletedEntry = historyManager?.removeEntry(position)
-            adapter?.notifyItemRemoved(position)
-            if (deletedEntry != null) {
-                showUndoBar(deletedEntry)
+            val entry = (adapter as? ClipboardAdapter)?.getItem(position)
+            if (entry != null) {
+                val cacheIndex = historyManager?.getClips()?.indexOfFirst { it.id == entry.id } ?: -1
+                if (cacheIndex != -1) {
+                    val deletedEntry = historyManager?.removeEntry(cacheIndex)
+                    if (deletedEntry != null) {
+                        (adapter as? ClipboardAdapter)?.removeDisplayItem(position)
+                        adapter?.notifyItemRemoved(position)
+                        showUndoBar(deletedEntry)
+                    }
+                    return
+                }
             }
+            // fallback in case entry or index was invalid
+            adapter?.notifyItemChanged(position)
         }
     }).attachToRecyclerView(this)
 

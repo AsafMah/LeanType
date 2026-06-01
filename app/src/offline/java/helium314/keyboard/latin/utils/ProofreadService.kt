@@ -56,7 +56,7 @@ class ProofreadService(private val context: Context) {
 
         // Smart Unload Logic
         private var unloadJob: Job? = null
-        private val scope = CoroutineScope(Dispatchers.IO)
+        private val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
         private const val UNLOAD_DELAY_MS = 10 * 60 * 1000L // 10 minutes
 
         @Synchronized
@@ -126,7 +126,7 @@ class ProofreadService(private val context: Context) {
                 modelDir!!.mkdirs()
 
                 // Initialize tokenizer
-                tokenizer = T5Tokenizer(context)
+                tokenizer = T5Tokenizer()
                 if (!tokenizerPath.isNullOrBlank()) {
                     val tokenizerFile = copyUriToCache(context, Uri.parse(tokenizerPath), "tokenizer.json", modelDir!!)
                     if (tokenizerFile != null) {

@@ -660,7 +660,7 @@ public final class InputLogic {
 
         // TODO: Consolidate the double-space period timer, mLastKeyTime, and the space
         // state.
-        if (processedEvent.getCodePoint() != Constants.CODE_SPACE) {
+        if (processedEvent.getCodePoint() != Constants.CODE_SPACE && event.getCodePoint() != Constants.CODE_SPACE) {
             cancelDoubleSpacePeriodCountdown();
         }
 

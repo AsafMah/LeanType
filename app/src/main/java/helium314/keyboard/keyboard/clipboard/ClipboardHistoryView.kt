@@ -680,6 +680,12 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val tag = view.tag
         if (tag is ToolbarKey) {
             AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, this, HapticEvent.KEY_LONG_PRESS)
+            val code = getCodeForToolbarKey(tag)
+            if (code == KeyCode.CLIPBOARD_CLEAR_HISTORY) {
+                dismissConfirmationBar()
+                clipboardHistoryManager.clearHistory()
+                return true
+            }
             val longClickCode = getCodeForToolbarKeyLongClick(tag)
             if (longClickCode != KeyCode.UNSPECIFIED) {
                 keyboardActionListener.onCodeInput(

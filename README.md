@@ -16,18 +16,19 @@ This fork adds **optional AI-powered features** using Gemini, Groq, and OpenAI-c
 
 ## What's New in LeanType
 
-- **[🤖 Multi-Provider AI](docs/FEATURES.md#supported-ai-providers)** - Proofread using **Gemini**, **Groq** (Llama 3, Mixtral), or **OpenAI-compatible** providers.
+- **[🤖 Multi-Provider AI](docs/FEATURES.md#supported-ai-providers)** - Proofread using **Gemini**, **Groq** (Llama 3, Mixtral), or **OpenAI-compatible** providers. Supports dynamic fetching of latest models directly from providers.
 - **[🛡️ Offline AI](docs/FEATURES.md#5-offline-proofreading-privacy-focused)** - Private, on-device proofreading and translation using ONNX models (Offline build only).
-- **🌐 AI Translation** - Translate selected text directly using your chosen AI provider.
-- **[🧠 Custom AI Keys](docs/FEATURES.md#4-custom-ai-keys--keywords)** - Assign custom prompts and personas (#editor, #proofread) to 10 customizable toolbar keys.
-- **🪟 Floating Keyboard** - Detach the keyboard into a draggable window for seamless multitasking.
+- **🌐 AI Translation** - Translate selected text directly using your chosen AI provider, with a separate model selector.
+- **[🧠 Custom AI Keys](docs/FEATURES.md#4-custom-ai-keys--keywords)** - Assign custom prompts, personas (#editor, #proofread), and custom text labels/tags (showing as themed capsules) to 10 customizable toolbar keys.
+- **📝 Text Expander** - Built-in expansion tool supporting custom shortcuts and dynamic template variables (date, time, clipboard, custom placeholders).
+- **🪟 Floating Keyboard** - Detach the keyboard into a draggable window for seamless multitasking. Includes a persistent mode option to keep the keyboard floating.
 - **⌨️ Dual Toolbar / Split Suggestions** - Option to split suggestions and toolbar for easier access.
-- **🖱️ Touchpad Mode** - Swipe spacebar up to toggle touchpad; custom sensitivity controls.
+- **🖱️ Touchpad Mode** - Swipe spacebar up to toggle touchpad with custom sensitivity controls, including full-screen laptop-style touchpad mode.
 - **🎨 Modern UI** - "Squircle" key backgrounds, refined icons, and polished aesthetics.
 - **🔄 Google Dictionary Import** - Easily import your personal dictionary words.
 - **⚙️ Enhanced Customization** - Force auto-capitalization toggle, reorganized settings, and more.
 - **🕵️ Clear Incognito Mode** - Distinct "Hat & Glasses" icon for clear visibility.
-- **🔍 Clipboard Search & Undo** - Search through your clipboard history directly from the toolbar, and undo accidental item deletions.
+- **🔍 Clipboard Search & Undo** - Search through your clipboard history directly from the toolbar, undo accidental item deletions, and fold/collapse pinned items by default to save space.
 - **📸 Screenshot Suggestion & Clipboard** - Suggests recently taken screenshots for quick sharing via the suggestion strip and saves them to your clipboard history.
 - **🔎 Emoji Search** - Search for emojis by name. *Requires loading an Emoji Dictionary.*
 - **🔒 Privacy Choices** - Choose **Standard** (Opt-in AI), **Offline** (Hard-disabled network, offline model load), or **Offline Lite** (Minimalist, no AI) versions.
@@ -69,9 +70,6 @@ This fork adds **optional AI-powered features** using Gemini, Groq, and OpenAI-c
     </td>
   </tr>
 </table>
-
-> [!NOTE]
-> F-Droid is currently stuck on v3.7.6 due to baseline profile issues. For the latest version, use GitHub or Obtainium.
 
 ### 📦 Choose Your Version
 

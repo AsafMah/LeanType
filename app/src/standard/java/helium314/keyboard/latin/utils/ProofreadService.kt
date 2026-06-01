@@ -103,6 +103,8 @@ class ProofreadService(private val context: Context) {
         val url = URL(urlString)
         val connection = url.openConnection() as HttpURLConnection
         return try {
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
             connection.requestMethod = "GET"
             connection.setRequestProperty("User-Agent", "LeanType/1.0")
             connection.connect()
@@ -133,6 +135,8 @@ class ProofreadService(private val context: Context) {
         val url = URL(context.getString(R.string.config_groq_models_endpoint))
         val connection = url.openConnection() as HttpURLConnection
         return try {
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
             connection.requestMethod = "GET"
             connection.setRequestProperty("Authorization", "Bearer $token")
             connection.setRequestProperty("User-Agent", "LeanType/1.0")

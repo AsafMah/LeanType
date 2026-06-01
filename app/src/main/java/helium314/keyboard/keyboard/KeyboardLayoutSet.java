@@ -87,6 +87,7 @@ public final class KeyboardLayoutSet {
         boolean mDeviceLocked;
         boolean mNumberRowEnabled;
         boolean mNumberRowInSymbols;
+        boolean mCompactNumberRowInSymbols;
         boolean mLanguageSwitchKeyEnabled;
         boolean mEmojiKeyEnabled;
         boolean mOneHandedModeEnabled;
@@ -261,6 +262,11 @@ public final class KeyboardLayoutSet {
 
         public Builder setNumberRowInSymbolsEnabled(final boolean enabled) {
             mParams.mNumberRowInSymbols = enabled;
+            return this;
+        }
+
+        public Builder setCompactNumberRowInSymbolsEnabled(final boolean enabled) {
+            mParams.mCompactNumberRowInSymbols = enabled;
             return this;
         }
 

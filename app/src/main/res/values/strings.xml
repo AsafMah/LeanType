@@ -326,6 +326,14 @@
     <!-- Preferences item for showing pinned clipboard items first -->
     <string name="clipboard_history_pinned_first">Show pinned items on top</string>
     <string name="clipboard_fold_pinned">Fold pinned items by default</string>
+    <string name="clear_clipboard_icon">Clear clipboard icon</string>
+    <string name="clear_clipboard_icon_summary">Select the icon style for the clear clipboard button</string>
+    <string name="clear_clipboard_icon_bin">Trash bin</string>
+    <string name="clear_clipboard_icon_sweep">Sweep / Clear all</string>
+    <string name="clear_clipboard_icon_sweep_slanted">Slanted lines</string>
+    <string name="clear_clipboard_icon_clipboard_slash">Outline clipboard with slash</string>
+    <string name="clear_clipboard_icon_legacy">Classic clipboard</string>
+    <string name="clipboard_pinned">Pinned</string>
     <!-- Hint for clipboard search bar -->
     <string name="clipboard_search_hint">Search clips...</string>
     <!-- Text for empty clipboard state -->
@@ -450,6 +458,10 @@
     <string name="number_row_summary">Always show number row</string>
     <!-- Title of the setting to replace the top row in symbols layout with number row -->
     <string name="number_row_in_symbols">Show number row in symbols view</string>
+    <!-- Title of the setting to replace the top row in symbols layout with number row -->
+    <string name="compact_number_row_in_symbols">Compact symbols number row</string>
+    <!-- Description of the setting to replace the top row in symbols layout with number row -->
+    <string name="compact_number_row_in_symbols_summary">Replace first row of symbols instead of adding a separate row</string>
     <!-- Title of the setting to localize number row -->
     <string name="localized_number_row">Localize number row</string>
     <!-- Description of the settings to localize number row -->

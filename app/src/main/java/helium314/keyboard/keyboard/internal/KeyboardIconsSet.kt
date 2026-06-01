@@ -27,8 +27,26 @@ class KeyboardIconsSet private constructor() {
             KeyboardTheme.STYLE_ROUNDED -> keyboardIconsRounded
             else -> keyboardIconsMaterial
         }
+        val clearClipboardIconPref = prefs.getString(Settings.PREF_CLEAR_CLIPBOARD_ICON, Defaults.PREF_CLEAR_CLIPBOARD_ICON) ?: Defaults.PREF_CLEAR_CLIPBOARD_ICON
+        val clearClipboardResId = when (clearClipboardIconPref) {
+            "legacy" -> when (iconStyle) {
+                KeyboardTheme.STYLE_HOLO -> R.drawable.sym_keyboard_clear_clipboard_holo
+                KeyboardTheme.STYLE_ROUNDED -> R.drawable.sym_keyboard_clear_clipboard_rounded
+                else -> R.drawable.sym_keyboard_clear_clipboard_lxx
+            }
+            "sweep" -> R.drawable.ic_clear_all
+            "sweep_slanted" -> R.drawable.ic_clear_all_slanted
+            "clipboard_slash" -> R.drawable.ic_clipboard_slash
+            else -> when (iconStyle) {
+                KeyboardTheme.STYLE_ROUNDED -> R.drawable.ic_bin_rounded
+                else -> R.drawable.ic_bin
+            }
+        }
+        val baseIds = defaultIds.toMutableMap().apply {
+            put(ToolbarKey.CLEAR_CLIPBOARD.name.lowercase(Locale.US), clearClipboardResId)
+        }
         val overrideIds = customIconIds(context, prefs)
-        val ids = if (overrideIds.isEmpty()) defaultIds else defaultIds + overrideIds
+        val ids = if (overrideIds.isEmpty()) baseIds else baseIds + overrideIds
         if (!needsReload && ids == iconIds) return
         iconIds = ids
         iconsByName.clear()

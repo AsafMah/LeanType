@@ -75,4 +75,5 @@ prompt_history.json
 chat.json
 docs/superpowers/
 .agents
+.kilo/
 .antigravitycli/

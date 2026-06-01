@@ -946,6 +946,11 @@ public final class RichInputConnection implements PrivateCommandPerformer {
     }
 
     public void copyText(final boolean getSelection) {
+        if (getSelection && hasSelection()) {
+            if (performContextMenuAction(android.R.id.copy)) {
+                return;
+            }
+        }
         CharSequence text = null;
         if (getSelection) {
             // copy selected text, and if nothing is selected copy the whole text

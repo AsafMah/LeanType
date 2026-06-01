@@ -73,6 +73,9 @@ fun PreferencesScreen(
             Settings.PREF_SHOW_NUMBER_ROW_HINTS else null,
         if (!prefs.getBoolean(Settings.PREF_SHOW_NUMBER_ROW, Defaults.PREF_SHOW_NUMBER_ROW))
             Settings.PREF_SHOW_NUMBER_ROW_IN_SYMBOLS else null,
+        if (!prefs.getBoolean(Settings.PREF_SHOW_NUMBER_ROW, Defaults.PREF_SHOW_NUMBER_ROW)
+            && prefs.getBoolean(Settings.PREF_SHOW_NUMBER_ROW_IN_SYMBOLS, Defaults.PREF_SHOW_NUMBER_ROW_IN_SYMBOLS))
+            Settings.PREF_COMPACT_NUMBER_ROW_IN_SYMBOLS else null,
         Settings.PREF_SHOW_LANGUAGE_SWITCH_KEY,
         Settings.PREF_LANGUAGE_SWITCH_KEY,
         Settings.PREF_SHOW_EMOJI_KEY,
@@ -81,7 +84,8 @@ fun PreferencesScreen(
         Settings.PREF_ENABLE_CLIPBOARD_HISTORY,
         if (clipboardHistoryEnabled) Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME else null,
         if (clipboardHistoryEnabled) Settings.PREF_CLIPBOARD_HISTORY_PINNED_FIRST else null,
-        if (clipboardHistoryEnabled) Settings.PREF_CLIPBOARD_FOLD_PINNED else null
+        if (clipboardHistoryEnabled) Settings.PREF_CLIPBOARD_FOLD_PINNED else null,
+        if (clipboardHistoryEnabled) Settings.PREF_CLEAR_CLIPBOARD_ICON else null
     )
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -132,6 +136,9 @@ fun createPreferencesSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_SHOW_NUMBER_ROW_IN_SYMBOLS, R.string.number_row_in_symbols) {
         SwitchPreference(it, Defaults.PREF_SHOW_NUMBER_ROW_IN_SYMBOLS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_COMPACT_NUMBER_ROW_IN_SYMBOLS, R.string.compact_number_row_in_symbols, R.string.compact_number_row_in_symbols_summary) {
+        SwitchPreference(it, Defaults.PREF_COMPACT_NUMBER_ROW_IN_SYMBOLS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
     Setting(context, Settings.PREF_LOCALIZED_NUMBER_ROW, R.string.localized_number_row, R.string.localized_number_row_summary) {
         SwitchPreference(it, Defaults.PREF_LOCALIZED_NUMBER_ROW) {
@@ -188,6 +195,25 @@ fun createPreferencesSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_CLIPBOARD_FOLD_PINNED, R.string.clipboard_fold_pinned) {
         SwitchPreference(it, Defaults.PREF_CLIPBOARD_FOLD_PINNED)
+    },
+    Setting(context, Settings.PREF_CLEAR_CLIPBOARD_ICON, R.string.clear_clipboard_icon) { setting ->
+        val ctx = LocalContext.current
+        val items = listOf(
+            stringResource(R.string.clear_clipboard_icon_bin) to "bin",
+            stringResource(R.string.clear_clipboard_icon_sweep) to "sweep",
+            stringResource(R.string.clear_clipboard_icon_sweep_slanted) to "sweep_slanted",
+            stringResource(R.string.clear_clipboard_icon_clipboard_slash) to "clipboard_slash",
+            stringResource(R.string.clear_clipboard_icon_legacy) to "legacy"
+        )
+        ListPreference(
+            setting = setting,
+            items = items,
+            default = Defaults.PREF_CLEAR_CLIPBOARD_ICON
+        ) {
+            helium314.keyboard.keyboard.internal.KeyboardIconsSet.needsReload = true
+            helium314.keyboard.keyboard.internal.KeyboardIconsSet.instance.loadIcons(ctx)
+            KeyboardSwitcher.getInstance().setThemeNeedsReload()
+        }
     },
     Setting(context, Settings.PREF_VIBRATION_DURATION_SETTINGS, R.string.prefs_keypress_vibration_duration_settings) { setting ->
         SliderPreference(

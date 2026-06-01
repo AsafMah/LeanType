@@ -109,9 +109,10 @@ class ClipboardAdapter(
                 )
                 lp.isFullSpan = true
                 layoutParams = lp
-                gravity = android.view.Gravity.CENTER
-                setPadding(32, 24, 32, 24)
+                gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+                setPadding(36, 24, 36, 24)
             }
+            clipboardLayoutParams.setItemProperties(textView)
             HeaderViewHolder(textView)
         } else {
             val view = LayoutInflater.from(parent.context)
@@ -127,9 +128,16 @@ class ClipboardAdapter(
         }
     }
 
-    private fun getItem(position: Int): ClipboardHistoryEntry? {
+    fun getItem(position: Int): ClipboardHistoryEntry? {
         val item = displayList.getOrNull(position)
         return if (item is ClipboardDisplayItem.Clip) item.entry else null
+    }
+
+    fun removeDisplayItem(position: Int): ClipboardDisplayItem? {
+        if (position in 0 until displayList.size) {
+            return displayList.removeAt(position)
+        }
+        return null
     }
 
     override fun getItemCount(): Int {
@@ -145,8 +153,8 @@ class ClipboardAdapter(
                 setBackgroundResource(itemBackgroundId)
                 
                 text = buildString {
-                    append(if (header.isFolded) "📁 " else "📂 ")
-                    append(context.getString(R.string.clipboard_history_pinned_first))
+                    append(if (header.isFolded) "▶  " else "▼  ")
+                    append(context.getString(R.string.clipboard_pinned))
                     append(" (")
                     append(header.count)
                     append(")")

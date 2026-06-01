@@ -23,7 +23,7 @@ import java.io.InputStream
  * For grammar correction, the input format is:
  * "grammar: <text>"
  */
-class T5Tokenizer(private val context: Context) {
+class T5Tokenizer {
     
     companion object {
         private const val TAG = "T5Tokenizer"

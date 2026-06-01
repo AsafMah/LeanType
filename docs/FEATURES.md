@@ -14,21 +14,22 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | 🧠 **[Custom AI Keys](#4-custom-ai-keys--keywords)** | Configure custom prompts and personas. |
 | 🛡️ **[Offline Proofreading](#5-offline-proofreading-privacy-focused)** | Privacy-first, on-device AI. |
 | 👐 **[Two-thumb Typing (experimental)](#two-thumb-typing-experimental)** | Mix taps and swipes naturally; manual spacing; Nintype-style. |
+| 📝 **[Text Expander](#6-text-expander)** | Custom text shortcut expansion. |
 
 ## Summary of New Features
 
 | Feature | Function | Settings Location |
 | :--- | :--- | :--- |
-| **Multi-Provider AI** | Uses Gemini, Groq, or OpenAI to proofread/rewrite text. | `AI Integration > Set AI Provider` |
+| **Multi-Provider AI** | Uses Gemini, Groq, or OpenAI to proofread/rewrite text. Fetch latest models dynamically. | `AI Integration > Set AI Provider` |
 | **Offline Proofreading** | Private, on-device AI for grammar (requires downloads). | `AI Integration > Offline Proofreading` |
-| **Custom AI Keys** | 10 toolbar keys with customizable prompts (supports hashtags). | `AI Integration > Custom Keys` |
-| **AI Translation** | Translates selected text via your configured AI provider. | Toolbar > Translate Icon |
-| **Floating Keyboard** | Detach the keyboard into a draggable window for multitasking. | Toolbar > Floating Keyboard |
-| **Touchpad Mode** | Swipe up on Spacebar to control cursor like a touchpad. | `Gesture typing > Vertical spacebar swipe` |
+| **Custom AI Keys** | 10 toolbar keys with custom prompts, tags (themed capsules), and toggle settings (supports hashtags). | `AI Integration > Custom Keys` |
+| **AI Translation** | Translates selected text via your configured AI provider (includes separate model selector). | Toolbar > Translate Icon |
+| **Floating Keyboard** | Detach the keyboard into a draggable window with a persistent mode option. | Toolbar > Floating Keyboard |
+| **Touchpad Mode** | Swipe up on Spacebar to control cursor, including full-screen laptop-style touchpad. | `Gesture typing > Vertical spacebar swipe` |
 | **Split Suggestions** | Separates suggestions from toolbar for quicker access. | `Appearance > Split toolbar & suggestions` |
 | **Build Variants** | Choose Standard, Offline, or Offline Lite versions. | GitHub Releases |
 | **Clear Incognito** | Shows a clear "Hat & Glasses" icon when Incognito is active. | *Automatic (when Incognito)* |
-| **Clipboard Search** | Search through your clipboard history directly. | Clipboard Toolbar > Search Icon |
+| **Clipboard Search** | Search history, undo swipe-delete, and optionally fold pinned items by default. | Clipboard Toolbar > Search Icon |
 | **Dictionary Import** | Import personal words from Google Gboard/other keyboards. | `Text correction > Dictionary > Import` |
 | **Force Auto-Caps** | Toggle to ensure automatic capitalization works reliably. | `Text correction > Auto-capitalization` |
 | **Emoji Search** | Search for emojis by name. | `Emoji Key > Search Icon` |
@@ -36,6 +37,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | **Screenshot on Clipboard** | Automatically saves taken screenshots to your clipboard history. | *Automatic (when enabled)* |
 | **Clipboard Undo** | Undo swipe-to-delete on clipboard items with a timed undo bar. | *Automatic (on swipe delete)* |
 | **Two-thumb Typing** | Mix taps and swipes naturally, multi-tap then swipe, manual spacing, recognition tweaks. All experimental and opt-in. | `Two-thumb typing (experimental)` |
+| **Text Expander** | Expand custom shortcuts using dynamic template variables (date, time, clipboard, custom placeholders). | `Text correction > Text Expander` |
 
 ---
 
@@ -205,6 +207,12 @@ You can assign custom prompts to 10 specific keys in the toolbar. These keys can
 2.  Tap a key (1-10) to configure it.
 3.  Enter your instructions. You can use the following hashtags to control the AI's behavior and output format.
 
+### Custom Text Labels / Tags
+You can assign custom text labels (up to 12 characters) to toolbar keys instead of displaying generic AI icons:
+1. Fill in the **Tag / Label** field when configuring a custom AI key (e.g. `French`, `Rewrite`, `Reply`).
+2. Toggle **Show tags on keyboard** under **Settings > AI Integration > Custom Keys**.
+3. Custom labels will display as sleek, themed capsules directly on the keyboard toolbar.
+
 ### AI Persona Keywords
 Add these to your prompt to enforce a specific role.
 
@@ -331,3 +339,23 @@ Offline proofreading runs entirely on your device using the ONNX Runtime engine.
 | **Flan-T5 Small**<br>*(Translation & General)* | 🐢 **Slower**<br>~300 MB<br>Higher accuracy | **Required**<br>`fix grammar: `<br>or<br>`translate English to Spanish: ` | • [Encoder](https://huggingface.co/Xenova/flan-t5-small/resolve/main/onnx/encoder_model_quantized.onnx)<br>• [Decoder](https://huggingface.co/Xenova/flan-t5-small/resolve/main/onnx/decoder_model_quantized.onnx)<br>• [Tokenizer](https://huggingface.co/Xenova/flan-t5-small/tree/main) |
 
 *Note: For Flan-T5, the quantized models linked above are standard recommendations. Users have also reported success with `bnb4` quantized variants if available.*
+
+---
+
+## 6. Text Expander
+
+Text Expander allows you to define custom shortcuts (abbreviations) that automatically expand into longer, structured text templates as you type.
+
+### Key Features
+*   **Custom Shortcuts**: Create abbreviations (e.g., `adr`) that expand immediately into complex blocks (e.g., your full postal address).
+*   **Dynamic Template Variables**: Enrich your expansions using dynamic variables:
+    *   `%date%` - Inserts the current local date.
+    *   `%time%` - Inserts the current local time.
+    *   `%clipboard%` - Appends the most recently copied text from your clipboard.
+    *   **Custom Placeholders**: Create dynamic input fields (e.g., `%name%`) that prompt you to type a value during the expansion flow.
+
+### Configuration
+1.  Navigate to **Settings > Text correction > Text Expander**.
+2.  Tap the **+** (Add) button to create a new expansion rule.
+3.  Specify the **Shortcut** trigger and the **Expansion** template.
+4.  Include dynamic template variables in the template block.
