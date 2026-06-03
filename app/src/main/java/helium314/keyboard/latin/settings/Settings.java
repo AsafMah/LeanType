@@ -178,6 +178,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // prepend a synthetic input point at the tail of the composing word so the gesture
     // recognizer treats it as a continuation. Helps tap-then-swipe joins land sensibly.
     public static final String PREF_MULTIPART_TAP_SEED_GESTURE = "multipart_tap_seed_gesture";
+    // Live-converge (opt-in): while building a word that already contains a swipe, route a
+    // tapped letter through the gesture recognizer together with the accumulated stroke and
+    // re-recognize the whole word, instead of literally appending it to a (possibly
+    // mis-resolved) fragment. Makes a slow tap-after-swipe behave like a fast one. Default off.
+    public static final String PREF_MULTIPART_RERECOGNIZE_TAPS = "multipart_rerecognize_taps";
     // Explicit "join" modifier: off | longpress_space | dedicated_key. Forces the next
     // input to extend the composing word regardless of timer. Defaults off until UX is
     // finalised.
