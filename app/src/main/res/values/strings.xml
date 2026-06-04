@@ -223,8 +223,8 @@
     <string name="two_thumb_spacing_mode_autospace">Auto-space after a delay</string>
     <!-- Title of the setting that disables auto-spacing at the end of a gesture so that words can be composed from multiple swipe fragments. -->
     <string name="gesture_manual_spacing">Manual spacing</string>
-    <!-- Description for "gesture_manual_spacing". When on, the keyboard does not commit a space when all fingers lift after a gesture; instead the user must tap space, punctuation, or Enter to commit. -->
-    <string name="gesture_manual_spacing_summary">Don\'t auto-commit when fingers lift; tap space to finish a word</string>
+    <!-- Description for "gesture_manual_spacing". When on, the keyboard does not commit a space when all fingers lift after a gesture; instead the user must tap space, punctuation, or Enter to commit. Taps and swipes combine into one composing word until space. -->
+    <string name="gesture_manual_spacing_summary">Don\'t auto-commit when fingers lift; mix taps and swipes into one word, then tap space to finish</string>
     <!-- Title of the setting that makes backspace remove the previous swipe fragment rather than one character. -->
     <string name="gesture_fragment_backspace">Backspace removes last fragment</string>
     <!-- Description for "gesture_fragment_backspace". -->
@@ -289,6 +289,10 @@
     <string name="multipart_full_word_suggestions_summary">During multi-part composition, the suggestion strip shows alternatives for the entire word so far, not just the most recent fragment.</string>
     <string name="multipart_tap_seed_gesture">Seed swipe from typed prefix</string>
     <string name="multipart_tap_seed_gesture_summary">When you type some letters and then swipe while combining mode is armed, treat the swipe as a continuation of the typed prefix.</string>
+    <!-- Title of the experimental setting that re-recognizes a whole swiped+tapped word when a tap follows a swipe. -->
+    <string name="multipart_rerecognize_taps">Re-recognize taps within swiped words</string>
+    <!-- Description for "multipart_rerecognize_taps". -->
+    <string name="multipart_rerecognize_taps_summary">When a word already contains a swipe, a tapped letter joins the gesture and the whole word is recognized again, so a slow tap after a swipe behaves like a fast one (swipe \"th\" then tap \"e\" → \"the\"). Taps act as recognizer hints, not exact letters. Experimental.</string>
     <string name="two_thumb_typed_prefix_swipe">Swipe continues typed prefix</string>
     <string name="two_thumb_typed_prefix_swipe_summary">If you type a few letters and then swipe during the countdown, treat the swipe as the rest of that word.</string>
     <string name="two_thumb_backspace_behavior">Backspace behavior</string>

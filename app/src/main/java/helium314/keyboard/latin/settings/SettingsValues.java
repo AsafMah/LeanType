@@ -144,6 +144,7 @@ public class SettingsValues {
         public final boolean mMultipartAutoExtendInCombining;
         public final boolean mMultipartFullWordSuggestions;
         public final boolean mMultipartTapSeedGesture;
+        public final boolean mMultipartRerecognizeTaps;
         public final String mMultipartJoinKeyMode;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
@@ -389,6 +390,9 @@ public class SettingsValues {
                 mMultipartTapSeedGesture = nonNormalTwoThumbSpacing || prefs.getBoolean(
                                 Settings.PREF_MULTIPART_TAP_SEED_GESTURE,
                                 Defaults.PREF_MULTIPART_TAP_SEED_GESTURE);
+                mMultipartRerecognizeTaps = prefs.getBoolean(
+                                Settings.PREF_MULTIPART_RERECOGNIZE_TAPS,
+                                Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS);
                 mMultipartJoinKeyMode = prefs.getString(Settings.PREF_MULTIPART_JOIN_KEY_MODE,
                                 Defaults.PREF_MULTIPART_JOIN_KEY_MODE);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
@@ -553,6 +557,19 @@ public class SettingsValues {
                 //   * input-type guard (mShouldInsertSpacesAutomatically) — automatically off
                 //     for password / email / URL fields regardless of the master toggle.
                 return mAutospaceEnabled && mInputAttributes.mShouldInsertSpacesAutomatically;
+        }
+
+        /**
+         * Two-thumb typing: whether multi-part word composition (the WordComposer merged-trail
+         * mechanism that lets tap(s)+swipe build one word) is active. Originally gated on the
+         * combining-grace timer only; manual spacing has no timer (the word stays open until the
+         * user taps space), so it's an equally valid — and primary — host for the same machinery.
+         * Both InputLogic and PointerTracker key off this single definition so their notions of
+         * "we're extending the current word" can never drift apart.
+         */
+        public boolean isMultipartComposeActive() {
+                return mMultipartAutoExtendInCombining
+                                && (mCombiningGraceMs > 0 || mGestureManualSpacing);
         }
 
         public boolean isLanguageSwitchKeyEnabled() {

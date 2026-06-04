@@ -372,6 +372,123 @@ class InputLogicTest {
         assertEquals("firetruck ", textBeforeCursor)
     }
 
+    // Manual spacing is the primary Nintype-style mode: the word never auto-commits and stays
+    // open until the user taps space. The fix lets a tap-built head extend into a swipe so
+    // tap(s)+swipe build ONE word. Pre-fix, the merged-trail path was gated on the combining
+    // grace timer (grace > 0), so under manual spacing the already-composed head ("he") was
+    // concatenated AGAIN onto the gesture result -> "hehello". With the fix, the non-empty
+    // tap trail arms the merged-trail path, prevTypedWord is dropped, and we get "hello".
+    @Test fun manualSpacingTapThenGestureBuildsOneOpenWord() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
+
+        // Tap the head of the word; taps populate the WordComposer pointer trail.
+        chainInput("he")
+        assertEquals("he", composingText)
+
+        // Swipe the rest. In real use the merged tap+swipe trail makes the recognizer emit the
+        // whole word; here we inject that whole word. The fix must NOT prepend "he" again.
+        gestureInput("hello")
+        assertEquals("hello", composingText)
+        assertEquals("hello", textBeforeCursor)
+
+        // Manual spacing: no autospace happened; the word was open until this explicit space.
+        input(' ')
+        assertEquals("hello ", textBeforeCursor)
+        assertEquals("", composingText)
+    }
+
+    // Gesture-then-tap under manual spacing must EXTEND the still-open word, not finalize it.
+    // Pre-fix, `mAutospaceAfterGestureTyping` (on by default) set a post-gesture PHANTOM space
+    // because the guard only excluded combining-grace mode (grace > 0), not manual spacing
+    // (grace = 0). The next tap then committed the swiped word and autospaced before the new
+    // letter -> "dea l" (or "sea l" once autocorrect was on) instead of "deal".
+    @Test fun manualSpacingGestureThenTapExtendsWithoutAutospace() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING, true) // the trigger
+        }
+
+        gestureInput("dea")
+        assertEquals("dea", composingText)
+        assertEquals("dea", textBeforeCursor)
+
+        input('l')
+        // The word stays open and the tap appends: "deal", not "dea l".
+        assertEquals("deal", composingText)
+        assertEquals("deal", textBeforeCursor)
+    }
+
+    // Live-converge OFF (default): a tap after a swipe appends literally to the recognized
+    // fragment. This documents the baseline the opt-in changes (on-device, the tap would instead
+    // re-recognize the whole stroke). "RJ" stands in for a mis-resolved short swipe fragment.
+    @Test fun liveConvergeOffAppendsTapLiterally() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
+
+        gestureInput("RJ")
+        input('e')
+        assertEquals("RJe", composingText)
+        assertEquals("RJe", textBeforeCursor)
+    }
+
+    // Live-converge ON: in the JVM harness the native recognizer isn't loaded and tap events
+    // carry no key coordinates, so the feature must degrade gracefully — fall back to a literal
+    // append, never lose the tap, never crash. (The real re-recognition path is validated
+    // on-device; it can't be exercised here without the gesture library.)
+    @Test fun liveConvergeOnDegradesGracefullyWithoutRecognizer() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_MULTIPART_RERECOGNIZE_TAPS, true)
+        }
+
+        gestureInput("RJ")
+        input('e')
+        // Same literal fallback as OFF — the tap is preserved and the word stays open.
+        assertEquals("RJe", composingText)
+        assertEquals("RJe", textBeforeCursor)
+    }
+
+    @Test fun manualSpacingActivatesMultipartCompose() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
+        assertEquals(true, settingsValues.isMultipartComposeActive)
+
+        // Neither manual spacing nor the grace timer -> multi-part composition is off.
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, false)
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 0)
+            putBoolean(Settings.PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING, false)
+        }
+        assertEquals(false, settingsValues.isMultipartComposeActive)
+    }
+
+    // Whole-word delete of a word re-composed by backspacing into committed text must remove
+    // exactly that word, not mash it into the preceding words. The bug was using
+    // deleteTextBeforeCursor (which can't remove an active composing region and ate committed
+    // text before it: "This is pretty cool" -> "This is precool"). Note: the JVM mock's
+    // deleteSurroundingText doesn't reproduce the real-editor composing quirk, so this guards the
+    // intended outcome / the commitText path rather than the editor-specific corruption itself.
+    @Test fun wholeWordDeleteRemovesComposingWordWithoutMashingPrecedingText() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT, true)
+        }
+        setText("This is pretty cool ")
+        functionalKeyPress(KeyCode.DELETE) // removes the trailing space, re-composes "cool"
+        assertEquals("This is pretty cool", text)
+        assertEquals("cool", composingText)
+
+        functionalKeyPress(KeyCode.DELETE) // whole-word delete of "cool"
+        assertEquals("This is pretty ", text)
+        assertEquals("", composingText)
+    }
+
     @Test fun wholeWordBackspaceDeletesManualSpacingComposingWord() {
         reset()
         latinIME.prefs().edit {

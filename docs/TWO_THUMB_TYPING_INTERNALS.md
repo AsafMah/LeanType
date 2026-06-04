@@ -453,9 +453,7 @@ been consumed:
 
 ```java
 // onStartBatchInput
-if (extendComposingWord
-        && sv.mMultipartAutoExtendInCombining
-        && sv.mCombiningGraceMs > 0) {
+if (extendComposingWord && sv.isMultipartComposeActive()) {
     mWordComposer.setExtendBatchInputBase(mWordComposer.getInputPointers());
 }
 
@@ -481,14 +479,35 @@ boundary with a stale-time, exactly the kind of discontinuity that breaks
 the recognizer. So the seed is suppressed when multi-part is on:
 
 ```java
-final boolean multipartExtendActive = sv.mMultipartAutoExtendInCombining
-        && sv.mCombiningGraceMs > 0;
+final boolean multipartExtendActive = sv.isMultipartComposeActive();
 if (!multipartExtendActive
         && sv.mCombiningGraceMs > 0
         && sLastLetterTapCodepoint > 0 …) {
     // wave-3 seed (now only used when multi-part is off)
 }
 ```
+
+### 4.6a Manual spacing is a first-class host for the merged trail (2026-06)
+
+Originally every merged-trail gate was `mMultipartAutoExtendInCombining && mCombiningGraceMs > 0`,
+which excluded **manual spacing** (grace = 0). That meant a sequential
+`tap H, tap E, swipe L→O` under manual spacing fell through to the legacy
+concat path — the recognizer saw only the isolated `L→O` swipe and the
+already-composed `he` was re-prepended, producing garbage / doubled text.
+
+The fix introduces one shared predicate,
+`SettingsValues#isMultipartComposeActive()` =
+`mMultipartAutoExtendInCombining && (mCombiningGraceMs > 0 || mGestureManualSpacing)`,
+used at both the `onStartBatchInput` extend-base gate (above) and
+`PointerTracker`'s `multipartExtendActive`. Manual spacing has **no timer** —
+the composing word simply stays open until the user taps space — which makes
+it the natural primary host for multi-part composition: every tap and swipe
+just extends until the explicit separator.
+
+`mMultipartAutoExtendInCombining` is already forced `true` whenever manual
+spacing (or grace) is on (the `nonNormalTwoThumbSpacing` line in the
+`SettingsValues` ctor), so the predicate collapses to "are we in a two-thumb
+spacing mode that keeps the word open?". No new pref was added.
 
 Result: `silo` still works (the merged-trail path covers the same case more
 robustly), and multi-part swipes don't fight the seed.
@@ -603,6 +622,43 @@ exists so we don't have to revisit the scaffolding later.
 armed" vs "grace window open") is similarly deferred — comes with the
 join-key UX work.
 
+### 4.12 Live-converge: re-recognize taps within swiped words (#1.7, 2026-06, opt-in)
+
+Problem: the native glide recognizer resolves every completed stroke to a whole
+word immediately, so a short swipe fragment (`t→h`) resolves to a nearby short
+word in isolation. A *fast* follow-up tap folds into the same stroke and
+`t→h→e` recognizes as `the`; a *slow* tap arrives after the stroke has ended
+and `handleNonSeparatorEvent` appends it literally to the mis-resolved word.
+
+Fix (`PREF_MULTIPART_RERECOGNIZE_TAPS`, default off): when the current word
+already contains a gesture fragment, route a tap as a one-point continuation of
+the accumulated stroke and re-recognize the whole word — making slow taps behave
+like fast ones. Pieces in `InputLogic`:
+
+- `mLiveStroke` (InputPointers): the word's accumulated raw trail. Captured in
+  `onUpdateTailBatchInputCompleted` *before* `setBatchInputWord` resets the
+  composer's `mInputPointers`; cleared in `resetComposingState` /
+  `commitChosenWord`.
+- `getBatchSuggestionsSync()`: synchronous batch recognition via the same
+  handler + `AsyncResultHolder` + timeout pattern as
+  `performUpdateSuggestionStripSync`.
+- `tryLiveConvergeTap(event, sv)`: hooked at the top of
+  `handleNonSeparatorEvent`. Guards on the pref, `isMultipartComposeActive()`,
+  a composing gesture-word with cursor at end, a word codepoint, real key
+  coordinates, and a non-empty accumulator. Builds a 1-point `InputPointers` at
+  the tap's key center, merges via `setExtendBatchInputBase` +
+  `setBatchInputPointers`, recognizes, then reuses
+  `onUpdateTailBatchInputCompleted` (extend-base set → whole-word replace, no
+  prevTypedWord concat). Returns `false` → literal-append fallback when
+  recognition is unavailable, so a tap is never lost.
+
+Constraints: pure-tap words are excluded (so ordinary typing stays exact);
+taps are recognizer *hints*, not exact anchors. v1 handles one swipe stem plus
+following taps; multi-swipe-then-tap resets the accumulator to the latest swipe.
+The positive recognition path is **not JVM-unit-testable** (no native lib in
+tests; harness tap events carry no coordinates), so unit coverage is limited to
+the safe-fallback/no-regression property and the change is validated on-device.
+
 ---
 
 ## 5. Test matrix (manual, on-device)
@@ -610,13 +666,20 @@ join-key UX work.
 The intended-behaviour matrix that wave 5 validated against, in case a
 future refactor needs to re-check it:
 
-| Input | Combining grace = 0 | Combining grace > 0 |
-| --- | --- | --- |
-| `silo` (tap `s` + swipe `ilo`) | `s ilo` (legacy) | `silo` ✓ |
-| `tech` + `nology` (swipe + swipe) | `tech nology` | `technology` ✓ |
-| `tech` + `y` (swipe + tap) | `tech y` (PHANTOM bug, fixed in `a63e9ea3`) | `Techy` ✓ |
-| `te` + `chnology` (tap + swipe) | `te chnology` | `technology` ✓ |
-| Multi-part word + backspace | char-delete | pops last fragment ✓ (with `PREF_GESTURE_FRAGMENT_BACKSPACE` on, now default) |
+The "grace = 0" column below assumes **manual spacing is also off** (plain
+keyboard). When manual spacing is ON (grace can stay 0), the merged-trail path
+is active via `isMultipartComposeActive()`, so the right-hand "grace > 0"
+results apply except that the word stays open until an explicit space rather
+than auto-committing on a timer — see the manual-spacing column.
+
+| Input | grace = 0, manual off | grace > 0 | manual spacing on (grace = 0) |
+| --- | --- | --- | --- |
+| `silo` (tap `s` + swipe `ilo`) | `s ilo` (legacy) | `silo ` ✓ (autospaced) | `silo` ✓ (open until space) |
+| `tech` + `nology` (swipe + swipe) | `tech nology` | `technology ` ✓ | `technology` ✓ |
+| `tech` + `y` (swipe + tap) | `tech y` (PHANTOM bug, fixed in `a63e9ea3`) | `Techy ` ✓ | `Techy` ✓ |
+| `te` + `chnology` (tap + swipe) | `te chnology` | `technology ` ✓ | `technology` ✓ |
+| `he` (tap+tap) + `llo` (swipe) | `he llo` | `hello ` ✓ | `hello` ✓ |
+| Multi-part word + backspace | char-delete | pops last fragment ✓ (with `PREF_GESTURE_FRAGMENT_BACKSPACE` on, now default) | pops last fragment ✓ |
 
 
 ### Forward-delete keycode

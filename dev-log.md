@@ -653,3 +653,175 @@ The backspace fixes were ready in PR #8, and the user asked to merge them to `ma
 
 ### Open Questions / Next Steps
 - Push the updated shortcuts PR branch.
+
+---
+
+## 2026-06-02 — Combine taps and swipes under manual spacing
+
+### Context
+With **Manual spacing** on (Nintype-style "never auto-commit"), tapping letters then swiping the rest of a word did not build one word reliably — e.g. `tap H, tap E, swipe L→O` did not yield `hello`. Investigation showed the multi-part **merged-trail** recognizer-help (in `WordComposer`, which prepends the prior fragment's re-timed pointer trail so the native recognizer sees one continuous stroke) was gated on the combining-grace timer only (`mCombiningGraceMs > 0`). In pure manual spacing (grace = 0) the gesture fell through to the legacy concat path, which feeds the recognizer only the isolated swipe fragment AND re-prepends the already-composed head — producing garbage / doubled text. The "hold a finger down while the other swipes" workaround worked because `BatchInputArbiter` aggregates the held pointer into the stroke, but it caps at a single held tap.
+
+User decisions for this change: **scope = just fix tap+swipe combining**; **manual spacing is the primary mode**.
+
+### Actions Taken
+- `latin/settings/SettingsValues.java`: added `isMultipartComposeActive()` — `mMultipartAutoExtendInCombining && (mCombiningGraceMs > 0 || mGestureManualSpacing)` — as the single shared definition of "multi-part composition is active". (`mMultipartAutoExtendInCombining` is already forced true whenever manual spacing or grace is on, see the `nonNormalTwoThumbSpacing` line in the ctor.)
+- `latin/inputlogic/InputLogic.java` (`onStartBatchInput`): replaced the `mMultipartAutoExtendInCombining && mCombiningGraceMs > 0` gate on `setExtendBatchInputBase(...)` with `isMultipartComposeActive()`, so the merged trail is captured when extending under manual spacing too. This flips `usedMergedTrail` true downstream in `onUpdateTailBatchInputCompleted`, which correctly suppresses the legacy `prevTypedWord` re-concat.
+- `keyboard/PointerTracker.java` (`onDownEvent`): switched `multipartExtendActive` to `sv.isMultipartComposeActive()` so the single-point tap seed and the merged-trail path can never both fire and the two files share one definition.
+- Tests:
+  - `app/src/test/.../WordComposerTest.java`: `testExtendBatchInputBaseMergesAndRetimes` (asserts base+gesture merge to one monotonically-retimed stream, base before gesture, gesture times preserved) and `testExtendBatchInputBaseEmptyIsNoOp` (empty base does not arm the merge).
+  - `app/src/test/.../InputLogicTest.kt`: `manualSpacingTapThenGestureBuildsOneOpenWord` (tap `he` + gesture `hello` → `hello`, not `hehello`, and the word stays open until an explicit space — this fails pre-fix) and `manualSpacingActivatesMultipartCompose` (helper truth table).
+- `res/values/strings.xml`: clarified `gesture_manual_spacing_summary` to mention mixing taps and swipes into one word.
+
+### Decisions Made
+- Reused the existing `mMultipartAutoExtendInCombining` pref as the de-facto master switch rather than renaming it (the codebase deliberately keeps the slightly-misleading "...InCombining" name to avoid churn; per `TWO_THUMB_TYPING_INTERNALS.md §7`). It already defaults to active under manual spacing, so users get the fix with no new pref.
+- Secondary (intended) effect: swipe+swipe under manual spacing now also merges (matching grace-mode), instead of the legacy concat that produced e.g. `techbiology`. This is strictly better and consistent with "manual spacing primary".
+- Why the existing manual-spacing tests still pass: the unit-test harness injects gesture results via `setBatchInputWord`, which `reset()`s `mInputPointers` to empty, so a gesture fragment leaves an empty trail → `setExtendBatchInputBase(empty)` is a no-op (`isExtendBatchInputBaseSet()` stays false) → legacy concat is preserved in tests. Tapped letters DO populate the trail, which is why the new tap-then-gesture test genuinely exercises the fix.
+
+### Testing status
+- **NOT yet compiled/run** — the dev machine has only JRE 1.8; the build needs JDK 17/21. Edits were made manually. Unit tests must be run on a Linux machine (procedure handed to the user).
+
+### Manual Tests — Tap+Swipe under Manual Spacing
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Settings → Two-thumb typing (experimental) → enable **Manual spacing**. | Toggle on; no crash. |
+| 2 | In any text field, tap `H`, tap `E`, then swipe `L→O` (sequentially, fingers lifting between). | Composing word becomes `hello`; nothing is committed yet. |
+| 3 | Tap space. | `hello ` is committed; word was open until the space. |
+| 4 | Tap `s`, then swipe `ilo`. | `silo` (single tap + swipe). |
+| 5 | Swipe `tech`, then swipe `nology`. | `technology` (swipe + swipe merges, not `techbiology`). |
+| 6 | Build a multi-fragment word, then press backspace (with **Backspace removes last fragment** on). | The last fragment is popped, not one character. |
+| 7 | Repeat #2 with manual spacing OFF and grace = 0. | Reverts to default behavior (no combining). |
+
+### Open Questions / Next Steps
+- Run the unit tests on Linux and confirm green; then on-device validation of the manual test table above.
+- After the user dailies this, evaluate the further Nintype items mentioned (faster/optional autospace, multi-tap recognition tuning) as separate changes.
+
+---
+
+## 2026-06-02 — Fix gesture-then-tap finalizing the word under manual spacing
+
+### Context
+Follow-up to the tap+swipe combining fix. With manual spacing on, tap-before/during-swipe worked, but ending a word with taps did not: e.g. swipe `dea` then tap `l` produced `dea l` (and once Auto-correction was enabled, `sea l`) instead of extending to `deal`. The tap after a gesture was finalizing the word and inserting an autospace.
+
+### Root cause
+`mAutospaceAfterGestureTyping` is read straight from its pref in `SettingsValues` with no manual-spacing override (the "no-op under manual spacing" behavior is only enforced at certain call sites). The post-gesture PHANTOM-set in `onUpdateTailBatchInputCompleted` only excluded combining-grace mode (`mCombiningGraceMs <= 0`), so under manual spacing (grace = 0) it still set `SpaceState.PHANTOM` after every gesture. The next letter tap then hit `handleNonSpecialCharacterEvent`'s PHANTOM branch, which commits the composing word and inserts the deferred autospace before starting the new letter. This is the manual-spacing analogue of the combining-mode PHANTOM-race fixed earlier in `a63e9ea3`.
+
+### Actions Taken
+- `latin/inputlogic/InputLogic.java` (`onUpdateTailBatchInputCompleted`): added `&& !settingsValues.mGestureManualSpacing` to the post-gesture PHANTOM-set condition, so manual spacing never arms a post-gesture autospace and the next tap extends the still-open word. Non-two-thumb users (grace = 0, manual spacing off) keep the normal autospace-after-gesture behavior.
+- `app/src/test/.../InputLogicTest.kt`: added `manualSpacingGestureThenTapExtendsWithoutAutospace` — swipe `dea` + tap `l` → `deal` (fails pre-fix, which yields composing `l` / text `dea l`).
+
+### Decisions Made
+- Scoped the guard to `!mGestureManualSpacing` rather than the broader `isMultipartComposeActive()`: the existing `mCombiningGraceMs <= 0` clause already excludes grace mode, so manual spacing is the only remaining case that needs suppressing; plain users are intentionally untouched.
+- Left the BEFORE-gesture autospace (`mAutospaceBeforeGestureTyping`, onStartBatchInput) unchanged for now — not part of the reported symptom; flag for review if word-to-word spacing under manual spacing looks off.
+
+### Testing status
+- **NOT yet compiled/run** on this machine (JRE 1.8 only). Needs the Linux build + `:app:testOfflineDebugUnitTest`.
+
+### Manual Tests — Gesture-then-tap under Manual Spacing
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Manual spacing on; Auto-correction on. Swipe `d→e→a`, then tap `l`. | Composing word becomes `deal` (extends); no premature space or commit. |
+| 2 | Tap space. | `deal ` committed. |
+| 3 | Swipe a word, tap several trailing letters. | Each tap appends to the open word until an explicit separator. |
+| 4 | Plain keyboard (manual spacing OFF, grace 0), autospace-after-gesture ON: swipe a word, tap a letter. | Unchanged stock behavior: gesture word commits, autospace, new letter. |
+
+---
+
+## 2026-06-02 — Live-converge: re-recognize taps within swiped words (opt-in)
+
+### Context
+After the gesture-then-tap fix, a tap correctly extended the open word, but the EXTENSION was literal: a slow tap after a swipe appends to whatever word the gesture library resolved the (often short, mis-resolved) swipe fragment to. The native glide recognizer resolves each completed stroke to a whole word immediately, so swiping `t→h` alone yields a nearby 2-letter word; a later slow `e` tap then appends to that wrong word. A FAST `e` tap already works because it folds into the gesture stroke and `t→h→e` recognizes as `the`. User asked to make the slow case behave like the fast case — accumulate the stroke and re-recognize. Chosen model: **live-converge** (re-recognize the accumulated stroke on each new fragment), taps treated as **recognizer hints**, shipped as an **opt-in toggle, default off**.
+
+### Design
+The recognizer is driven by `mWordComposer` state (`getInputPointers()` + `isBatchMode()`), and `performUpdateSuggestionStripSync` already shows how to run it synchronously (handler + `AsyncResultHolder` + timeout). Since `setBatchInputWord` resets the composer's pointers on every commit, a persistent per-word accumulator (`mLiveStroke`) is required.
+
+### Actions Taken
+- New pref (5-file, default false): `PREF_MULTIPART_RERECOGNIZE_TAPS` in Settings.java / Defaults.kt / SettingsValues.java (`mMultipartRerecognizeTaps`) / strings.xml / TwoThumbTypingScreen.kt (under the multi-part group, gated by nonNormalSpacing).
+- `latin/inputlogic/InputLogic.java`:
+  - `mLiveStroke` (InputPointers): accumulated raw trail of the current word. Captured in `onUpdateTailBatchInputCompleted` just before `setBatchInputWord` wipes `mInputPointers` (gated on the pref). Cleared in `resetComposingState` and `commitChosenWord`.
+  - `getBatchSuggestionsSync()`: synchronous batch recognition via the existing handler/holder pattern (`INPUT_STYLE_TAIL_BATCH`).
+  - `tryLiveConvergeTap(event, sv)`: guards (pref on; manual spacing or grace; composing gesture-word; cursor at end; word codepoint; real key coords; non-empty accumulator). Builds a 1-point InputPointers at the tap's key center, merges via `setExtendBatchInputBase`+`setBatchInputPointers`, recognizes, and reuses `onUpdateTailBatchInputCompleted` (extend-base set → whole-word replace). Returns false → literal-append fallback when recognition is unavailable (the tap is never lost; typed-word cache untouched).
+  - Hook at the top of `handleNonSeparatorEvent`.
+- Tests (`InputLogicTest.kt`): `liveConvergeOffAppendsTapLiterally` (baseline) and `liveConvergeOnDegradesGracefullyWithoutRecognizer` (graceful literal fallback when the recognizer/coords are absent — the JVM harness can't load the gesture lib).
+
+### Decisions / limitations
+- Pure-tap words are excluded (guard on `mCombiningWordHasGestureFragment || isBatchMode`) so ordinary typing stays exact.
+- Taps are recognizer hints, not exact anchors (user's choice) — matches how tap-then-swipe already behaves.
+- v1 accumulates one swipe stem + following taps; multi-swipe-then-tap resets the accumulator to the latest swipe (documented edge case).
+- **Positive recognition path is NOT unit-testable here**: the native gesture lib isn't loaded in JVM tests and harness tap events carry no coordinates, so `tryLiveConvergeTap` bails before recognition. Unit tests only cover the safe-fallback/no-regression property. The real behavior must be validated on-device.
+
+### Testing status
+- **NOT compiled or run** on this machine (JRE 1.8 only). Needs Linux build + `:app:testOfflineDebugUnitTest`, then on-device validation. Expect possible on-device tuning (synchronous recognize-per-tap latency; recognition quality of stem+tap strokes).
+
+### Manual Tests — Live-converge (toggle ON)
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Two-thumb typing → enable **Manual spacing** and **Re-recognize taps within swiped words**. | Toggles on; no crash. |
+| 2 | Swipe `t→h` (may briefly show a wrong short word), then tap `e`. | Word re-recognizes to `the`; no premature space. |
+| 3 | Swipe `d→e→a`, then tap `l`. | `deal`. |
+| 4 | Type a pure-tap word like `hello` (no swipe). | Exact literal typing — feature does not interfere. |
+| 5 | Toggle OFF, repeat #2. | Old behavior: tap appends literally to the resolved fragment. |
+| 6 | Watch typing latency on the taps that trigger re-recognition. | No noticeable lag; if present, report for tuning. |
+
+---
+
+## 2026-06-02 — Backspace: clear stored stroke + fix whole-word delete of composing word
+
+### Context
+Two backspace bugs while building gesture words under manual spacing:
+1. Deleting part of a word did NOT clear the stored gesture stroke, so re-doing the word merged with stale geometry — e.g. type `th`, swipe `ing` → `thing`; delete `ing`; swipe again and the recognizer keeps resolving ever-growing words that still start with `th`.
+2. The 3-way backspace setting (one character / last fragment / whole word) appeared to act as single-character delete; in particular "Delete whole word" did not delete the open (still-composing) word.
+
+### Root causes
+1. The live-converge accumulator `mLiveStroke` (added with `PREF_MULTIPART_RERECOGNIZE_TAPS`) was cleared only in `resetComposingState` and `commitChosenWord`. `handleBackspaceEvent` never cleared it, and its whole-word / batch-reject branches call `mWordComposer.reset()` directly (bypassing `resetComposingState`). So the accumulated raw stroke survived a delete and the next swipe/tap merged with it.
+2. Whole-word delete of a *composing* word requires BOTH `PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD` and `PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT` (`handleBackspaceEvent`, composing-word branch). The 3-way selector's "Delete whole word" option set only the former, leaving the latter at whatever it was — so if the composing-text toggle had ever been turned off, "whole word" silently degraded to one-character on the open word.
+
+### Actions Taken
+- `latin/inputlogic/InputLogic.java` (`handleBackspaceEvent`): added `mLiveStroke.reset()` near the top (after `cancelCombiningMode`), so EVERY backspace path invalidates the accumulated stroke. A re-done word now starts from a clean stroke regardless of delete mode. (We don't attempt to trim the raw trail to a partial word — per the user, dropping it is the desired, predictable behavior.)
+- `settings/screens/TwoThumbTypingScreen.kt`: the selector's `BACKSPACE_WORD` branch now also sets `PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT = true`, so picking "Delete whole word" reliably deletes the open composing word, not just committed words. The sub-toggle remains for users who want whole-word scoped to committed words only.
+
+### Decisions Made
+- Clear `mLiveStroke` unconditionally on backspace (it's empty when the feature is off, so this is harmless) rather than trying to trim it — trimming a fuzzy stroke to match a partially-deleted word is unreliable, and the user explicitly prefers "just delete it".
+- Kept the runtime requirement that composing-word whole-delete needs the composing-text pref (preserves the existing `wholeWordBackspaceWithLiveComposingDeleteOffFallsBackToOneCharacter` behavior / power-user choice); fixed the footgun at the selector instead.
+- Did NOT change one-character / fragment delete semantics — only the stale-stroke clearing applies to them.
+
+### Testing status
+- **NOT compiled or run** here (JRE 1.8 only). Existing tests cover the behavior: `wholeWordBackspaceDeletesManualSpacingComposingWord` (whole-word composing delete), `wholeWordBackspaceWithLiveComposingDeleteOffFallsBackToOneCharacter` (sub-toggle off → one char), `fragmentBackspaceDeletesLastSwipeFragmentInMultipartWord` (fragment pop). The `mLiveStroke` clear isn't JVM-unit-observable (no recognizer/coords in the harness) — validate the re-do behavior on-device.
+- **Note for the user:** because the selector only writes prefs when an item is selected, re-pick **Delete whole word** once after installing so the composing-text toggle gets set.
+
+### Manual Tests — Backspace re-do
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Manual spacing on; backspace mode = **Delete whole word** (re-select it once). Type `th`, swipe `ing` → `thing`. Backspace. | Whole word deleted (empty), not one character. |
+| 2 | Immediately swipe `ing` again (or re-type the word). | Recognizes cleanly from a fresh stroke — no ever-growing `th…` words. |
+| 3 | Backspace mode = **Delete last fragment**. Build `th`+swipe `ing`, backspace. | Last fragment (`ing`) popped → `th`; re-doing starts from a clean stroke. |
+| 4 | Backspace mode = **Delete one character**. Build a gesture word, backspace once. | One character removed; stored stroke is dropped so a later swipe doesn't merge with stale geometry. |
+
+---
+
+## 2026-06-03 — Fix whole-word backspace corrupting/mashing committed text
+
+### Context
+With backspace mode = "Delete whole word", deleting words mid-text corrupted the text instead of deleting cleanly. Reported example: `Hey there. This is pretty cool!` → backspaces produced `…This is precool`, `…Thprecoo`, `Hey Thprecoo`, etc. — words mashing into preceding ones and the cursor desyncing. Also: stored gestures sometimes weren't cleared (incl. after the swipe-on-backspace bulk delete).
+
+### Root cause
+The whole-word branch for a *composing* word used `mConnection.deleteTextBeforeCursor(wordLength)`. That routes through `InputConnection.deleteSurroundingText`, which does NOT remove an active composing region — it deletes committed text BEFORE it (documented TODO in `RichInputConnection#deleteTextBeforeCursor`). So backspacing the re-composed word `cool` deleted `tty ` instead, giving `precool`, and desynced the RichInputConnection cursor cache, cascading into more corruption on subsequent keystrokes. The batch-delete branch never had this bug because it resets the composer and lets the post-block `commitText("", 1)` clear the composing span. This only became visible after the prior session made "Delete whole word" reliably enable `DELETES_COMPOSING_TEXT`.
+
+### Actions Taken
+- `latin/inputlogic/InputLogic.java` (`handleBackspaceEvent`, composing-word branch): the whole-word delete now does `mWordComposer.reset()` and lets the post-block `commitText("", 1)` remove the composing span — the correct primitive for deleting composing text — instead of `deleteTextBeforeCursor`. Removed the now-unused `deletedWholeComposingWord` flag; the post-block always clears the composing span when the composer is no longer composing.
+- Added a defensive `mLiveStroke.reset()` in the composing-inconsistency recovery path (`setComposingTextInternalWithBackgroundColor`) so a force-cancelled composition also drops the stored stroke.
+- Verified `mLiveStroke` clearing is now comprehensive: `handleBackspaceEvent` (covers per-char, fragment, whole-word, batch, and selection/bulk delete — runs before any branch), `resetComposingState` (reached via `resetEntireInputState` on cursor/selection moves from `onUpdateSelection`), `commitChosenWord`, and the inconsistency path.
+
+### Why the other modes were safe
+- One-character delete uses `applyProcessedEvent` + `setComposingTextInternal` (correct primitive).
+- Fragment delete (`tryFragmentBackspace`) uses `setBatchInputWord` + `setComposingTextInternal`, and only fires for actively-built words (recorded boundaries). Re-composed committed words have no boundaries → falls back to one-char.
+- Only the whole-word composing branch used `deleteTextBeforeCursor`, so only it corrupted.
+
+### Tests
+- `InputLogicTest.kt`: `wholeWordDeleteRemovesComposingWordWithoutMashingPrecedingText` — re-compose `cool` in `This is pretty cool`, whole-word delete → `This is pretty ` (not `precool`). Caveat: the JVM mock's `deleteSurroundingText` doesn't reproduce the real-editor composing-region quirk, so this guards the intended outcome and the `commitText` path; the editor-specific corruption must be confirmed on-device.
+- Existing `wholeWordBackspaceDeletesManualSpacingComposingWord` / `…DeleteOffFallsBackToOneCharacter` still hold (the new code clears the composing span via `commitText`).
+
+### Testing status
+- **NOT compiled or run** here (JRE 1.8). Needs Linux build + `:app:testOfflineDebugUnitTest`, then on-device:
+  - Whole-word delete through a sentence deletes word-by-word with NO mashing/desync.
+  - Re-doing a word after deletion recognizes cleanly (no ever-growing `th…`).
+  - Swipe-on-backspace bulk delete leaves no stale stroke for the next word.

@@ -929,8 +929,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             // worse, introduce a stale-time point at the merge boundary that breaks the
             // recognizer's continuity assumptions (regressed 'silo' in earlier testing).
             // Disable the PointerTracker seed entirely when multipart auto-extend is on.
-            final boolean multipartExtendActive = sv.mMultipartAutoExtendInCombining
-                    && sv.mCombiningGraceMs > 0;
+            // Shares one definition with InputLogic (covers grace-timer mode AND manual
+            // spacing) so the seed and the merged-trail path can never both fire.
+            final boolean multipartExtendActive = sv.isMultipartComposeActive();
             if (!multipartExtendActive
                     && sv.mCombiningGraceMs > 0
                     && sLastLetterTapCodepoint > 0
