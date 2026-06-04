@@ -338,7 +338,6 @@ returns nonsense for it (`biology` for the `nology` half of `technology`).
 | `PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING` | true | Combining mode implies extend for next input |
 | `PREF_MULTIPART_TAP_SEED_GESTURE` | true | Seed the next gesture's pointer trail from the previous fragment |
 | `PREF_MULTIPART_FULL_WORD_SUGGESTIONS` | true | Strip shows alternatives for the whole composing word (not the last fragment) |
-| `PREF_MULTIPART_JOIN_KEY_MODE` | `"off"` | Explicit "join next" modifier — scaffolded, UX TBD |
 
 `PREF_GESTURE_FRAGMENT_BACKSPACE` was bumped from default-off to default-on
 so backspace-pops-fragment "just works" once multi-part composition is on.
@@ -603,24 +602,25 @@ through into wave 5.
 
 All four new prefs sit under the existing Two-Thumb Typing screen, grouped
 with the existing combining-mode prefs. `PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING`
-gates visibility of the other three (no point showing
-seed-gesture / full-word-suggestions / join-key options if extension itself
-is off). `PREF_GESTURE_FRAGMENT_BACKSPACE` is surfaced in *both* the
+gates visibility of the other two (no point showing seed-gesture /
+full-word-suggestions options if extension itself is off).
+`PREF_GESTURE_FRAGMENT_BACKSPACE` is surfaced in *both* the
 multi-part group and the manual-spacing group; `SettingsContainer` dedupes
 on key so we don't get duplicate entries.
 
 ### 4.11 What's deliberately not done
 
-`PREF_MULTIPART_JOIN_KEY_MODE` is scaffolded (Settings/Defaults/SettingsValues/
-strings.xml/UI entry) but no input handler is wired up yet. The intent was
-an explicit "force-extend the next input" modifier (long-press space, or a
-dedicated symbols-layer key) for cases where the grace window times out
-but the user still wants to extend. Pending a UX decision; the pref slot
-exists so we don't have to revisit the scaffolding later.
+`PREF_MULTIPART_JOIN_KEY_MODE` was a dead config slot (Settings/Defaults/
+SettingsValues/strings, no input handler) meant to choose how an explicit
+"force-extend the next input" modifier is triggered. The force-extend action
+itself already works via the `JOIN_NEXT` toolbar key (`KeyCode.JOIN_NEXT`,
+`enterJoinNextMode` / `OneShotSpaceAction`), so the unused pref was removed.
+Assigning `JOIN_NEXT` to a swipe-from-key shortcut (rather than a config pref)
+is tracked in #34.
 
 `indicator-armed-state` (a distinct visual indicator for "explicit join
-armed" vs "grace window open") is similarly deferred — comes with the
-join-key UX work.
+armed" vs "grace window open") is still deferred — comes with the join-key
+UX work (#34).
 
 ### 4.12 Live-converge: re-recognize taps within swiped words (#1.7, 2026-06, opt-in)
 

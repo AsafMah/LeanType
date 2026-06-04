@@ -145,7 +145,6 @@ public class SettingsValues {
         public final boolean mMultipartFullWordSuggestions;
         public final boolean mMultipartTapSeedGesture;
         public final boolean mMultipartRerecognizeTaps;
-        public final String mMultipartJoinKeyMode;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -393,8 +392,6 @@ public class SettingsValues {
                 mMultipartRerecognizeTaps = prefs.getBoolean(
                                 Settings.PREF_MULTIPART_RERECOGNIZE_TAPS,
                                 Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS);
-                mMultipartJoinKeyMode = prefs.getString(Settings.PREF_MULTIPART_JOIN_KEY_MODE,
-                                Defaults.PREF_MULTIPART_JOIN_KEY_MODE);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions
