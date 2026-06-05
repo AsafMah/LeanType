@@ -72,7 +72,6 @@ fun TwoThumbTypingScreen(
         }
         if (nonNormalSpacing) {
             add(Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS)
-            add(Settings.PREF_MULTIPART_RERECOGNIZE_TAPS)
             add(SettingsWithoutKey.TWO_THUMB_BACKSPACE_BEHAVIOR)
             if (backspaceBehavior == BACKSPACE_WORD) {
                 add(Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT)
@@ -180,10 +179,6 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS,
         R.string.multipart_full_word_suggestions, R.string.multipart_full_word_suggestions_summary) {
         SwitchPreference(it, Defaults.PREF_MULTIPART_FULL_WORD_SUGGESTIONS)
-    },
-    Setting(context, Settings.PREF_MULTIPART_RERECOGNIZE_TAPS,
-        R.string.multipart_rerecognize_taps, R.string.multipart_rerecognize_taps_summary) {
-        SwitchPreference(it, Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS)
     },
     Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
         R.string.two_thumb_point_hinting, R.string.two_thumb_point_hinting_summary) {
