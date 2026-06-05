@@ -345,9 +345,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             )
             ngramContextForCurrentWord = ngramContextForCurrentWord.getNextNgramContext(WordInfo(currentWord))
 
-            // remove manually entered blacklisted words from blacklist for likely matching languages
+            // Un-blacklist a word the user deliberately committed — but ONLY if it is a word they
+            // genuinely know: present in a non-history dictionary (main/contacts/apps or their personal
+            // dictionary). A junk word (e.g. a gesture misfire that is in no dictionary) must STAY
+            // blacklisted, otherwise the user's "remove" never sticks: it would be un-blacklisted here
+            // and then re-learned, resurrecting it (e.g. "לא" → "לר").
             dictionaryGroups.filter { it.confidence == preferredGroup.confidence }.forEach {
-                it.removeFromBlacklist(currentWord)
+                if (it.isInNonHistoryDictionary(currentWord)) it.removeFromBlacklist(currentWord)
             }
         }
     }
@@ -357,6 +361,10 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         timeStampInSeconds: Int, blockPotentiallyOffensive: Boolean
     ) {
         val userHistoryDictionary = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
+
+        // Never re-learn a word the user has blacklisted (e.g. a deleted gesture-misfire junk word).
+        // Without this, committing it again would resurrect it in user history.
+        if (dictionaryGroup.isBlacklisted(word)) return
 
         val mainFreq = dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.getFrequency(word) ?: Dictionary.NOT_A_PROBABILITY
         if (mainFreq == 0 && blockPotentiallyOffensive)
@@ -414,6 +422,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val dictionaryGroup = clearlyPreferredDictionaryGroup ?: return
         val userDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER) ?: return
         val userHistoryDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
+        if (dictionaryGroup.isBlacklisted(word))
+            return // never auto-promote a word the user has blacklisted
         if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup))
             return // valid word, no reason to auto-add it to personal dict
         if (userDict.isInDictionary(word))
@@ -782,16 +792,38 @@ private class DictionaryGroup(
             return
         }
 
-        val mainDict = mainDict ?: return
-        if (mainDict.isValidWord(word)) {
+        val mainDict = mainDict
+        if (mainDict != null && mainDict.isValidWord(word)) {
             addToBlacklist(word)
             return
         }
 
         val lowercase = word.lowercase(locale)
-        if (getDict(Dictionary.TYPE_MAIN)!!.isValidWord(lowercase)) {
+        if (mainDict != null && mainDict.isValidWord(lowercase)) {
             addToBlacklist(lowercase)
+            return
         }
+
+        // The word was in no read-only dictionary (main/contacts/apps) — it only lived in the mutable
+        // user-history / personal dict (e.g. an auto-learned gesture misfire). Removing it from those
+        // is not enough: it gets re-learned on the next commit and resurrects. Blacklist it so the
+        // user's explicit removal actually sticks (the suggestion filter at getSuggestions then hides
+        // it, including in the glide-typing path).
+        addToBlacklist(word)
+    }
+
+    /**
+     * True if [word] exists in a dictionary other than the auto-learned user-history dict
+     * (main/contacts/apps or the user's personal dictionary), ignoring the blacklist. Used to decide
+     * whether committing a word should un-blacklist it: a word the user genuinely knows is restored,
+     * while an auto-learned junk word is not.
+     */
+    fun isInNonHistoryDictionary(word: String): Boolean {
+        if (mainDict?.isValidWord(word) == true) return true
+        if (getSubDict(Dictionary.TYPE_CONTACTS)?.isInDictionary(word) == true) return true
+        if (getSubDict(Dictionary.TYPE_APPS)?.isInDictionary(word) == true) return true
+        if (getSubDict(Dictionary.TYPE_USER)?.isInDictionary(word) == true) return true
+        return false
     }
 
     // --------------- Confidence for multilingual typing -------------------
