@@ -103,17 +103,26 @@ class DictionaryGroupTest {
     }
 
     @Test
-    fun isInReadOnlyDict_trueOnlyForReadOnlyDictWords() {
-        // Drives whether committing a word un-blacklists it: real words (in a read-only dict) are
-        // restored on commit, junk words are not.
+    fun isInNonHistoryDictionary_trueForKnownWordsNotHistoryJunk() {
+        // Drives whether committing a word un-blacklists it: a word the user genuinely knows
+        // (main/contacts/apps/personal dict) is restored on commit; auto-learned junk is not.
         val cls = Class.forName("helium314.keyboard.latin.DictionaryGroup")
         val ctor = cls.declaredConstructors.first { it.parameterCount == 4 }.apply { isAccessible = true }
         val main = mock(Dictionary::class.java)
         Mockito.`when`(main.isValidWord("real")).thenReturn(true)
-        val instance = ctor.newInstance(Locale.ENGLISH, main, emptyMap<String, ExpandableBinaryDictionary>(), null)
-        val isInReadOnly = cls.getDeclaredMethod("isInReadOnlyDict", String::class.java).apply { isAccessible = true }
+        val userDict = mock(ExpandableBinaryDictionary::class.java)
+        Mockito.`when`(userDict.isInDictionary("custom")).thenReturn(true)
+        val instance = ctor.newInstance(Locale.ENGLISH, main, mapOf(Dictionary.TYPE_USER to userDict), null)
+        val isInNonHistory = cls.getDeclaredMethod("isInNonHistoryDictionary", String::class.java).apply { isAccessible = true }
+        val addToBlacklist = cls.getDeclaredMethod("addToBlacklist", String::class.java).apply { isAccessible = true }
 
-        assertEquals(true, isInReadOnly.invoke(instance, "real"))
-        assertEquals(false, isInReadOnly.invoke(instance, "לר"))
+        assertEquals(true, isInNonHistory.invoke(instance, "real"))    // main dict
+        assertEquals(true, isInNonHistory.invoke(instance, "custom"))  // personal dict
+        assertEquals(false, isInNonHistory.invoke(instance, "לר"))     // junk, in no dictionary
+
+        // Even after blacklisting, a real main-dict word is still recognized (lookup bypasses the
+        // blacklist), so typing it can un-block it.
+        addToBlacklist.invoke(instance, "real")
+        assertEquals(true, isInNonHistory.invoke(instance, "real"))
     }
 }

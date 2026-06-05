@@ -345,12 +345,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             )
             ngramContextForCurrentWord = ngramContextForCurrentWord.getNextNgramContext(WordInfo(currentWord))
 
-            // Un-blacklist a word the user deliberately committed — but ONLY if it is a real word in
-            // a read-only dictionary (main/contacts/apps). A junk word (e.g. a gesture misfire that is
-            // in no dictionary) must STAY blacklisted, otherwise the user's "remove" never sticks: it
-            // would be un-blacklisted here and then re-learned, resurrecting it (e.g. "לא" → "לר").
+            // Un-blacklist a word the user deliberately committed — but ONLY if it is a word they
+            // genuinely know: present in a non-history dictionary (main/contacts/apps or their personal
+            // dictionary). A junk word (e.g. a gesture misfire that is in no dictionary) must STAY
+            // blacklisted, otherwise the user's "remove" never sticks: it would be un-blacklisted here
+            // and then re-learned, resurrecting it (e.g. "לא" → "לר").
             dictionaryGroups.filter { it.confidence == preferredGroup.confidence }.forEach {
-                if (it.isInReadOnlyDict(currentWord)) it.removeFromBlacklist(currentWord)
+                if (it.isInNonHistoryDictionary(currentWord)) it.removeFromBlacklist(currentWord)
             }
         }
     }
@@ -421,6 +422,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val dictionaryGroup = clearlyPreferredDictionaryGroup ?: return
         val userDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER) ?: return
         val userHistoryDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
+        if (dictionaryGroup.isBlacklisted(word))
+            return // never auto-promote a word the user has blacklisted
         if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup))
             return // valid word, no reason to auto-add it to personal dict
         if (userDict.isInDictionary(word))
@@ -809,11 +812,17 @@ private class DictionaryGroup(
         addToBlacklist(word)
     }
 
-    /** True if [word] exists in a read-only dictionary (main/contacts/apps), ignoring the blacklist. */
-    fun isInReadOnlyDict(word: String): Boolean {
+    /**
+     * True if [word] exists in a dictionary other than the auto-learned user-history dict
+     * (main/contacts/apps or the user's personal dictionary), ignoring the blacklist. Used to decide
+     * whether committing a word should un-blacklist it: a word the user genuinely knows is restored,
+     * while an auto-learned junk word is not.
+     */
+    fun isInNonHistoryDictionary(word: String): Boolean {
         if (mainDict?.isValidWord(word) == true) return true
         if (getSubDict(Dictionary.TYPE_CONTACTS)?.isInDictionary(word) == true) return true
         if (getSubDict(Dictionary.TYPE_APPS)?.isInDictionary(word) == true) return true
+        if (getSubDict(Dictionary.TYPE_USER)?.isInDictionary(word) == true) return true
         return false
     }
 
