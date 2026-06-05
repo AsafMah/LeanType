@@ -4,12 +4,15 @@
 > issues once converged. Status legend: ✅ greenlit · 🔬 needs design/chew · 🅿️ parked ·
 > 🐞 bug to file · 💡 future/explore. Estimates are rough (S<1d, M 1–3d, L 4–6d, XL >1wk).
 >
-> Grounding note: file:line refs below come from read-only scouting of the current tree.
+> Grounding note: claims below were verified by read-only code scouting, but file:line refs are a
+> SNAPSHOT (they shift across commits — prefer the named symbols and re-confirm at implementation).
+> Treat each item as an evidence-backed hypothesis, not a contract: re-verify the specific code path
+> before building from it.
 > Dependencies matter — the **test harness (A3)** and **spacing policy (B6)** are spines.
 >
 > **Guiding principle (feel-driven):** the two-thumb/spacing behaviors are judged by how they TYPE,
 > not how they read. Ship feel-sensitive logic as *tunable experiments* (live settings, conservative
-> defaults) — never hardcode a feel call. Build the structurally-correct part first (e.g. B6b), layer
+> defaults) — never hardcode a feel call. Build the structurally-correct part first, layer
 > the feel knobs on top. The enabling trio for playtesting: **A3** (harness — measure regressions as
 > you tweak), **A11** (typing-insight overlay — SEE why a word committed/stayed open), and a small
 > **live tuning panel**. Prioritize these early; they're what make "play with it" possible.
@@ -119,14 +122,18 @@ User-facing model = three spacing **tiers** (replaces scattered toggles):
     extendable stays open and under your control. This is the "type I, no space needed" you wanted,
     generalized and dictionary-driven.**
   - *Auto* (today): always autospace after gesture/word.
-- B6b: **decouple commit from space (small).** PHANTOM is ALREADY the deferred-space mechanism
+- B6b: **decouple commit from space.** PHANTOM is ALREADY the deferred-space mechanism
   (regime a). Only the grace path writes eagerly. Fix: in `onCombiningGraceExpired` replace the
   eager `insertAutomaticSpaceIfOptionsAndTextAllow(sv)` + `mAutospaceJustWritten=…` (InputLogic.java
   1139–1156) with `mSpaceState = SpaceState.PHANTOM`; existing PHANTOM consumers
   (`handleNonSeparatorEvent` ~373/2003, `handleSeparatorEvent` ~2207) materialize/suppress the space
   on next input — consistent connector/URL/punct handling for free. One wrinkle: the
   `mLastComposedWord.mSeparatorString` patch (backspace-revert, 1148–1156) moves to
-  space-materialization time — already solved for regime (a). Difficulty Low–Med.
+  space-materialization time — already solved for regime (a). **Difficulty Med — NOT the trivial
+  seam it first looks: ~8 `InputLogicTest` cases lock in the eager-space contract
+  (`expireCombiningGrace(); assertEquals("hello ", …)`), so those behavior tests must be
+  deliberately redesigned (not just updated), backspace-revert needs explicit coverage, and the
+  deferred-space feel must be playtested. Do it behind the experimental tuning — see #23.**
 - B6c: **learned cadence, per posture.** The "brief pause" that triggers an Assisted commit is a
   running percentile of the user's real inter-word pauses, stored separately per posture (one/two-
   handed), keyed off the existing one-handed toggle so switching loads the right baseline instantly
@@ -135,7 +142,7 @@ User-facing model = three spacing **tiers** (replaces scattered toggles):
   (complete real word + low prefix-richness + pause), NEVER while a multipart/live-converge fragment
   is mid-flight; deferred PHANTOM space + word-as-last-composed keeps it cheaply backspace-reversible.
   Ship Assisted opt-in/default-off; expose one "eagerness" slider, not raw ms. **Gate tuning on A3.**
-- **PRs:** B6b first (self-contained decouple) → B6a (signal grace + Assisted tier, needs A3 to
+- **PRs:** B6b (decouple — needs grace-test redesign + playtest, #23) → B6a (signal grace + Assisted tier, needs A3 to
   tune) → B6c (learned cadence + per-posture, needs C1 posture key).
 - **Playtest knobs (NOT paper decisions — these are feel calls, ship them adjustable):** (1)
   "Assisted" as a distinct tier vs folding the smarts into Manual; (2) prefix-richness = completion
@@ -192,8 +199,11 @@ Root cause traced (answers "why does it win even when swiping"):
 
 **Revised fix (user steer: DON'T block non-dict learning — people legitimately add new words.
 Make the algorithm smarter + the UI clearer):**
-- C4a–d (blacklist, still needed): blacklist on history-only removal; check blacklist on the learn
-  path; stop un-blacklisting on commit; "block forever" UI distinct from transient delete.
+- C4a–d (blacklist): **landed in PR #43** — blacklist on history-only removal; skip the learn path
+  for blacklisted words; gate the per-commit un-blacklist to *known* words via
+  `isInNonHistoryDictionary` (main/contacts/apps **+ personal dict**, so typing a real or user-added
+  word restores it while junk stays blocked). Still TODO: the "block forever" UI distinct from the
+  transient delete (C4-ui, #40).
 - C4-smart (algorithm): **graduated trust** — a non-dictionary learned word needs *more* repetition
   before it's allowed to override a real dictionary word that the geometry matches better. New words
   still learn (slowly); a single misfire can't hijack a common word. (Replaces the heavier-handed
