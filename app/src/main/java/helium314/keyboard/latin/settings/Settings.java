@@ -183,10 +183,6 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // re-recognize the whole word, instead of literally appending it to a (possibly
     // mis-resolved) fragment. Makes a slow tap-after-swipe behave like a fast one. Default off.
     public static final String PREF_MULTIPART_RERECOGNIZE_TAPS = "multipart_rerecognize_taps";
-    // Explicit "join" modifier: off | longpress_space | dedicated_key. Forces the next
-    // input to extend the composing word regardless of timer. Defaults off until UX is
-    // finalised.
-    public static final String PREF_MULTIPART_JOIN_KEY_MODE = "multipart_join_key_mode";
     public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREF_USE_CONTACTS = "use_contacts";
     public static final String PREF_USE_APPS = "use_apps";
