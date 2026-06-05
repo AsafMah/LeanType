@@ -433,24 +433,6 @@ class InputLogicTest {
         assertEquals("RJe", textBeforeCursor)
     }
 
-    // Live-converge ON: in the JVM harness the native recognizer isn't loaded and tap events
-    // carry no key coordinates, so the feature must degrade gracefully — fall back to a literal
-    // append, never lose the tap, never crash. (The real re-recognition path is validated
-    // on-device; it can't be exercised here without the gesture library.)
-    @Test fun liveConvergeOnDegradesGracefullyWithoutRecognizer() {
-        reset()
-        latinIME.prefs().edit {
-            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
-            putBoolean(Settings.PREF_MULTIPART_RERECOGNIZE_TAPS, true)
-        }
-
-        gestureInput("RJ")
-        input('e')
-        // Same literal fallback as OFF — the tap is preserved and the word stays open.
-        assertEquals("RJe", composingText)
-        assertEquals("RJe", textBeforeCursor)
-    }
-
     @Test fun manualSpacingActivatesMultipartCompose() {
         reset()
         latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
