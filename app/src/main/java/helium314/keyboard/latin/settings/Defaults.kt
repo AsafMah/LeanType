@@ -157,6 +157,9 @@ object Defaults {
     const val PREF_MULTIPART_FULL_WORD_SUGGESTIONS = true
     const val PREF_MULTIPART_TAP_SEED_GESTURE = true
     const val PREF_MULTIPART_RERECOGNIZE_TAPS = false
+    // Adaptive typing (opt-in). Off by default; strength is a 0..100 percentage of the cap.
+    const val PREF_ADAPTIVE_KEY_GEOMETRY = false
+    const val PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH = 50
     const val PREF_SHOW_SETUP_WIZARD_ICON = true
     const val PREF_USE_CONTACTS = false
     const val PREF_USE_APPS = false

@@ -10,17 +10,21 @@ import java.io.File
 class Database private constructor(context: Context, name: String = NAME) : SQLiteOpenHelper(context, name, null, VERSION) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(ClipboardDao.CREATE_TABLE)
+        db.execSQL(TouchModelDao.CREATE_TABLE)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) {
             db.execSQL("ALTER TABLE CLIPBOARD ADD COLUMN IMAGE_URI TEXT")
         }
+        if (oldVersion < 3) {
+            db.execSQL(TouchModelDao.CREATE_TABLE)
+        }
     }
 
     companion object {
         private val TAG = Database::class.java.simpleName
-        private const val VERSION = 2
+        private const val VERSION = 3
         const val NAME = "leantype.db"
         private var instance: Database? = null
         fun getInstance(context: Context): Database {
@@ -55,6 +59,23 @@ class Database private constructor(context: Context, name: String = NAME) : SQLi
                         clipDao.addClip(it.getLong(0), it.getInt(1) != 0, it.getString(2) ?: "", imageUri)
                     }
                 }
+            // Touch model (adaptive typing): present only in backups from versions that have it.
+            val touchDao = TouchModelDao.getInstance(context)
+            if (touchDao != null) {
+                val hasTouchModel = otherDb.readableDatabase.rawQuery(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='${TouchModelDao.TABLE}'", null
+                ).use { it.moveToNext() }
+                if (hasTouchModel) {
+                    touchDao.clear()
+                    otherDb.readableDatabase.rawQuery(TouchModelDao.SELECT_ALL, null).use {
+                        while (it.moveToNext()) {
+                            touchDao.restore(TouchModelDao.Stat(
+                                it.getInt(0), it.getString(1), it.getInt(2), it.getFloat(3), it.getFloat(4),
+                                it.getFloat(5), it.getFloat(6), it.getInt(7), it.getLong(8)))
+                        }
+                    }
+                }
+            }
             otherDb.close()
             file.delete()
         }

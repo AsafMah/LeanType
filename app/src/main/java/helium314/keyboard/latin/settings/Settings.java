@@ -183,6 +183,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // re-recognize the whole word, instead of literally appending it to a (possibly
     // mis-resolved) fragment. Makes a slow tap-after-swipe behave like a fast one. Default off.
     public static final String PREF_MULTIPART_RERECOGNIZE_TAPS = "multipart_rerecognize_taps";
+    // Adaptive typing (opt-in): learn per-user key landing offsets and bias both tap resolution
+    // and gesture sweet-spots toward where the user actually types. Content-free (geometry only),
+    // incognito-gated. Strength scales the cap (0 = off). See docs/ADAPTIVE_TYPING.md.
+    public static final String PREF_ADAPTIVE_KEY_GEOMETRY = "adaptive_key_geometry";
+    public static final String PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH = "adaptive_key_geometry_strength";
     public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREF_USE_CONTACTS = "use_contacts";
     public static final String PREF_USE_APPS = "use_apps";
