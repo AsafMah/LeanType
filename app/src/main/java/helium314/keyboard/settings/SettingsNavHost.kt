@@ -39,6 +39,7 @@ import helium314.keyboard.settings.screens.ToolbarScreen
 import helium314.keyboard.settings.screens.TwoThumbTypingScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -200,7 +201,10 @@ object SettingsDestination {
     const val TextExpander = "text_expander"
     val navTarget = MutableStateFlow(Settings)
 
-    private val navScope = CoroutineScope(Dispatchers.Default)
+    // Use SupervisorJob so a cancellation in one navigation hop
+    // doesn't tear down the rest of the settings UI. Dispatchers.Default
+    // is fine here because we're only updating a MutableStateFlow.
+    private val navScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     fun navigateTo(target: String) {
         if (navTarget.value == target) {
             // triggers recompose twice, but that's ok as it's a rare event

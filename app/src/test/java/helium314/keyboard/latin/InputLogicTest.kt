@@ -433,6 +433,24 @@ class InputLogicTest {
         assertEquals("RJe", textBeforeCursor)
     }
 
+    // Live-converge ON: in the JVM harness the native recognizer isn't loaded and tap events
+    // carry no key coordinates, so the feature must degrade gracefully — fall back to a literal
+    // append, never lose the tap, never crash. (The real re-recognition path is validated
+    // on-device; it can't be exercised here without the gesture library.)
+    @Test fun liveConvergeOnDegradesGracefullyWithoutRecognizer() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_MULTIPART_RERECOGNIZE_TAPS, true)
+        }
+
+        gestureInput("RJ")
+        input('e')
+        // Same literal fallback as OFF — the tap is preserved and the word stays open.
+        assertEquals("RJe", composingText)
+        assertEquals("RJe", textBeforeCursor)
+    }
+
     @Test fun manualSpacingActivatesMultipartCompose() {
         reset()
         latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
@@ -1340,6 +1358,62 @@ class InputLogicTest {
         assertEquals(0, delayedMessages.size)
     }
 
+
+    // ---- A3: data-driven input-trace corpus -------------------------------------------------
+    // Each scenario is an ordered list of replayable input events; the runner replays it through
+    // the same simulated pipeline and asserts the resulting editor text (a golden-master baseline
+    // of the two-thumb spacing / combining logic). Adding a regression case is a data row, not a
+    // new test method. NOTE: gesture results are fed deterministically by the harness
+    // (ShadowFacilitator), so this covers the input/spacing/combining LOGIC, not native glide
+    // recognition (which needs on-device instrumented tests).
+    private val twoThumbCorpus = listOf(
+        Scenario("plain typing commits words",
+            steps = listOf(Type("hello world")), expected = "hello world"),
+        Scenario("combining grace commits and autospaces on expiry",
+            prefs = mapOf(Settings.PREF_COMBINING_GRACE_MS to 1000),
+            steps = listOf(Type("tech"), GraceExpire), expected = "tech "),
+        Scenario("force-next-space after combining autospace does not double-space",
+            prefs = mapOf(Settings.PREF_COMBINING_GRACE_MS to 1000),
+            steps = listOf(Type("hello"), GraceExpire, Func(KeyCode.FORCE_NEXT_SPACE),
+                Gesture("world"), GraceExpire),
+            expected = "hello world"),
+        Scenario("force-next-space during combining commits the space",
+            prefs = mapOf(Settings.PREF_COMBINING_GRACE_MS to 1000),
+            steps = listOf(Type("hello"), Func(KeyCode.FORCE_NEXT_SPACE), Gesture("world"), GraceExpire),
+            expected = "hello world"),
+        Scenario("join-next resumes the word for the next gesture",
+            prefs = mapOf(
+                Settings.PREF_COMBINING_GRACE_MS to 1000,
+                Settings.PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING to true),
+            steps = listOf(Type("tech"), GraceExpire, Func(KeyCode.JOIN_NEXT),
+                Gesture("technology"), GraceExpire),
+            expected = "technology "),
+    )
+
+    @Test fun replayTwoThumbCorpus() {
+        for (s in twoThumbCorpus) {
+            reset()
+            if (s.prefs.isNotEmpty()) latinIME.prefs().edit {
+                for ((key, value) in s.prefs) when (value) {
+                    is Boolean -> putBoolean(key, value)
+                    is Int -> putInt(key, value)
+                    is String -> putString(key, value)
+                    is Float -> putFloat(key, value)
+                    else -> error("unsupported pref type for $key: $value")
+                }
+            }
+            for (step in s.steps) when (step) {
+                is SetField -> setText(step.text)
+                is Type -> chainInput(step.text)
+                is Gesture -> gestureInput(step.word)
+                is Func -> functionalKeyPress(step.keyCode)
+                GraceExpire -> expireCombiningGrace()
+            }
+            assertEquals(s.expected, textBeforeCursor, "[${s.name}] textBeforeCursor")
+            if (s.expectedComposing != null)
+                assertEquals(s.expectedComposing, composingText, "[${s.name}] composingText")
+        }
+    }
 }
 
 private var currentInputType = InputType.TYPE_CLASS_TEXT
@@ -1585,3 +1659,19 @@ class ShadowFacilitator2 {
         var lastAddedWord = ""
     }
 }
+
+// ---- A3 input-trace corpus model (see InputLogicTest.replayTwoThumbCorpus) ----
+private sealed interface TraceStep
+private data class SetField(val text: String) : TraceStep   // seed the editor field
+private data class Type(val text: String) : TraceStep       // tap each character in turn
+private data class Gesture(val word: String) : TraceStep    // glide -> recognized word (shadow-fed)
+private data class Func(val keyCode: Int) : TraceStep        // functional key (DELETE, JOIN_NEXT, ...)
+private data object GraceExpire : TraceStep                  // combining-grace timeout fires
+
+private data class Scenario(
+    val name: String,
+    val prefs: Map<String, Any> = emptyMap(),
+    val steps: List<TraceStep>,
+    val expected: String,                  // expected textBeforeCursor after replaying steps
+    val expectedComposing: String? = null, // optional: expected composing text
+)

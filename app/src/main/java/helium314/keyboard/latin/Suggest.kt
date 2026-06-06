@@ -42,6 +42,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         }
     }
     // Cached scoreLimit to avoid repeated Settings lookups in hot path
+    // The read-then-write of (mLastScoreLimitUpdateTime, mCachedScoreLimitForAutocorrect)
+    // is guarded by `synchronized(this)` in shouldBeAutoCorrected() to make the update atomic
+    // when called from multiple threads (e.g. main IME thread + SuggestionSpan / TextClassifier).
     @Volatile private var mCachedScoreLimitForAutocorrect = 0
     @Volatile private var mLastScoreLimitUpdateTime = 0L
 
@@ -49,7 +52,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     fun clearNextWordSuggestionsCache() {
         nextWordSuggestionsCache.evictAll()
         // Also reset scoreLimit cache to force refresh on next use
-        mLastScoreLimitUpdateTime = 0
+        synchronized(this) {
+            mLastScoreLimitUpdateTime = 0
+        }
     }
 
     /**
@@ -172,13 +177,17 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         val consideredWord = typedWordString.dropLast(trailingSingleQuotesCount)
         val firstAndTypedEmptyInfos by lazy { getEmptyWordSuggestions() }
 
-        // Use cached scoreLimit to avoid repeated Settings lookups in hot path
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - mLastScoreLimitUpdateTime > SCORE_LIMIT_CACHE_UPDATE_INTERVAL_MS) {
-            mCachedScoreLimitForAutocorrect = Settings.getValues().mScoreLimitForAutocorrect
-            mLastScoreLimitUpdateTime = currentTime
+        // Use cached scoreLimit to avoid repeated Settings lookups in hot path.
+        // The read-then-write is guarded by `synchronized(this)` to make the cache
+        // update atomic across threads.
+        val scoreLimit: Int = synchronized(this) {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - mLastScoreLimitUpdateTime > SCORE_LIMIT_CACHE_UPDATE_INTERVAL_MS) {
+                mCachedScoreLimitForAutocorrect = Settings.getValues().mScoreLimitForAutocorrect
+                mLastScoreLimitUpdateTime = currentTime
+            }
+            mCachedScoreLimitForAutocorrect
         }
-        val scoreLimit = mCachedScoreLimitForAutocorrect
         // We allow auto-correction if whitelisting is not required or the word is whitelisted,
         // or if the word had more than one char and was not suggested.
         val allowsToBeAutoCorrected: Boolean

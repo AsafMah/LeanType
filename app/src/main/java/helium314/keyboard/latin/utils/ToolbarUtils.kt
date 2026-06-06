@@ -23,8 +23,10 @@ import helium314.keyboard.latin.inputlogic.OneShotSpaceAction
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ToolbarKey.*
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -40,6 +42,17 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.ColorFilter
 import android.content.res.ColorStateList
+
+// Process-wide scope used for fire-and-forget tasks triggered by
+// SharedPreferences listeners (which don't carry a coroutine scope).
+// SupervisorJob prevents a single failure from cancelling unrelated
+// preference-driven updates, and the exception handler keeps crashes
+// from surfacing as silent uncaught exceptions in the default
+// handler. UI mutations still hop to Dispatchers.Main explicitly.
+private val toolbarPrefScope = CoroutineScope(SupervisorJob() + Dispatchers.Default +
+    CoroutineExceptionHandler { _, throwable ->
+        android.util.Log.w("ToolbarUtils", "preference update failed", throwable)
+    })
 
 fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     val button = ImageButton(context, null, R.attr.suggestionWordStyle)
@@ -162,7 +175,12 @@ fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: St
         && key?.startsWith(Settings.PREF_ONE_HANDED_MODE_PREFIX) == false)
         return
 
-    GlobalScope.launch {
+    // Use a process-wide scope with a SupervisorJob and exception handler.
+    // The previous code used GlobalScope, which is uncancellable and
+    // doesn't have a structured way to handle errors. The buttonsGroup
+    // can be detached if the IME is torn down quickly, so we also need
+    // to use the main thread.
+    toolbarPrefScope.launch {
         delay(10) // need to wait until SettingsValues are reloaded
         withContext(Dispatchers.Main) {
             setToolbarButtonsActivatedState(buttonsGroup)
@@ -329,7 +347,7 @@ enum class ToolbarMode {
 val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
 
 private val excludedKeys by lazy {
-    val customAiKeys = if (BuildConfig.FLAVOR != "standard")
+    val customAiKeys = if (BuildConfig.FLAVOR != "standard" && BuildConfig.FLAVOR != "standardOptimised")
         ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") }
     else emptyList()
     val otherKeys = if (BuildConfig.FLAVOR == "offlinelite")

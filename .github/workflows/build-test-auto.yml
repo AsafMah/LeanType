@@ -1,21 +1,28 @@
-name: Test build
-# builds only for a single abi and does not produce an APK
+name: Unit tests
+# Compiles main + runs the JVM unit-test suite for the offline flavor using the `runTests`
+# build type, which self-skips the network/data-dependent tests known to fail on CI
+# (see `if (BuildConfig.BUILD_TYPE == "runTests") return` in XLinkTest/StringUtilsTest/InputLogicTest).
+# No APK is produced; single-ABI, JVM tests only.
 
 on:
-# disabled on push: when I push to non-main, I do a PR anyway
-#  push:
-    # don't run on main. I noticed I often don't push commits to avoid unnecessary workflow runs
-#    branches-ignore: [ main ]
-#    paths:
-#      - 'app/**'
   pull_request:
+    branches: [ dev, main ]
     paths:
-      - 'app/src/main/java**'
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle*'
+      - 'gradle.properties'
+      - '.github/workflows/build-test-auto.yml'
+  push:
+    branches: [ dev ]
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle*'
   workflow_dispatch:
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,13 +38,18 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+      - name: Run unit tests
+        # Non-blocking for now: the suite still has ~9 failures on CI (network link tests +
+        # the #12 known-failing set + 3 new MiscTest.isWideScreen from the v3.8.5 merge).
+        # This RUNS the full suite and uploads the report on every PR (closing the "CI only
+        # compiles" gap); flip continue-on-error off once those are triaged (#12) to make it a
+        # hard gate.
+        continue-on-error: true
+        run: ./gradlew :app:testOfflineRunTestsUnitTest
 
-      - name: Build with Gradle
-        run: ./gradlew compileOfflineRunTestsKotlin
-
-      - name: Archive reports for failed job
+      - name: Archive test reports
         uses: actions/upload-artifact@v4
         with:
-          name: reports
+          name: test-reports
           path: '*/build/reports'
-        if: ${{ failure() }}
+        if: ${{ always() }}

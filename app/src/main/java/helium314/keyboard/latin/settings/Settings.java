@@ -178,6 +178,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // prepend a synthetic input point at the tail of the composing word so the gesture
     // recognizer treats it as a continuation. Helps tap-then-swipe joins land sensibly.
     public static final String PREF_MULTIPART_TAP_SEED_GESTURE = "multipart_tap_seed_gesture";
+    // Live-converge (opt-in): while building a word that already contains a swipe, route a
+    // tapped letter through the gesture recognizer together with the accumulated stroke and
+    // re-recognize the whole word, instead of literally appending it to a (possibly
+    // mis-resolved) fragment. Makes a slow tap-after-swipe behave like a fast one. Default off.
+    public static final String PREF_MULTIPART_RERECOGNIZE_TAPS = "multipart_rerecognize_taps";
     public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREF_USE_CONTACTS = "use_contacts";
     public static final String PREF_USE_APPS = "use_apps";
@@ -215,6 +220,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     public static final String PREF_ENABLE_CLIPBOARD_HISTORY = "enable_clipboard_history";
     public static final String PREF_SUGGEST_SCREENSHOTS = "suggest_screenshots";
+    public static final String PREF_COMPRESS_SCREENSHOTS = "compress_screenshots";
     public static final String PREF_CLIPBOARD_HISTORY_RETENTION_TIME = "clipboard_history_retention_time";
     public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
     public static final String PREF_CLIPBOARD_FOLD_PINNED = "clipboard_fold_pinned";
@@ -587,8 +593,9 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         if (!image.isFile())
             return null;
         try {
-            sCachedBackgroundImages[index] = new CenterCropDrawable(
-                    BitmapFactory.decodeFile(image.getAbsolutePath()));
+            final android.graphics.Bitmap bm = helium314.keyboard.latin.utils.BitmapUtils.decodeSampledBitmap(image, 2048, true);
+            if (bm == null) return null;
+            sCachedBackgroundImages[index] = new CenterCropDrawable(bm);
             return sCachedBackgroundImages[index];
         } catch (Exception e) {
             return null;

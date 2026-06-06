@@ -355,6 +355,22 @@ final class DynamicGridKeyboard extends Keyboard {
         }
 
         @Override
+        public int getHorizontalGap() {
+            if (Settings.getValues().mEmojiKeyFit) {
+                return (int) (super.getHorizontalGap() * Settings.getValues().mFontSizeMultiplierEmoji);
+            }
+            return super.getHorizontalGap();
+        }
+
+        @Override
+        public int getVerticalGap() {
+            if (Settings.getValues().mEmojiKeyFit) {
+                return (int) (super.getVerticalGap() * Settings.getValues().mFontSizeMultiplierEmoji);
+            }
+            return super.getVerticalGap();
+        }
+
+        @Override
         public int getWidth() {
             return getHitBox().width() - getHorizontalGap();
         }

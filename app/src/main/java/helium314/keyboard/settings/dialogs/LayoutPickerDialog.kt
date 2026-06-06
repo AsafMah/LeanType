@@ -95,7 +95,7 @@ fun LayoutPickerDialog(
                 LocalTextStyle provides MaterialTheme.typography.bodyLarge
             ) {
                 LazyColumn(state = state) {
-                    items(layouts) { item ->
+                    items(layouts, key = { it }) { item ->
                         if (item == "") {
                             AddLayoutRow({ newLayoutDialog = it to "" }, layoutType, customLayouts)
                         } else {

@@ -638,7 +638,10 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 showIcon = false
         }
         if (showIcon) {
-            val icon = KeyboardIconsSet.instance.getNewDrawable(KeyboardIconsSet.NAME_BIN, context)!!
+            val icon = KeyboardIconsSet.instance.getNewDrawable(KeyboardIconsSet.NAME_BIN, context)
+            if (icon == null) {
+                return true
+            }
             Settings.getValues().mColors.setColor(icon, ColorType.REMOVE_SUGGESTION_ICON)
             val w = icon.intrinsicWidth
             val h = icon.intrinsicHeight

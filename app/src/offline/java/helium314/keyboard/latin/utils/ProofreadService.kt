@@ -39,10 +39,10 @@ import java.nio.LongBuffer
  */
 class ProofreadService(private val context: Context) {
 
-    private val prefs: SharedPreferences by lazy {
+    val prefs: SharedPreferences by lazy {
         context.prefs()
     }
-    
+
     // Singleton holder for model state to prevent reloading on every request
     object ModelHolder {
         var ortEnvironment: OrtEnvironment? = null

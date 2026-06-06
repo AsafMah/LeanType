@@ -129,7 +129,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
         }
 
         contentContainer.addView(headerBar)
-        overlayRoot!!.addView(contentContainer)
+        overlayRoot?.addView(contentContainer) ?: return
 
         // Calculate window position
         val savedX = prefs.getInt(PREF_X, -1)

@@ -13,6 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,13 +52,17 @@ fun ColorPickerDialog(
     onConfirmed: (Int) -> Unit,
 ) {
     val controller = rememberColorPickerController()
-    val wheelPaint = Paint().apply {
-        alpha = 0.5f
-        style = PaintingStyle.Stroke
-        strokeWidth = 5f
-        color = Color.White
+    val wheelPaint = remember {
+        Paint().apply {
+            alpha = 0.5f
+            style = PaintingStyle.Stroke
+            strokeWidth = 5f
+            color = Color.White
+        }
     }
-    controller.wheelPaint = wheelPaint
+    LaunchedEffect(controller) {
+        controller.wheelPaint = wheelPaint
+    }
     val barHeight = 35.dp
     val initialString = initialColor.toUInt().toString(16)
     var textValue by remember { mutableStateOf(TextFieldValue(initialString, TextRange(initialString.length))) }

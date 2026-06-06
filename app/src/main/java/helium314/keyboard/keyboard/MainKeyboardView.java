@@ -62,6 +62,8 @@ import helium314.keyboard.latin.define.DebugFlags;
 import helium314.keyboard.latin.settings.DebugSettings;
 import helium314.keyboard.latin.settings.Defaults;
 import helium314.keyboard.latin.settings.Settings;
+import helium314.keyboard.latin.AudioAndHapticFeedbackManager;
+import helium314.keyboard.event.HapticEvent;
 import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LanguageOnSpacebarUtils;
 import helium314.keyboard.latin.utils.LayoutType;
@@ -556,6 +558,14 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         if (!Settings.getValues().mGestureDebugDrawPoints) return;
         locatePreviewPlacerView();
         mGestureDebugPointsDrawingPreview.updateSnapshot(raw, synthetic);
+    }
+
+    /** Cue that this gesture/tap joined the current word: a ring on the joining fragment + a haptic tick. */
+    public void signalGestureJoin() {
+        if (!Settings.getValues().mGestureDebugDrawPoints) return;
+        locatePreviewPlacerView();
+        mGestureDebugPointsDrawingPreview.markJoin();
+        AudioAndHapticFeedbackManager.getInstance().performHapticFeedback(this, HapticEvent.GESTURE_MOVE);
     }
 
     @Override

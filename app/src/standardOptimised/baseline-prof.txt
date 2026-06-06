@@ -1,0 +1,7 @@
+# Optimize Heliboard/LeanType classes and methods for butter-smooth typing & suggestion rendering
+HSPLhelium314/keyboard/**
+HSPLhelium314/keyboard/**->**
+HSPLhelium314/keyboard/latin/**
+HSPLhelium314/keyboard/latin/**->**
+HSPLhelium314/keyboard/settings/**
+HSPLhelium314/keyboard/settings/**->**

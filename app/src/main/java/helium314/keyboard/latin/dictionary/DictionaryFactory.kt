@@ -8,6 +8,7 @@ package helium314.keyboard.latin.dictionary
 import android.content.Context
 import helium314.keyboard.latin.common.LocaleUtils
 import helium314.keyboard.latin.utils.DictionaryInfoUtils
+import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.Log
 import java.io.File
 import java.util.LinkedList
@@ -29,13 +30,13 @@ object DictionaryFactory {
         val (extracted, nonExtracted) = getAvailableDictsForLocale(locale, context, useEmojiDict)
         extracted.sortedBy { !it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX) }.forEach {
             // we sort to have user dicts first, so they have priority over internal dicts of the same type
-            checkAndAddDictionaryToListIfNewType(it, dictList, locale)
+            checkAndAddDictionaryToListIfNewType(it, dictList, locale, context)
         }
         nonExtracted.forEach { filename ->
             val type = filename.substringBefore("_")
             if (dictList.any { it.mDictType == type }) return@forEach
             val extractedFile = DictionaryInfoUtils.extractAssetsDictionary(filename, locale, context) ?: return@forEach
-            checkAndAddDictionaryToListIfNewType(extractedFile, dictList, locale)
+            checkAndAddDictionaryToListIfNewType(extractedFile, dictList, locale, context)
         }
         return DictionaryCollection(Dictionary.TYPE_MAIN, locale, dictList, FloatArray(dictList.size) { 1f })
     }
@@ -64,7 +65,15 @@ object DictionaryFactory {
      * if [file] cannot be loaded it is deleted
      * if the dictionary type already exists in [dicts], the [file] is skipped
      */
-    private fun checkAndAddDictionaryToListIfNewType(file: File, dicts: MutableList<Dictionary>, locale: Locale) {
+    private fun checkAndAddDictionaryToListIfNewType(file: File, dicts: MutableList<Dictionary>, locale: Locale, context: Context) {
+        val header = DictionaryInfoUtils.getDictionaryFileHeaderOrNull(file)
+        if (header != null) {
+            val prefs = context.prefs()
+            if (!prefs.getBoolean("pref_dict_enabled_${header.mIdString}", true)) {
+                Log.i("DictionaryFactory", "skipping disabled dictionary ${header.mIdString}")
+                return
+            }
+        }
         val dictionary = getDictionary(file, locale) ?: return
         if (dicts.any { it.mDictType == dictionary.mDictType }) {
             dictionary.close()

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,8 +30,10 @@ import androidx.compose.ui.unit.em
 import helium314.keyboard.compat.locale
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.LocaleUtils
 import helium314.keyboard.latin.common.LocaleUtils.localizedDisplayName
 import helium314.keyboard.latin.utils.DictionaryInfoUtils
+import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.createDictionaryTextAnnotated
 import helium314.keyboard.settings.DeleteButton
 import helium314.keyboard.settings.ExpandButton
@@ -62,16 +65,51 @@ fun DictionaryDialog(
         content = {
             Column {
                 if (hasInternal) {
+                    val internalDicts = DictionaryInfoUtils.getAssetsDictionaryList(ctx)
+                    val best = internalDicts?.let {
+                        LocaleUtils.getBestMatch(locale, it.toList()) { dict ->
+                            DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(dict)
+                        }
+                    }
+                    val internalId = best?.let { "main:" + it.substringAfter("_").substringBefore(".") }
+                    
                     val color = if (mainDict == null) MaterialTheme.typography.titleSmall.color
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) // for disabled look
                     val bottomPadding = if (mainDict == null) 12.dp else 0.dp
-                    Text(stringResource(R.string.internal_dictionary_summary),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = bottomPadding),
-                        color = color,
-                        style = MaterialTheme.typography.titleSmall
-                    )
+
+                    if (internalId != null) {
+                        val prefs = ctx.prefs()
+                        val prefKey = "pref_dict_enabled_$internalId"
+                        var enabled by remember { mutableStateOf(prefs.getBoolean(prefKey, true)) }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = bottomPadding)
+                        ) {
+                            Switch(
+                                checked = enabled && (mainDict == null),
+                                enabled = mainDict == null,
+                                onCheckedChange = { isChecked ->
+                                    enabled = isChecked
+                                    prefs.edit().putBoolean(prefKey, isChecked).apply()
+                                },
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(stringResource(R.string.internal_dictionary_summary),
+                                color = color,
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+                    } else {
+                        Text(stringResource(R.string.internal_dictionary_summary),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = bottomPadding),
+                            color = color,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
                 }
                 if (mainDict != null)
                     DictionaryDetails(mainDict)
@@ -113,11 +151,24 @@ private fun DictionaryDetails(dict: File) {
     var showDetails by remember { mutableStateOf(false) }
     val title = if (type != DictionaryInfoUtils.DEFAULT_MAIN_DICT) type
         else stringResource(R.string.main_dictionary)
+    val ctx = LocalContext.current
+    val prefs = ctx.prefs()
+    val prefKey = "pref_dict_enabled_${header.mIdString}"
+    var enabled by remember { mutableStateOf(prefs.getBoolean(prefKey, true)) }
+
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
     ) {
+        Switch(
+            checked = enabled,
+            onCheckedChange = { isChecked ->
+                enabled = isChecked
+                prefs.edit().putBoolean(prefKey, isChecked).apply()
+            },
+            modifier = Modifier.padding(end = 8.dp)
+        )
         Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         DeleteButton { showDeleteDialog = true }
         ExpandButton { showDetails = !showDetails }

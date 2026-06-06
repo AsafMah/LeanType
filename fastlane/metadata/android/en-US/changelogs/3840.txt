@@ -1,0 +1,6 @@
+- Fix missing words & optimize Gboard dictionary import performance
+- Pre-verify ZIP signatures & close streams to prevent corrupted imports
+- Add double tap touchpad gesture to delete selected words
+- Prevent duplicate clipboard screenshots & add compression toggle
+- Settings and editor performance, stability & memory optimizations
+- Text Expander: Backspace-to-revert, %cursor%, %greeting%, %tomorrow%, and bullets/list placeholders (with optional custom count e.g. %list_5%)

@@ -32,6 +32,11 @@ class ClipboardHistoryManager(
 ) : ClipboardManager.OnPrimaryClipChangedListener {
 
     private lateinit var clipboardManager: ClipboardManager
+    // Cache the main-thread Handler. ClipboardHistoryManager is a
+    // singleton scoped to the IME service, so a single Handler bound
+    // to the main Looper is fine for the whole process. This avoids
+    // allocating a fresh Handler on every postDelayed().
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var clipboardSuggestionView: View? = null
     private var clipboardDao: ClipboardDao? = null
     private var dontShowCurrentSuggestion: Boolean = false
@@ -148,11 +153,11 @@ class ClipboardHistoryManager(
 
     private fun registerMediaStoreObserver() {
         if (mediaStoreObserver == null) {
-            mediaStoreObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            mediaStoreObserver = object : ContentObserver(mainHandler) {
                 override fun onChange(selfChange: Boolean, uri: Uri?) {
                     super.onChange(selfChange, uri)
                     if (latinIME.mSettings.current.mSuggestScreenshots) {
-                        Handler(Looper.getMainLooper()).postDelayed({
+                        mainHandler.postDelayed({
                             updateLatestScreenshotCache {
                                 dontShowCurrentSuggestion = false
                                 latinIME.setNeutralSuggestionStrip()
@@ -253,7 +258,24 @@ class ClipboardHistoryManager(
             val cacheDir = java.io.File(latinIME.cacheDir, "clipboard_images")
             if (!cacheDir.exists()) cacheDir.mkdirs()
             
-            val file = java.io.File(cacheDir, "img_${System.currentTimeMillis()}.jpg")
+            val md = java.security.MessageDigest.getInstance("MD5")
+            val digest = md.digest(uri.toString().toByteArray())
+            val hash = digest.joinToString("") { "%02x".format(it) }
+            val suffix = if (latinIME.mSettings.current.mCompressScreenshots) "_compressed" else ""
+            val file = java.io.File(cacheDir, "img_${hash}${suffix}.jpg")
+            if (file.exists() && file.length() > 0) {
+                return file.absolutePath
+            }
+            
+            if (!latinIME.mSettings.current.mCompressScreenshots) {
+                resolver.openInputStream(uri)?.use { input ->
+                    file.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                    return file.absolutePath
+                }
+                return null
+            }
             
             resolver.openInputStream(uri)?.use { input ->
                 val options = android.graphics.BitmapFactory.Options().apply {
@@ -534,7 +556,7 @@ class ClipboardHistoryManager(
         }
         
         // Restore original clip after a tiny delay to allow paste process to complete
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+        mainHandler.postDelayed({
             try {
                 if (primaryClip != null) {
                     clipboardManager.setPrimaryClip(primaryClip)

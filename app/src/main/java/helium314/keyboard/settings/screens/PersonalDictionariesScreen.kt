@@ -54,6 +54,7 @@ import java.io.InputStreamReader
 import java.util.TreeSet
 import java.util.zip.ZipInputStream
 import android.provider.UserDictionary
+import android.content.ContentValues
 import kotlinx.coroutines.withContext
 import java.util.zip.ZipEntry
 
@@ -133,61 +134,109 @@ fun PersonalDictionariesScreen(
 
 private suspend fun importGboardDictionary(context: android.content.Context, uri: android.net.Uri): Int {
     var addedCount = 0
-    context.contentResolver.openInputStream(uri)?.use { inputStream ->
-        // Check if it's a zip by reading magic bytes or extension (but here we just try zip first)
-        // Gboard export is typically a zip containing dictionary.txt
-        // But users might extract it
-        try {
-            // Try as ZIP
-            val zipStream = ZipInputStream(inputStream)
-            var entry = zipStream.nextEntry
-            while (entry != null) {
-                if (entry.name.endsWith(".txt") || entry.name == "dictionary.txt") {
-                    // Prevent closing the parent stream
-                    val reader = BufferedReader(InputStreamReader(zipStream))
-                    addedCount += parseAndInsert(context, reader)
+    val isZip = try {
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            ZipInputStream(inputStream).use { zip -> zip.nextEntry != null }
+        } ?: false
+    } catch (_: Exception) {
+        false
+    }
+
+    if (isZip) {
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            try {
+                ZipInputStream(inputStream).use { zipStream ->
+                    var entry = zipStream.nextEntry
+                    while (entry != null) {
+                        if (entry.name.endsWith(".txt") || entry.name == "dictionary.txt") {
+                            val reader = BufferedReader(InputStreamReader(zipStream))
+                            addedCount += parseAndInsert(context, reader)
+                        }
+                        zipStream.closeEntry()
+                        entry = zipStream.nextEntry
+                    }
                 }
-                zipStream.closeEntry()
-                entry = zipStream.nextEntry
+            } catch (e: Exception) {
+                Log.e("ImportDict", "Failed to parse ZIP dictionary", e)
             }
-        } catch (e: Exception) {
-            // Might be a plain text file
-            context.contentResolver.openInputStream(uri)?.use { plainStream ->
-                val reader = BufferedReader(InputStreamReader(plainStream))
-                addedCount += parseAndInsert(context, reader)
-            }
+        }
+    } else {
+        context.contentResolver.openInputStream(uri)?.use { plainStream ->
+            val reader = BufferedReader(InputStreamReader(plainStream))
+            addedCount += parseAndInsert(context, reader)
         }
     }
     return addedCount
 }
 
 private fun parseAndInsert(context: android.content.Context, reader: BufferedReader): Int {
-    var count = 0
+    val valuesList = mutableListOf<ContentValues>()
     var line: String?
+    var wordIndex = 0
+    var shortcutIndex = 1
+    var localeIndex = 2
     while (reader.readLine().also { line = it } != null) {
         val currentLine = line ?: continue
-        if (currentLine.startsWith("#")) continue
+        if (currentLine.startsWith("#")) {
+            val formatPrefix = "# Gboard Dictionary format:"
+            if (currentLine.startsWith(formatPrefix)) {
+                val columnsStr = currentLine.substring(formatPrefix.length)
+                val columns = if (columnsStr.contains("\t")) {
+                    columnsStr.split("\t")
+                } else {
+                    columnsStr.split(Regex("\\s+"))
+                }.map { it.trim() }
+                val wIdx = columns.indexOf("word")
+                val sIdx = columns.indexOf("shortcut")
+                val lIdx = columns.indexOf("language_tag").let { if (it == -1) columns.indexOf("locale") else it }
+                if (wIdx != -1) {
+                    wordIndex = wIdx
+                    shortcutIndex = sIdx
+                    localeIndex = lIdx
+                }
+            }
+            continue
+        }
         val parts = currentLine.split("\t")
         if (parts.isNotEmpty()) {
-            val word = parts[0]
+            val word = if (wordIndex in parts.indices) parts[wordIndex] else ""
             if (word.isNotBlank()) {
-                val shortcut = if (parts.size >= 2) parts[1].ifBlank { null } else null
-                val localeStr = if (parts.size >= 3) parts[2].ifBlank { null } else null
+                val shortcut = if (shortcutIndex != -1 && shortcutIndex in parts.indices) parts[shortcutIndex].ifBlank { null } else null
+                val localeStr = if (localeIndex != -1 && localeIndex in parts.indices) parts[localeIndex].ifBlank { null } else null
                 
                 val locale = if (localeStr != null && localeStr != "all") {
                     try { Locale.forLanguageTag(localeStr) } catch(_: Exception) { null }
                 } else null
                 
-                try {
-                    UserDictionary.Words.addWord(context, word, 250, shortcut, locale)
-                    count++
-                } catch (e: Exception) {
-                    Log.w("ImportDict", "Failed to add word $word", e)
+                val values = ContentValues(5).apply {
+                    put(UserDictionary.Words.WORD, word)
+                    put(UserDictionary.Words.FREQUENCY, 250)
+                    put(UserDictionary.Words.LOCALE, locale?.toString())
+                    put(UserDictionary.Words.APP_ID, 0)
+                    put(UserDictionary.Words.SHORTCUT, shortcut)
                 }
+                valuesList.add(values)
             }
         }
     }
-    return count
+
+    if (valuesList.isEmpty()) return 0
+
+    return try {
+        context.contentResolver.bulkInsert(UserDictionary.Words.CONTENT_URI, valuesList.toTypedArray())
+    } catch (e: Exception) {
+        Log.e("ImportDict", "Bulk insert failed, falling back to one-by-one insert", e)
+        var successCount = 0
+        for (values in valuesList) {
+            try {
+                context.contentResolver.insert(UserDictionary.Words.CONTENT_URI, values)
+                successCount++
+            } catch (ex: Exception) {
+                Log.w("ImportDict", "Failed to add word ${values.getAsString(UserDictionary.Words.WORD)}", ex)
+            }
+        }
+        successCount
+    }
 }
 
 fun getSortedDictionaryLocales(): TreeSet<Locale> {

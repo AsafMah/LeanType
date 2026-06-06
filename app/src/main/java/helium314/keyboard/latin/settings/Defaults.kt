@@ -117,6 +117,7 @@ object Defaults {
     const val PREF_SUGGEST_PUNCTUATION = false
     const val PREF_SUGGEST_CLIPBOARD_CONTENT = true
     const val PREF_SUGGEST_SCREENSHOTS = false
+    const val PREF_COMPRESS_SCREENSHOTS = true
     const val PREF_GESTURE_INPUT = true
     const val PREF_VIBRATION_DURATION_SETTINGS = -1
     const val PREF_VIBRATION_AMPLITUDE_SETTINGS = -1
@@ -155,6 +156,7 @@ object Defaults {
     const val PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING = true
     const val PREF_MULTIPART_FULL_WORD_SUGGESTIONS = true
     const val PREF_MULTIPART_TAP_SEED_GESTURE = true
+    const val PREF_MULTIPART_RERECOGNIZE_TAPS = false
     const val PREF_SHOW_SETUP_WIZARD_ICON = true
     const val PREF_USE_CONTACTS = false
     const val PREF_USE_APPS = false

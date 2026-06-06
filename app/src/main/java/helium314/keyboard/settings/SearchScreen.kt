@@ -104,7 +104,7 @@ fun SearchSettingsScreen(
                             .fillMaxSize(),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
                     ) {
-                        items(groups) { (titleRes, keys) ->
+                        items(groups, key = { (titleRes, _) -> titleRes ?: 0 }) { (titleRes, keys) ->
                             androidx.compose.material3.Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -119,7 +119,9 @@ fun SearchSettingsScreen(
                                     }
                                     
                                     keys.forEach { key ->
-                                        SettingsActivity.settingsContainer[key]?.Preference()
+                                        androidx.compose.runtime.key(key) {
+                                            SettingsActivity.settingsContainer[key]?.Preference()
+                                        }
                                     }
                                 }
                             }
@@ -242,12 +244,12 @@ fun <T: Any?> SearchScreen(
                         content()
                     }
                 } else {
-                    val items = filteredItems(searchText.text)
+                    val items = remember(searchText.text) { filteredItems(searchText.text) }
                     Scaffold(
                         contentWindowInsets = WindowInsets(0)
                     ) { innerPadding ->
                         LazyColumn(contentPadding = innerPadding) {
-                            items(items) {
+                            items(items, key = { it?.toString() ?: "null" }) {
                                 itemContent(it)
                             }
                         }

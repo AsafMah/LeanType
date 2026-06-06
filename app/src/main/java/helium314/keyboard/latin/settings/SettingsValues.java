@@ -144,6 +144,7 @@ public class SettingsValues {
         public final boolean mMultipartAutoExtendInCombining;
         public final boolean mMultipartFullWordSuggestions;
         public final boolean mMultipartTapSeedGesture;
+        public final boolean mMultipartRerecognizeTaps;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -198,6 +199,7 @@ public class SettingsValues {
         private final boolean mOverrideShowingSuggestions;
         public final boolean mSuggestClipboardContent;
         public final boolean mSuggestScreenshots;
+        public final boolean mCompressScreenshots;
         public final SettingsValuesForSuggestion mSettingsValuesForSuggestion;
         public final boolean mIncognitoModeEnabled;
         public final boolean mLongPressSymbolsForNumpad;
@@ -299,6 +301,8 @@ public class SettingsValues {
                                 Defaults.PREF_SUGGEST_CLIPBOARD_CONTENT);
                 mSuggestScreenshots = prefs.getBoolean(Settings.PREF_SUGGEST_SCREENSHOTS,
                                 Defaults.PREF_SUGGEST_SCREENSHOTS);
+                mCompressScreenshots = prefs.getBoolean(Settings.PREF_COMPRESS_SCREENSHOTS,
+                                Defaults.PREF_COMPRESS_SCREENSHOTS);
                 mDoubleSpacePeriodTimeout = 1100; // ms
                 mHasHardwareKeyboard = Settings.readHasHardwareKeyboard(res.getConfiguration());
                 final boolean isLandscape = mDisplayOrientation == Configuration.ORIENTATION_LANDSCAPE;
@@ -388,6 +392,9 @@ public class SettingsValues {
                 mMultipartTapSeedGesture = nonNormalTwoThumbSpacing || prefs.getBoolean(
                                 Settings.PREF_MULTIPART_TAP_SEED_GESTURE,
                                 Defaults.PREF_MULTIPART_TAP_SEED_GESTURE);
+                mMultipartRerecognizeTaps = prefs.getBoolean(
+                                Settings.PREF_MULTIPART_RERECOGNIZE_TAPS,
+                                Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions

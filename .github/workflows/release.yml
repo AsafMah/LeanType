@@ -1,0 +1,84 @@
+# Builds the signed release APKs (all three flavors) and drafts a GitHub Release.
+#
+# Triggers on pushing a version tag (e.g. `git tag v3.8.5 && git push origin v3.8.5`),
+# or manually via "Run workflow" (workflow_dispatch) for a signing/build dry run that
+# uploads the APKs as an artifact WITHOUT creating a Release.
+#
+# REQUIRED repository secrets (Settings > Secrets and variables > Actions) — only the
+# maintainer can add these; the build fails fast with a clear message if KEYSTORE_BASE64
+# is missing:
+#   KEYSTORE_BASE64    base64 of the release keystore  (`base64 -w0 release.jks` / certutil on Windows)
+#   KEYSTORE_PASSWORD  store password
+#   KEY_ALIAS          key alias
+#   KEY_PASSWORD       key password
+# These map onto app/build.gradle.kts' keystore.properties signingConfig.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required to create the GitHub Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is not set. Add the release signing secrets (see this file's header) before tagging a release."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          cat > keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Build signed release APKs (all flavors)
+        run: ./gradlew :app:assembleStandardRelease :app:assembleOfflineRelease :app:assembleOfflineliteRelease
+
+      - name: Collect APKs
+        run: |
+          mkdir -p release-apks
+          find app/build/outputs/apk -path '*/release/*.apk' -exec cp {} release-apks/ \;
+          ls -la release-apks
+
+      - name: Upload APKs as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apks
+          path: release-apks/*.apk
+          if-no-files-found: error
+
+      - name: Draft GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: release-apks/*.apk
