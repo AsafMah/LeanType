@@ -7,8 +7,8 @@ object Links {
     const val DICTIONARY_NORMAL_SUFFIX = "dictionaries/"
     const val DICTIONARY_EXPERIMENTAL_SUFFIX = "dictionaries_experimental/"
     const val DICTIONARY_EMOJI_CLDR_SUFFIX = "emoji_cldr_signal_dictionaries/"
-    // LeanBitBoard fork repo
-    const val GITHUB = "https://github.com/LeanBitLab/HeliboardL"
+    // This app's repo (AsafMah/LeanType, a fork of the LeanBitLab/LeanType upstream)
+    const val GITHUB = "https://github.com/AsafMah/LeanType"
     const val LICENSE = "$GITHUB/blob/main/LICENSE"
     const val SPONSOR = "https://github.com/sponsors/LeanBitLab"
     // Original HeliBoard wiki and community links
