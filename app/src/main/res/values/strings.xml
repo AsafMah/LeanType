@@ -293,6 +293,10 @@
     <string name="multipart_full_word_suggestions_summary">During multi-part composition, the suggestion strip shows alternatives for the entire word so far, not just the most recent fragment.</string>
     <string name="multipart_tap_seed_gesture">Seed swipe from typed prefix</string>
     <string name="multipart_tap_seed_gesture_summary">When you type some letters and then swipe while combining mode is armed, treat the swipe as a continuation of the typed prefix.</string>
+    <!-- Title of the experimental setting that re-recognizes a whole swiped+tapped word when a tap follows a swipe. -->
+    <string name="multipart_rerecognize_taps">Re-recognize taps within swiped words</string>
+    <!-- Description for "multipart_rerecognize_taps". -->
+    <string name="multipart_rerecognize_taps_summary">When a word already contains a swipe, a tapped letter joins the gesture and the whole word is recognized again, so a slow tap after a swipe behaves like a fast one (swipe \"th\" then tap \"e\" → \"the\"). Taps act as recognizer hints, not exact letters. Experimental.</string>
     <string name="two_thumb_typed_prefix_swipe">Swipe continues typed prefix</string>
     <string name="two_thumb_typed_prefix_swipe_summary">If you type a few letters and then swipe during the countdown, treat the swipe as the rest of that word.</string>
     <string name="two_thumb_backspace_behavior">Backspace behavior</string>

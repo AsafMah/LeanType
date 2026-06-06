@@ -622,24 +622,42 @@ is tracked in #34.
 armed" vs "grace window open") is still deferred — comes with the join-key
 UX work (#34).
 
-### 4.12 Live-converge: re-recognize taps within swiped words (#1.7) — REMOVED
+### 4.12 Live-converge: re-recognize taps within swiped words (#1.7, 2026-06, opt-in)
 
-This was an opt-in (`PREF_MULTIPART_RERECOGNIZE_TAPS`, default off) that, when a
-word already contained a swipe, routed a following tap through the recognizer
-together with the accumulated stroke (`mLiveStroke`) and re-recognized the whole
-word — so a slow tap-after-swipe behaved like a fast one.
+Problem: the native glide recognizer resolves every completed stroke to a whole
+word immediately, so a short swipe fragment (`t→h`) resolves to a nearby short
+word in isolation. A *fast* follow-up tap folds into the same stroke and
+`t→h→e` recognizes as `the`; a *slow* tap arrives after the stroke has ended
+and `handleNonSeparatorEvent` appends it literally to the mis-resolved word.
 
-It was **removed** (2026-06) after on-device dogfooding. The re-recognition is
-*destructive* (you stop seeing the letter you tapped), it blocks typing words the
-recognizer doesn't know, and it isn't unified with starting a word by typing. The
-only case it improved — swiping a *partial* word then finishing it with taps — is
-rare and not worth those costs. With it gone, a tap after a swipe simply appends
-literally (you see exactly what you typed).
+Fix (`PREF_MULTIPART_RERECOGNIZE_TAPS`, default off): when the current word
+already contains a gesture fragment, route a tap as a one-point continuation of
+the accumulated stroke and re-recognize the whole word — making slow taps behave
+like fast ones. Pieces in `InputLogic`:
 
-The multi-part composition users rely on (swipe+swipe, tap+swipe, swipe+tap → one
-word, via the seed/concat and `setExtendBatchInputBase` merged-trail path) is
-**unchanged** — it never depended on this flag. A non-destructive "offer, don't
-replace" successor is tracked in issue #27 (B2).
+- `mLiveStroke` (InputPointers): the word's accumulated raw trail. Captured in
+  `onUpdateTailBatchInputCompleted` *before* `setBatchInputWord` resets the
+  composer's `mInputPointers`; cleared in `resetComposingState` /
+  `commitChosenWord`.
+- `getBatchSuggestionsSync()`: synchronous batch recognition via the same
+  handler + `AsyncResultHolder` + timeout pattern as
+  `performUpdateSuggestionStripSync`.
+- `tryLiveConvergeTap(event, sv)`: hooked at the top of
+  `handleNonSeparatorEvent`. Guards on the pref, `isMultipartComposeActive()`,
+  a composing gesture-word with cursor at end, a word codepoint, real key
+  coordinates, and a non-empty accumulator. Builds a 1-point `InputPointers` at
+  the tap's key center, merges via `setExtendBatchInputBase` +
+  `setBatchInputPointers`, recognizes, then reuses
+  `onUpdateTailBatchInputCompleted` (extend-base set → whole-word replace, no
+  prevTypedWord concat). Returns `false` → literal-append fallback when
+  recognition is unavailable, so a tap is never lost.
+
+Constraints: pure-tap words are excluded (so ordinary typing stays exact);
+taps are recognizer *hints*, not exact anchors. v1 handles one swipe stem plus
+following taps; multi-swipe-then-tap resets the accumulator to the latest swipe.
+The positive recognition path is **not JVM-unit-testable** (no native lib in
+tests; harness tap events carry no coordinates), so unit coverage is limited to
+the safe-fallback/no-regression property and the change is validated on-device.
 
 ---
 
