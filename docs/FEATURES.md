@@ -15,6 +15,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | 🛡️ **[Offline Proofreading](#5-offline-proofreading-privacy-focused)** | Privacy-first, on-device AI. |
 | 👐 **[Two-thumb Typing (experimental)](#two-thumb-typing-experimental)** | Mix taps and swipes naturally; manual spacing; Nintype-style. |
 | 📝 **[Text Expander](#6-text-expander)** | Custom text shortcut expansion. |
+| 🖱️ **[Touchpad Mode](#7-touchpad-mode)** | Full-screen touchpad gestures and controls. |
 
 ## Summary of New Features
 
@@ -352,6 +353,11 @@ Text Expander allows you to define custom shortcuts (abbreviations) that automat
     *   `%date%` - Inserts the current local date.
     *   `%time%` - Inserts the current local time.
     *   `%clipboard%` - Appends the most recently copied text from your clipboard.
+    *   `%cursor%` - Positions the typing cursor here after expansion.
+    *   `%greeting%` - Inserts "Good morning", "Good afternoon", or "Good evening" depending on the hour.
+    *   `%tomorrow%` - Inserts tomorrow's date (YYYY-MM-DD).
+    *   `%bullets%` - Inserts a bullet list template (supports count suffix e.g. `%bullets_5%`).
+    *   `%list%` - Inserts a numbered list template (supports count suffix e.g. `%list_5%`).
     *   **Custom Placeholders**: Create dynamic input fields (e.g., `%name%`) that prompt you to type a value during the expansion flow.
 
 ### Configuration
@@ -359,3 +365,20 @@ Text Expander allows you to define custom shortcuts (abbreviations) that automat
 2.  Tap the **+** (Add) button to create a new expansion rule.
 3.  Specify the **Shortcut** trigger and the **Expansion** template.
 4.  Include dynamic template variables in the template block.
+
+---
+
+## 7. Touchpad Mode
+
+Touchpad Mode replaces the keyboard with a laptop-style touchpad overlay to control the cursor and edit text using fluid gestures.
+
+### How to Enable
+*   **Swipe gesture**: Swipe up on the **Spacebar** to temporarily toggle Touchpad Mode.
+*   **Toolbar shortcut**: Tap the **Touchpad** icon in the toolbar for a persistent touchpad overlay.
+
+### Touchpad Gestures
+*   **Single-finger drag**: Moves the cursor in 2D space (simulating arrow keys left/right/up/down) to navigate text.
+*   **Two-finger drag**: Performs fast vertical scrolling (simulating arrow keys up/down).
+*   **Two-finger tap**: Simulates a mouse click/Enter.
+*   **Long press (hold finger)**: Activates text selection mode. Dragging while holding will select text. Releasing the finger exits selection mode.
+*   **Double tap by single finger**: Deletes the selected text or words (if a text selection exists).

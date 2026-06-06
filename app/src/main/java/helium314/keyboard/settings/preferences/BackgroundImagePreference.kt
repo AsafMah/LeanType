@@ -4,12 +4,12 @@ package helium314.keyboard.settings.preferences
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +23,7 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.BitmapUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.prefs
@@ -45,8 +46,9 @@ fun BackgroundImagePref(setting: Setting, isLandscape: Boolean) {
     if ((b?.value ?: 0) < 0) // necessary to reload dayNightPref
         Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
     val dayNightPref = ctx.prefs().getBoolean(Settings.PREF_THEME_DAY_NIGHT, Defaults.PREF_THEME_DAY_NIGHT)
-    if (!dayNightPref)
-        isNight = false
+    LaunchedEffect(dayNightPref) {
+        if (!dayNightPref) isNight = false
+    }
     val scope = rememberCoroutineScope()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
@@ -118,12 +120,12 @@ private fun setBackgroundImage(ctx: Context, uri: Uri, isNight: Boolean, isLands
     val imageFile = Settings.getCustomBackgroundFile(ctx, isNight, isLandscape)
     FileUtils.copyContentUriToNewFile(uri, ctx, imageFile)
     KeyboardSwitcher.getInstance().setThemeNeedsReload()
-    try {
-        BitmapFactory.decodeFile(imageFile.absolutePath)
-    } catch (_: Exception) {
+    val bm = BitmapUtils.decodeSampledBitmap(imageFile, maxDim = 2048, preferLowConfig = true)
+    if (bm == null) {
         imageFile.delete()
         return false
     }
+    bm.recycle()
     Settings.clearCachedBackgroundImages()
     return true
 }

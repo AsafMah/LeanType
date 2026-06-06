@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -22,6 +23,7 @@ import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.dialogs.ReorderDialog
 import helium314.keyboard.settings.screens.GetIcon
+import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
 
 @Composable
@@ -35,10 +37,12 @@ fun ReorderSwitchPreference(setting: Setting, default: String, filter: (String) 
     if (showDialog) {
         val ctx = LocalContext.current
         val prefs = ctx.prefs()
-        val items = prefs.getString(setting.key, default)!!.split(Separators.ENTRY).map {
-            val both = it.split(Separators.KV)
-            KeyAndState(both.first(), both.last().toBoolean())
-        }.filter { filter(it.name) }
+        val items = remember(setting.key) {
+            prefs.getString(setting.key, default)!!.split(Separators.ENTRY).map {
+                val both = it.split(Separators.KV)
+                KeyAndState(both.first(), both.last().toBoolean())
+            }.filter { filter(it.name) }
+        }
         ReorderDialog(
             onConfirmed = { reorderedItems ->
                 val value = reorderedItems.joinToString(Separators.ENTRY) { it.name + Separators.KV + it.state }
@@ -51,7 +55,7 @@ fun ReorderSwitchPreference(setting: Setting, default: String, filter: (String) 
             items = items,
             title = { Text(setting.title) },
             displayItem = { item ->
-                var checked by rememberSaveable { mutableStateOf(item.state) }
+                var checked by rememberSaveable(item.name) { mutableStateOf(item.state) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     KeyboardIconsSet.instance.GetIcon(item.name)
                     val text = item.name.lowercase().getStringResourceOrName("", ctx)
@@ -60,7 +64,10 @@ fun ReorderSwitchPreference(setting: Setting, default: String, filter: (String) 
                     Text(actualText, Modifier.weight(1f))
                     Switch(
                         checked = checked,
-                        onCheckedChange = { item.state = it; checked = it }
+                        onCheckedChange = {
+                            item.state = it
+                            checked = it
+                        }
                     )
                 }
             },
@@ -69,4 +76,4 @@ fun ReorderSwitchPreference(setting: Setting, default: String, filter: (String) 
     }
 }
 
-private class KeyAndState(var name: String, var state: Boolean)
+private class KeyAndState(val name: String, var state: Boolean)

@@ -446,7 +446,7 @@ public class KeyboardView extends View {
                 labelX = centerX;
                 paint.setTextAlign(Align.CENTER);
             }
-            if (key.needsAutoXScale()) {
+            if (key.needsAutoXScale() || (StringUtilsKt.isEmoji(label) && Settings.getValues().mEmojiKeyFit)) {
                 final int width;
                 if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags)) {
                     // make sure the text stays inside bounds of background drawable
@@ -457,7 +457,7 @@ public class KeyboardView extends View {
                     width = keyWidth;
                 final float ratio = Math.min(1.0f,
                         (width * MAX_LABEL_RATIO) / TypefaceUtils.getStringWidth(label, paint));
-                if (key.needsAutoScale()) {
+                if (key.needsAutoScale() || (StringUtilsKt.isEmoji(label) && Settings.getValues().mEmojiKeyFit)) {
                     final float autoSize = paint.getTextSize() * ratio;
                     paint.setTextSize(autoSize);
                 } else {

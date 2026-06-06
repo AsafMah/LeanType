@@ -116,7 +116,7 @@ fun ColorThemePickerDialog(
                 LocalTextStyle provides MaterialTheme.typography.bodyLarge
             ) {
                 LazyColumn(state = state) {
-                    items(colors) { item ->
+                    items(colors, key = { it }) { item ->
                         if (item == "") {
                             AddColorRow(onDismissRequest, userColors, targetScreen, setting.key)
                         } else {

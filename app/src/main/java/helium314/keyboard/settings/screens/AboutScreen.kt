@@ -184,10 +184,23 @@ fun createAboutSettings(context: Context) = listOf(
             val uri = result.data?.data ?: return@rememberLauncherForActivityResult
             scope.launch(Dispatchers.IO) {
                 ctx.getActivity()?.contentResolver?.openOutputStream(uri)?.use { os ->
-                    os.writer().use { writer ->
-                        val logcat = ProcessBuilder("logcat", "-d", "-b", "all", "*:W").start().inputStream.use { it.reader().readText() }
-                        val internal = Log.getLog().joinToString("\n")
-                        writer.write(logcat + "\n\n" + internal)
+                    os.bufferedWriter().use { writer ->
+                        // Stream the logcat line by line to avoid allocating a multi-MB
+                        // String in memory (the IME process can OOM on long-running devices).
+                        ProcessBuilder("logcat", "-d", "-b", "all", "*:W").start().inputStream.use { stream ->
+                            stream.bufferedReader().useLines { lines: Sequence<String> ->
+                                for (line: String in lines) {
+                                    writer.write(line)
+                                    writer.newLine()
+                                }
+                            }
+                        }
+                        writer.newLine()
+                        writer.newLine()
+                        for (line in Log.getLog()) {
+                            writer.write(line.toString())
+                            writer.newLine()
+                        }
                     }
                 }
             }

@@ -324,8 +324,9 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
             onChanged = { newProvider ->
                 service.setProvider(helium314.keyboard.latin.utils.ProofreadService.AIProvider.valueOf(newProvider))
                 selectedProvider = newProvider
-                // Trigger AI Integration screen recomposition
-                helium314.keyboard.settings.screens.updateProviderState(newProvider)
+                // Provider change is reflected on the AI Integration screen the next
+                // time the user navigates there; the screen reads provider on
+                // each composition.
             }
         )
     },
@@ -533,7 +534,7 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
             )
         }
     },
-    if (BuildConfig.FLAVOR == "standard") Setting(context, SettingsWithoutKey.CUSTOM_AI_KEYS, R.string.custom_ai_keys_title, R.string.custom_ai_keys_summary) {
+    if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardOptimised") Setting(context, SettingsWithoutKey.CUSTOM_AI_KEYS, R.string.custom_ai_keys_title, R.string.custom_ai_keys_summary) {
         Preference(
             name = it.title,
             description = it.description,

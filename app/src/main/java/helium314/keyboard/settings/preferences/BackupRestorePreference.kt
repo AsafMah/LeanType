@@ -3,6 +3,7 @@ package helium314.keyboard.settings.preferences
 
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -228,8 +229,9 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                 }
 
                 Database.copyFromDb(restoredDb, ctx)
-                Looper.prepare()
-                FeedbackManager.message(ctx, R.string.backup_restored)
+                Handler(Looper.getMainLooper()).post {
+                    FeedbackManager.message(ctx, R.string.backup_restored)
+                }
             } catch (t: Throwable) {
                 onError("r" + t.message)
                 Log.w("AdvancedScreen", "error during restore", t)

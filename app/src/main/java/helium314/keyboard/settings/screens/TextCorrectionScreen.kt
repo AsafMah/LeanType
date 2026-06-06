@@ -93,6 +93,8 @@ fun TextCorrectionScreen(
         Settings.PREF_SUGGEST_PUNCTUATION,
         Settings.PREF_SUGGEST_CLIPBOARD_CONTENT,
         Settings.PREF_SUGGEST_SCREENSHOTS,
+        if (prefs.getBoolean(Settings.PREF_SUGGEST_SCREENSHOTS, Defaults.PREF_SUGGEST_SCREENSHOTS))
+            Settings.PREF_COMPRESS_SCREENSHOTS else null,
         Settings.PREF_USE_CONTACTS,
         Settings.PREF_USE_APPS
     )
@@ -246,6 +248,11 @@ fun createCorrectionSettings(context: Context) = listOf(
                 } else true
             }
         )
+    },
+    Setting(context, Settings.PREF_COMPRESS_SCREENSHOTS,
+        R.string.compress_screenshots, R.string.compress_screenshots_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_COMPRESS_SCREENSHOTS)
     },
     Setting(context, Settings.PREF_USE_CONTACTS,
         R.string.use_contacts_dict, R.string.use_contacts_dict_summary

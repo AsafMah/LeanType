@@ -67,7 +67,10 @@ fun MainSettingsScreen(
         title = stringResource(R.string.ime_settings),
         settings = emptyList(),
     ) {
-        val enabledSubtypes = SubtypeSettings.getEnabledSubtypes(true)
+        val enabledSubtypes = remember { SubtypeSettings.getEnabledSubtypes(true) }
+        val enabledSubtypesDescription = remember(enabledSubtypes) {
+            enabledSubtypes.joinToString(", ") { it.displayName() }
+        }
         val ctx = LocalContext.current
         val prefs = ctx.prefs()
         val neverShowAgain = prefs.getBoolean(
@@ -144,7 +147,7 @@ fun MainSettingsScreen(
                         ) { NextScreenIcon() }
                         Preference(
                             name = stringResource(R.string.language_and_layouts_title),
-                            description = enabledSubtypes.joinToString(", ") { it.displayName() },
+                            description = enabledSubtypesDescription,
                             onClick = onClickLanguage,
                             icon = R.drawable.ic_settings_languages
                         ) { NextScreenIcon() }

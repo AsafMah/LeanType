@@ -1,2 +1,11 @@
 include ':app'
 include ':tools:make-emoji-keys'
+
+// Dynamically enable R8 fullMode for non-reproducible optimised flavor builds to unlock maximum compilation optimizations.
+gradle.projectsLoaded { gradle ->
+    if (gradle.startParameter.taskNames.any { it.toLowerCase().contains("optimised") || it.toLowerCase().contains("optimized") }) {
+        gradle.rootProject.allprojects { project ->
+            project.ext.set("android.enableR8.fullMode", "true")
+        }
+    }
+}

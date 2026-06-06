@@ -34,6 +34,7 @@ import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.ScriptUtils;
 import helium314.keyboard.latin.utils.SubtypeSettings;
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional;
+import helium314.keyboard.latin.utils.SubtypeUtilsKt;
 import helium314.keyboard.latin.utils.SuggestionResults;
 
 import java.util.Locale;
@@ -87,6 +88,12 @@ public final class AndroidSpellCheckerService extends SpellCheckerService
         onSharedPreferenceChanged(prefs, Settings.PREF_USE_APPS);
         final boolean blockOffensive = prefs.getBoolean(Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE, Defaults.PREF_BLOCK_POTENTIALLY_OFFENSIVE);
         mSettingsValuesForSuggestion = new SettingsValuesForSuggestion(blockOffensive, false);
+    }
+
+    @Override
+    public void onDestroy() {
+        KtxKt.prefs(this).unregisterOnSharedPreferenceChangeListener(this);
+        super.onDestroy();
     }
 
     public float getRecommendedThreshold() {
@@ -205,7 +212,17 @@ public final class AndroidSpellCheckerService extends SpellCheckerService
             editorInfo.inputType = InputType.TYPE_CLASS_TEXT;
             Settings.getInstance().loadSettings(this, locale, new InputAttributes(editorInfo, false, getPackageName()), ScriptUtils.SCRIPT_UNKNOWN);
         }
-        final String mainLayoutName = SubtypeSettings.INSTANCE.getMatchingMainLayoutNameForLocale(locale);
+        String mainLayoutName = null;
+        for (InputMethodSubtype enabledSubtype : SubtypeSettings.INSTANCE.getEnabledSubtypes(true)) {
+            if (enabledSubtype.getLocale().equals(locale.toString())
+                    || SubtypeUtilsKt.locale(enabledSubtype).getLanguage().equals(locale.getLanguage())) {
+                mainLayoutName = SubtypeUtilsKt.mainLayoutName(enabledSubtype);
+                break;
+            }
+        }
+        if (mainLayoutName == null) {
+            mainLayoutName = SubtypeSettings.INSTANCE.getMatchingMainLayoutNameForLocale(locale);
+        }
         final InputMethodSubtype subtype = SubtypeUtilsAdditional.INSTANCE.createDummyAdditionalSubtype(locale, mainLayoutName);
         final KeyboardLayoutSet keyboardLayoutSet = createKeyboardSetForSpellChecker(subtype);
         return keyboardLayoutSet.getKeyboard(KeyboardId.ELEMENT_ALPHABET);
