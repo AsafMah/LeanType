@@ -1,21 +1,28 @@
-name: Test build
-# builds only for a single abi and does not produce an APK
+name: Unit tests
+# Compiles main + runs the JVM unit-test suite for the offline flavor using the `runTests`
+# build type, which self-skips the network/data-dependent tests known to fail on CI
+# (see `if (BuildConfig.BUILD_TYPE == "runTests") return` in XLinkTest/StringUtilsTest/InputLogicTest).
+# No APK is produced; single-ABI, JVM tests only.
 
 on:
-# disabled on push: when I push to non-main, I do a PR anyway
-#  push:
-    # don't run on main. I noticed I often don't push commits to avoid unnecessary workflow runs
-#    branches-ignore: [ main ]
-#    paths:
-#      - 'app/**'
   pull_request:
+    branches: [ dev, main ]
     paths:
-      - 'app/src/main/java**'
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle*'
+      - 'gradle.properties'
+      - '.github/workflows/build-test-auto.yml'
+  push:
+    branches: [ dev ]
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle*'
   workflow_dispatch:
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,8 +39,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew compileOfflineRunTestsKotlin
+      - name: Run unit tests
+        run: ./gradlew :app:testOfflineRunTestsUnitTest
 
       - name: Archive reports for failed job
         uses: actions/upload-artifact@v4
