@@ -19,7 +19,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.leanbitlab.leantype"
+        applicationId = "com.asafmah.leantypedual"
         minSdk = 21
         targetSdk = 35
         versionCode = 3830
@@ -106,7 +106,7 @@ android {
             if (number.isNotEmpty()) {
                 outputs.all {
                     val output = this as? com.android.build.gradle.api.ApkVariantOutput
-                    output?.outputFileName = "$number-LeanType_${defaultConfig.versionName}-${flavor}-${buildType.name}.apk"
+                    output?.outputFileName = "$number-LeanTypeDual_${defaultConfig.versionName}-${flavor}-${buildType.name}.apk"
                 }
             }
         }

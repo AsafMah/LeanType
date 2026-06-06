@@ -1,1 +1,1 @@
-LeanType
+LeanTypeDual

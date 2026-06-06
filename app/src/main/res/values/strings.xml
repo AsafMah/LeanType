@@ -6,12 +6,12 @@
 -->
 <resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- Name of Android spell checker service. The app name should not be translated. -->
-    <string name="spell_checker_service_name">LeanType Spell Checker</string>
-    <string name="ime_name">LeanType</string>
+    <string name="spell_checker_service_name">LeanTypeDual Spell Checker</string>
+    <string name="ime_name">LeanTypeDual</string>
     <!-- Title for IME settings screen. The app name should not be translated. -->
-    <string name="ime_settings">LeanType Settings</string>
+    <string name="ime_settings">LeanTypeDual Settings</string>
     <!-- Title for the spell checking service settings screen. The app name should not be translated. -->
-    <string name="android_spell_checker_settings">LeanType Spell Checker Settings</string>
+    <string name="android_spell_checker_settings">LeanTypeDual Spell Checker Settings</string>
     <!-- Option to provide vibrate/haptic feedback on keypress -->
     <string name="vibrate_on_keypress">Vibrate on keypress</string>
     <!-- Option to provide vibrate/haptic feedback on keypress even in do not disturb mode -->
@@ -550,7 +550,7 @@
     <string name="disable_network_summary">Internal lock: Blocks all network requests from this app. To revoke permission entirely, use system App Info settings.</string>
     <string name="open_app_info">Open System App Info</string>
     <string name="open_app_info_summary">Manage permissions and battery usage in Android settings</string>
-    <string name="gemini_network_disabled">Network access is disabled in LeanType settings</string>
+    <string name="gemini_network_disabled">Network access is disabled in LeanTypeDual settings</string>
     <string name="ai_provider_title">AI Provider</string>
     <string name="ai_provider_summary">Select AI service for proofreading</string>
     <string name="ai_provider_gemini">Google Gemini</string>
@@ -1124,7 +1124,7 @@ New dictionary:
     <!-- sponsor link for about screen -->
     <string name="about_sponsor_link">Sponsor project</string>
     <!-- description for sponsor link -->
-    <string name="about_sponsor_link_description">Support the development of LeanType</string>
+    <string name="about_sponsor_link_description">Support the development of LeanTypeDual</string>
     <!-- sponsor dialog -->
     <string name="sponsor_dialog_title">Sponsor this project</string>
     <string name="sponsor_dialog_message">This project is completely community-driven and relies on donations to keep development alive. If you find this keyboard useful, please consider sponsoring!</string>
