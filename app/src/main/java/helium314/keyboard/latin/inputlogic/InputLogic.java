@@ -745,6 +745,15 @@ public final class InputLogic {
         // Combining mode: snapshot before cancel; the gesture will re-arm the timer on completion.
         final boolean wasInCombiningMode = mInCombiningMode;
         cancelCombiningMode();
+        // Two-thumb typing: defensively drop any stale merged-trail extend-base before this
+        // gesture's extend decision. The base is meant to live for exactly one gesture (set in
+        // the extend branch below, cleared in onUpdateTailBatchInputCompleted), but an abnormal
+        // prior gesture end — a cancel, or an empty-top recognition that early-returns before
+        // that clear — can leave it armed. A fresh gesture would then merge with the ghost
+        // trail; most visibly at the start of a text box, where no composing word exists to
+        // re-set it. Clearing here guarantees every gesture begins from a clean base; the
+        // extend branch re-arms it from the real composing word when appropriate.
+        mWordComposer.setExtendBatchInputBase(null);
         mConnection.beginBatchEdit();
         // Two-thumb typing (#1.1 + combining-mode): two ways the gesture can EXTEND an existing
         // composing word instead of replacing it:
@@ -895,6 +904,10 @@ public final class InputLogic {
         // Drop any seed codepoint stashed by PointerTracker so the next gesture doesn't
         // strip its first letter against a stale seed.
         helium314.keyboard.keyboard.PointerTracker.consumeGestureSeedCodepoint();
+        // Two-thumb typing: a cancelled gesture never reaches onUpdateTailBatchInputCompleted,
+        // which is the only routine site that clears the merged-trail extend-base. Drop it here
+        // so this cancelled gesture's trail can't leak into the next one.
+        mWordComposer.setExtendBatchInputBase(null);
         // Tap-promotion-extend was a per-gesture decision; clear on cancel so the NEXT
         // gesture re-evaluates against current timing.
         mGestureExtendsByTapPromotion = false;
@@ -2360,6 +2373,12 @@ public final class InputLogic {
         // stroke. The whole-word and batch delete branches below call mWordComposer.reset()
         // directly rather than resetComposingState(), so clear here to cover every path.
         mLiveStroke.reset();
+        // Two-thumb typing: a backspace invalidates the merged-trail extend-base for the same
+        // reason it invalidates mLiveStroke above — re-doing the word must start from a clean
+        // stroke, not merge with the geometry we just partially deleted. This single clear
+        // covers all three backspace modes (character / fragment / whole-word), since it runs
+        // before any of their branches.
+        mWordComposer.setExtendBatchInputBase(null);
         // Typing-insight overlay: a backspace edits/clears the gesture word, so its trail is now
         // stale. Drop it so it doesn't linger.
         final MainKeyboardView backspaceKv = KeyboardSwitcher.getInstance().getMainKeyboardView();
@@ -3547,6 +3566,9 @@ public final class InputLogic {
         mCombiningWordHasGestureFragment = false;
         // Live-converge (#1.7): the word is gone, so its accumulated stroke is stale.
         mLiveStroke.reset();
+        // Two-thumb typing: likewise drop the merged-trail extend-base. This path also covers
+        // the delete slider (finishInput -> resetComposingState) and cursor-move resets.
+        mWordComposer.setExtendBatchInputBase(null);
         // Combining mode is keyed on a composing word existing; if we're wiping it, the
         // pending timer would commit nothing useful, so cancel.
         cancelCombiningMode();
@@ -4217,6 +4239,8 @@ public final class InputLogic {
         mCombiningWordHasGestureFragment = false;
         // Live-converge (#1.7): word committed — its accumulated stroke no longer applies.
         mLiveStroke.reset();
+        // Two-thumb typing: the merged-trail extend-base belongs to the just-committed word too.
+        mWordComposer.setExtendBatchInputBase(null);
         if (DebugFlags.DEBUG_ENABLED) {
             long runTimeMillis = System.currentTimeMillis() - startTimeMillis;
             Log.d(TAG, "commitChosenWord() : " + runTimeMillis + " ms to run "
@@ -4379,6 +4403,8 @@ public final class InputLogic {
             // Live-converge (#1.7): composing was force-cancelled due to a desync — the stored
             // stroke no longer matches anything on screen, so drop it.
             mLiveStroke.reset();
+            // Two-thumb typing: the merged-trail extend-base is equally stale after a desync.
+            mWordComposer.setExtendBatchInputBase(null);
         }
     }
 
