@@ -144,6 +144,7 @@ public class SettingsValues {
         public final boolean mMultipartAutoExtendInCombining;
         public final boolean mMultipartFullWordSuggestions;
         public final boolean mMultipartTapSeedGesture;
+        public final boolean mMultipartRerecognizeTaps;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -391,6 +392,9 @@ public class SettingsValues {
                 mMultipartTapSeedGesture = nonNormalTwoThumbSpacing || prefs.getBoolean(
                                 Settings.PREF_MULTIPART_TAP_SEED_GESTURE,
                                 Defaults.PREF_MULTIPART_TAP_SEED_GESTURE);
+                mMultipartRerecognizeTaps = prefs.getBoolean(
+                                Settings.PREF_MULTIPART_RERECOGNIZE_TAPS,
+                                Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions

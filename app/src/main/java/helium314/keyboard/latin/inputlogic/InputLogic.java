@@ -159,6 +159,14 @@ public final class InputLogic {
     private boolean mInCombiningMode;
     private boolean mCombiningWordHasGestureFragment;
 
+    // Live-converge (multi-part, opt-in PREF_MULTIPART_RERECOGNIZE_TAPS): the accumulated raw
+    // pointer trail of the CURRENT word — the latest gesture fragment's points plus any tap
+    // key-centers appended by {@link #tryLiveConvergeTap}. This must persist across fragments
+    // because {@link WordComposer#setBatchInputWord} resets the composer's own mInputPointers
+    // on every commit, so without a separate copy a tap arriving after a swipe would have no
+    // stroke to extend. Captured in {@link #onUpdateTailBatchInputCompleted}; cleared whenever
+    // the composing word ends ({@link #resetComposingState}, {@link #commitChosenWord}).
+    private final InputPointers mLiveStroke = new InputPointers(48);
 
     // Keeps track of most recently inserted text (multi-character key) for
     // reverting
@@ -1995,6 +2003,14 @@ public final class InputLogic {
         // typing the next word — the strip-on-next-punctuation one-shot no longer applies.
         mAutospaceJustWritten = false;
         final int codePoint = event.getCodePoint();
+        // Live-converge (#1.7): if we're building a word that already contains a swipe and the
+        // opt-in is on, route this tap through the recognizer together with the accumulated
+        // stroke instead of appending it literally. Returns false (and we fall through to the
+        // normal literal path) when it doesn't apply or recognition is unavailable.
+        if (tryLiveConvergeTap(event, settingsValues)) {
+            inputTransaction.setRequiresUpdateSuggestions();
+            return;
+        }
         // TODO: refactor this method to stop flipping isComposingWord around all the
         // time, and
         // make it shorter (possibly cut into several pieces). Also factor
@@ -2336,6 +2352,14 @@ public final class InputLogic {
         // explicitly retracting input; we don't want the timer to fire mid-correction.
         cancelCombiningMode();
         clearOneShotSpaceActionAndNotifyIfChanged();
+        // Live-converge (#1.7): a backspace invalidates the accumulated gesture stroke — we
+        // can't reliably trim the raw trail to match a partially-deleted word, and leaving it
+        // intact would make the NEXT swipe/tap merge with stale geometry (e.g. delete "ing"
+        // from "thing", swipe it again, and the recognizer keeps resolving ever-growing words
+        // that still start with "th"). Dropping it means a re-done word starts from a clean
+        // stroke. The whole-word and batch delete branches below call mWordComposer.reset()
+        // directly rather than resetComposingState(), so clear here to cover every path.
+        mLiveStroke.reset();
         // Typing-insight overlay: a backspace edits/clears the gesture word, so its trail is now
         // stale. Drop it so it doesn't linger.
         final MainKeyboardView backspaceKv = KeyboardSwitcher.getInstance().getMainKeyboardView();
@@ -3007,6 +3031,74 @@ public final class InputLogic {
     }
 
     /**
+     * Live-converge (#1.7): run gesture recognition on the CURRENT {@link #mWordComposer} batch
+     * state synchronously. Uses the same handler + {@link AsyncResultHolder} mechanism as
+     * {@link #performUpdateSuggestionStripSync} so the native recognizer runs on the suggestions
+     * thread and the call is bounded by {@link Constants#GET_SUGGESTED_WORDS_TIMEOUT}. Returns
+     * {@code null} on timeout / error (caller falls back to a literal tap).
+     */
+    @Nullable
+    private SuggestedWords getBatchSuggestionsSync() {
+        final AsyncResultHolder<SuggestedWords> holder = new AsyncResultHolder<>("LiveConverge");
+        mInputLogicHandler.getSuggestedWords(() -> getSuggestedWords(
+                SuggestedWords.INPUT_STYLE_TAIL_BATCH, SuggestedWords.NOT_A_SEQUENCE_NUMBER,
+                holder::set));
+        return holder.get(null, Constants.GET_SUGGESTED_WORDS_TIMEOUT);
+    }
+
+    /**
+     * Live-converge (#1.7, opt-in {@link Settings#PREF_MULTIPART_RERECOGNIZE_TAPS}): when the
+     * user is building a word that already contains a gesture fragment, treat a tapped letter as
+     * a one-point continuation of the accumulated stroke and re-recognize the WHOLE word, rather
+     * than literally appending it to a (possibly mis-resolved) fragment. This makes a slow
+     * tap-after-swipe behave like a fast one — swipe "th" then tap "e" yields "the".
+     *
+     * <p>Taps are recognizer hints here, not exact letters; pure-tap words are excluded so normal
+     * typing stays exact. Returns {@code true} if it handled the tap (composing word replaced);
+     * {@code false} to fall through to the normal literal-append path — feature off, guards unmet,
+     * no key coordinates, or recognition unavailable (the tap must never be lost).
+     */
+    private boolean tryLiveConvergeTap(final Event event, final SettingsValues settingsValues) {
+        if (!settingsValues.mMultipartRerecognizeTaps) return false;
+        if (!settingsValues.isMultipartComposeActive()) return false;
+        if (!mWordComposer.isComposingWord()
+                || mWordComposer.isCursorFrontOrMiddleOfComposingWord()) return false;
+        // Only for words that already contain a swipe — pure-tap words stay exact literal typing.
+        if (!mCombiningWordHasGestureFragment && !mWordComposer.isBatchMode()) return false;
+        final int codePoint = event.getCodePoint();
+        if (!settingsValues.isWordCodePoint(codePoint)) return false;
+        final int x = event.getX();
+        final int y = event.getY();
+        if (x < 0 || y < 0) return false; // no real key coordinates (hardware / programmatic)
+        if (mLiveStroke.getPointerSize() == 0) return false; // nothing to extend
+        // Feed (accumulated stroke + this tap's key center) to the recognizer as one stroke; the
+        // extend-base re-timing in WordComposer makes them look like a single continuous glide.
+        final InputPointers tap = new InputPointers(1);
+        // Time anchor for the tap: a fixed positive value, not SystemClock (which, cast to int,
+        // can wrap negative after long uptime). WordComposer#setBatchInputPointers re-times the
+        // base RELATIVE to this anchor, so only its positivity and the synthetic inter-point
+        // gaps matter to the recognizer — the absolute value is irrelevant. Large enough that
+        // the re-timed base (anchor - gap - n*interval) stays positive for any real stem.
+        tap.addPointer(x, y, 0, 1_000_000);
+        mWordComposer.setExtendBatchInputBase(mLiveStroke);
+        mWordComposer.setBatchInputPointers(tap);
+        final SuggestedWords suggestedWords = getBatchSuggestionsSync();
+        if (suggestedWords == null || suggestedWords.isEmpty()) {
+            // Recognition unavailable — clear the merge and let the caller append the tap as a
+            // literal letter so it is never lost. The typed-word cache is untouched above, so the
+            // composing word is unchanged.
+            mWordComposer.setExtendBatchInputBase(null);
+            return false;
+        }
+        // Reuse the gesture consumer. The extend-base is still set, so
+        // onUpdateTailBatchInputCompleted treats the recognizer output as the WHOLE word
+        // (usedMergedTrail == true) and replaces the composing word without re-concatenating the
+        // previous text. It also re-snapshots mLiveStroke (incl. this tap) for the next fragment.
+        onUpdateTailBatchInputCompleted(settingsValues, suggestedWords, KeyboardSwitcher.getInstance());
+        return true;
+    }
+
+    /**
      * Check if the cursor is touching a word. If so, restart suggestions on this
      * word, else
      * do nothing.
@@ -3453,6 +3545,8 @@ public final class InputLogic {
         // Two-thumb typing (#1.1): composing word is wiped — drop the matching boundaries.
         clearFragmentBoundaries();
         mCombiningWordHasGestureFragment = false;
+        // Live-converge (#1.7): the word is gone, so its accumulated stroke is stale.
+        mLiveStroke.reset();
         // Combining mode is keyed on a composing word existing; if we're wiping it, the
         // pending timer would commit nothing useful, so cancel.
         cancelCombiningMode();
@@ -3808,6 +3902,13 @@ public final class InputLogic {
             }
         }
         enterInlineEmojiSearchIfNeeded(batchInputText.codePointAt(0), settingsValues);
+        // Live-converge (#1.7): snapshot the stroke geometry NOW, before setBatchInputWord
+        // resets mInputPointers, so a tap arriving later (tryLiveConvergeTap) can re-feed the
+        // accumulated stroke to the recognizer. getInputPointers() here holds this gesture's
+        // (merged) trail.
+        if (settingsValues.mMultipartRerecognizeTaps) {
+            mLiveStroke.set(mWordComposer.getInputPointers());
+        }
         mWordComposer.setBatchInputWord(composedText);
         setComposingTextInternal(composedText, 1);
         if (extendExistingCompose) {
@@ -4074,6 +4175,8 @@ public final class InputLogic {
         // boundaries are now stale and would point past the end of the (empty) word.
         clearFragmentBoundaries();
         mCombiningWordHasGestureFragment = false;
+        // Live-converge (#1.7): word committed — its accumulated stroke no longer applies.
+        mLiveStroke.reset();
         if (DebugFlags.DEBUG_ENABLED) {
             long runTimeMillis = System.currentTimeMillis() - startTimeMillis;
             Log.d(TAG, "commitChosenWord() : " + runTimeMillis + " ms to run "
@@ -4233,6 +4336,9 @@ public final class InputLogic {
             // inconsistency in set and found composing text, better cancel composing
             // (should be restarted automatically)
             mWordComposer.reset();
+            // Live-converge (#1.7): composing was force-cancelled due to a desync — the stored
+            // stroke no longer matches anything on screen, so drop it.
+            mLiveStroke.reset();
         }
     }
 
