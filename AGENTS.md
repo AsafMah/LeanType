@@ -3,6 +3,8 @@
 ## Project Overview
 LeanType is an Android keyboard (an `InputMethodService` app), forked from HeliBoard/OpenBoard/AOSP LatinIME. On top of the upstream keyboard it adds AI proofreading & translation (cloud and on-device ONNX), Nintype-style two-thumb typing, custom AI toolbar keys, and a floating keyboard. The legacy input engine is **Java**; newer logic, settings, and AI code are **Kotlin**. Settings UI is **Jetpack Compose**. A native **C++** engine (under `app/src/main/jni/`) does dictionary lookup and gesture/glide scoring.
 
+**Fork lineage & "upstream":** the chain is HeliBoard (`Helium314/HeliBoard`, the original) → **`LeanBitLab/LeanType`** (a fork of HeliBoard) → **this repo, `AsafMah/LeanType`** (a fork of LeanBitLab/LeanType). When the maintainer says **"upstream" they mean `LeanBitLab/LeanType`** (`upstream/main`) — NOT HeliBoard. This fork ships as its own distinct, installable app, **"LeanTypeDual"** (its own `applicationId`, so it installs *alongside* the upstream LeanType instead of colliding with it). "Make it distinct" therefore means distinct from `LeanBitLab/LeanType`, not from HeliBoard.
+
 ## Architecture & Data Flow
 Strict **view → logic → engine** split.
 
