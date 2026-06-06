@@ -112,6 +112,22 @@
     <string name="add_to_personal_dictionary">Add words to personal dictionary</string>
     <!-- Description for option to add learned words to system-wide user dictionary -->
     <string name="add_to_personal_dictionary_summary">Use device personal dictionary to store learned words</string>
+    <!-- Option name for flagging words that are not in a real dictionary in the suggestion strip -->
+    <string name="flag_unknown_words">Flag unknown words</string>
+    <!-- Description for the flag-unknown-words option -->
+    <string name="flag_unknown_words_summary">Mark suggestions that are only learned/typed (not in a dictionary) and offer Add/Block on long-press</string>
+    <!-- Action: add the long-pressed word to the personal dictionary -->
+    <string name="add_to_dictionary">Add to dictionary</string>
+    <!-- Action: permanently block the long-pressed word from suggestions -->
+    <string name="block_word">Block word</string>
+    <!-- Title of the blocklist settings screen, listing words blocked from suggestions -->
+    <string name="blocklist">Blocklist</string>
+    <!-- Description for the blocklist settings entry -->
+    <string name="blocklist_summary">View and remove words you have blocked from suggestions</string>
+    <!-- Shown when a locale has no blocked words -->
+    <string name="blocklist_empty">No blocked words</string>
+    <!-- Content description for the button that removes a word from the blocklist -->
+    <string name="blocklist_remove">Remove from blocklist</string>
     <!-- Option name for enabling or disabling the double-space period feature that lets double tap on spacebar insert a period followed by a space -->
     <string name="use_double_space_period">Double-space period</string>
     <!-- Description for option enabling or disabling the double-space period feature that lets double tap on spacebar insert a period followed by a space -->

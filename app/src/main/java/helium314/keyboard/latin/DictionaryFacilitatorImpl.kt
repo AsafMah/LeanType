@@ -670,6 +670,26 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         }
     }
 
+    override fun addToUserDictionary(word: String) {
+        if (word.isEmpty()) return
+        val group = currentlyPreferredDictionaryGroup
+        // Resolve the user dictionary first: if it isn't loaded we cannot add, and we must NOT
+        // un-blacklist the word in that case (that would leave it neither blocked nor added).
+        val userDict = group.getSubDict(Dictionary.TYPE_USER) ?: return
+        group.removeFromBlacklist(word) // promoting a word un-blocks it
+        scope.launch {
+            // adding can throw IllegalArgumentException on some devices, see addToPersonalDictionaryIfInvalidButInHistory
+            runCatching { UserDictionary.Words.addWord(userDict.mContext, word, 250, null, group.locale) }
+        }
+    }
+
+    override fun blockWord(word: String) {
+        // A permanent block is exactly removeWord: group.removeWord already blacklists the word in
+        // every group (including words that lived only in user history), so it cannot be re-learned.
+        if (word.isEmpty()) return
+        removeWord(word)
+    }
+
     override fun clearUserHistoryDictionary(context: Context) {
         for (dictionaryGroup in dictionaryGroups) {
             dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)?.clear()

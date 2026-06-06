@@ -107,6 +107,12 @@ public interface DictionaryFacilitator {
     /** removes the word from all editable dictionaries, and adds it to a blacklist in case it's in a read-only dictionary */
     void removeWord(String word);
 
+    /** promotes the word to the user (personal) dictionary and removes it from the blacklist */
+    void addToUserDictionary(String word);
+
+    /** permanently blocks the word: removes it from editable dictionaries and adds it to the blacklist */
+    void blockWord(String word);
+
     void closeDictionaries();
 
     /** main dictionaries are loaded asynchronously after resetDictionaries */
