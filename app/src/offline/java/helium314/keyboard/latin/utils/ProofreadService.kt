@@ -42,6 +42,8 @@ class ProofreadService(private val context: Context) {
     private val prefs: SharedPreferences by lazy {
         context.prefs()
     }
+
+    fun getPrefs(): SharedPreferences = prefs
     
     // Singleton holder for model state to prevent reloading on every request
     object ModelHolder {

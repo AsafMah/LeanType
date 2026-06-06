@@ -5,6 +5,7 @@
 package helium314.keyboard.latin.utils
 
 import android.content.Context
+import android.content.SharedPreferences
 
 /**
  * Stub ProofreadService for OfflineLite flavor.
@@ -15,6 +16,8 @@ class ProofreadService(private val context: Context) {
     enum class AIProvider {
         GEMINI, GROQ, OPENAI
     }
+
+    fun getPrefs(): SharedPreferences = context.prefs()
 
     // Always returns GEMINI as default, but methods do nothing
     fun getProvider(): AIProvider = AIProvider.GEMINI

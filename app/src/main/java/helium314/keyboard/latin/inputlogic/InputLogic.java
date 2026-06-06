@@ -174,6 +174,12 @@ public final class InputLogic {
     // Note: This does not have a composing span, so it must be handled separately.
     private String mWordBeingCorrectedByCursor = null;
 
+    // Keep track of the last text expansion for backspace undo
+    private String mLastExpandedText = null;
+    private String mLastShortcutText = null;
+    private int mLastExpandedCursorPosition = -1;
+    private int mLastExpandedCursorOffset = -1;
+
     private boolean mJustRevertedACommit = false;
 
     /**
@@ -542,6 +548,15 @@ public final class InputLogic {
         // state-related special processing to kick in.
         mSpaceState = SpaceState.NONE;
 
+        if (oldSelStart != newSelStart || oldSelEnd != newSelEnd) {
+            if (newSelStart != mLastExpandedCursorPosition) {
+                mLastExpandedText = null;
+                mLastShortcutText = null;
+                mLastExpandedCursorPosition = -1;
+                mLastExpandedCursorOffset = -1;
+            }
+        }
+
         final boolean selectionChangedOrSafeToReset = oldSelStart != newSelStart || oldSelEnd != newSelEnd // selection
                                                                                                            // changed
                 || !mWordComposer.isComposingWord(); // safe to reset
@@ -649,6 +664,12 @@ public final class InputLogic {
         if (processedEvent.getKeyCode() != KeyCode.DELETE
                 || inputTransaction.getTimestamp() > mLastKeyTime + Constants.LONG_PRESS_MILLISECONDS) {
             mDeleteCount = 0;
+        }
+        if (processedEvent.getKeyCode() != KeyCode.DELETE) {
+            mLastExpandedText = null;
+            mLastShortcutText = null;
+            mLastExpandedCursorPosition = -1;
+            mLastExpandedCursorOffset = -1;
         }
         mLastKeyTime = inputTransaction.getTimestamp();
         mConnection.beginBatchEdit();
@@ -2329,6 +2350,28 @@ public final class InputLogic {
         mSpaceState = SpaceState.NONE;
         mDeleteCount++;
 
+        if (mLastExpandedText != null && !event.isKeyRepeat()) {
+            final int expectedCursor = mConnection.getExpectedSelectionEnd();
+            if (expectedCursor == mLastExpandedCursorPosition) {
+                final int beforeLen = mLastExpandedCursorOffset;
+                final int afterLen = mLastExpandedText.length() - beforeLen;
+                final CharSequence textBefore = mConnection.getTextBeforeCursor(beforeLen, 0);
+                final CharSequence textAfter = mConnection.getTextAfterCursor(afterLen, 0);
+                final String expectedBefore = mLastExpandedText.substring(0, beforeLen);
+                final String expectedAfter = mLastExpandedText.substring(beforeLen);
+                if (textBefore != null && textBefore.toString().equals(expectedBefore)
+                        && textAfter != null && textAfter.toString().equals(expectedAfter)) {
+                    mConnection.deleteSurroundingText(beforeLen, afterLen);
+                    mConnection.commitText(mLastShortcutText, 1);
+                    mLastExpandedText = null;
+                    mLastShortcutText = null;
+                    mLastExpandedCursorPosition = -1;
+                    mLastExpandedCursorOffset = -1;
+                    return;
+                }
+            }
+        }
+
         // In many cases after backspace, we need to update the shift state. Normally we
         // need
         // to do this right away to avoid the shift state being out of date in case the
@@ -3951,7 +3994,7 @@ public final class InputLogic {
                 if (expanded != null) {
                     mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
                     mConnection.deleteTextBeforeCursor(chosenWord.length());
-                    mConnection.commitText(expanded, 1);
+                    commitExpandedText(chosenWord, expanded);
                     return;
                 }
             } else {
@@ -3964,7 +4007,7 @@ public final class InputLogic {
                         if (expanded != null) {
                             mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
                             mConnection.deleteTextBeforeCursor(prefix.length() + chosenWord.length());
-                            mConnection.commitText(expanded, 1);
+                            commitExpandedText(targetSuffix, expanded);
                             return;
                         }
                     }
@@ -4527,5 +4570,26 @@ public final class InputLogic {
                         KeyboardSwitcher.getInstance().showToast("AI Error: " + errorMessage, true);
                     }
                 });
+    }
+
+    private void commitExpandedText(final String shortcut, final String expanded) {
+        final int cursorOffset = expanded.indexOf("%cursor%");
+        final String finalExpandedText = cursorOffset != -1 ? expanded.replace("%cursor%", "") : expanded;
+        
+        mConnection.commitText(finalExpandedText, 1);
+        
+        mLastExpandedText = finalExpandedText;
+        mLastShortcutText = shortcut;
+        mLastExpandedCursorOffset = cursorOffset != -1 ? cursorOffset : finalExpandedText.length();
+        
+        if (cursorOffset != -1) {
+            final int moveBackAmount = finalExpandedText.length() - cursorOffset;
+            if (moveBackAmount > 0) {
+                final int newCursorPos = mConnection.getExpectedSelectionEnd() - moveBackAmount;
+                mConnection.setSelection(newCursorPos, newCursorPos);
+            }
+        }
+        
+        mLastExpandedCursorPosition = mConnection.getExpectedSelectionEnd();
     }
 }

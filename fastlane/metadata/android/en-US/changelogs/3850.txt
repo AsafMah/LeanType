@@ -1,0 +1,3 @@
+- Fix toolbar key customization toggles not persisting
+- Allow enabling or disabling individual dictionaries (built-in and custom) in settings
+- Fix emoji search keyboard layout not split in landscape mode when split keyboard is enabled

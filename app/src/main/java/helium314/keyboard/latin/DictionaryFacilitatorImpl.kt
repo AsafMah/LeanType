@@ -7,6 +7,7 @@ package helium314.keyboard.latin
 
 import android.Manifest
 import android.content.Context
+import android.content.SharedPreferences
 import android.provider.UserDictionary
 import android.util.LruCache
 import helium314.keyboard.keyboard.Keyboard
@@ -60,6 +61,8 @@ import java.util.concurrent.TimeUnit
  */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DictionaryFacilitatorImpl : DictionaryFacilitator {
+    private var mPrefs: SharedPreferences? = null
+    private var mEnabledDictionariesState: Map<String, Boolean> = emptyMap()
     private var dictionaryGroups = listOf(DictionaryGroup())
 
     @Volatile
@@ -75,9 +78,16 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private var changeFrom = ""
     private var changeTo = ""
 
+    private val SPELLING_DICTIONARY_TYPES = arrayOf(
+        Dictionary.TYPE_MAIN,
+        Dictionary.TYPE_CONTACTS,
+        Dictionary.TYPE_APPS,
+        Dictionary.TYPE_USER_HISTORY
+    )
+
     // Caches for spell checking word validity
-    private var mValidSpellingWordReadCache: LruCache<String, Boolean>? = null
-    private var mValidSpellingWordWriteCache: LruCache<String, Boolean>? = null
+    private var mValidSpellingWordReadCache: LruCache<String, Boolean>? = LruCache(500)
+    private var mValidSpellingWordWriteCache: LruCache<String, Boolean>? = LruCache(500)
 
     // Limit parallelism to prevent excessive CPU usage during dictionary operations
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(2))
@@ -126,6 +136,14 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     }
 
     override fun usesSameSettings(locales: List<Locale>, contacts: Boolean, apps: Boolean, personalization: Boolean): Boolean {
+        val prefs = mPrefs
+        if (prefs != null) {
+            val currentPrefs = prefs.all.filterKeys { it.startsWith("pref_dict_enabled_") }
+                .mapValues { it.value as? Boolean ?: true }
+            if (currentPrefs != mEnabledDictionariesState) {
+                return false
+            }
+        }
         val dictGroup = dictionaryGroups[0] // settings are the same for all groups
         return contacts == dictGroup.hasDict(Dictionary.TYPE_CONTACTS)
                 && apps == dictGroup.hasDict(Dictionary.TYPE_APPS)
@@ -147,6 +165,10 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         listener: DictionaryInitializationListener?
     ) {
         Log.i(TAG, "resetDictionaries, force reloading main dictionary: $forceReloadMainDictionary")
+        val prefs = context.prefs()
+        mPrefs = prefs
+        mEnabledDictionariesState = prefs.all.filterKeys { it.startsWith("pref_dict_enabled_") }
+            .mapValues { it.value as? Boolean ?: true }
 
         // Initialize session word boost with context if not yet done
         if (sessionWordBoost == null) {
@@ -623,7 +645,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     // locale, and instead simply return true if word is in any of the available dictionaries
     override fun isValidSpellingWord(word: String): Boolean {
         mValidSpellingWordReadCache?.get(word)?.let { return it }
-        val result = dictionaryGroups.any { isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, it) }
+        mValidSpellingWordWriteCache?.get(word)?.let { return it }
+        val result = dictionaryGroups.any { isValidWord(word, SPELLING_DICTIONARY_TYPES, it) }
         mValidSpellingWordReadCache?.put(word, result)
         return result
     }
@@ -770,6 +793,12 @@ private class DictionaryGroup(
 ) {
     private val subDicts: ConcurrentHashMap<String, ExpandableBinaryDictionary> = ConcurrentHashMap(subDicts)
 
+    // Monitor for the blacklist set + file I/O. The previous code used
+    // `synchronized(this)` inside an `apply { }` and `scope.launch { }` block, which
+    // re-bound `this` to the inner receiver (the HashSet / CoroutineScope). Two
+    // concurrent blacklist operations could then run without mutual exclusion.
+    private val blacklistLock = Any()
+
     /** Removes a word from all dictionaries in this group. If the word is in a read-only dictionary, it is blacklisted. */
     fun removeWord(word: String) {
         // remove from user history
@@ -879,7 +908,7 @@ private class DictionaryGroup(
     private val blacklist = hashSetOf<String>().apply {
         if (blacklistFile?.isFile != true) return@apply
         scope.launch {
-            synchronized(this) {
+            synchronized(blacklistLock) {
                 try {
                     addAll(blacklistFile.readLines())
                 } catch (e: IOException) {
@@ -894,7 +923,7 @@ private class DictionaryGroup(
     fun addToBlacklist(word: String) {
         if (!blacklist.add(word) || blacklistFile == null) return
         scope.launch {
-            synchronized(this) {
+            synchronized(blacklistLock) {
                 try {
                     if (blacklistFile.isDirectory) blacklistFile.delete()
                     blacklistFile.appendText("$word\n")
@@ -908,7 +937,7 @@ private class DictionaryGroup(
     fun removeFromBlacklist(word: String) {
         if (!blacklist.remove(word) || blacklistFile == null) return
         scope.launch {
-            synchronized(this) {
+            synchronized(blacklistLock) {
                 try {
                     val newLines = blacklistFile.readLines().filterNot { it == word }
                     blacklistFile.writeText(newLines.joinToString("\n"))

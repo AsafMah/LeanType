@@ -30,6 +30,7 @@ public class TouchpadView extends LinearLayout {
     public interface TouchpadListener {
         void onCursorMove(int keyCode, boolean isSelecting);
         void onSingleTap();
+        void onDoubleTap();
         void onScroll(int direction);
     }
 
@@ -88,6 +89,15 @@ public class TouchpadView extends LinearLayout {
             public void onLongPress(MotionEvent e) {
                 mSelectionMode = true;
                 applySurfaceColor();
+            }
+
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                if (mListener != null) {
+                    mListener.onDoubleTap();
+                    return true;
+                }
+                return false;
             }
         });
 

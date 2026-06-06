@@ -60,7 +60,7 @@ fun ToolbarKeysCustomizer(
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                items(ToolbarKey.entries) {
+                items(ToolbarKey.entries, key = { it.name }) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { showKeyCustomizer = it }.fillParentMaxWidth()

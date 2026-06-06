@@ -13,6 +13,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -55,6 +56,11 @@ fun LayoutEditDialog(
 ) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Per-composable cancellation slot. Previously this was a top-level
+    // var, so opening a second dialog would cancel the first dialog's
+    // feedback job, and on configuration change the scope could be
+    // cancelled while the top-level job reference leaked.
+    val errorJob = remember { mutableStateOf<Job?>(null) }
     val startIsCustom = LayoutUtilsCustom.isCustomLayout(initialLayoutName)
     var displayNameValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(
@@ -70,7 +76,7 @@ fun LayoutEditDialog(
 
     TextInputDialog(
         onDismissRequest = {
-            errorJob?.cancel()
+            errorJob.value?.cancel()
             onDismissRequest()
         },
         onConfirmed = {
@@ -103,9 +109,9 @@ fun LayoutEditDialog(
         },
         checkTextValid = { text ->
             val valid = LayoutUtilsCustom.checkLayout(text, ctx)
-            errorJob?.cancel()
+            errorJob.value?.cancel()
             if (!valid) {
-                errorJob = scope.launch {
+                errorJob.value = scope.launch {
                     val message = Log.getLog(10)
                         .lastOrNull { it.tag == "LayoutUtilsCustom" }?.message
                         ?.split("\n")?.take(2)?.joinToString("\n")
@@ -121,9 +127,6 @@ fun LayoutEditDialog(
         reducePadding = true,
     )
 }
-
-// the job is here (outside the composable to make sure old jobs are canceled
-private var errorJob: Job? = null
 
 @Preview
 @Composable

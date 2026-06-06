@@ -46,6 +46,7 @@ fun LoadEmojiLibPreference(
     title: String,
     summary: String? = null,
     @DrawableRes icon: Int? = null,
+    onSuccess: (() -> Unit)? = null,
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     var isDownloading by rememberSaveable { mutableStateOf(false) }
@@ -61,10 +62,8 @@ fun LoadEmojiLibPreference(
 
     fun refreshAndLoad() {
         helium314.keyboard.keyboard.emoji.EmojiPalettesView.closeDictionaryFacilitator()
-        // Force settings screen to recompose by updating a dummy pref or just updating local state so the preference knows it's installed.
-        // The most direct way since we read `isInstalled` at composition is to just swap a boolean state here if needed,
-        // but `isInstalled` is computed on every recompose.
         ctx.protectedPrefs().edit { putLong("emoji_lib_last_update", System.currentTimeMillis()) }
+        onSuccess?.invoke()
         (ctx.getActivity() as? helium314.keyboard.settings.SettingsActivity)?.let {
             it.prefChanged.value = it.prefChanged.value + 1
         }
@@ -93,6 +92,7 @@ fun LoadEmojiLibPreference(
                     withContext(Dispatchers.Main) {
                         FeedbackManager.message(ctx, R.string.load_gesture_library_download_success) // Reusing success string
                         isDownloading = false
+                        showDialog = false
                         refreshAndLoad()
                     }
                 } else {
@@ -107,6 +107,7 @@ fun LoadEmojiLibPreference(
         }
     }
 
+
     val launcher = filePicker { uri ->
         if (cachePath != null) {
             val targetFile = File(cachePath, dictName)
@@ -120,6 +121,7 @@ fun LoadEmojiLibPreference(
                 }
                 tmpFile.delete()
                 FeedbackManager.message(ctx, "Emoji dictionary loaded successfully")
+                showDialog = false
                 refreshAndLoad()
             } catch (e: IOException) {
                 Toast.makeText(ctx, "Failed to load emoji dictionary from file", Toast.LENGTH_SHORT).show()
@@ -161,6 +163,7 @@ fun LoadEmojiLibPreference(
             onNeutral = {
                 if (isInstalled) {
                     libFile.delete()
+                    showDialog = false
                     refreshAndLoad()
                 } else {
                     showDialog = false

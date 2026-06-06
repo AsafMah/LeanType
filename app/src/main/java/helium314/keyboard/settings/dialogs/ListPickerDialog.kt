@@ -60,7 +60,7 @@ fun <T: Any> ListPickerDialog(
                 LocalTextStyle provides MaterialTheme.typography.bodyLarge
             ) {
                 LazyColumn(state = state) {
-                    items(items) { item ->
+                    items(items, key = { it.toString() }) { item ->
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalAlignment = Alignment.CenterVertically,

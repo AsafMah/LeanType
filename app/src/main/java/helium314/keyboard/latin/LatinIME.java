@@ -557,14 +557,19 @@ public class LatinIME extends InputMethodService implements
         // Register to receive ringer mode change.
         final IntentFilter filter = new IntentFilter();
         filter.addAction(AudioManager.RINGER_MODE_CHANGED_ACTION);
-        registerReceiver(mRingerModeChangeReceiver, filter);
+        // These intents are sent by the system, so NOT_EXPORTED is sufficient and
+        // avoids the SecurityException thrown by the plain registerReceiver()
+        // overload on API 33+ when no exported flag is set.
+        ContextCompat.registerReceiver(this, mRingerModeChangeReceiver, filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED);
 
         // Register to receive installation and removal of a dictionary pack.
         final IntentFilter packageFilter = new IntentFilter();
         packageFilter.addAction(Intent.ACTION_PACKAGE_ADDED);
         packageFilter.addAction(Intent.ACTION_PACKAGE_REMOVED);
         packageFilter.addDataScheme(SCHEME_PACKAGE);
-        registerReceiver(mDictionaryPackInstallReceiver, packageFilter);
+        ContextCompat.registerReceiver(this, mDictionaryPackInstallReceiver, packageFilter,
+                ContextCompat.RECEIVER_NOT_EXPORTED);
 
         final IntentFilter newDictFilter = new IntentFilter();
         newDictFilter.addAction(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION);
@@ -582,7 +587,8 @@ public class LatinIME extends InputMethodService implements
         final IntentFilter restartAfterUnlockFilter = new IntentFilter();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
             restartAfterUnlockFilter.addAction(Intent.ACTION_USER_UNLOCKED);
-        registerReceiver(mRestartAfterDeviceUnlockReceiver, restartAfterUnlockFilter);
+        ContextCompat.registerReceiver(this, mRestartAfterDeviceUnlockReceiver,
+                restartAfterUnlockFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         StatsUtils.onCreate(mSettings.getCurrent(), mRichImm);
     }

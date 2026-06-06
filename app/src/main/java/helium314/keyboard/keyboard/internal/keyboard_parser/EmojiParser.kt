@@ -75,10 +75,7 @@ class EmojiParser(private val params: KeyboardParams, private val context: Conte
         val emojiKeyboardHeight = defaultKeyboardHeight * 0.75f + params.mVerticalGap - defaultBottomPadding - context.resources.getDimensionPixelSize(R.dimen.config_emoji_category_page_id_height)
         var keyHeight = emojiKeyboardHeight * params.mDefaultRowHeight * Settings.getValues().mKeyboardHeightScale // still apply height scale to key
 
-        if (Settings.getValues().mEmojiKeyFit) {
-            keyWidth *= Settings.getValues().mFontSizeMultiplierEmoji
-            keyHeight *= Settings.getValues().mFontSizeMultiplierEmoji
-        }
+
 
 
         lines.forEach { line ->

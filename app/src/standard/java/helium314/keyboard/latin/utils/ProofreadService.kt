@@ -59,9 +59,11 @@ class ProofreadService(private val context: Context) {
         }
     }
 
+    fun getPrefs(): SharedPreferences = context.prefs()
+
     // Provider selection
     fun getProvider(): AIProvider {
-        val providerStr = securePrefs.getString(KEY_PROVIDER, AIProvider.GEMINI.name)
+        val providerStr = context.prefs().getString(KEY_PROVIDER, AIProvider.GEMINI.name)
         return try {
             AIProvider.valueOf(providerStr ?: AIProvider.GEMINI.name)
         } catch (e: IllegalArgumentException) {
@@ -70,7 +72,7 @@ class ProofreadService(private val context: Context) {
     }
 
     fun setProvider(provider: AIProvider) {
-        securePrefs.edit().putString(KEY_PROVIDER, provider.name).apply()
+        context.prefs().edit().putString(KEY_PROVIDER, provider.name).apply()
     }
 
     // Gemini API key

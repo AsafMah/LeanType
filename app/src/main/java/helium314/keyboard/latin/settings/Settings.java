@@ -215,6 +215,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     public static final String PREF_ENABLE_CLIPBOARD_HISTORY = "enable_clipboard_history";
     public static final String PREF_SUGGEST_SCREENSHOTS = "suggest_screenshots";
+    public static final String PREF_COMPRESS_SCREENSHOTS = "compress_screenshots";
     public static final String PREF_CLIPBOARD_HISTORY_RETENTION_TIME = "clipboard_history_retention_time";
     public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
     public static final String PREF_CLIPBOARD_FOLD_PINNED = "clipboard_fold_pinned";
@@ -587,8 +588,9 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         if (!image.isFile())
             return null;
         try {
-            sCachedBackgroundImages[index] = new CenterCropDrawable(
-                    BitmapFactory.decodeFile(image.getAbsolutePath()));
+            final android.graphics.Bitmap bm = helium314.keyboard.latin.utils.BitmapUtils.decodeSampledBitmap(image, 2048, true);
+            if (bm == null) return null;
+            sCachedBackgroundImages[index] = new CenterCropDrawable(bm);
             return sCachedBackgroundImages[index];
         } catch (Exception e) {
             return null;

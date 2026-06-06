@@ -504,7 +504,7 @@ public final class EmojiPalettesView extends LinearLayout
             downloadBtn.setTextSize(12); // Keep it small to fit
             downloadBtn.setAllCaps(false);
             downloadBtn.setOnClickListener(v -> {
-                if ("standard".equals(BuildConfig.FLAVOR)) {
+                if ("standard".equals(BuildConfig.FLAVOR) || "standardOptimised".equals(BuildConfig.FLAVOR)) {
                     downloadEmojiDictionary();
                     downloadBtn.setText("Downloading...");
                     downloadBtn.setEnabled(false);
@@ -711,6 +711,7 @@ public final class EmojiPalettesView extends LinearLayout
         // Load Alpha Keyboard
         KeyboardLayoutSet.Builder builder = new KeyboardLayoutSet.Builder(ctx, null);
         builder.setSubtype(RichInputMethodManager.getInstance().getCurrentSubtype());
+        builder.setSplitLayoutEnabled(Settings.getValues().mIsSplitKeyboardEnabled);
 
         // Fix: Use SecondaryKeyboardHeight which provides the exact height of the Emoji
         // palettes area
