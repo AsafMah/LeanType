@@ -59,7 +59,7 @@ class ProofreadService(private val context: Context) {
         }
     }
 
-    fun getPrefs(): SharedPreferences = context.prefs()
+    val prefs: SharedPreferences get() = context.prefs()
 
     // Provider selection
     fun getProvider(): AIProvider {

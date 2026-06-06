@@ -48,7 +48,7 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
                 provider = service.getProvider().name
             }
         }
-        val prefs = service.getPrefs()
+        val prefs = service.prefs
         prefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose {
             prefs.unregisterOnSharedPreferenceChangeListener(listener)
