@@ -6,6 +6,22 @@ Once everything is up correctly, you're ready to go!
 
 If you have difficulties implementing some functionality, you're welcome to ask for help. No one will write the code for you, but often other contributors can give you very useful hints.
 
+# Branching & Merge Workflow (LeanType)
+
+LeanType uses an integration-branch model so `main` stays release-ready:
+
+- **`main`** — release-only and **protected**. Never commit or push to it directly; it
+  advances only by merging `dev` at release time (version bump via `tools/release.py`, then
+  tag/release). Direct pushes are blocked by branch protection.
+- **`dev`** — the integration branch and the **base for all feature PRs**. Work lands here,
+  is dogfooded together, then promoted to `main` for a release. Also protected (PRs only).
+- **Feature branches** → PR into **`dev`** (not `main`). One responsibility per PR; put
+  build/test verification in the description.
+- **Releases:** open a PR `dev` → `main`, review, merge, then tag.
+
+Automated agents (e.g. the coding agent) **open** PRs and **never self-merge, and never push
+to `main`/`dev`** — a human maintainer reviews and merges. Propose, don't dispose.
+
 # About the Code
 
 HeliBoard is based on AOSP keyboard, and in many places still contains mostly the original code. There are some extensions, and some parts have been replaced completely.
