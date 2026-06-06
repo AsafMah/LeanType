@@ -229,6 +229,7 @@ public final class InputLogic {
         if (mAutospaceJustWritten
                 || SpaceState.PHANTOM == spaceState
                 || SpaceState.WEAK == spaceState
+                || !mWordComposer.isComposingWord() // a fresh word is starting (works in manual spacing too)
                 || Constants.CODE_SPACE == mConnection.getCodePointBeforeCursor()) {
             kv.clearGestureDebugPoints();
         }
@@ -2314,6 +2315,12 @@ public final class InputLogic {
         // explicitly retracting input; we don't want the timer to fire mid-correction.
         cancelCombiningMode();
         clearOneShotSpaceActionAndNotifyIfChanged();
+        // Typing-insight overlay: a backspace edits/clears the gesture word, so its trail is now
+        // stale. Drop it so it doesn't linger.
+        final MainKeyboardView backspaceKv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+        if (backspaceKv != null && backspaceKv.hasGestureDebugPoints()) {
+            backspaceKv.clearGestureDebugPoints();
+        }
         final String currentKeyboardScript = inputTransaction.getSettingsValues().mCurrentKeyboardScript;
         // Two-thumb typing (#1.1, PREF_GESTURE_FRAGMENT_BACKSPACE): try to pop the most-recent
         // fragment from the composing word as one keystroke. Returns true if handled — in
@@ -3703,6 +3710,12 @@ public final class InputLogic {
         final boolean usedMergedTrail = mWordComposer.isExtendBatchInputBaseSet();
         // Clear the extend base now that we've used it — gesture is committing.
         mWordComposer.setExtendBatchInputBase(null);
+        if (settingsValues.mGestureDebugDrawPoints && (extendExistingCompose || usedMergedTrail)) {
+            // Typing insight: this gesture/tap JOINED the existing word (a swipe fragment or a
+            // re-recognized tap) rather than starting a new one — cue it (ring + haptic tick).
+            final MainKeyboardView joinKv = keyboardSwitcher.getMainKeyboardView();
+            if (joinKv != null) joinKv.signalGestureJoin();
+        }
         final String prevTypedWord = (extendExistingCompose && !usedMergedTrail)
                 ? mWordComposer.getTypedWord() : "";
         if (settingsValues.mGestureDebugDrawPoints) {

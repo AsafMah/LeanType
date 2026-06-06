@@ -243,10 +243,10 @@
     <string name="gesture_dual_thumb_hinting_summary">Improve recognition when one thumb taps while the other swipes</string>
     <!-- Title of the slider that picks where the keyboard is split between left and right hand. -->
     <string name="gesture_dual_thumb_midline">Left/right hand split</string>
-    <!-- Title of the developer setting that draws raw and post-processed gesture points on the trail layer. -->
-    <string name="gesture_debug_draw_points">Draw gesture points (debug)</string>
+    <!-- Title of the setting that overlays, on the keyboard, what the gesture recognizer saw and chose. -->
+    <string name="gesture_debug_draw_points">Typing insight</string>
     <!-- Description for "gesture_debug_draw_points". -->
-    <string name="gesture_debug_draw_points_summary">Overlay the raw and processed points sent to the gesture library</string>
+    <string name="gesture_debug_draw_points_summary">Show what the keyboard saw and chose as you type: the gesture trail, where taps landed, a tick when a tap joins a swipe, and the word it picked.</string>
     <!-- Title of the setting that enables an apostrophe key dedicated for gesture typing of contractions. -->
     <string name="gesture_apostrophe_key">Apostrophe key for gestures</string>
     <!-- Description for "gesture_apostrophe_key". -->
@@ -298,8 +298,8 @@
     <string name="two_thumb_backspace_word">Delete whole word</string>
     <string name="two_thumb_point_hinting">Improve two-thumb recognition (experimental)</string>
     <string name="two_thumb_point_hinting_summary">Adds synthetic hints for the recognizer when both thumbs are used. It may help two-thumb gestures, but can hurt accuracy if the hand split is wrong.</string>
-    <string name="gesture_debug_accumulate_fragments">Accumulate debug fragments</string>
-    <string name="gesture_debug_accumulate_fragments_summary">Keep the debug overlay across word fragments and clear it when the next word starts. Turn off to clear at each new swipe.</string>
+    <string name="gesture_debug_accumulate_fragments">Keep insight across word parts</string>
+    <string name="gesture_debug_accumulate_fragments_summary">Keep the trail visible across the parts of one word, clearing when the next word starts. Turn off to clear at each new swipe.</string>
 
     <!-- Title of the post-autospace suggestion-strip behavior pref. -->
     <string name="combining_autospace_suggestions">After auto-space, show…</string>

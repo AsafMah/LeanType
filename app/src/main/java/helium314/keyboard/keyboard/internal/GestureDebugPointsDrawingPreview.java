@@ -57,6 +57,9 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private int[] mSyntheticFragments;
     private int mSyntheticSize;
     private int mNextFragmentId;
+    // Join marker: this fragment joined the current word (set by markJoin). Drawn as a ring on the
+    // joining fragment's last raw point until cleared.
+    private boolean mJoinPending;
 
     private final Paint mRawPaint = new Paint();
     private final Paint mLinePaint = new Paint();
@@ -64,6 +67,8 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private final Paint mStartPaint = new Paint();
     private final Paint mEndPaint = new Paint();
     private final Paint mTapPaint = new Paint();
+    private final Paint mGlowPaint = new Paint();
+    private final Paint mJoinPaint = new Paint();
     private final float[] mColorHsv = new float[3];
     /** Radius in pixels for a "raw" sample dot. Picked so dots remain visible at typical DPIs. */
     private static final float RAW_RADIUS_PX = 4f;
@@ -71,6 +76,7 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
     private static final float TAP_MARKER_RADIUS_PX = 10f;
     private static final float START_MARKER_RADIUS_PX = 9f;
     private static final float END_MARKER_RADIUS_PX = 8f;
+    private static final float JOIN_RING_RADIUS_PX = 22f;
     private static final int TAP_MAX_POINTS = 5;
     private static final int TAP_MAX_DURATION_MS = 80;
     private static final float[][] FRAGMENT_HSV = {
@@ -114,6 +120,21 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         mTapPaint.setAlpha(0xDD);
         mTapPaint.setStrokeWidth(3f);
         mTapPaint.setStyle(Paint.Style.STROKE);
+        mLinePaint.setStrokeCap(Paint.Cap.ROUND);
+
+        // Visual refinement: a soft wide halo under the trail line so it reads as a stroke, not dots.
+        mGlowPaint.setAntiAlias(true);
+        mGlowPaint.setAlpha(0x33);
+        mGlowPaint.setStrokeWidth(11f);
+        mGlowPaint.setStrokeCap(Paint.Cap.ROUND);
+        mGlowPaint.setStyle(Paint.Style.STROKE);
+
+        // Join cue: bright magenta double-ring where a tap converged into the swiped word.
+        mJoinPaint.setAntiAlias(true);
+        mJoinPaint.setColor(Color.rgb(255, 64, 200));
+        mJoinPaint.setStrokeWidth(5f);
+        mJoinPaint.setStyle(Paint.Style.STROKE);
+
     }
 
     /**
@@ -179,11 +200,19 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         mSyntheticFragments = null;
         mSyntheticSize = 0;
         mNextFragmentId = 0;
+        mJoinPending = false;
         invalidateDrawingView();
     }
 
     public boolean hasSnapshot() {
         return mRawSize > 0 || mSyntheticSize > 0;
+    }
+
+    /** Cue that this gesture/tap joined the current word; drawn at the joining fragment's last point. */
+    public void markJoin() {
+        Log.d(TAG, "markJoin");
+        mJoinPending = true;
+        invalidateDrawingView();
     }
 
     @Override
@@ -198,6 +227,7 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         drawRawPoints(canvas);
         drawRunMarkers(canvas);
         drawSyntheticPoints(canvas);
+        drawJoin(canvas);
     }
 
     @Override
@@ -213,7 +243,10 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         for (int i = 1; i < n; i++) {
             if (mRawIds[i] != mRawIds[i - 1]
                     || mRawFragments[i] != mRawFragments[i - 1]) continue;
-            mLinePaint.setColor(colorForFragment(mRawFragments[i]));
+            final int color = colorForFragment(mRawFragments[i]);
+            mGlowPaint.setColor(color);
+            canvas.drawLine(mRawXs[i - 1], mRawYs[i - 1], mRawXs[i], mRawYs[i], mGlowPaint);
+            mLinePaint.setColor(color);
             canvas.drawLine(mRawXs[i - 1], mRawYs[i - 1], mRawXs[i], mRawYs[i], mLinePaint);
         }
     }
@@ -319,5 +352,15 @@ public final class GestureDebugPointsDrawingPreview extends AbstractDrawingPrevi
         if (size == 0 || size > TAP_MAX_POINTS) return false;
         final int[] times = pointers.getTimes();
         return times[size - 1] - times[0] <= TAP_MAX_DURATION_MS;
+    }
+
+    private void drawJoin(final Canvas canvas) {
+        if (!mJoinPending || mRawXs == null || mRawYs == null) return;
+        final int n = Math.min(mRawSize, Math.min(mRawXs.length, mRawYs.length));
+        if (n == 0) return;
+        final int x = mRawXs[n - 1];
+        final int y = mRawYs[n - 1];
+        canvas.drawCircle(x, y, JOIN_RING_RADIUS_PX, mJoinPaint);
+        canvas.drawCircle(x, y, JOIN_RING_RADIUS_PX * 0.55f, mJoinPaint);
     }
 }
