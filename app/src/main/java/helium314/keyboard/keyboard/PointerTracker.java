@@ -1617,7 +1617,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         final float dy = y - hitBox.exactCenterY();
         dao.record(key.getCode(), Integer.toString(mKeyboard.mId.mElementId),
                 context.getResources().getConfiguration().orientation, dx, dy,
-                System.currentTimeMillis());
+                hitBox.width(), hitBox.height(), System.currentTimeMillis());
     }
 
     @Override

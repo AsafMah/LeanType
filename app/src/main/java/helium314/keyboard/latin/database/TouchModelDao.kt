@@ -20,7 +20,9 @@ import java.util.concurrent.Executors
  */
 class TouchModelDao private constructor(private val db: Database) {
 
-    /** One key's learned stats. Offsets/variance are in pixels (relative to the key center). */
+    /** One key's learned stats. Offsets/variance are in pixels (relative to the key center).
+     *  keyWidth/keyHeight are the key's size in px at record time, so a viewer can express the
+     *  offset as a fraction of the key (e.g. "18px = 20% toward the lower-left of E"). */
     data class Stat(
         val keyCode: Int,
         val layout: String,
@@ -31,6 +33,8 @@ class TouchModelDao private constructor(private val db: Database) {
         var varDy: Float,
         var count: Int,
         var updatedAt: Long,
+        var keyWidth: Int = 0,
+        var keyHeight: Int = 0,
     )
 
     private val cache = HashMap<String, Stat>()
@@ -44,12 +48,12 @@ class TouchModelDao private constructor(private val db: Database) {
         db.readableDatabase.query(
             TABLE,
             arrayOf(COLUMN_KEY_CODE, COLUMN_LAYOUT, COLUMN_ORIENTATION, COLUMN_MEAN_DX, COLUMN_MEAN_DY,
-                COLUMN_VAR_DX, COLUMN_VAR_DY, COLUMN_COUNT, COLUMN_UPDATED_AT),
+                COLUMN_VAR_DX, COLUMN_VAR_DY, COLUMN_COUNT, COLUMN_UPDATED_AT, COLUMN_KEY_WIDTH, COLUMN_KEY_HEIGHT),
             null, null, null, null, null
         ).use {
             while (it.moveToNext()) {
                 val s = Stat(it.getInt(0), it.getString(1), it.getInt(2), it.getFloat(3), it.getFloat(4),
-                    it.getFloat(5), it.getFloat(6), it.getInt(7), it.getLong(8))
+                    it.getFloat(5), it.getFloat(6), it.getInt(7), it.getLong(8), it.getInt(9), it.getInt(10))
                 cache[key(s.keyCode, s.layout, s.orientation)] = s
             }
         }
@@ -61,11 +65,12 @@ class TouchModelDao private constructor(private val db: Database) {
      * old data decays. Persists immediately. Callers must gate on incognito + the opt-in pref.
      */
     @Synchronized
-    fun record(keyCode: Int, layout: String, orientation: Int, dx: Float, dy: Float, now: Long) {
+    fun record(keyCode: Int, layout: String, orientation: Int, dx: Float, dy: Float,
+               keyWidth: Int, keyHeight: Int, now: Long) {
         val k = key(keyCode, layout, orientation)
         val s = cache[k]
         if (s == null) {
-            val ns = Stat(keyCode, layout, orientation, dx, dy, 0f, 0f, 1, now)
+            val ns = Stat(keyCode, layout, orientation, dx, dy, 0f, 0f, 1, now, keyWidth, keyHeight)
             cache[k] = ns
             persistAsync(ns.copy())
             return
@@ -80,6 +85,8 @@ class TouchModelDao private constructor(private val db: Database) {
         s.varDy = (1 - a) * (s.varDy + a * (dy - oldMeanDy) * (dy - oldMeanDy))
         if (s.count < Int.MAX_VALUE) s.count++
         s.updatedAt = now
+        if (keyWidth > 0) s.keyWidth = keyWidth
+        if (keyHeight > 0) s.keyHeight = keyHeight
         persistAsync(s.copy())
     }
 
@@ -116,7 +123,7 @@ class TouchModelDao private constructor(private val db: Database) {
     }
 
     private fun write(s: Stat) {
-        val cv = ContentValues(9)
+        val cv = ContentValues(11)
         cv.put(COLUMN_KEY_CODE, s.keyCode)
         cv.put(COLUMN_LAYOUT, s.layout)
         cv.put(COLUMN_ORIENTATION, s.orientation)
@@ -126,6 +133,8 @@ class TouchModelDao private constructor(private val db: Database) {
         cv.put(COLUMN_VAR_DY, s.varDy)
         cv.put(COLUMN_COUNT, s.count)
         cv.put(COLUMN_UPDATED_AT, s.updatedAt)
+        cv.put(COLUMN_KEY_WIDTH, s.keyWidth)
+        cv.put(COLUMN_KEY_HEIGHT, s.keyHeight)
         db.writableDatabase.insertWithOnConflict(TABLE, null, cv, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
@@ -146,6 +155,8 @@ class TouchModelDao private constructor(private val db: Database) {
         private const val COLUMN_VAR_DY = "VAR_DY"
         private const val COLUMN_COUNT = "COUNT"
         private const val COLUMN_UPDATED_AT = "UPDATED_AT"
+        const val COLUMN_KEY_WIDTH = "KEY_WIDTH"
+        const val COLUMN_KEY_HEIGHT = "KEY_HEIGHT"
         const val CREATE_TABLE = """
             CREATE TABLE $TABLE (
                 $COLUMN_KEY_CODE INTEGER NOT NULL,
@@ -157,12 +168,11 @@ class TouchModelDao private constructor(private val db: Database) {
                 $COLUMN_VAR_DY REAL NOT NULL,
                 $COLUMN_COUNT INTEGER NOT NULL,
                 $COLUMN_UPDATED_AT INTEGER NOT NULL,
+                $COLUMN_KEY_WIDTH INTEGER NOT NULL DEFAULT 0,
+                $COLUMN_KEY_HEIGHT INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY ($COLUMN_KEY_CODE, $COLUMN_LAYOUT, $COLUMN_ORIENTATION)
             )
         """
-        const val SELECT_ALL =
-            "SELECT $COLUMN_KEY_CODE, $COLUMN_LAYOUT, $COLUMN_ORIENTATION, $COLUMN_MEAN_DX, $COLUMN_MEAN_DY, " +
-            "$COLUMN_VAR_DX, $COLUMN_VAR_DY, $COLUMN_COUNT, $COLUMN_UPDATED_AT FROM $TABLE"
 
         private fun key(keyCode: Int, layout: String, orientation: Int) = "$keyCode|$layout|$orientation"
 

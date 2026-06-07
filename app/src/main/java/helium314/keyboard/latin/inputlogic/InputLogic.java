@@ -4032,7 +4032,7 @@ public final class InputLogic {
         dao.record(codePoint, Integer.toString(keyboard.mId.mElementId),
                 mLatinIME.getResources().getConfiguration().orientation,
                 x - hitBox.exactCenterX(), y - hitBox.exactCenterY(),
-                System.currentTimeMillis());
+                hitBox.width(), hitBox.height(), System.currentTimeMillis());
     }
 
     /**
