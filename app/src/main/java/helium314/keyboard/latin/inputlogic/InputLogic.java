@@ -1048,16 +1048,17 @@ public final class InputLogic {
     }
 
     /**
-     * Handles the UNDO_WORD toolbar action: re-opens the just-committed word with its ORIGINAL
-     * alternatives (gesture/autocorrect candidates) for re-selection, without changing the text.
+     * Handles the UNDO_WORD toolbar action: re-opens the last word for re-selection, showing its
+     * alternatives (the gesture/autocorrect candidates) so a different one can be picked. Most useful
+     * AFTER you've pressed space to move on — the strip already shows a word's alternatives right
+     * after it is committed.
      * <p>
-     * The alternatives are read from {@code mLastComposedWord.mCommittedWord}'s in-memory
-     * {@link SuggestionSpan} — not from the editor (gesture commits don't leave those spans there,
-     * so a fresh editor-based lookup would show unrelated/nonsense suggestions). The word is only
-     * re-composed (composing region set over it) so picking an alternative replaces it; nothing is
-     * deleted, so there is no over-delete or garbage. Works even after you've pressed space to move
-     * on: it finds the committed word before the cursor (skipping a trailing separator), moves the
-     * cursor back into it, and re-opens it. No-ops if that word isn't there or has no alternatives.
+     * The candidates live in the committed text's {@link android.text.style.SuggestionSpan}s in the
+     * EDITOR ({@code mLastComposedWord.mCommittedWord} is a plain string without them). So we move the
+     * cursor to the end of the last word before the cursor (skipping a trailing space) and post a
+     * resume — the standard recorrection path then re-acquires that word and its editor spans once
+     * the cursor has settled. Non-destructive: no text is deleted. No-ops if there is no word before
+     * the cursor.
      *
      * @param inputTransaction The transaction in progress.
      */
@@ -1066,72 +1067,30 @@ public final class InputLogic {
         if (!settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
                 || !settingsValues.needsToLookupSuggestions()
                 || mInputLogicHandler.isInBatchInput()
-                || mConnection.hasSelection()
-                || mConnection.getExpectedSelectionStart() < 0
-                || mLastComposedWord == LastComposedWord.NOT_A_COMPOSED_WORD) {
+                || mConnection.hasSelection()) {
             return;
         }
-        final CharSequence committedWord = mLastComposedWord.mCommittedWord;
-        if (TextUtils.isEmpty(committedWord)) return;
-        final String committedWordString = committedWord.toString();
-        final int length = committedWordString.length();
-        // Find the committed word before the cursor, allowing a trailing separator (e.g. the space
-        // you typed to move on). After a gesture the trailing space may be a pending phantom space
-        // that is not in the text, so trailing can be 0. We skip only whitespace after the word.
-        final CharSequence before = mConnection.getTextBeforeCursor(length + 3, 0);
-        if (before == null) return;
+        final int cursor = mConnection.getExpectedSelectionStart();
+        if (cursor <= 0) return;
+        // Find the end of the last word before the cursor, skipping a trailing separator (the space
+        // you typed to move on; after a gesture it may be a pending phantom space that is absent).
+        final CharSequence before = mConnection.getTextBeforeCursor(48, 0);
+        if (TextUtils.isEmpty(before)) return;
         int trailing = 0;
         while (before.length() - trailing > 0
                 && Character.isWhitespace(before.charAt(before.length() - 1 - trailing))) {
             trailing++;
         }
-        final int wordEndInBefore = before.length() - trailing;
-        if (wordEndInBefore < length
-                || !TextUtils.equals(committedWordString, before.subSequence(wordEndInBefore - length, wordEndInBefore))) {
-            return; // the last word before the cursor isn't the one we committed — do nothing
+        if (before.length() - trailing == 0) return; // only whitespace before the cursor
+        final int wordEnd = cursor - trailing;
+        // Move the cursor into that word, then resume suggestions for it once the cursor settles.
+        // restartSuggestionsOnWordTouchedByCursor reads the word's editor SuggestionSpans — the real
+        // gesture/autocorrect candidates — and shows them in the strip.
+        if (wordEnd != cursor) {
+            mConnection.setSelection(wordEnd, wordEnd);
         }
-        final int wordEnd = mConnection.getExpectedSelectionStart() - trailing;
-        final int wordStart = wordEnd - length;
-        if (wordStart < 0) return;
-
-        // Rebuild the alternatives list from the committed word's in-memory suggestion spans.
-        final ArrayList<SuggestedWordInfo> suggestions = new ArrayList<>();
-        final SuggestedWordInfo typedWordInfo = new SuggestedWordInfo(committedWordString,
-                "" /* prevWordsContext */, SuggestedWords.MAX_SUGGESTIONS + 1,
-                SuggestedWordInfo.KIND_TYPED, Dictionary.DICTIONARY_USER_TYPED,
-                SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE);
-        suggestions.add(typedWordInfo);
-        if (committedWord instanceof SpannableString committedWordWithSpans) {
-            int i = 0;
-            for (final SuggestionSpan span : committedWordWithSpans.getSpans(0, length, SuggestionSpan.class)) {
-                for (final String s : span.getSuggestions()) {
-                    ++i;
-                    if (!TextUtils.equals(s, committedWordString)) {
-                        suggestions.add(new SuggestedWordInfo(s, "" /* prevWordsContext */,
-                                SuggestedWords.MAX_SUGGESTIONS - i, SuggestedWordInfo.KIND_RESUMED,
-                                Dictionary.DICTIONARY_RESUMED, SuggestedWordInfo.NOT_AN_INDEX,
-                                SuggestedWordInfo.NOT_A_CONFIDENCE));
-                    }
-                }
-            }
-        }
-        // No real alternatives to offer — do nothing rather than show a fresh (nonsense) lookup.
-        if (suggestions.size() <= 1) return;
-
-        // Move the cursor back into the word and re-compose it so picking an alternative replaces
-        // it (keeping any trailing separator). We are no longer in a post-commit state.
-        mConnection.setSelection(wordEnd, wordEnd);
         mSpaceState = SpaceState.NONE;
-        final int[] codePoints = StringUtils.toCodePointArray(committedWordString);
-        mWordComposer.setComposingWord(codePoints, mLatinIME.getCoordinatesForCurrentKeyboard(codePoints));
-        mWordComposer.setCursorPositionWithinWord(committedWordString.codePointCount(0, length));
-        mConnection.setComposingRegion(wordStart, wordEnd);
-
-        final SuggestedWords suggestedWords = new SuggestedWords(suggestions, null /* rawSuggestions */,
-                typedWordInfo, false /* typedWordValid */, false /* willAutoCorrect */,
-                false /* isObsoleteSuggestions */, SuggestedWords.INPUT_STYLE_RECORRECTION,
-                SuggestedWords.NOT_A_SEQUENCE_NUMBER);
-        doShowSuggestionsAndClearAutoCorrectionIndicator(suggestedWords);
+        mLatinIME.mHandler.postResumeSuggestions(true /* shouldDelay */);
     }
 
 
