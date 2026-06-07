@@ -22,8 +22,8 @@ android {
         applicationId = "com.asafmah.leantypedual"
         minSdk = 21
         targetSdk = 35
-        versionCode = 3850
-        versionName = "3.8.5"
+        versionCode = 3860
+        versionName = "3.8.6"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
@@ -250,6 +250,9 @@ dependencies {
     testImplementation("androidx.test.ext:junit:1.1.5")
     testImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    // runTests is the CI variant; it needs the Compose test manifest (ComponentActivity) too,
+    // otherwise Compose UI tests (e.g. MiscTest.isWideScreen) fail to resolve the host activity.
+    "runTestsImplementation"("androidx.compose.ui:ui-test-manifest")
 }
 
 // Disable baseline/ART profile tasks to guarantee deterministic reproducible builds (except for standardOptimised)

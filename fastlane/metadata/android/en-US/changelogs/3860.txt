@@ -1,0 +1,3 @@
+- Two-thumb: down-swipe shortcut popup now aligns to the letter row (swipe down on a key selects the icon above it)
+- Flag learned/typed words that aren't in a dictionary; long-press to Add or Block them, plus a new Blocklist settings screen
+- Fix two-thumb ghost-merge: a deleted or cancelled gesture trail no longer fuses into the next swipe

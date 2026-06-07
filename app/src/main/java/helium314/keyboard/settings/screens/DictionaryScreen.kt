@@ -114,6 +114,65 @@ fun DictionaryScreen(
                     NextScreenIcon()
                 }
                 androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                // Blocklist Entry
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .padding(vertical = 4.dp, horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .clickable { SettingsDestination.navigateTo(SettingsDestination.Blocklist) }
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.blocklist),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            stringResource(R.string.blocklist_summary),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    NextScreenIcon()
+                }
+                androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                // Flag Unknown Words Setting
+                var flagUnknownWordsEnabled by remember { mutableStateOf(ctx.prefs().getBoolean(Settings.PREF_FLAG_UNKNOWN_WORDS, Defaults.PREF_FLAG_UNKNOWN_WORDS)) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .padding(vertical = 4.dp, horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .clickable {
+                            val newValue = !flagUnknownWordsEnabled
+                            flagUnknownWordsEnabled = newValue
+                            ctx.prefs().edit { putBoolean(Settings.PREF_FLAG_UNKNOWN_WORDS, newValue) }
+                        }
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.flag_unknown_words),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            stringResource(R.string.flag_unknown_words_summary),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = flagUnknownWordsEnabled,
+                        onCheckedChange = {
+                            flagUnknownWordsEnabled = it
+                            ctx.prefs().edit { putBoolean(Settings.PREF_FLAG_UNKNOWN_WORDS, it) }
+                        }
+                    )
+                }
+                androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
                 
                 // Personal Dictionary Setting
                 val prefs = ctx.prefs()

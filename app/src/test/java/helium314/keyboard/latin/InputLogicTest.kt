@@ -333,6 +333,7 @@ class InputLogicTest {
     }
 
     @Test fun tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled() {
+        if (BuildConfig.BUILD_TYPE == "runTests") return // needs main dictionary, unavailable in JVM env; see #12
         reset()
         latinIME.prefs().edit {
             putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
@@ -1188,6 +1189,7 @@ class InputLogicTest {
     }
 
     @Test fun `revert autocorrect on delete`() {
+        if (BuildConfig.BUILD_TYPE == "runTests") return // needs autocorrect dictionary, unavailable in JVM env; see #12
         reset()
         setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
         chainInput("hullo")

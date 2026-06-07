@@ -26,6 +26,7 @@ import android.text.TextUtils;
 import android.text.style.CharacterStyle;
 import android.text.style.StyleSpan;
 import android.text.style.UnderlineSpan;
+import helium314.keyboard.latin.dictionary.Dictionary;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
@@ -522,6 +523,21 @@ final class SuggestionStripLayoutHelper {
             wordView.setTag(indexInSuggestedWords);
             wordView.setText(getStyledSuggestedWord(suggestedWords, indexInSuggestedWords));
             wordView.setTextColor(getSuggestionTextColor(suggestedWords, indexInSuggestedWords));
+
+            // Flag uncurated words with an underline when the pref is enabled
+            if (Settings.getValues().mFlagUnknownWords) {
+                final SuggestedWordInfo info = suggestedWords.getInfo(indexInSuggestedWords);
+                if (info != null && info.mSourceDict != null
+                        && (info.mSourceDict.mDictType.equals(Dictionary.TYPE_USER_HISTORY)
+                                || info.mSourceDict.mDictType.equals(Dictionary.TYPE_USER_TYPED))) {
+                    final CharSequence current = wordView.getText();
+                    if (!StringUtilsKt.isEmoji(current)) {
+                        final SpannableString flagged = new SpannableString(current != null ? current : "");
+                        flagged.setSpan(UNDERLINE_SPAN, 0, flagged.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        wordView.setText(flagged);
+                    }
+                }
+            }
 
             if (emojiTypeface != null && StringUtilsKt.isEmoji(wordView.getText()))
                 wordView.setTypeface(emojiTypeface);

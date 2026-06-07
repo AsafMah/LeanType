@@ -44,6 +44,14 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
     private int mOriginX;
     private int mOriginY;
     private Key mCurrentKey;
+    // When true, the panel is anchored below the source key (its top aligned to pointY)
+    // instead of the default above-key placement (its bottom aligned to pointY).
+    private boolean mShowBelowAnchor;
+    // Shortcut-row popup: when set (not NO_ROW_ALIGN), the panel's visible content left edge is
+    // pinned to this x (the source letter row's left edge) so the icons tile across the row and the
+    // swiped key maps to the icon directly above it — instead of re-anchoring on the swiped key.
+    public static final int NO_ROW_ALIGN = Integer.MIN_VALUE;
+    private int mRowAlignedLeftX = NO_ROW_ALIGN;
 
     private int mActivePointerId;
 
@@ -137,6 +145,15 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         mEmojiViewCallback = emojiViewCallback;
         showPopupKeysPanelInternal(parentView, controller, pointX, pointY);
     }
+    // Must be called before showPopupKeysPanel(...) for a given show; resets per show.
+    public void setShowBelowAnchor(final boolean below) {
+        mShowBelowAnchor = below;
+    }
+
+    // Must be called before showPopupKeysPanel(...) for a given show; NO_ROW_ALIGN resets it.
+    public void setRowAlignedLeftX(final int rowLeftX) {
+        mRowAlignedLeftX = rowLeftX;
+    }
 
     @SuppressLint("RtlHardcoded") // a key on the left is on the left, independent of layout direction
     private void showPopupKeysPanelInternal(final View parentView, final Controller controller,
@@ -145,9 +162,19 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         final View container = getContainerView();
         // The coordinates of panel's left-top corner in parentView's coordinate system.
         // We need to consider background drawable paddings.
-        final int x = pointX - getDefaultCoordX() - container.getPaddingLeft() - getPaddingLeft();
-        final int y = pointY - container.getMeasuredHeight() + container.getPaddingBottom()
-                + getPaddingBottom();
+        // Default: anchor the panel so its default column sits under pointX (centered on the key).
+        // Row-aligned (shortcut-row popup): pin the visible content left edge to the source row's
+        // left edge so the icons tile across the row and the swiped key maps to the icon above it.
+        final int x = (mRowAlignedLeftX != NO_ROW_ALIGN)
+                ? mRowAlignedLeftX - container.getPaddingLeft() - getPaddingLeft()
+                : pointX - getDefaultCoordX() - container.getPaddingLeft() - getPaddingLeft();
+        // Above-anchor (default): panel bottom aligned to pointY (popup sits above the key).
+        // Below-anchor: panel top aligned to pointY (popup sits below the key), mirroring the
+        // padding compensation so the visible content edge lands on pointY either way.
+        final int y = mShowBelowAnchor
+                ? pointY - container.getPaddingTop() - getPaddingTop()
+                : pointY - container.getMeasuredHeight() + container.getPaddingBottom()
+                        + getPaddingBottom();
 
         parentView.getLocationInWindow(mCoordinates);
         final int containerY = y + CoordinateUtils.y(mCoordinates);
