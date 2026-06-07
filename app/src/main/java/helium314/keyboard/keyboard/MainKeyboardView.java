@@ -619,13 +619,13 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     @Nullable
     public PopupKeysPanel showPopupKeysKeyboard(@NonNull final Key key,
             @NonNull final PointerTracker tracker) {
-        return showPopupKeysKeyboard(key, tracker, false, PopupKeysKeyboardView.NO_ROW_ALIGN);
+        return showPopupKeysKeyboard(key, tracker, false, PopupKeysKeyboardView.NO_ROW_ALIGN, 0);
     }
 
     @Nullable
     private PopupKeysPanel showPopupKeysKeyboard(@NonNull final Key key,
             @NonNull final PointerTracker tracker, final boolean belowSourceKey,
-            final int rowAlignedLeftX) {
+            final int rowAlignedLeftX, final int fixedKeyWidth) {
         final PopupKeySpec[] popupKeys = key.getPopupKeys();
         if (popupKeys == null) {
             return null;
@@ -646,7 +646,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             final PopupKeysKeyboard.Builder builder = new PopupKeysKeyboard.Builder(
                     getContext(), key, getKeyboard(), isSinglePopupKeyWithPreview,
                     mKeyPreviewDrawParams.getVisibleWidth(),
-                    mKeyPreviewDrawParams.getVisibleHeight(), newLabelPaint(key));
+                    mKeyPreviewDrawParams.getVisibleHeight(), newLabelPaint(key), fixedKeyWidth);
             popupKeysKeyboard = builder.build();
             mPopupKeysKeyboardCache.put(key, popupKeysKeyboard);
         }
@@ -698,18 +698,26 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         if (popupParentKey == null) {
             return null;
         }
-        // Align the shortcut popup's icons to the source letter row so the swiped key maps to the
-        // icon directly above it, instead of re-anchoring on the swiped key (which the irregular
-        // shift/backspace keys at the row edges throw off). Row left = leftmost normal key in the row.
+        // Align the shortcut popup's icons across the source letter row so a swipe maps PROPORTIONALLY
+        // to the icon above it: the N icons tile the usable-keys row width (each = rowWidth/N), pinned
+        // to the row's left edge. This avoids re-anchoring on the swiped key (which the irregular
+        // shift/backspace keys at the row edges throw off).
         int rowLeftX = Integer.MAX_VALUE;
+        int rowRightX = Integer.MIN_VALUE;
         for (final Key rowKey : keyboard.getSortedKeys()) {
             if (rowKey.getY() == key.getY() && rowKey.getBackgroundType() == Key.BACKGROUND_TYPE_NORMAL
                     && !rowKey.isModifier() && !rowKey.isSpacer()) {
                 rowLeftX = Math.min(rowLeftX, rowKey.getX());
+                rowRightX = Math.max(rowRightX, rowKey.getX() + rowKey.getWidth());
             }
         }
-        if (rowLeftX == Integer.MAX_VALUE) rowLeftX = key.getX();
-        return showPopupKeysKeyboard(popupParentKey, tracker, belowSourceKey, rowLeftX);
+        if (rowLeftX == Integer.MAX_VALUE) {
+            rowLeftX = key.getX();
+            rowRightX = key.getX() + key.getWidth();
+        }
+        final int iconCount = popupParentKey.getPopupKeys().length;
+        final int proportionalKeyWidth = iconCount > 0 ? (rowRightX - rowLeftX) / iconCount : 0;
+        return showPopupKeysKeyboard(popupParentKey, tracker, belowSourceKey, rowLeftX, proportionalKeyWidth);
     }
 
     public boolean isInDraggingFinger() {
