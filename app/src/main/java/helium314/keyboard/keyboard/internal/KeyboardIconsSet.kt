@@ -181,6 +181,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.PAGE_END -> R.drawable.ic_page_end
                     ToolbarKey.JOIN_NEXT -> R.drawable.ic_close
                     ToolbarKey.FORCE_NEXT_SPACE -> R.drawable.ic_plus // no rounded variant exists
+                    ToolbarKey.UNDO_WORD -> R.drawable.ic_edit
                     ToolbarKey.SPLIT -> R.drawable.ic_ime_switcher
                     ToolbarKey.PROOFREAD -> R.drawable.ic_proofread
                     ToolbarKey.TRANSLATE -> R.drawable.ic_translate
@@ -262,6 +263,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.PAGE_END -> R.drawable.ic_page_end
                     ToolbarKey.JOIN_NEXT -> R.drawable.ic_close
                     ToolbarKey.FORCE_NEXT_SPACE -> R.drawable.ic_plus // no rounded variant exists
+                    ToolbarKey.UNDO_WORD -> R.drawable.ic_edit
                     ToolbarKey.SPLIT -> R.drawable.ic_ime_switcher
                     ToolbarKey.PROOFREAD -> R.drawable.ic_proofread
                     ToolbarKey.TRANSLATE -> R.drawable.ic_translate
@@ -343,6 +345,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.PAGE_END -> R.drawable.ic_page_end_rounded
                     ToolbarKey.JOIN_NEXT -> R.drawable.ic_close_rounded
                     ToolbarKey.FORCE_NEXT_SPACE -> R.drawable.ic_plus
+                    ToolbarKey.UNDO_WORD -> R.drawable.ic_edit // ic_edit has no rounded variant
                     ToolbarKey.SPLIT -> R.drawable.ic_ime_switcher
                     ToolbarKey.PROOFREAD -> R.drawable.ic_proofread_rounded
                     ToolbarKey.TRANSLATE -> R.drawable.ic_translate_rounded

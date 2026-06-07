@@ -1047,6 +1047,53 @@ public final class InputLogic {
         }
     }
 
+    /**
+     * Handles the UNDO_WORD toolbar action: re-opens the last word for re-selection, showing its
+     * alternatives (the gesture/autocorrect candidates) so a different one can be picked. Most useful
+     * AFTER you've pressed space to move on — the strip already shows a word's alternatives right
+     * after it is committed.
+     * <p>
+     * The candidates live in the committed text's {@link android.text.style.SuggestionSpan}s in the
+     * EDITOR ({@code mLastComposedWord.mCommittedWord} is a plain string without them). So we move the
+     * cursor to the end of the last word before the cursor (skipping a trailing space) and post a
+     * resume — the standard recorrection path then re-acquires that word and its editor spans once
+     * the cursor has settled. Non-destructive: no text is deleted. No-ops if there is no word before
+     * the cursor.
+     *
+     * @param inputTransaction The transaction in progress.
+     */
+    private void handleUndoWord(final InputTransaction inputTransaction) {
+        final SettingsValues settingsValues = inputTransaction.getSettingsValues();
+        if (!settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
+                || !settingsValues.needsToLookupSuggestions()
+                || mInputLogicHandler.isInBatchInput()
+                || mConnection.hasSelection()) {
+            return;
+        }
+        final int cursor = mConnection.getExpectedSelectionStart();
+        if (cursor <= 0) return;
+        // Find the end of the last word before the cursor, skipping a trailing separator (the space
+        // you typed to move on; after a gesture it may be a pending phantom space that is absent).
+        final CharSequence before = mConnection.getTextBeforeCursor(48, 0);
+        if (TextUtils.isEmpty(before)) return;
+        int trailing = 0;
+        while (before.length() - trailing > 0
+                && Character.isWhitespace(before.charAt(before.length() - 1 - trailing))) {
+            trailing++;
+        }
+        if (before.length() - trailing == 0) return; // only whitespace before the cursor
+        final int wordEnd = cursor - trailing;
+        // Move the cursor into that word, then resume suggestions for it once the cursor settles.
+        // restartSuggestionsOnWordTouchedByCursor reads the word's editor SuggestionSpans — the real
+        // gesture/autocorrect candidates — and shows them in the strip.
+        if (wordEnd != cursor) {
+            mConnection.setSelection(wordEnd, wordEnd);
+        }
+        mSpaceState = SpaceState.NONE;
+        mLatinIME.mHandler.postResumeSuggestions(true /* shouldDelay */);
+    }
+
+
     private void resumeWordAtCursorForJoining(final SettingsValues settingsValues) {
         final TextRange range = mConnection.getWordRangeAtCursor(settingsValues.mSpacingAndPunctuations,
                 settingsValues.mCurrentKeyboardScript);
@@ -1665,6 +1712,9 @@ public final class InputLogic {
                 break;
             case KeyCode.FORCE_NEXT_SPACE:
                 forceSpaceBeforeNextWord(event, inputTransaction, handler);
+                break;
+            case KeyCode.UNDO_WORD:
+                handleUndoWord(inputTransaction);
                 break;
             case KeyCode.LANGUAGE_SWITCH:
                 handleLanguageSwitchKey();
