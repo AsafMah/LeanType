@@ -210,10 +210,12 @@ public class LatinIME extends InputMethodService implements
         private static final int ARG2_UNUSED = 0;
         private static final int ARG1_TRUE = 1;
 
-        // When the adaptive context prior is enabled, suggestions are refreshed with this shorter
-        // debounce instead of mDelayInMillisecondsToUpdateSuggestions, so the prior (and its debug
-        // overlay) keep up with the keystroke instead of trailing it by ~one key. See ADAPTIVE_TYPING.md.
-        private static final long PROMPT_PRIOR_UPDATE_DELAY_MS = 30;
+        // While the adaptive debug overlay is on, suggestions are refreshed with this shorter
+        // debounce instead of mDelayInMillisecondsToUpdateSuggestions, so the visualized prior keeps
+        // up with the keystroke instead of trailing it by ~one key. Scoped to the overlay (a
+        // temporary diagnostic) on purpose: the normal ~100 ms debounce coalesces the UI-blocking
+        // suggestion compute, so we don't shorten it during ordinary typing. See ADAPTIVE_TYPING.md.
+        private static final long PROMPT_PRIOR_UPDATE_DELAY_MS = 50;
 
         private int mDelayInMillisecondsToUpdateSuggestions;
         private int mDelayInMillisecondsToUpdateShiftState;
@@ -303,7 +305,9 @@ public class LatinIME extends InputMethodService implements
             final LatinIME latinIme = getOwnerInstance();
             if (latinIme != null) {
                 final SettingsValues sv = latinIme.mSettings.getCurrent();
-                if (sv != null && sv.mAdaptiveContextPrior) {
+                // Only when actively visualizing the prior: overlay on AND prior on. Ordinary
+                // typing keeps the full debounce so fast typists aren't hit by extra computes.
+                if (sv != null && sv.mAdaptiveDebugOverlay && sv.mAdaptiveContextPrior) {
                     delay = Math.min(delay, PROMPT_PRIOR_UPDATE_DELAY_MS);
                 }
             }

@@ -78,12 +78,16 @@ current position weighted by the candidate's score; sum per letter. Example: typ
 `H`, candidates `Hello`/`Hey`/`He` → `e` dominates → **E's tap target grows slightly
 for the next tap.** Recomputed live; never persisted.
 
-The prior is rebuilt from the suggestion strip, which is normally debounced ~100 ms; that
-made the prior (and the debug overlay) trail the keystroke by ~one key. When the prior is
-enabled we shorten that debounce (`PROMPT_PRIOR_UPDATE_DELAY_MS` in `LatinIME.UIHandler`)
-so the prediction is ready before the next tap. Lookups are case-insensitive
-(`AdaptiveKeyContext.weight` folds to lowercase) so the bias also applies on the shifted
-keyboard, where keys report uppercase codes.
+The prior is rebuilt from the suggestion strip, which is normally debounced ~100 ms (that
+debounce exists because the suggestion compute *blocks the UI thread* — see
+`InputLogic.performUpdateSuggestionStripSync`, which waits on `holder.get(..., 200 ms)` — so
+it coalesces the expensive compute during fast typing). At that cadence the prior is still
+ready before the next tap at normal speed (the functional bias works), but the *debug
+overlay* visibly trails by ~one key. So **only while the debug overlay is on** we shorten
+the debounce to 50 ms (`PROMPT_PRIOR_UPDATE_DELAY_MS` in `LatinIME.UIHandler`) so the
+visualization keeps up; ordinary typing (overlay off) keeps the full debounce and is
+unaffected. Lookups are case-insensitive (`AdaptiveKeyContext.weight` folds to lowercase)
+so the bias also applies on the shifted keyboard, where keys report uppercase codes.
 
 For **gestures** there is no single "next key" to enlarge mid-stroke, so the context
 prior is tap-only. The contextual-likelihood part for gestures is already handled by
