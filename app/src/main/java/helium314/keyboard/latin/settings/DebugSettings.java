@@ -17,6 +17,7 @@ public final class DebugSettings {
     public static final String PREF_KEY_DUMP_DICT_PREFIX = "dump_dictionaries";
 
     public static final String PREF_SHOW_SUGGESTION_INFOS = "show_suggestion_infos";
+    public static final String PREF_RECORD_INPUT_TRACES = "record_input_traces";
     private DebugSettings() {
         // This class is not publicly instantiable.
     }

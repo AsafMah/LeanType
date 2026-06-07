@@ -146,6 +146,7 @@ public class SettingsValues {
         public final boolean mMultipartTapSeedGesture;
         public final boolean mMultipartRerecognizeTaps;
         public final boolean mSlidingKeyInputPreviewEnabled;
+        public final boolean mRecordInputTraces;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
         public final boolean mIsSplitKeyboardEnabled;
@@ -240,6 +241,8 @@ public class SettingsValues {
                 mKeyPreviewPopupOn = prefs.getBoolean(Settings.PREF_POPUP_ON, Defaults.PREF_POPUP_ON);
                 mSlidingKeyInputPreviewEnabled = prefs.getBoolean(
                                 DebugSettings.PREF_SLIDING_KEY_INPUT_PREVIEW, Defaults.PREF_SLIDING_KEY_INPUT_PREVIEW);
+                mRecordInputTraces = prefs.getBoolean(
+                                DebugSettings.PREF_RECORD_INPUT_TRACES, Defaults.PREF_RECORD_INPUT_TRACES);
                 mShowsVoiceInputKey = mInputAttributes.mShouldShowVoiceInputKey;
                 final String languagePref = prefs.getString(Settings.PREF_LANGUAGE_SWITCH_KEY,
                                 Defaults.PREF_LANGUAGE_SWITCH_KEY);

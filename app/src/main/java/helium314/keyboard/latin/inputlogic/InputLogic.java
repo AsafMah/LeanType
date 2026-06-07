@@ -3958,6 +3958,16 @@ public final class InputLogic {
         // commit later.
         mShiftModeAtGestureStart = WordComposer.CAPS_MODE_OFF;
         final String composedText = prevTypedWord + batchInputText;
+        // Trace recorder (A3a): capture gesture trace + committed word for replay debugging.
+        // At this point composedText is the full word, mWordComposer.getInputPointers() holds
+        // the gesture trail (merged if multi-part), and the keyboard geometry is available.
+        if (settingsValues.mRecordInputTraces) {
+            helium314.keyboard.latin.utils.TraceRecorder.INSTANCE.record(
+                    mLatinIME,
+                    mWordComposer.getInputPointers(),
+                    composedText,
+                    keyboardSwitcher.getKeyboard());
+        }
         if (settingsValues.mGestureDebugDrawPoints) {
             Log.d(TAG, "batch composed='" + composedText + "'");
         }
