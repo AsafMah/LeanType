@@ -201,8 +201,20 @@ stats page to keep it honest. Validate the gesture path explicitly (it's the pri
    `InputLogic.setSuggestedWords`, off the tap path) and read lock-free per tap. The prior's
    cap (`PRIOR_MAX_FRACTION` ≈ 18% of key) is deliberately a bit **below** the learned cap
    (≈ 25%), so it nudges rather than dominates. Bias is suppressed during gestures/swipes
-   (`PointerTracker.isInGestureOrKeySwipe`) and only flips near-boundary taps. Gestures are
-   intentionally NOT context-biased (suggestions don't change mid-swipe).
+   (`PointerTracker.isInGestureOrKeySwipe`) and only flips near-boundary taps.
+
+   The context prior is **tap-only by design** — not because swipe suggestions are
+   unavailable (they do update live during a swipe), but because the prior is a *per-key*
+   mechanism (it enlarges the next key's tap target), and a swipe resolves a *whole word*
+   holistically via the recognizer, which already incorporates previous-word context through
+   its language model. So there is no single "next key" to enlarge mid-stroke. Making swipe
+   *word selection* more context-aware is the separate word-level re-ranking lever in
+   `SUGGESTION_RANKING.md`, not this prior. Note the resulting asymmetry: for a fresh word the
+   first *tap* is context-biased, but the first point of a *swipe* is not.
+
+   The **learned geometry** (Layer B), by contrast, applies to the entire swipe including its
+   start — every key the stroke passes is matched against its learned-shifted sweet spot — and
+   a swipe's endpoints also feed the model (gesture-endpoint learning).
 6. ⬜ **Strength/cap tuning** + optional heatmap visualization + interior-key gesture
    learning (needs corner-cutting handling or native alignment).
 
