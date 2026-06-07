@@ -326,8 +326,8 @@
     <string name="two_thumb_backspace_word">Delete whole word</string>
     <string name="two_thumb_point_hinting">Improve two-thumb recognition (experimental)</string>
     <string name="two_thumb_point_hinting_summary">Adds synthetic hints for the recognizer when both thumbs are used. It may help two-thumb gestures, but can hurt accuracy if the hand split is wrong.</string>
-    <string name="swipe_up_symbol">Swipe up for symbols (experimental)</string>
-    <string name="swipe_up_symbol_summary">A quick flick up on a key inserts its popup symbol (no long-press). Decided on release and only when no glide happened, so swipe typing is unaffected.</string>
+    <string name="swipe_up_symbol">Swipe up + hold for symbols (experimental)</string>
+    <string name="swipe_up_symbol_summary">Swipe up on a key and pause briefly to open its symbol popup (drag to pick, release to take the highlighted one). A continuous glide never triggers it, so swipe typing is unaffected.</string>
     <string name="gesture_debug_accumulate_fragments">Keep insight across word parts</string>
     <string name="gesture_debug_accumulate_fragments_summary">Keep the trail visible across the parts of one word, clearing when the next word starts. Turn off to clear at each new swipe.</string>
 

@@ -216,11 +216,14 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private boolean mShortcutBottomRowSwipeAllowed = false;
     private boolean mInShortcutRowSwipe = false;
     private static boolean sInShortcutRowSwipe = false;
-    // Swipe-up-to-symbol (#32): captured at finger-down so the up-flick decision (made on release,
-    // only when no glide engaged) can read the original key + start position.
+    // Swipe-up + hold to open a key's symbol popup (#32). mSwipeUpStart* captured at finger-down so a
+    // later up-flick + hold can target the original key. mSwipeUpHoldArmed: an up-flick is in progress
+    // and the hold timer is running (it fires once the finger stills; a continuous glide never lets it).
     private Key mSwipeUpStartKey = null;
     private int mSwipeUpStartX;
     private int mSwipeUpStartY;
+    private boolean mSwipeUpHoldArmed = false;
+    private static final int SWIPE_UP_HOLD_MS = 120;
 
     // Touchpad mode for cursor control
     public static boolean sPersistentTouchpadModeActive = false;
@@ -997,6 +1000,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         mShortcutBottomRowSwipeAllowed = isShortcutRowSource(key, false);
         mInShortcutRowSwipe = false;
         mSwipeUpStartKey = null;
+        mSwipeUpHoldArmed = false;
         mKeyboardLayoutHasBeenChanged = false;
         mIsTrackingForActionDisabled = false;
         resetKeySelectionByDraggingFinger();
@@ -1110,6 +1114,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (tryStartShortcutRowSwipe(x, y, eventTime)) {
             return;
         }
+        // Swipe-up + hold (#32): arm/refresh the hold timer. Does not consume the event, so gesture
+        // detection continues — a real glide just keeps the timer from ever firing.
+        maybeArmOrRefreshSwipeUpHold(x, y);
 
         if (sGestureEnabler.shouldHandleGesture() && me != null) {
             // Add historical points to gesture path.
@@ -1542,12 +1549,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             }
         }
 
-        // Swipe-up-to-symbol (#32): decide on release BEFORE the gesture commit. A clear vertical
-        // up-flick emits the start key's popup symbol (cancelling any in-progress gesture); a
-        // horizontal glide is not a flick, falls through (returns false), and types normally.
-        if (tryEmitSwipeUpSymbol(x, y)) {
-            return;
-        }
         if (sInGesture) {
             if (currentKey != null) {
                 callListenerOnRelease(currentKey, currentKey.getCode(), true);
@@ -1615,44 +1616,56 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     }
 
     /**
-     * Swipe-up-to-symbol (#32, opt-in): on finger release, if the stroke was a clear, mostly-vertical
-     * UP flick that stayed over the key it started on, emit that key's first popup symbol instead of
-     * the base letter. Called only from the single-key release path (after the gesture path has
-     * returned), so a real glide never reaches here and is never preempted. Returns true if a symbol
-     * was emitted (caller then skips the base-letter commit).
+     * Swipe-up + hold (#32, opt-in): while a swipe-up is armed, called on every move to (re)start the
+     * hold timer, so it only fires after the finger has been still for SWIPE_UP_HOLD_MS. A continuous
+     * glide keeps moving and never lets it fire; a deliberate flick-up-then-pause does. Arms on a
+     * clear upward flick from the start key. Does NOT consume the event — gesture detection proceeds
+     * in parallel, so gliding (even an upward word like "buy") is unaffected.
      */
-    private boolean tryEmitSwipeUpSymbol(final int upX, final int upY) {
-        if (!Settings.getValues().mSwipeUpSymbol) return false;
-        if (mIsTrackingForActionDisabled) return false;
-        // Top-row up-swipe opens the shortcut-row popup; leave that to tryStartShortcutRowSwipe.
-        if (mShortcutTopRowSwipeAllowed) return false;
-        final Key startKey = mSwipeUpStartKey;
-        if (startKey == null) return false;
-        final PopupKeySpec[] popupKeys = startKey.getPopupKeys();
-        if (popupKeys == null || popupKeys.length == 0 || popupKeys[0] == null) return false;
-        // Require a deliberate upward flick (>= 2 steps up), more vertical than horizontal, that did
-        // not drift more than one key width sideways (i.e. stayed over the start key's column).
-        final int dX = upX - mSwipeUpStartX;
-        final int dY = upY - mSwipeUpStartY;
-        if (dY > -2 * sPointerStep || abs(dY) <= abs(dX) || abs(dX) > startKey.getWidth()) {
-            return false;
+    private void maybeArmOrRefreshSwipeUpHold(final int x, final int y) {
+        if (!Settings.getValues().mSwipeUpSymbol || mShortcutTopRowSwipeAllowed
+                || mSwipeUpStartKey == null || isShowingPopupKeysPanel()) {
+            return;
         }
-        // A clear vertical flick wins over the gesture recognizer: cancel any in-progress batch so
-        // the (garbage) gesture isn't committed, then emit the symbol.
-        if (sInGesture) {
-            cancelBatchInput();
+        final PopupKeySpec[] popupKeys = mSwipeUpStartKey.getPopupKeys();
+        if (popupKeys == null || popupKeys.length == 0 || popupKeys[0] == null) return;
+        if (mSwipeUpHoldArmed) {
+            // Finger still moving — restart the timer so it only fires once the finger stills.
+            sTimerProxy.cancelLongPressTimersOf(this);
+            sTimerProxy.startLongPressTimerOf(this, SWIPE_UP_HOLD_MS);
+            return;
         }
-        final PopupKeySpec spec = popupKeys[0];
-        if (spec.mCode == KeyCode.MULTIPLE_CODE_POINTS) {
-            sListener.onTextInput(spec.mOutputText);
-        } else if (spec.mCode != KeyCode.NOT_SPECIFIED) {
-            sListener.onCodeInput(spec.mCode, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
-        } else if (spec.mOutputText != null) {
-            sListener.onTextInput(spec.mOutputText);
-        } else {
-            return false;
+        // Arm on a clear upward flick from the start key (more vertical than horizontal, little drift).
+        final int dX = x - mSwipeUpStartX;
+        final int dY = y - mSwipeUpStartY;
+        if (dY <= -2 * sPointerStep && abs(dY) > abs(dX) && abs(dX) <= mSwipeUpStartKey.getWidth()) {
+            mSwipeUpHoldArmed = true;
+            sTimerProxy.cancelLongPressTimersOf(this);
+            sTimerProxy.startLongPressTimerOf(this, SWIPE_UP_HOLD_MS);
         }
-        return true;
+    }
+
+    /**
+     * Fired by the hold timer (via onLongPressed) once a swipe-up has been held still: open the START
+     * key's popup-keys panel (like long-press), cancelling any in-progress glide so it isn't committed.
+     */
+    private void showSwipeUpSymbolPopup() {
+        mSwipeUpHoldArmed = false;
+        if (isShowingPopupKeysPanel()) return;
+        final Key key = mSwipeUpStartKey;
+        if (key == null || key.getPopupKeys() == null) return;
+        if (sInGesture) cancelBatchInput();
+        setReleasedKeyGraphics(key, false);
+        final PopupKeysPanel panel = sDrawingProxy.showPopupKeysKeyboard(key, this);
+        if (panel == null) return;
+        final int translatedX = panel.translateX(mLastX);
+        final int translatedY = panel.translateY(mLastY);
+        panel.onDownEvent(translatedX, translatedY, mPointerId, SystemClock.uptimeMillis());
+        mPopupKeysPanel = panel;
+        if (mKeySwipeAllowed) {
+            mKeySwipeAllowed = false;
+            sInKeySwipe = false;
+        }
     }
 
     @Override
@@ -1669,6 +1682,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     public void onLongPressed() {
         sTimerProxy.cancelLongPressTimersOf(this);
+        if (mSwipeUpHoldArmed) {
+            showSwipeUpSymbolPopup();
+            return;
+        }
         if (isShowingPopupKeysPanel()) {
             return;
         }
