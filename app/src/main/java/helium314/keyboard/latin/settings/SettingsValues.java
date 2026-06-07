@@ -149,6 +149,7 @@ public class SettingsValues {
         public final boolean mAdaptiveKeyGeometry;
         public final int mAdaptiveKeyGeometryStrength;
         public final boolean mAdaptiveContextPrior;
+        public final boolean mAdaptiveDebugOverlay;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -409,6 +410,9 @@ public class SettingsValues {
                 mAdaptiveContextPrior = prefs.getBoolean(
                                 Settings.PREF_ADAPTIVE_CONTEXT_PRIOR,
                                 Defaults.PREF_ADAPTIVE_CONTEXT_PRIOR);
+                mAdaptiveDebugOverlay = prefs.getBoolean(
+                                Settings.PREF_ADAPTIVE_DEBUG_OVERLAY,
+                                Defaults.PREF_ADAPTIVE_DEBUG_OVERLAY);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions

@@ -161,6 +161,7 @@ object Defaults {
     const val PREF_ADAPTIVE_KEY_GEOMETRY = false
     const val PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH = 50
     const val PREF_ADAPTIVE_CONTEXT_PRIOR = false
+    const val PREF_ADAPTIVE_DEBUG_OVERLAY = false
     const val PREF_SHOW_SETUP_WIZARD_ICON = true
     const val PREF_USE_CONTACTS = false
     const val PREF_USE_APPS = false

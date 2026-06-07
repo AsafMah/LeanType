@@ -124,8 +124,8 @@ The literal tap is committed as-is, so the bias is **hard-capped** and confidenc
 ## Persistence, export/import, backup compatibility
 
 Local data lives in a single SQLite DB, `leantype.db`
-(`latin/database/Database.kt`, raw `SQLiteOpenHelper`, currently VERSION 2; clipboard
-lives there). The settings backup (`settings/preferences/BackupRestorePreference.kt`,
+(`latin/database/Database.kt`, raw `SQLiteOpenHelper`, currently VERSION 4 — clipboard +
+the `TOUCH_MODEL` table, which also stores per-key width/height for fraction-of-key math). The settings backup (`settings/preferences/BackupRestorePreference.kt`,
 Advanced tab) **already zips the entire `leantype.db` and restores it**, and restore
 is lenient (unknown zip entries skipped; missing columns handled by schema checks in
 `Database.copyFromDb` + `onUpgrade`).
@@ -155,12 +155,48 @@ A visualization page (trust + the reset control live here):
     e.g. "Z corrected ~18% vs E ~2%."
 - **Reset** button.
 
+The built page (`AdaptiveTypingStatsScreen`) renders the heatmap on a **mock keyboard**
+(`MockKeyboardHeatmap`): each key shows its learned offset as a dot displaced from center
+and a spread indicator, both expressed as a **fraction of the key**, so "18px on E" reads
+as a visible nudge rather than an abstract number.
+
+## Live debug overlay ("see it in action")
+
+A debug toggle — **"Show adaptive targets on keyboard"** — draws the adaptive model
+*directly on the live keyboard* so you can watch it work as you type. Implemented as
+`AdaptiveTargetsDrawingPreview` (an `AbstractDrawingPreview`, the same overlay mechanism
+as the gesture-debug points), drawn on the `DrawingPreviewPlacerView` above the keys:
+
+- **Learned geometry (Layer B):** for each letter key with a confident learned offset, a
+  faint ring marks the geometric center, an arrow points to the learned landing target,
+  and a filled dot marks it — the same shift `KeyDetector` biases taps toward.
+- **Context prior (Layer A):** keys the current suggestions predict get a translucent
+  green halo whose radius grows with the prior weight. Because the prior is rebuilt
+  between keystrokes, the halos appear/grow/shrink **live as you type** — the keyboard
+  visibly "leans" toward the likely next key.
+
+It is purely visual (never changes detection), reads the same live model / prior /
+settings the engine uses, and is gated on its pref each frame (zero cost when off).
+Repaints are driven by an `AdaptiveKeyContext` change listener fired on each keystroke;
+`MainKeyboardView` registers it and feeds the overlay the current keyboard + padding so
+markers align with the rendered keys. The halo radius is intentionally exaggerated
+relative to the engine's sub-key boost so the effect is legible. We deliberately do **not**
+reflow/resize the visible keys (jarring, breaks muscle memory) — an overlay communicates
+the same thing without destabilizing typing.
+
 ## Configurability
 
-- Master toggle (opt-in, default off).
-- Strength slider (off → gentle tie-break → aggressive).
-- Reset learned model.
-- Honors incognito / no-learning fields.
+All adaptive controls live under one **"Adaptive typing"** section in *Gesture typing*
+settings. The two halves are **independently toggleable** (either alone, both, or neither):
+
+- **Adaptive key geometry** (Layer B, learned offsets) — opt-in, default off.
+- **Anticipate likely keys** (Layer A, context prior) — opt-in, default off.
+- **Strength slider** — shared by both; shown when either toggle is on (off → gentle
+  tie-break → aggressive).
+- **Learned typing model** stats page (heatmap + reset) — shown when learning is on.
+- **Show adaptive targets on keyboard (debug)** — live visualization overlay (below);
+  shown when either toggle is on.
+- Honors incognito / no-learning fields; learning records nothing in those contexts.
 
 ## Implementation footprint
 
@@ -215,8 +251,16 @@ stats page to keep it honest. Validate the gesture path explicitly (it's the pri
    The **learned geometry** (Layer B), by contrast, applies to the entire swipe including its
    start — every key the stroke passes is matched against its learned-shifted sweet spot — and
    a swipe's endpoints also feed the model (gesture-endpoint learning).
-6. ⬜ **Strength/cap tuning** + optional heatmap visualization + interior-key gesture
-   learning (needs corner-cutting handling or native alignment).
+6. ✅ **Independent context-prior toggle + grouped settings:** Layer A (context prior) is now
+   its own opt-in toggle ("Anticipate likely keys"), separate from Layer B (learned geometry);
+   both live under one "Adaptive typing" section and share the strength slider. `KeyDetector`
+   gates the learned-offset bias and the prior boost independently.
+7. ✅ **Heatmap stats page:** `AdaptiveTypingStatsScreen` renders the learned model on a mock
+   keyboard (offsets as a fraction of each key) + reset.
+8. ✅ **Live debug overlay:** `AdaptiveTargetsDrawingPreview` draws learned targets + prior
+   halos on the real keyboard, morphing as you type (toggle: "Show adaptive targets on keyboard").
+9. ⬜ **Strength/cap tuning** + interior-key gesture learning (needs corner-cutting handling or
+   native alignment).
 
 ## Open questions (tracked)
 

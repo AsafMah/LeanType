@@ -30,7 +30,25 @@ public final class AdaptiveKeyContext {
     private static volatile int[] sCodes;
     private static volatile float[] sWeights;
 
+    /**
+     * Optional observer notified whenever the prior changes, on the same (UI) thread that mutates
+     * it. Used only by the debug overlay (see AdaptiveTargetsDrawingPreview) to repaint the live
+     * keyboard as the prior shifts between keystrokes; null in normal operation. Volatile so the
+     * keyboard view can register/clear it from its own lifecycle without extra locking.
+     */
+    private static volatile Runnable sChangeListener;
+
     private AdaptiveKeyContext() {}
+
+    /** Register (or clear, with {@code null}) the debug repaint observer. */
+    public static void setChangeListener(final Runnable listener) {
+        sChangeListener = listener;
+    }
+
+    private static void fireChanged() {
+        final Runnable l = sChangeListener;
+        if (l != null) l.run();
+    }
 
     /**
      * Rebuild the prior from the top suggestions.
@@ -70,11 +88,13 @@ public final class AdaptiveKeyContext {
         }
         sCodes = codes;
         sWeights = weights;
+        fireChanged();
     }
 
     public static void clear() {
         sCodes = null;
         sWeights = null;
+        fireChanged();
     }
 
     /** Prior weight in [0, 1] for the given key code (0 if none / no prior). */

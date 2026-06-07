@@ -88,6 +88,7 @@ fun GestureTypingScreen(
         val learnOn = prefs.getBoolean(Settings.PREF_ADAPTIVE_KEY_GEOMETRY, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY)
         val priorOn = prefs.getBoolean(Settings.PREF_ADAPTIVE_CONTEXT_PRIOR, Defaults.PREF_ADAPTIVE_CONTEXT_PRIOR)
         if (learnOn || priorOn) add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH)
+        if (learnOn || priorOn) add(Settings.PREF_ADAPTIVE_DEBUG_OVERLAY) // visualize the effect on the live keyboard
         if (learnOn) add(SettingsWithoutKey.ADAPTIVE_TYPING_STATS) // the learned model only fills with the geometry half
     }
     SearchSettingsScreen(
@@ -192,6 +193,12 @@ fun createGestureTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_ADAPTIVE_CONTEXT_PRIOR,
         R.string.adaptive_context_prior, R.string.adaptive_context_prior_summary) {
         SwitchPreference(it, Defaults.PREF_ADAPTIVE_CONTEXT_PRIOR)
+    },
+    Setting(context, Settings.PREF_ADAPTIVE_DEBUG_OVERLAY,
+        R.string.adaptive_debug_overlay, R.string.adaptive_debug_overlay_summary) {
+        SwitchPreference(it, Defaults.PREF_ADAPTIVE_DEBUG_OVERLAY) {
+            KeyboardSwitcher.getInstance().setThemeNeedsReload() // rebuild so the overlay attaches/detaches at once
+        }
     },
     Setting(context, Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH, R.string.adaptive_key_geometry_strength) { def ->
         SliderPreference(
