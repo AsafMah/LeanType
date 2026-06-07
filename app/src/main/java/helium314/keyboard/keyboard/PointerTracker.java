@@ -29,6 +29,7 @@ import helium314.keyboard.keyboard.internal.GestureStrokeRecognitionParams;
 import helium314.keyboard.keyboard.internal.PointerTrackerQueue;
 import helium314.keyboard.keyboard.internal.TimerProxy;
 import helium314.keyboard.keyboard.internal.TypingTimeRecorder;
+import helium314.keyboard.keyboard.internal.PopupKeySpec;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.common.Constants;
@@ -1100,6 +1101,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (tryStartShortcutRowSwipe(x, y, eventTime)) {
             return;
         }
+        if (tryStartSwipeUpSymbol(x, y)) {
+            return;
+        }
 
         if (sGestureEnabler.shouldHandleGesture() && me != null) {
             // Add historical points to gesture path.
@@ -1399,6 +1403,58 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         sInShortcutRowSwipe = true;
         return true;
     }
+
+    /**
+     * Swipe-up on a non-top-row key: emit the key's first popup symbol (same output as tapping
+     * that popup key after long-press), then cancel tracking so the base letter is not typed.
+     * Top-row keys are excluded because their up-swipe opens the shortcut-row popup, which is
+     * handled by {@link #tryStartShortcutRowSwipe}. Glide typing is unaffected because we set
+     * {@code mIsDetectingGesture = false} (same as the shortcut-row path) and return before the
+     * gesture accumulation code runs.
+     */
+    private boolean tryStartSwipeUpSymbol(final int x, final int y) {
+        // Skip if the top-row shortcut swipe is allowed for this key (handled elsewhere),
+        // or if any conflicting state is active.
+        if (mShortcutTopRowSwipeAllowed || mInShortcutRowSwipe || sInShortcutRowSwipe
+                || isShowingPopupKeysPanel() || sInGesture || sInKeySwipe
+                || mCurrentKey == null) {
+            return false;
+        }
+        // Must be a clear upward swipe: sufficient vertical travel, more vertical than horizontal.
+        final int dX = x - mStartX;
+        final int dY = y - mStartY;
+        if (dY > -sPointerStep || abs(dY) <= abs(dX)) {
+            return false;
+        }
+        // Key must have at least one popup key spec.
+        final PopupKeySpec[] popupKeys = mCurrentKey.getPopupKeys();
+        if (popupKeys == null || popupKeys.length == 0 || popupKeys[0] == null) {
+            return false;
+        }
+        final PopupKeySpec spec = popupKeys[0];
+        sTimerProxy.cancelKeyTimersOf(this);
+        mIsDetectingGesture = false;
+        setReleasedKeyGraphics(mCurrentKey, true);
+        // Emit the popup symbol, mirroring the callListenerOnCodeInput logic but without
+        // proximity correction (symbols do not need it).
+        if (spec.mCode == KeyCode.MULTIPLE_CODE_POINTS) {
+            // Multi-codepoint output (e.g. uppercase Eszett "SS"): emit as text.
+            sListener.onTextInput(spec.mOutputText);
+        } else if (spec.mCode != KeyCode.NOT_SPECIFIED) {
+            sListener.onCodeInput(spec.mCode, Constants.NOT_A_COORDINATE,
+                    Constants.NOT_A_COORDINATE, false);
+        } else if (spec.mOutputText != null) {
+            // Fallback: spec has no code but has output text.
+            sListener.onTextInput(spec.mOutputText);
+        } else {
+            // No usable output — treat as no-op; let normal handling continue.
+            return false;
+        }
+        // Prevent the base letter from being typed on finger-up.
+        cancelTrackingForAction();
+        return true;
+    }
+
 
     private void onMoveEventInternal(final int x, final int y, final long eventTime) {
         final Key oldKey = mCurrentKey;
