@@ -1542,6 +1542,12 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             }
         }
 
+        // Swipe-up-to-symbol (#32): decide on release BEFORE the gesture commit. A clear vertical
+        // up-flick emits the start key's popup symbol (cancelling any in-progress gesture); a
+        // horizontal glide is not a flick, falls through (returns false), and types normally.
+        if (tryEmitSwipeUpSymbol(x, y)) {
+            return;
+        }
         if (sInGesture) {
             if (currentKey != null) {
                 callListenerOnRelease(currentKey, currentKey.getCode(), true);
@@ -1588,11 +1594,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 && (currentKey.getCode() == currentRepeatingKeyCode) && !isInDraggingFinger) {
             return;
         }
-        // Swipe-up-to-symbol (#32): we only get here if no glide engaged (the sInGesture path
-        // returns above), so this never preempts gliding. Decide on release.
-        if (tryEmitSwipeUpSymbol(x, y)) {
-            return;
-        }
         detectAndSendKey(currentKey, mKeyX, mKeyY, eventTime);
         // Combining-mode seeding: remember the last letter tap so a follow-up gesture can
         // seed its first pointer event with this position and time. Only letter taps qualify
@@ -1622,6 +1623,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
      */
     private boolean tryEmitSwipeUpSymbol(final int upX, final int upY) {
         if (!Settings.getValues().mSwipeUpSymbol) return false;
+        if (mIsTrackingForActionDisabled) return false;
         // Top-row up-swipe opens the shortcut-row popup; leave that to tryStartShortcutRowSwipe.
         if (mShortcutTopRowSwipeAllowed) return false;
         final Key startKey = mSwipeUpStartKey;
@@ -1634,6 +1636,11 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         final int dY = upY - mSwipeUpStartY;
         if (dY > -2 * sPointerStep || abs(dY) <= abs(dX) || abs(dX) > startKey.getWidth()) {
             return false;
+        }
+        // A clear vertical flick wins over the gesture recognizer: cancel any in-progress batch so
+        // the (garbage) gesture isn't committed, then emit the symbol.
+        if (sInGesture) {
+            cancelBatchInput();
         }
         final PopupKeySpec spec = popupKeys[0];
         if (spec.mCode == KeyCode.MULTIPLE_CODE_POINTS) {
