@@ -116,6 +116,10 @@
     <string name="flag_unknown_words">Flag unknown words</string>
     <!-- Description for the flag-unknown-words option -->
     <string name="flag_unknown_words_summary">Mark suggestions that are only learned/typed (not in a dictionary) and offer Add/Block on long-press</string>
+    <!-- Option name for graduated trust of newly learned words -->
+    <string name="graduated_trust">Graduated trust for new words</string>
+    <!-- Description for the graduated-trust option -->
+    <string name="graduated_trust_summary">A learned word that is not in a dictionary must be repeated a few times before it can outrank a real word — so a single misfire can\'t hijack your typing</string>
     <!-- Action: add the long-pressed word to the personal dictionary -->
     <string name="add_to_dictionary">Add to dictionary</string>
     <!-- Action: permanently block the long-pressed word from suggestions -->
