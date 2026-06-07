@@ -34,6 +34,7 @@ class XLinkTest { // Without the X, SubtypeTests fail with ClassCastException. W
     }
 
     @Test fun readmeLinks() {
+        if (BuildConfig.BUILD_TYPE == "runTests") return // network integration; skip on CI
         val file = File("../README.md")
         val linkRegex = "(?:https?:\\/\\/.)?(?:www\\.)?[-a-zA-Z0-9@%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b(?:[-a-zA-Z0-9@:%_\\+.~#?&\\/\\/=]*)".toRegex()
         val links = linkRegex.findAll(file.readText())
@@ -44,6 +45,7 @@ class XLinkTest { // Without the X, SubtypeTests fail with ClassCastException. W
     }
 
     @Test fun layoutsLinks() {
+        if (BuildConfig.BUILD_TYPE == "runTests") return // network integration; skip on CI
         val file = File("../layouts.md")
         val linkRegex = "(?:https?:\\/\\/.)?(?:www\\.)?[-a-zA-Z0-9@%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b(?:[-a-zA-Z0-9@:%_\\+.~#?&\\/\\/=]*)".toRegex()
         val links = linkRegex.findAll(file.readText())
@@ -54,6 +56,7 @@ class XLinkTest { // Without the X, SubtypeTests fail with ClassCastException. W
     }
 
     @Test fun layoutsLinksInternal() {
+        if (BuildConfig.BUILD_TYPE == "runTests") return // network integration; skip on CI
         val file = File("../layouts.md")
         val internalLinkRegex = "app/src/\\b(?:[-a-zA-Z0-9@:%_\\+.~#?&\\/\\/=]*)".toRegex()
         val links = internalLinkRegex.findAll(file.readText())
@@ -63,6 +66,7 @@ class XLinkTest { // Without the X, SubtypeTests fail with ClassCastException. W
     }
 
     @Test fun otherLinks() {
+        if (BuildConfig.BUILD_TYPE == "runTests") return // network integration; skip on CI
         listOf(Links.LICENSE, Links.LAYOUT_WIKI_URL, Links.WIKI_URL, Links.CUSTOM_LAYOUTS, Links.CUSTOM_COLORS).forEach {
             checkLink(it)
         }

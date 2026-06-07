@@ -825,3 +825,92 @@ The whole-word branch for a *composing* word used `mConnection.deleteTextBeforeC
   - Whole-word delete through a sentence deletes word-by-word with NO mashing/desync.
   - Re-doing a word after deletion recognizes cleanly (no ever-growing `th…`).
   - Swipe-on-backspace bulk delete leaves no stale stroke for the next word.
+
+---
+
+## 2026-06-06 — Fix stale merged-trail extend-base leaking into the next gesture
+
+### Context
+Bug report: gestures occasionally get "stored" after a deletion and bleed into the
+next swipe — most visibly when swiping a fresh word at the start of a text box,
+which produced a word fused with previously-deleted gesture geometry. Branch:
+`fix/extend-base-leak-on-delete` off `main`.
+
+### Root cause
+There are two per-word gesture-geometry stores. `mLiveStroke` (live-converge, in
+`InputLogic`) was already cleared on every word-end path. But its WordComposer-side
+counterpart — `mExtendBatchInputBase` (the multi-part merged-trail base consumed by
+`WordComposer.setBatchInputPointers`) — was only ever cleared by a *normally
+completing* gesture (`onUpdateTailBatchInputCompleted`, the lone routine clear,
+which sits AFTER two empty-recognition early-returns). An abnormal gesture end left
+the `mExtendBatchInputBaseSet` flag armed:
+- `onCancelBatchInput` never cleared it,
+- the empty-top-word early-returns in `onUpdateTailBatchInputCompleted` skip the clear,
+- `WordComposer.reset()` does not touch it, so NO deletion path cleared it either.
+
+Once leaked, the flag survived every backspace / selection-delete / commit. A later
+fresh gesture (no composing word ⇒ the `onStartBatchInput` extend branch never runs,
+so it neither set nor cleared the base) hit the merge guard in
+`setBatchInputPointers` and prepended the ghost trail. Start-of-text-box made it
+maximally visible because there is no composing word there to legitimately re-set
+the base.
+
+### Actions Taken
+- `latin/inputlogic/InputLogic.java`: clear the merged-trail base
+  (`mWordComposer.setExtendBatchInputBase(null)`) at the same word-end sites where
+  `mLiveStroke` is already dropped, plus the two gesture-lifecycle origins:
+  - `onStartBatchInput` (top, before the extend decision — guarantees every gesture
+    starts from a clean base; the extend branch re-arms it from the real composing
+    word when appropriate),
+  - `onCancelBatchInput` (a cancelled gesture never reaches the routine clear),
+  - `handleBackspaceEvent` (next to the existing `mLiveStroke.reset()`, before any
+    mode branch — covers all three backspace modes in one place),
+  - `resetComposingState` (covers the delete slider's `finishInput` and cursor-move
+    resets),
+  - `commitChosenWord` and the composing-desync recovery path.
+  Deliberately did NOT add the clear to the hot `WordComposer.reset()` to avoid any
+  interaction with the mid-gesture merge timing; mirroring the reviewed `mLiveStroke`
+  sites is equivalent and lower-risk.
+- `app/src/test/.../InputLogicTest.kt`: 6 base-clear regression tests (one per
+  backspace mode — character / fragment / whole-word — plus delete slider, fresh
+  `onStartBatchInput`, and `onCancelBatchInput`), each arming the base then asserting
+  it is dropped (each fails pre-fix). Added `armExtendBase()` helper and `InputPointers`
+  / `assertTrue` / `assertFalse` imports.
+- Also added two reachability-guard tests pinning the (currently dead) PointerTracker
+  static-seed interlock: `grace > 0 ⇒ isMultipartComposeActive()` and the
+  manual-spacing equivalent. If a future settings refactor decouples them and re-arms
+  the seed, these fail and force adding the missing stale-static cleanup first.
+
+### Decisions Made
+- Threading was verified safe: every `mExtendBatchInputBase` mutation runs on the UI
+  thread (the recognizer runs on the suggestions HandlerThread but only reads a
+  snapshot), so the new clears need no locking and can't race the merge.
+- Scoped to dropping the base. The *related* "re-extend after a partial (character /
+  fragment) delete still merges the un-trimmed `mInputPointers`" issue is left for a
+  later ticket per the established "drop, don't trim" philosophy — the fix neither
+  causes nor worsens it.
+
+### Testing status
+- Built and ran on this machine (newly installed JDK 21 + Android SDK platform-35 /
+  build-tools 35.0.0). `:app:testStandardDebugUnitTest` filtered to the 8 new tests +
+  `WordComposerTest`: **BUILD SUCCESSFUL, 11/11 passing.** Full-suite still carries the
+  3 pre-existing known failures (`insertLetterIntoWordHangulFails`,
+  `revert autocorrect on delete`, `tapOnlyCombiningWordDoesNotShowAutospaceIndicator…`),
+  unrelated to this change.
+- On-device validation still recommended: reproduce the start-of-text-box ghost-merge
+  (swipe a word, trigger an abnormal gesture end, delete, swipe a fresh word) and
+  confirm it no longer fuses; re-check all three backspace modes + the delete slider.
+
+### Manual Tests — Extend-base leak
+| # | Steps | Expected Result |
+|---|---|---|
+| 1 | Two-thumb on. Swipe a word; cancel/abort a follow-up gesture; delete everything; swipe a fresh word at the start of the box. | Fresh word recognizes alone — no fusion with the deleted gesture. |
+| 2 | Repeat #1 with backspace mode = Delete one character. | Same; no ghost merge. |
+| 3 | Repeat #1 with backspace mode = Delete last fragment. | Same; no ghost merge. |
+| 4 | Repeat #1 with backspace mode = Delete whole word. | Same; no ghost merge. |
+| 5 | Repeat #1 using swipe-from-backspace (delete slider) to clear. | Same; no ghost merge. |
+
+### Open Questions / Next Steps
+- Build the standard debug APK and install for on-device validation.
+- Decide whether to also tackle the re-extend-after-partial-delete (stale
+  `mInputPointers`) follow-up.

@@ -1,8 +1,9 @@
 name: Unit tests
 # Compiles main + runs the JVM unit-test suite for the offline flavor using the `runTests`
 # build type, which self-skips the network/data-dependent tests known to fail on CI
-# (see `if (BuildConfig.BUILD_TYPE == "runTests") return` in XLinkTest/StringUtilsTest/InputLogicTest).
-# No APK is produced; single-ABI, JVM tests only.
+# (see `if (BuildConfig.BUILD_TYPE == "runTests") return` in XLinkTest/StringUtilsTest/
+# InputLogicTest/KeyboardParserTest; tracked in issue #12). Hard gate: a real test failure
+# fails the job. No APK is produced; single-ABI, JVM tests only.
 
 on:
   pull_request:
@@ -39,12 +40,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Run unit tests
-        # Non-blocking for now: the suite still has ~9 failures on CI (network link tests +
-        # the #12 known-failing set + 3 new MiscTest.isWideScreen from the v3.8.5 merge).
-        # This RUNS the full suite and uploads the report on every PR (closing the "CI only
-        # compiles" gap); flip continue-on-error off once those are triaged (#12) to make it a
-        # hard gate.
-        continue-on-error: true
         run: ./gradlew :app:testOfflineRunTestsUnitTest
 
       - name: Archive test reports

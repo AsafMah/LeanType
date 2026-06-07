@@ -619,12 +619,13 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     @Nullable
     public PopupKeysPanel showPopupKeysKeyboard(@NonNull final Key key,
             @NonNull final PointerTracker tracker) {
-        return showPopupKeysKeyboard(key, tracker, false);
+        return showPopupKeysKeyboard(key, tracker, false, PopupKeysKeyboardView.NO_ROW_ALIGN);
     }
 
     @Nullable
     private PopupKeysPanel showPopupKeysKeyboard(@NonNull final Key key,
-            @NonNull final PointerTracker tracker, final boolean belowSourceKey) {
+            @NonNull final PointerTracker tracker, final boolean belowSourceKey,
+            final int rowAlignedLeftX) {
         final PopupKeySpec[] popupKeys = key.getPopupKeys();
         if (popupKeys == null) {
             return null;
@@ -675,8 +676,10 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         // {@code mPreviewVisibleOffset} has been set appropriately in
         // {@link KeyboardView#showKeyPreview(PointerTracker)}.
         final int pointY = belowSourceKey
-                ? key.getY() + key.getHeight() + container.getMeasuredHeight()
+                ? key.getY() + key.getHeight()
                 : key.getY() + mKeyPreviewDrawParams.getVisibleOffset();
+        popupKeysKeyboardView.setShowBelowAnchor(belowSourceKey);
+        popupKeysKeyboardView.setRowAlignedLeftX(rowAlignedLeftX);
         popupKeysKeyboardView.showPopupKeysPanel(this, this, pointX, pointY, mKeyboardActionListener);
         return popupKeysKeyboardView;
     }
@@ -695,7 +698,18 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         if (popupParentKey == null) {
             return null;
         }
-        return showPopupKeysKeyboard(popupParentKey, tracker, belowSourceKey);
+        // Align the shortcut popup's icons to the source letter row so the swiped key maps to the
+        // icon directly above it, instead of re-anchoring on the swiped key (which the irregular
+        // shift/backspace keys at the row edges throw off). Row left = leftmost normal key in the row.
+        int rowLeftX = Integer.MAX_VALUE;
+        for (final Key rowKey : keyboard.getSortedKeys()) {
+            if (rowKey.getY() == key.getY() && rowKey.getBackgroundType() == Key.BACKGROUND_TYPE_NORMAL
+                    && !rowKey.isModifier() && !rowKey.isSpacer()) {
+                rowLeftX = Math.min(rowLeftX, rowKey.getX());
+            }
+        }
+        if (rowLeftX == Integer.MAX_VALUE) rowLeftX = key.getX();
+        return showPopupKeysKeyboard(popupParentKey, tracker, belowSourceKey, rowLeftX);
     }
 
     public boolean isInDraggingFinger() {

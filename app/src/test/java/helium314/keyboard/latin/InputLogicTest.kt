@@ -39,9 +39,12 @@ import org.robolectric.shadows.ShadowLog
 import java.util.*
 import kotlin.math.min
 import kotlin.streams.asSequence
+import helium314.keyboard.latin.common.InputPointers
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [
@@ -330,6 +333,7 @@ class InputLogicTest {
     }
 
     @Test fun tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled() {
+        if (BuildConfig.BUILD_TYPE == "runTests") return // needs main dictionary, unavailable in JVM env; see #12
         reset()
         latinIME.prefs().edit {
             putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
@@ -605,6 +609,107 @@ class InputLogicTest {
 
         assertEquals("", textBeforeCursor)
         assertEquals("", composingText)
+    }
+
+    // --- Two-thumb typing: the merged-trail extend-base (WordComposer.mExtendBatchInputBase)
+    // must never outlive the word it belonged to. Before the fix it was only cleared on a
+    // normally-completing gesture, so an abnormal end (cancel / empty-top recognition) left it
+    // armed, and NO deletion path cleared it. A later fresh swipe — most visibly at the start of
+    // a text box — then merged with that ghost trail. Each test below arms the base, performs one
+    // user action, and asserts the base is dropped. (We arm the base directly because the JVM
+    // harness has no native recognizer to produce a real merged trail.) Each fails pre-fix. ---
+
+    @Test fun extendBaseClearedByCharacterBackspace() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            // Character mode = neither fragment-pop nor whole-word delete. Both default ON
+            // (Defaults.kt), so they must be explicitly disabled to exercise the per-char path.
+            putBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE, false)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, false)
+        }
+        chainInput("hello")
+        armExtendBase()
+        functionalKeyPress(KeyCode.DELETE) // character delete; word stays composing as "hell"
+        assertEquals("hell", composingText)
+        assertFalse(composer.isExtendBatchInputBaseSet)
+    }
+
+    @Test fun extendBaseClearedByFragmentBackspace() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, false)
+        }
+        chainInput("hello") // each tap records a fragment boundary under manual spacing
+        armExtendBase()
+        functionalKeyPress(KeyCode.DELETE) // fragment pop
+        assertFalse(composer.isExtendBatchInputBaseSet)
+    }
+
+    @Test fun extendBaseClearedByWholeWordBackspace() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT, true)
+        }
+        chainInput("hello")
+        armExtendBase()
+        functionalKeyPress(KeyCode.DELETE) // whole-word delete of the composing word
+        assertEquals("", composingText)
+        assertFalse(composer.isExtendBatchInputBaseSet)
+    }
+
+    @Test fun extendBaseClearedByDeleteSlider() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
+        chainInput("hello")
+        armExtendBase()
+        // The delete slider (swipe-from-backspace) routes through inputLogic.finishInput() in
+        // KeyboardActionListenerImpl.onMoveDeletePointer / onUpWithDeletePointerActive.
+        inputLogic.finishInput()
+        assertFalse(composer.isExtendBatchInputBaseSet)
+    }
+
+    @Test fun extendBaseClearedByFreshGestureStart() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
+        // No composing word: the next gesture is fresh and must not inherit a leaked base.
+        armExtendBase()
+        inputLogic.onStartBatchInput(settingsValues, KeyboardSwitcher.getInstance(), latinIME.mHandler)
+        handleMessages()
+        assertFalse(composer.isExtendBatchInputBaseSet)
+    }
+
+    @Test fun extendBaseClearedByGestureCancel() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
+        armExtendBase()
+        inputLogic.onCancelBatchInput(latinIME.mHandler)
+        handleMessages()
+        assertFalse(composer.isExtendBatchInputBaseSet)
+    }
+
+    // Static-seed reachability guard. PointerTracker's tap-seed path (sLastLetterTap*) is gated
+    // on (!isMultipartComposeActive() && mCombiningGraceMs > 0). But grace > 0 forces multi-part
+    // composition active, so that conjunction is unsatisfiable and the seed is currently
+    // unreachable dead code. These pin the interlock: if a future settings refactor decouples
+    // them and re-arms the seed, it must first add the stale-static cleanup (the seed statics are
+    // process-global and never reset on delete / commit / field switch).
+    @Test fun graceImpliesMultipartComposeActive_keepsSeedPathDead() {
+        reset()
+        latinIME.prefs().edit { putInt(Settings.PREF_COMBINING_GRACE_MS, 1000) }
+        setText("") // force a settings reload
+        assertTrue(settingsValues.isMultipartComposeActive)
+    }
+
+    @Test fun manualSpacingImpliesMultipartComposeActive() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
+        setText("")
+        assertTrue(settingsValues.isMultipartComposeActive)
     }
 
     @Test fun forceAutoCapWorksWhenAutoCapIsOff() {
@@ -1084,6 +1189,7 @@ class InputLogicTest {
     }
 
     @Test fun `revert autocorrect on delete`() {
+        if (BuildConfig.BUILD_TYPE == "runTests") return // needs autocorrect dictionary, unavailable in JVM env; see #12
         reset()
         setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
         chainInput("hullo")
@@ -1307,6 +1413,17 @@ class InputLogicTest {
         combiningGraceExpired.invoke(inputLogic)
         handleMessages()
         checkConnectionConsistency()
+    }
+
+    // Arm the merged-trail extend-base with a non-empty trail, simulating the state left by a
+    // prior gesture fragment. (A single empty InputPointers is treated as "clear", so two real
+    // points are required for isExtendBatchInputBaseSet to become true.)
+    private fun armExtendBase() {
+        val base = InputPointers(8)
+        base.addPointer(10, 20, 0, 0)
+        base.addPointer(30, 40, 0, 0)
+        composer.setExtendBatchInputBase(base)
+        assertTrue(composer.isExtendBatchInputBaseSet)
     }
 
     private fun checkConnectionConsistency() {

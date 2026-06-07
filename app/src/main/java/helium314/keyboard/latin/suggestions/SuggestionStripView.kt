@@ -6,6 +6,8 @@
 package helium314.keyboard.latin.suggestions
 
 import android.animation.ValueAnimator
+import android.app.AlertDialog
+import android.view.WindowManager
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
@@ -47,6 +49,7 @@ import helium314.keyboard.latin.settings.DebugSettings
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.getPlatformDialogThemeContext
 import helium314.keyboard.latin.utils.ToolbarKey
 import helium314.keyboard.latin.utils.ToolbarMode
 import helium314.keyboard.latin.utils.addPinnedKey
@@ -77,6 +80,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean)
         fun removeSuggestion(word: String?)
         fun removeExternalSuggestions()
+        fun addToDictionary(word: String)
+        fun blockWord(word: String)
     }
 
     private val moreSuggestionsContainer: View
@@ -631,6 +636,42 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
     @SuppressLint("ClickableViewAccessibility") // no need for View#performClick, we only return false mostly anyway
     private fun onLongClickSuggestion(wordView: TextView): Boolean {
+        // Check if this is an uncurated (user-typed or user-history) suggestion
+        if (wordView.tag is Int) {
+            val index = wordView.tag as Int
+            if (index < suggestedWords.size()) {
+                val info = suggestedWords.getInfo(index)
+                val srcDict = info?.mSourceDict
+                val isUncurated = srcDict != null
+                        && (srcDict.mDictType == Dictionary.TYPE_USER_HISTORY
+                                || srcDict.mDictType == Dictionary.TYPE_USER_TYPED)
+                if (isUncurated) {
+                    val word = wordView.text.toString()
+                    val dialog = AlertDialog.Builder(getPlatformDialogThemeContext(context))
+                        .setTitle(word)
+                        .setPositiveButton(R.string.add_to_dictionary) { di, _ ->
+                            di.dismiss()
+                            listener.addToDictionary(word)
+                        }
+                        .setNeutralButton(R.string.block_word) { di, _ ->
+                            di.dismiss()
+                            listener.blockWord(word)
+                        }
+                        .setNegativeButton(android.R.string.cancel) { di, _ -> di.dismiss() }
+                        .create()
+                    val window = dialog.window
+                    val lp = window?.attributes
+                    lp?.token = windowToken
+                    lp?.type = WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+                    window?.attributes = lp
+                    window?.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+                    dialog.show()
+                    return true
+                }
+            }
+        }
+        // Curated word: show the bin icon for removal (suppress for USER_TYPED which has no
+        // persistent dictionary entry worth removing, matching existing behaviour)
         var showIcon = true
         if (wordView.tag is Int) {
             val index = wordView.tag as Int
