@@ -148,6 +148,7 @@ public class SettingsValues {
         // Adaptive typing (opt-in): learn where the user lands and bias tap/gesture key geometry.
         public final boolean mAdaptiveKeyGeometry;
         public final int mAdaptiveKeyGeometryStrength;
+        public final boolean mAdaptiveContextPrior;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -405,6 +406,9 @@ public class SettingsValues {
                 mAdaptiveKeyGeometryStrength = prefs.getInt(
                                 Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH,
                                 Defaults.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH);
+                mAdaptiveContextPrior = prefs.getBoolean(
+                                Settings.PREF_ADAPTIVE_CONTEXT_PRIOR,
+                                Defaults.PREF_ADAPTIVE_CONTEXT_PRIOR);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions

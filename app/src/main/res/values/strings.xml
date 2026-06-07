@@ -387,6 +387,9 @@
     <string name="adaptive_key_geometry">Adaptive key geometry (experimental)</string>
     <string name="adaptive_key_geometry_summary">Learn where you actually tap each key and nudge gesture and tap recognition toward your style. Stored on-device only, no text is saved.</string>
     <string name="adaptive_key_geometry_strength">Adaptive geometry strength</string>
+    <string name="adaptive_typing_category">Adaptive typing</string>
+    <string name="adaptive_context_prior">Anticipate likely keys (experimental)</string>
+    <string name="adaptive_context_prior_summary">Make the next key the suggestions predict slightly easier to press. Averages the top suggestions and is capped so it never overrides a clear press. Applies to taps, not swipes.</string>
     <string name="adaptive_key_geometry_stats_title">Learned typing model</string>
     <string name="adaptive_key_geometry_stats_summary">See what the keyboard has learned about your typing</string>
     <string name="adaptive_key_geometry_stats_explanation">Per key: average offset from the key center (where you land), spread (how consistent you are), and number of samples. Higher samples and lower spread mean a stronger, more confident adjustment. Nothing here ever leaves your device.</string>

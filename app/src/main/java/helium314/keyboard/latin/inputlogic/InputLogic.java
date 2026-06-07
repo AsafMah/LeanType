@@ -1381,10 +1381,12 @@ public final class InputLogic {
         // (or 0 for a new word, where the predictions' first letters are the likely next keys).
         // Cheap, and runs on suggestion updates rather than the tap hot path.
         final SettingsValues svAdaptive = Settings.getValues();
-        if (svAdaptive != null && svAdaptive.mAdaptiveKeyGeometry) {
+        if (svAdaptive != null && svAdaptive.mAdaptiveContextPrior) {
             final int nextCharIndex = mWordComposer.isComposingWord()
                     ? mWordComposer.getTypedWord().length() : 0;
             helium314.keyboard.keyboard.AdaptiveKeyContext.update(suggestedWords, nextCharIndex);
+        } else {
+            helium314.keyboard.keyboard.AdaptiveKeyContext.clear();
         }
         final boolean newAutoCorrectionIndicator = suggestedWords.mWillAutoCorrect;
 

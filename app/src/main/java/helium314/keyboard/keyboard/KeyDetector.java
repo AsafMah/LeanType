@@ -130,32 +130,37 @@ public class KeyDetector {
      *  or {@code null} to keep the plain geometric result. */
     private Key applyAdaptiveBias(final int touchX, final int touchY, final Key geo) {
         final SettingsValues sv = Settings.getValues();
-        if (sv == null || !sv.mAdaptiveKeyGeometry || sv.mAdaptiveKeyGeometryStrength <= 0) return null;
+        if (sv == null || sv.mAdaptiveKeyGeometryStrength <= 0) return null;
+        // The two halves are independently toggleable: learned per-key offset, and the
+        // context prior. Either alone is enough to bias a tap; both share the strength slider.
+        final boolean learn = sv.mAdaptiveKeyGeometry;
+        final boolean usePrior = sv.mAdaptiveContextPrior;
+        if (!learn && !usePrior) return null;
         final Context ctx = Settings.getCurrentContext();
         if (ctx == null || mKeyboard == null) return null;
-        final TouchModelDao dao = TouchModelDao.getInstance(ctx);
-        final boolean hasPrior = AdaptiveKeyContext.hasPrior();
+        final TouchModelDao dao = learn ? TouchModelDao.getInstance(ctx) : null;
+        final boolean hasPrior = usePrior && AdaptiveKeyContext.hasPrior();
         if (dao == null && !hasPrior) return null; // nothing to bias with
         final String layout = Integer.toString(mKeyboard.mId.mElementId);
         final int orientation = ctx.getResources().getConfiguration().orientation;
         final int strength = sv.mAdaptiveKeyGeometryStrength;
 
         Key best = geo;
-        float bestScore = adjustedDistance(geo, touchX, touchY, dao, layout, orientation, strength);
+        float bestScore = adjustedDistance(geo, touchX, touchY, dao, layout, orientation, strength, usePrior);
         for (final Key k : mKeyboard.getNearestKeys(touchX, touchY)) {
             if (k == geo) continue;
             final int code = k.getCode();
             if (code <= 0 || !Character.isLetter(code)) continue;
             // Only a genuinely-favored neighbor (a confident learned offset and/or a next-key
             // prior) may steal a near-boundary tap; otherwise leave the geometric result alone.
-            final float prior = AdaptiveKeyContext.weight(code);
+            final float prior = usePrior ? AdaptiveKeyContext.weight(code) : 0f;
             final TouchModelDao.Stat st = (dao == null) ? null : dao.get(code, layout, orientation);
             final boolean hasLearned = st != null && st.getCount() >= TouchModelDao.MIN_CONFIDENT_SAMPLES;
             if (prior <= 0f && !hasLearned) continue;
             // Bound: the touch must be within a margin of the neighbor's hitbox.
             final float margin = CONSIDER_MARGIN_FRACTION * k.getWidth();
             if (k.squaredDistanceToEdge(touchX, touchY) > margin * margin) continue;
-            final float s = adjustedDistance(k, touchX, touchY, dao, layout, orientation, strength);
+            final float s = adjustedDistance(k, touchX, touchY, dao, layout, orientation, strength, usePrior);
             if (s < bestScore) {
                 bestScore = s;
                 best = k;
@@ -165,9 +170,11 @@ public class KeyDetector {
     }
 
     /** Distance from the touch to the key's effective center (center shifted by the learned
-     *  landing offset) minus the capped next-key prior boost. Smaller wins. */
+     *  landing offset, when enabled) minus the capped next-key prior boost (when enabled).
+     *  Smaller wins. */
     private float adjustedDistance(final Key k, final int touchX, final int touchY,
-            final TouchModelDao dao, final String layout, final int orientation, final int strength) {
+            final TouchModelDao dao, final String layout, final int orientation, final int strength,
+            final boolean usePrior) {
         final Rect hb = k.getHitBox();
         float cx = hb.exactCenterX();
         float cy = hb.exactCenterY();
@@ -180,8 +187,9 @@ public class KeyDetector {
         final float dx = touchX - cx;
         final float dy = touchY - cy;
         final float dist = (float) Math.sqrt(dx * dx + dy * dy);
-        final float boost = AdaptiveKeyContext.weight(k.getCode())
-                * PRIOR_MAX_FRACTION * k.getWidth() * (strength / 100f);
+        final float boost = usePrior
+                ? AdaptiveKeyContext.weight(k.getCode()) * PRIOR_MAX_FRACTION * k.getWidth() * (strength / 100f)
+                : 0f;
         return dist - boost;
     }
 }

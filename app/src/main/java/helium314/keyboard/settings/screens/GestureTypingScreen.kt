@@ -75,16 +75,20 @@ fun GestureTypingScreen(
         add(Settings.PREF_SPACE_VERTICAL_SWIPE)
         add(Settings.PREF_TOUCHPAD_SENSITIVITY)
         add(Settings.PREF_DELETE_SWIPE)
-        add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY)
-        if (prefs.getBoolean(Settings.PREF_ADAPTIVE_KEY_GEOMETRY, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY)) {
-            add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH)
-            add(SettingsWithoutKey.ADAPTIVE_TYPING_STATS)
-        }
         add(Settings.PREF_SHORTCUT_ROWS)
         if (prefs.getBoolean(Settings.PREF_SHORTCUT_ROWS, Defaults.PREF_SHORTCUT_ROWS)) {
             add(Settings.PREF_SHORTCUT_TOP_ROW)
             add(Settings.PREF_SHORTCUT_BOTTOM_ROW)
         }
+
+        // Adaptive typing — both sub-features grouped in one section.
+        add(R.string.adaptive_typing_category)
+        add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY)
+        add(Settings.PREF_ADAPTIVE_CONTEXT_PRIOR)
+        val learnOn = prefs.getBoolean(Settings.PREF_ADAPTIVE_KEY_GEOMETRY, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY)
+        val priorOn = prefs.getBoolean(Settings.PREF_ADAPTIVE_CONTEXT_PRIOR, Defaults.PREF_ADAPTIVE_CONTEXT_PRIOR)
+        if (learnOn || priorOn) add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH)
+        if (learnOn) add(SettingsWithoutKey.ADAPTIVE_TYPING_STATS) // the learned model only fills with the geometry half
     }
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -184,6 +188,10 @@ fun createGestureTypingSettings(context: Context) = listOf(
         SwitchPreference(it, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY) {
             KeyboardSwitcher.getInstance().setThemeNeedsReload() // rebuild keyboard so sweet spots refresh
         }
+    },
+    Setting(context, Settings.PREF_ADAPTIVE_CONTEXT_PRIOR,
+        R.string.adaptive_context_prior, R.string.adaptive_context_prior_summary) {
+        SwitchPreference(it, Defaults.PREF_ADAPTIVE_CONTEXT_PRIOR)
     },
     Setting(context, Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH, R.string.adaptive_key_geometry_strength) { def ->
         SliderPreference(

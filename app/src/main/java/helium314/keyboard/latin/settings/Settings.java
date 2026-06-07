@@ -188,6 +188,9 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // incognito-gated. Strength scales the cap (0 = off). See docs/ADAPTIVE_TYPING.md.
     public static final String PREF_ADAPTIVE_KEY_GEOMETRY = "adaptive_key_geometry";
     public static final String PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH = "adaptive_key_geometry_strength";
+    // Context prior: enlarge the touch target of the next key the suggestions predict. Independent
+    // of the learned-geometry toggle above; both share the strength slider. See ADAPTIVE_TYPING.md.
+    public static final String PREF_ADAPTIVE_CONTEXT_PRIOR = "adaptive_context_prior";
     public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREF_USE_CONTACTS = "use_contacts";
     public static final String PREF_USE_APPS = "use_apps";
