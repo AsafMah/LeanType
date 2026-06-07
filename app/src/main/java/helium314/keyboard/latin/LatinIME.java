@@ -210,6 +210,11 @@ public class LatinIME extends InputMethodService implements
         private static final int ARG2_UNUSED = 0;
         private static final int ARG1_TRUE = 1;
 
+        // When the adaptive context prior is enabled, suggestions are refreshed with this shorter
+        // debounce instead of mDelayInMillisecondsToUpdateSuggestions, so the prior (and its debug
+        // overlay) keep up with the keystroke instead of trailing it by ~one key. See ADAPTIVE_TYPING.md.
+        private static final long PROMPT_PRIOR_UPDATE_DELAY_MS = 30;
+
         private int mDelayInMillisecondsToUpdateSuggestions;
         private int mDelayInMillisecondsToUpdateShiftState;
 
@@ -294,8 +299,16 @@ public class LatinIME extends InputMethodService implements
         }
 
         public void postUpdateSuggestionStrip(final int inputStyle) {
+            long delay = mDelayInMillisecondsToUpdateSuggestions;
+            final LatinIME latinIme = getOwnerInstance();
+            if (latinIme != null) {
+                final SettingsValues sv = latinIme.mSettings.getCurrent();
+                if (sv != null && sv.mAdaptiveContextPrior) {
+                    delay = Math.min(delay, PROMPT_PRIOR_UPDATE_DELAY_MS);
+                }
+            }
             sendMessageDelayed(obtainMessage(MSG_UPDATE_SUGGESTION_STRIP, inputStyle,
-                    0 /* ignored */), mDelayInMillisecondsToUpdateSuggestions);
+                    0 /* ignored */), delay);
         }
 
         public void postReopenDictionaries() {

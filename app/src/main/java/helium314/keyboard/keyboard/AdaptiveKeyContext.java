@@ -97,18 +97,35 @@ public final class AdaptiveKeyContext {
         fireChanged();
     }
 
-    /** Prior weight in [0, 1] for the given key code (0 if none / no prior). */
+    /** Prior weight in [0, 1] for the given key code (0 if none / no prior). Case-insensitive:
+     *  the prior stores lowercase next-characters, but a shifted keyboard reports uppercase key
+     *  codes, so we fold to lowercase to match (otherwise the bias/overlay miss capital letters). */
     public static float weight(final int code) {
         final int[] c = sCodes;
         final float[] w = sWeights;
-        if (c == null) return 0f;
-        for (int i = 0; i < c.length; i++) {
-            if (c[i] == code) return w[i];
+        if (c == null || w == null) return 0f;
+        final int lower = Character.toLowerCase(code);
+        for (int i = 0; i < c.length && i < w.length; i++) {
+            if (c[i] == lower) return w[i];
         }
         return 0f;
     }
 
     public static boolean hasPrior() {
         return sCodes != null;
+    }
+
+    /** Human-readable snapshot of the current prior, e.g. {@code [e=0.60,o=0.40]}, for debug logs. */
+    public static String debugString() {
+        final int[] c = sCodes;
+        final float[] w = sWeights;
+        if (c == null || w == null) return "(none)";
+        final StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < c.length && i < w.length; i++) {
+            if (i > 0) sb.append(',');
+            sb.append((char) c[i]).append('=')
+              .append(String.format(java.util.Locale.US, "%.2f", w[i]));
+        }
+        return sb.append(']').toString();
     }
 }

@@ -13,6 +13,7 @@ import helium314.keyboard.latin.database.TouchModelDao;
 import helium314.keyboard.latin.database.TouchModelManager;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
+import helium314.keyboard.latin.utils.Log;
 
 /**
  * This class handles key detection.
@@ -165,6 +166,13 @@ public class KeyDetector {
                 bestScore = s;
                 best = k;
             }
+        }
+        if (sv.mAdaptiveDebugOverlay && hasPrior) {
+            Log.d("AdaptivePrior", "tap geo='" + (char) geo.getCode()
+                    + "' priorOnGeo=" + AdaptiveKeyContext.weight(geo.getCode())
+                    + " chosen='" + (char) best.getCode() + "'"
+                    + (best == geo ? "" : " (FLIPPED by bias)")
+                    + " prior=" + AdaptiveKeyContext.debugString());
         }
         return best == geo ? null : best;
     }

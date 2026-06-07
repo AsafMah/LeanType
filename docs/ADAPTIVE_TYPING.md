@@ -78,6 +78,13 @@ current position weighted by the candidate's score; sum per letter. Example: typ
 `H`, candidates `Hello`/`Hey`/`He` → `e` dominates → **E's tap target grows slightly
 for the next tap.** Recomputed live; never persisted.
 
+The prior is rebuilt from the suggestion strip, which is normally debounced ~100 ms; that
+made the prior (and the debug overlay) trail the keystroke by ~one key. When the prior is
+enabled we shorten that debounce (`PROMPT_PRIOR_UPDATE_DELAY_MS` in `LatinIME.UIHandler`)
+so the prediction is ready before the next tap. Lookups are case-insensitive
+(`AdaptiveKeyContext.weight` folds to lowercase) so the bias also applies on the shifted
+keyboard, where keys report uppercase codes.
+
 For **gestures** there is no single "next key" to enlarge mid-stroke, so the context
 prior is tap-only. The contextual-likelihood part for gestures is already handled by
 the native language model (word-level). The new gesture win is Layer B (learned

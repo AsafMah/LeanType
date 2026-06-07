@@ -1385,6 +1385,19 @@ public final class InputLogic {
             final int nextCharIndex = mWordComposer.isComposingWord()
                     ? mWordComposer.getTypedWord().length() : 0;
             helium314.keyboard.keyboard.AdaptiveKeyContext.update(suggestedWords, nextCharIndex);
+            if (svAdaptive.mAdaptiveDebugOverlay) {
+                final StringBuilder words = new StringBuilder();
+                for (int i = 0; i < Math.min(5, suggestedWords.size()); i++) {
+                    if (i > 0) words.append('|');
+                    words.append(suggestedWords.getWord(i));
+                }
+                Log.d("AdaptivePrior", "setSuggested style=" + suggestedWords.mInputStyle
+                        + " composing=" + mWordComposer.isComposingWord()
+                        + " typed='" + mWordComposer.getTypedWord() + "'"
+                        + " pos=" + nextCharIndex
+                        + " words=[" + words + "]"
+                        + " -> prior=" + helium314.keyboard.keyboard.AdaptiveKeyContext.debugString());
+            }
         } else {
             helium314.keyboard.keyboard.AdaptiveKeyContext.clear();
         }
