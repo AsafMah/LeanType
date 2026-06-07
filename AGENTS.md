@@ -96,3 +96,11 @@ Before merging a non-trivial change — correctness-sensitive input/dictionary l
 - Use `effort: high` for correctness/design passes; lower tiers for quick sanity checks.
 - Treat its output as adversarial input, not gospel: it sees the conversation but not tool/scout internals, so verify its claims against the code before acting (it has caught real bugs and unverified assertions in this repo's PRs).
 - Especially worth running before merging changes to `InputLogic`, `DictionaryFacilitatorImpl`/`Suggest`, or anything touching the two-thumb/spacing state machine.
+
+## Project Board & Issue Tracking
+The roadmap lives in GitHub Project #3 ("Two-Thumb & Keyboard Roadmap", `gh project … --owner AsafMah`), with a `Status` field (`Todo` / `In Progress` / `Done`) and epics (`[Epic]` issues) parenting sub-issues. **Keep it current as you work — it is the single source of truth, not a chat promise:**
+- When you **open a PR** for an issue, set that issue (and its PR, once added) to **In Progress**, and bump the parent epic to **In Progress** if it was `Todo`.
+- When a PR **merges** (and its issue closes), move both the issue and PR to **Done**; if every sub-issue of an epic is `Done`, move the epic to `Done`.
+- **Add** any issue/PR you create to the project, and close issues a merged PR resolves (use `Fixes #N` in the PR body, or `gh issue close` if the squash/merge message only referenced `(#N)`).
+- Field/option IDs for scripting: project `PVT_kwHOAGIGz84BZwMC`, Status field `PVTSSF_lAHOAGIGz84BZwMCzhUsrio` (Todo `f75ad846`, In Progress `47fc9ee4`, Done `98236657`); set via `gh project item-edit --id <itemId> --field-id <fieldId> --single-select-option-id <optId> --project-id <projId>`.
+This convention is loaded every session, so any agent (and future-you) is expected to follow it without being re-told.
