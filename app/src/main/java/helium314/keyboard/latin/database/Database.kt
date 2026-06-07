@@ -17,13 +17,13 @@ class Database private constructor(context: Context, name: String = NAME) : SQLi
         if (oldVersion < 2) {
             db.execSQL("ALTER TABLE CLIPBOARD ADD COLUMN IMAGE_URI TEXT")
         }
-        if (oldVersion < 3) {
-            // Created fresh with the current schema (already includes the key-size columns).
+        if (oldVersion < 4) {
+            // The learned touch model is experimental and disposable, so on any upgrade from
+            // before it stabilized we just recreate it with the current schema instead of
+            // carrying per-version column migrations. No real release shipped the table, so
+            // this loses nothing in practice.
+            db.execSQL("DROP TABLE IF EXISTS ${TouchModelDao.TABLE}")
             db.execSQL(TouchModelDao.CREATE_TABLE)
-        } else if (oldVersion < 4) {
-            // Upgrading from the v3 table, which lacked the per-key size columns.
-            db.execSQL("ALTER TABLE ${TouchModelDao.TABLE} ADD COLUMN ${TouchModelDao.COLUMN_KEY_WIDTH} INTEGER NOT NULL DEFAULT 0")
-            db.execSQL("ALTER TABLE ${TouchModelDao.TABLE} ADD COLUMN ${TouchModelDao.COLUMN_KEY_HEIGHT} INTEGER NOT NULL DEFAULT 0")
         }
     }
 
