@@ -1376,6 +1376,16 @@ public final class InputLogic {
             mWordComposer.setAutoCorrection(suggestedWordInfo);
         }
         mSuggestedWords = suggestedWords;
+        // Adaptive typing: refresh the "likely next key" prior from the strip so the next tap can
+        // bias toward likely keys. The next-character index is the current composing-word length
+        // (or 0 for a new word, where the predictions' first letters are the likely next keys).
+        // Cheap, and runs on suggestion updates rather than the tap hot path.
+        final SettingsValues svAdaptive = Settings.getValues();
+        if (svAdaptive != null && svAdaptive.mAdaptiveKeyGeometry) {
+            final int nextCharIndex = mWordComposer.isComposingWord()
+                    ? mWordComposer.getTypedWord().length() : 0;
+            helium314.keyboard.keyboard.AdaptiveKeyContext.update(suggestedWords, nextCharIndex);
+        }
         final boolean newAutoCorrectionIndicator = suggestedWords.mWillAutoCorrect;
 
         // Put a blue underline to a word in TextView which will be auto-corrected.

@@ -6,10 +6,25 @@
 
 package helium314.keyboard.keyboard;
 
+import android.content.Context;
+import android.graphics.Rect;
+
+import helium314.keyboard.latin.database.TouchModelDao;
+import helium314.keyboard.latin.database.TouchModelManager;
+import helium314.keyboard.latin.settings.Settings;
+import helium314.keyboard.latin.settings.SettingsValues;
+
 /**
  * This class handles key detection.
  */
 public class KeyDetector {
+    // Adaptive typing: the context prior may enlarge a likely key's effective target by at most
+    // this fraction of the key (deliberately a bit less than the learned-geometry cap, so the
+    // prior nudges rather than dominates). See docs/ADAPTIVE_TYPING.md.
+    private static final float PRIOR_MAX_FRACTION = 0.18f;
+    // A neighbor is only allowed to win a tap if the touch is within this fraction of its hitbox.
+    private static final float CONSIDER_MARGIN_FRACTION = 0.40f;
+
     private final int mKeyHysteresisDistanceSquared;
     private final int mKeyHysteresisDistanceForSlidingModifierSquared;
 
@@ -101,6 +116,72 @@ public class KeyDetector {
                 primaryKey = key;
             }
         }
+        // Adaptive typing (opt-in): for a plain tap (not a gesture/swipe), let the learned
+        // per-key landing offset and the current next-key prior gently bias which key wins —
+        // bounded so only genuinely ambiguous, near-boundary taps can flip.
+        if (primaryKey != null && !PointerTracker.isInGestureOrKeySwipe()) {
+            final Key biased = applyAdaptiveBias(touchX, touchY, primaryKey);
+            if (biased != null) return biased;
+        }
         return primaryKey;
+    }
+
+    /** Returns a key that should win this tap instead of {@code geo} due to learned/prior bias,
+     *  or {@code null} to keep the plain geometric result. */
+    private Key applyAdaptiveBias(final int touchX, final int touchY, final Key geo) {
+        final SettingsValues sv = Settings.getValues();
+        if (sv == null || !sv.mAdaptiveKeyGeometry || sv.mAdaptiveKeyGeometryStrength <= 0) return null;
+        final Context ctx = Settings.getCurrentContext();
+        if (ctx == null || mKeyboard == null) return null;
+        final TouchModelDao dao = TouchModelDao.getInstance(ctx);
+        final boolean hasPrior = AdaptiveKeyContext.hasPrior();
+        if (dao == null && !hasPrior) return null; // nothing to bias with
+        final String layout = Integer.toString(mKeyboard.mId.mElementId);
+        final int orientation = ctx.getResources().getConfiguration().orientation;
+        final int strength = sv.mAdaptiveKeyGeometryStrength;
+
+        Key best = geo;
+        float bestScore = adjustedDistance(geo, touchX, touchY, dao, layout, orientation, strength);
+        for (final Key k : mKeyboard.getNearestKeys(touchX, touchY)) {
+            if (k == geo) continue;
+            final int code = k.getCode();
+            if (code <= 0 || !Character.isLetter(code)) continue;
+            // Only a genuinely-favored neighbor (a confident learned offset and/or a next-key
+            // prior) may steal a near-boundary tap; otherwise leave the geometric result alone.
+            final float prior = AdaptiveKeyContext.weight(code);
+            final TouchModelDao.Stat st = (dao == null) ? null : dao.get(code, layout, orientation);
+            final boolean hasLearned = st != null && st.getCount() >= TouchModelDao.MIN_CONFIDENT_SAMPLES;
+            if (prior <= 0f && !hasLearned) continue;
+            // Bound: the touch must be within a margin of the neighbor's hitbox.
+            final float margin = CONSIDER_MARGIN_FRACTION * k.getWidth();
+            if (k.squaredDistanceToEdge(touchX, touchY) > margin * margin) continue;
+            final float s = adjustedDistance(k, touchX, touchY, dao, layout, orientation, strength);
+            if (s < bestScore) {
+                bestScore = s;
+                best = k;
+            }
+        }
+        return best == geo ? null : best;
+    }
+
+    /** Distance from the touch to the key's effective center (center shifted by the learned
+     *  landing offset) minus the capped next-key prior boost. Smaller wins. */
+    private float adjustedDistance(final Key k, final int touchX, final int touchY,
+            final TouchModelDao dao, final String layout, final int orientation, final int strength) {
+        final Rect hb = k.getHitBox();
+        float cx = hb.exactCenterX();
+        float cy = hb.exactCenterY();
+        if (dao != null) {
+            final TouchModelDao.Stat st = dao.get(k.getCode(), layout, orientation);
+            final float[] off = TouchModelManager.adjustedOffset(st, k.getWidth(), k.getHeight(), strength);
+            cx += off[0];
+            cy += off[1];
+        }
+        final float dx = touchX - cx;
+        final float dy = touchY - cy;
+        final float dist = (float) Math.sqrt(dx * dx + dy * dy);
+        final float boost = AdaptiveKeyContext.weight(k.getCode())
+                * PRIOR_MAX_FRACTION * k.getWidth() * (strength / 100f);
+        return dist - boost;
     }
 }

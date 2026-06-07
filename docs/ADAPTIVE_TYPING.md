@@ -190,11 +190,19 @@ stats page to keep it honest. Validate the gesture path explicitly (it's the pri
 1. ✅ **Foundation:** opt-in pref (5-file) + `leantype.db` table + DAO + `TouchModelManager`
    (EMA update, capped effective-geometry API).
 2. ✅ **Learning + gesture injection:** record letter taps; feed learned geometry into
-   `ProximityInfo` sweet spots (gestures + tap-correction). The capped literal-tap
-   `KeyDetector` tie-break is deferred (marginal/risky — hitbox-gated).
+   `ProximityInfo` sweet spots (gestures + tap-correction).
 3. ✅ **Gesture-endpoint learning:** swipes teach the model via their start/end keys.
 4. ✅ **Stats / "learned typing model" page** (`AdaptiveTypingStatsScreen`) + reset.
-5. ⬜ **Context prior (Layer A):** completion-derived next-char boost for taps.
+5. ✅ **Tap biasing + context prior (Layer A):** `KeyDetector` now biases the tapped key by
+   the learned per-key offset AND a next-key prior. The prior is built in
+   `AdaptiveKeyContext` from the top-5 suggestions, weighted **equally** (averaged, not
+   score-skewed): the next char of the in-progress word's completions, or the first char of
+   the next-word predictions for a fresh word. It is rebuilt between keystrokes (in
+   `InputLogic.setSuggestedWords`, off the tap path) and read lock-free per tap. The prior's
+   cap (`PRIOR_MAX_FRACTION` ≈ 18% of key) is deliberately a bit **below** the learned cap
+   (≈ 25%), so it nudges rather than dominates. Bias is suppressed during gestures/swipes
+   (`PointerTracker.isInGestureOrKeySwipe`) and only flips near-boundary taps. Gestures are
+   intentionally NOT context-biased (suggestions don't change mid-swipe).
 6. ⬜ **Strength/cap tuning** + optional heatmap visualization + interior-key gesture
    learning (needs corner-cutting handling or native alignment).
 

@@ -162,6 +162,12 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         return seed;
     }
 
+    /** True while a gesture, key-swipe (space/delete), or shortcut-row swipe is in progress.
+     *  Adaptive tap biasing must be suppressed in these states (it only applies to plain taps). */
+    public static boolean isInGestureOrKeySwipe() {
+        return sInGesture || sInKeySwipe || sInShortcutRowSwipe;
+    }
+
     private static TypingTimeRecorder sTypingTimeRecorder;
 
     // The position and time at which first down event occurred.

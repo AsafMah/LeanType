@@ -1,0 +1,94 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+package helium314.keyboard.keyboard;
+
+import helium314.keyboard.latin.SuggestedWords;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Holds a transient "likely next key" prior derived from the current suggestion strip, used to
+ * gently enlarge the touch target of likely next keys (adaptive typing, see
+ * docs/ADAPTIVE_TYPING.md).
+ *
+ * <p>It is rebuilt between keystrokes — whenever the suggestions change — on the UI thread, and
+ * read per tap in {@link KeyDetector}. Reads are lock-free via {@code volatile} parallel arrays,
+ * which are tiny (at most a handful of distinct next-characters), so the tap hot path stays fast
+ * even for very fast typists. Because suggestions are computed asynchronously, the prior may lag
+ * the latest keystroke by one tap under very fast typing; that is harmless, as the prior is only
+ * a soft, capped bias.
+ *
+ * <p>Suggestions are weighted EQUALLY (averaged) rather than by score, so the result is not skewed
+ * toward the single top suggestion.
+ */
+public final class AdaptiveKeyContext {
+    /** How many suggestions to average over. */
+    private static final int TOP_N = 5;
+
+    private static volatile int[] sCodes;
+    private static volatile float[] sWeights;
+
+    private AdaptiveKeyContext() {}
+
+    /**
+     * Rebuild the prior from the top suggestions.
+     *
+     * @param words    the current suggestion strip contents.
+     * @param position index of the NEXT character within each suggestion — the current
+     *                 composing-word length while a word is being built, or 0 for a new word
+     *                 (using next-word predictions, whose first letter is the likely next key).
+     */
+    public static void update(final SuggestedWords words, final int position) {
+        if (words == null || words.isEmpty() || position < 0) {
+            clear();
+            return;
+        }
+        final int n = Math.min(TOP_N, words.size());
+        final HashMap<Integer, Integer> tally = new HashMap<>();
+        int considered = 0;
+        for (int i = 0; i < n; i++) {
+            final String w = words.getWord(i);
+            if (w == null || position >= w.length()) continue; // typed word itself / too short
+            final int cp = Character.toLowerCase(w.charAt(position));
+            if (!Character.isLetter(cp)) continue;
+            tally.merge(cp, 1, Integer::sum);
+            considered++;
+        }
+        if (considered == 0) {
+            clear();
+            return;
+        }
+        final int[] codes = new int[tally.size()];
+        final float[] weights = new float[tally.size()];
+        int j = 0;
+        for (final Map.Entry<Integer, Integer> e : tally.entrySet()) {
+            codes[j] = e.getKey();
+            weights[j] = (float) e.getValue() / considered; // 0..1, equal-weight average
+            j++;
+        }
+        sCodes = codes;
+        sWeights = weights;
+    }
+
+    public static void clear() {
+        sCodes = null;
+        sWeights = null;
+    }
+
+    /** Prior weight in [0, 1] for the given key code (0 if none / no prior). */
+    public static float weight(final int code) {
+        final int[] c = sCodes;
+        final float[] w = sWeights;
+        if (c == null) return 0f;
+        for (int i = 0; i < c.length; i++) {
+            if (c[i] == code) return w[i];
+        }
+        return 0f;
+    }
+
+    public static boolean hasPrior() {
+        return sCodes != null;
+    }
+}
