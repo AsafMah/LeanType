@@ -142,4 +142,17 @@ class DictionaryGroupTest {
         removeFromBlacklist.invoke(instance, "blockedword")
         assertEquals(false, isBlacklisted.invoke(instance, "blockedword"))
     }
+
+    @Test
+    fun graduatedTrust_penalizesUnconfirmedUncuratedWordsOnly() {
+        // C4-smart (#39): an uncurated learned word (not in a real dictionary) below the confirmation
+        // frequency is penalized, so a single misfire can't out-rank a real word...
+        assertEquals(true, DictionaryFacilitatorImpl.shouldPenalizeUnconfirmedWord(true, 0))
+        // ...but once it has been repeated enough it is trusted (deliberate new words still learn)...
+        assertEquals(false, DictionaryFacilitatorImpl.shouldPenalizeUnconfirmedWord(true, 10000))
+        // ...and a real dictionary word is never penalized regardless of how rarely it was learned.
+        assertEquals(false, DictionaryFacilitatorImpl.shouldPenalizeUnconfirmedWord(false, 0))
+        // (the actual capping of the score below the best real candidate happens in
+        // applyGraduatedTrust, which needs the native scorer and is covered by on-device testing.)
+    }
 }
