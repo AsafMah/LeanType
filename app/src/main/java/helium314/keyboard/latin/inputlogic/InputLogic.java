@@ -1047,6 +1047,33 @@ public final class InputLogic {
         }
     }
 
+    /**
+     * Handles the UNDO_WORD toolbar action: reverts the last committed word back to its
+     * alternatives in the suggestion strip, as if it had not been auto-picked.
+     * <p>
+     * Uses the same {@link #revertCommit} + {@link #restartSuggestionsOnWordTouchedByCursor}
+     * path that backspace uses when reverting an auto-correction. Unlike the backspace path,
+     * this is an explicit user action and is therefore NOT gated by the
+     * {@code mBackspaceRevertsAutocorrect} setting, and it also fires when the committed word
+     * matches the typed word (i.e. no net text change, but alternatives are still shown).
+     * No-ops gracefully if there is no revertible committed word.
+     *
+     * @param inputTransaction The transaction in progress.
+     */
+    private void handleUndoWord(final InputTransaction inputTransaction) {
+        // canRevertCommit() covers the active + non-empty-committed-word checks (and NOT_A_COMPOSED_WORD,
+        // which is inactive). For a gesture commit didCommitTypedWord() is false, so this is true.
+        if (!mLastComposedWord.canRevertCommit()) {
+            return;
+        }
+        revertCommit(inputTransaction);
+        if (inputTransaction.getSettingsValues().needsToLookupSuggestions()
+                && inputTransaction.getSettingsValues().mSpacingAndPunctuations.mCurrentLanguageHasSpaces) {
+            restartSuggestionsOnWordTouchedByCursor(inputTransaction.getSettingsValues());
+        }
+    }
+
+
     private void resumeWordAtCursorForJoining(final SettingsValues settingsValues) {
         final TextRange range = mConnection.getWordRangeAtCursor(settingsValues.mSpacingAndPunctuations,
                 settingsValues.mCurrentKeyboardScript);
@@ -1665,6 +1692,9 @@ public final class InputLogic {
                 break;
             case KeyCode.FORCE_NEXT_SPACE:
                 forceSpaceBeforeNextWord(event, inputTransaction, handler);
+                break;
+            case KeyCode.UNDO_WORD:
+                handleUndoWord(inputTransaction);
                 break;
             case KeyCode.LANGUAGE_SWITCH:
                 handleLanguageSwitchKey();

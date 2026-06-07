@@ -69,6 +69,8 @@
     <string name="spoken_description_join_next">Join next</string>
     <!-- Spoken description for the "Force next space" one-shot keyboard key. -->
     <string name="spoken_description_force_next_space">Force next space</string>
+    <!-- Spoken description for the "Undo word" toolbar key. -->
+    <string name="spoken_description_undo_word">Undo word</string>
 
     <!-- Spoken feedback after turning "Shift" mode on. -->
     <string name="spoken_description_shiftmode_on">Shift enabled</string>
