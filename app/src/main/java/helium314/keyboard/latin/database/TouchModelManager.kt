@@ -22,6 +22,7 @@ object TouchModelManager {
      * Capped, confidence- and strength-scaled landing offset for a key, in pixels.
      * @return a fresh {dx, dy}; {0, 0} when there is not enough data or strength is 0.
      */
+    @JvmStatic
     fun adjustedOffset(stat: TouchModelDao.Stat?, keyWidth: Int, keyHeight: Int,
                        strengthPercent: Int): FloatArray {
         if (stat == null || strengthPercent <= 0 || keyWidth <= 0 || keyHeight <= 0) {

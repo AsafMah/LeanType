@@ -367,6 +367,10 @@
     <string name="delete_swipe">Delete swipe</string>
     <!-- Description for "delete_swipe" option. -->
     <string name="delete_swipe_summary">Perform a swipe from the delete key to select and remove bigger portions of text at once</string>
+    <!-- Adaptive typing (learned per-user key geometry) -->
+    <string name="adaptive_key_geometry">Adaptive key geometry (experimental)</string>
+    <string name="adaptive_key_geometry_summary">Learn where you actually tap each key and nudge gesture and tap recognition toward your style. Stored on-device only, no text is saved.</string>
+    <string name="adaptive_key_geometry_strength">Adaptive geometry strength</string>
     <string name="shortcut_rows">Shortcut rows</string>
     <string name="shortcut_rows_summary">Enable temporary layout-defined shortcut rows opened by vertical swipes</string>
     <string name="shortcut_top_row">Top shortcut row swipe</string>

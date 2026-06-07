@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import helium314.keyboard.latin.utils.Log
+import java.util.concurrent.Executors
 
 /**
  * Cached access to the learned per-user touch-model table (see docs/ADAPTIVE_TYPING.md).
@@ -33,6 +34,11 @@ class TouchModelDao private constructor(private val db: Database) {
     )
 
     private val cache = HashMap<String, Stat>()
+    // Persist off the input thread: record() runs on every letter tap, so the DB write must not
+    // block typing. The cache (source of truth at runtime) is updated synchronously; the disk
+    // write is serialized on this single thread (order preserved). Losing the last sample or two
+    // on a crash is acceptable for a learning model.
+    private val writeExecutor = Executors.newSingleThreadExecutor()
 
     init {
         db.readableDatabase.query(
@@ -61,7 +67,7 @@ class TouchModelDao private constructor(private val db: Database) {
         if (s == null) {
             val ns = Stat(keyCode, layout, orientation, dx, dy, 0f, 0f, 1, now)
             cache[k] = ns
-            write(ns)
+            persistAsync(ns.copy())
             return
         }
         val a = EMA_ALPHA
@@ -74,7 +80,15 @@ class TouchModelDao private constructor(private val db: Database) {
         s.varDy = (1 - a) * (s.varDy + a * (dy - oldMeanDy) * (dy - oldMeanDy))
         if (s.count < Int.MAX_VALUE) s.count++
         s.updatedAt = now
-        write(s)
+        persistAsync(s.copy())
+    }
+
+    private fun persistAsync(snapshot: Stat) {
+        try {
+            writeExecutor.execute { write(snapshot) }
+        } catch (e: Throwable) {
+            Log.e(TAG, "touch model write rejected", e)
+        }
     }
 
     /** Learned stats for a key, or null if none recorded yet. */
@@ -155,6 +169,7 @@ class TouchModelDao private constructor(private val db: Database) {
         private var instance: TouchModelDao? = null
 
         /** Returns the instance, or null if it can't be created (e.g. device locked). */
+        @JvmStatic
         @Synchronized
         fun getInstance(context: Context): TouchModelDao? {
             if (instance == null)

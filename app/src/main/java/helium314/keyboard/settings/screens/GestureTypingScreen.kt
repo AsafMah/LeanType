@@ -73,6 +73,9 @@ fun GestureTypingScreen(
         add(Settings.PREF_SPACE_VERTICAL_SWIPE)
         add(Settings.PREF_TOUCHPAD_SENSITIVITY)
         add(Settings.PREF_DELETE_SWIPE)
+        add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY)
+        if (prefs.getBoolean(Settings.PREF_ADAPTIVE_KEY_GEOMETRY, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY))
+            add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH)
         add(Settings.PREF_SHORTCUT_ROWS)
         if (prefs.getBoolean(Settings.PREF_SHORTCUT_ROWS, Defaults.PREF_SHORTCUT_ROWS)) {
             add(Settings.PREF_SHORTCUT_TOP_ROW)
@@ -171,6 +174,21 @@ fun createGestureTypingSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_DELETE_SWIPE, R.string.delete_swipe, R.string.delete_swipe_summary) {
         SwitchPreference(it, Defaults.PREF_DELETE_SWIPE)
+    },
+    Setting(context, Settings.PREF_ADAPTIVE_KEY_GEOMETRY,
+        R.string.adaptive_key_geometry, R.string.adaptive_key_geometry_summary) {
+        SwitchPreference(it, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY) {
+            KeyboardSwitcher.getInstance().setThemeNeedsReload() // rebuild keyboard so sweet spots refresh
+        }
+    },
+    Setting(context, Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH, R.string.adaptive_key_geometry_strength) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH,
+            range = 0f..100f,
+            description = { it.toString() }
+        ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
     Setting(context, Settings.PREF_SHORTCUT_ROWS, R.string.shortcut_rows, R.string.shortcut_rows_summary) {
         SwitchPreference(it, Defaults.PREF_SHORTCUT_ROWS)
