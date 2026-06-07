@@ -1055,9 +1055,9 @@ public final class InputLogic {
      * {@link SuggestionSpan} — not from the editor (gesture commits don't leave those spans there,
      * so a fresh editor-based lookup would show unrelated/nonsense suggestions). The word is only
      * re-composed (composing region set over it) so picking an alternative replaces it; nothing is
-     * deleted, so there is no over-delete or garbage. No-ops unless the committed word is still
-     * exactly before the cursor (the immediate post-commit state — the phantom trailing space is not
-     * in the text) and it actually carries alternative candidates.
+     * deleted, so there is no over-delete or garbage. Works even after you've pressed space to move
+     * on: it finds the committed word before the cursor (skipping a trailing separator), moves the
+     * cursor back into it, and re-opens it. No-ops if that word isn't there or has no alternatives.
      *
      * @param inputTransaction The transaction in progress.
      */
@@ -1075,11 +1075,24 @@ public final class InputLogic {
         if (TextUtils.isEmpty(committedWord)) return;
         final String committedWordString = committedWord.toString();
         final int length = committedWordString.length();
-        // Only act if the committed word is still exactly before the cursor (nothing typed/moved
-        // since). We check only the word, not a separator: after a gesture the trailing space is a
-        // pending phantom space and is NOT in the text.
-        final CharSequence beforeCursor = mConnection.getTextBeforeCursor(length, 0);
-        if (beforeCursor == null || !TextUtils.equals(committedWordString, beforeCursor)) return;
+        // Find the committed word before the cursor, allowing a trailing separator (e.g. the space
+        // you typed to move on). After a gesture the trailing space may be a pending phantom space
+        // that is not in the text, so trailing can be 0. We skip only whitespace after the word.
+        final CharSequence before = mConnection.getTextBeforeCursor(length + 3, 0);
+        if (before == null) return;
+        int trailing = 0;
+        while (before.length() - trailing > 0
+                && Character.isWhitespace(before.charAt(before.length() - 1 - trailing))) {
+            trailing++;
+        }
+        final int wordEndInBefore = before.length() - trailing;
+        if (wordEndInBefore < length
+                || !TextUtils.equals(committedWordString, before.subSequence(wordEndInBefore - length, wordEndInBefore))) {
+            return; // the last word before the cursor isn't the one we committed — do nothing
+        }
+        final int wordEnd = mConnection.getExpectedSelectionStart() - trailing;
+        final int wordStart = wordEnd - length;
+        if (wordStart < 0) return;
 
         // Rebuild the alternatives list from the committed word's in-memory suggestion spans.
         final ArrayList<SuggestedWordInfo> suggestions = new ArrayList<>();
@@ -1105,12 +1118,14 @@ public final class InputLogic {
         // No real alternatives to offer — do nothing rather than show a fresh (nonsense) lookup.
         if (suggestions.size() <= 1) return;
 
-        // Re-compose the committed word in place so picking an alternative replaces it. No deletion.
+        // Move the cursor back into the word and re-compose it so picking an alternative replaces
+        // it (keeping any trailing separator). We are no longer in a post-commit state.
+        mConnection.setSelection(wordEnd, wordEnd);
+        mSpaceState = SpaceState.NONE;
         final int[] codePoints = StringUtils.toCodePointArray(committedWordString);
         mWordComposer.setComposingWord(codePoints, mLatinIME.getCoordinatesForCurrentKeyboard(codePoints));
         mWordComposer.setCursorPositionWithinWord(committedWordString.codePointCount(0, length));
-        final int cursor = mConnection.getExpectedSelectionStart();
-        mConnection.setComposingRegion(cursor - length, cursor);
+        mConnection.setComposingRegion(wordStart, wordEnd);
 
         final SuggestedWords suggestedWords = new SuggestedWords(suggestions, null /* rawSuggestions */,
                 typedWordInfo, false /* typedWordValid */, false /* willAutoCorrect */,
