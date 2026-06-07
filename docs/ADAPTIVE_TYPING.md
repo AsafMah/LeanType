@@ -83,9 +83,15 @@ debounce exists because the suggestion compute *blocks the UI thread* — see
 `InputLogic.performUpdateSuggestionStripSync`, which waits on `holder.get(..., 200 ms)` — so
 it coalesces the expensive compute during fast typing). At that cadence the prior is still
 ready before the next tap at normal speed (the functional bias works), but the *debug
-overlay* visibly trails by ~one key. So **only while the debug overlay is on** we shorten
-the debounce to 50 ms (`PROMPT_PRIOR_UPDATE_DELAY_MS` in `LatinIME.UIHandler`) so the
-visualization keeps up; ordinary typing (overlay off) keeps the full debounce and is
+overlay* visibly trails by ~one key. So **only while the debug overlay is on** we drop the
+debounce to 0 in `LatinIME.UIHandler.postUpdateSuggestionStrip` (compute the prediction
+immediately); since the overlay repaints the instant the prior updates, that is the safe
+equivalent of "update as soon as the suggestion is made". The remaining floor is the
+compute itself (~5–10 ms release, ~20 ms debug), which briefly blocks the UI by design. A
+fully non-blocking async refresh would be snappier still, but the suggestion compute reads
+the non-thread-safe `WordComposer` on the background thread — the blocking design exists to
+avoid that race during typing — so doing it safely would need a composer snapshot (not worth
+it for a debug visualization). Ordinary typing (overlay off) keeps the full debounce and is
 unaffected. Lookups are case-insensitive (`AdaptiveKeyContext.weight` folds to lowercase)
 so the bias also applies on the shifted keyboard, where keys report uppercase codes.
 

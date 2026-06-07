@@ -210,13 +210,6 @@ public class LatinIME extends InputMethodService implements
         private static final int ARG2_UNUSED = 0;
         private static final int ARG1_TRUE = 1;
 
-        // While the adaptive debug overlay is on, suggestions are refreshed with this shorter
-        // debounce instead of mDelayInMillisecondsToUpdateSuggestions, so the visualized prior keeps
-        // up with the keystroke instead of trailing it by ~one key. Scoped to the overlay (a
-        // temporary diagnostic) on purpose: the normal ~100 ms debounce coalesces the UI-blocking
-        // suggestion compute, so we don't shorten it during ordinary typing. See ADAPTIVE_TYPING.md.
-        private static final long PROMPT_PRIOR_UPDATE_DELAY_MS = 50;
-
         private int mDelayInMillisecondsToUpdateSuggestions;
         private int mDelayInMillisecondsToUpdateShiftState;
 
@@ -302,13 +295,20 @@ public class LatinIME extends InputMethodService implements
 
         public void postUpdateSuggestionStrip(final int inputStyle) {
             long delay = mDelayInMillisecondsToUpdateSuggestions;
-            final LatinIME latinIme = getOwnerInstance();
-            if (latinIme != null) {
-                final SettingsValues sv = latinIme.mSettings.getCurrent();
-                // Only when actively visualizing the prior: overlay on AND prior on. Ordinary
-                // typing keeps the full debounce so fast typists aren't hit by extra computes.
-                if (sv != null && sv.mAdaptiveDebugOverlay && sv.mAdaptiveContextPrior) {
-                    delay = Math.min(delay, PROMPT_PRIOR_UPDATE_DELAY_MS);
+            // While the debug overlay + context prior are both on, compute the prediction
+            // immediately (no debounce) so the visualization keeps up with fast typing. The overlay
+            // repaints the instant the prior updates, so "no debounce" is the safe equivalent of
+            // "update as soon as the suggestion is made". The remaining floor is the suggestion
+            // compute itself, which briefly blocks the UI thread by design (see
+            // performUpdateSuggestionStripSync) — fast on release, slower on debug builds. Scoped to
+            // the overlay so ordinary typing keeps the full, smooth debounce.
+            if (inputStyle == SuggestedWords.INPUT_STYLE_TYPING) {
+                final LatinIME latinIme = getOwnerInstance();
+                if (latinIme != null) {
+                    final SettingsValues sv = latinIme.mSettings.getCurrent();
+                    if (sv != null && sv.mAdaptiveDebugOverlay && sv.mAdaptiveContextPrior) {
+                        delay = 0;
+                    }
                 }
             }
             sendMessageDelayed(obtainMessage(MSG_UPDATE_SUGGESTION_STRIP, inputStyle,
