@@ -3909,6 +3909,9 @@ public final class InputLogic {
         if (settingsValues.mMultipartRerecognizeTaps) {
             mLiveStroke.set(mWordComposer.getInputPointers());
         }
+        // Adaptive typing: learn this gesture's clean endpoints so swipes teach the model too.
+        maybeRecordGestureEndpoints(settingsValues, composedText, extendExistingCompose,
+                usedMergedTrail, keyboardSwitcher);
         mWordComposer.setBatchInputWord(composedText);
         setComposingTextInternal(composedText, 1);
         if (extendExistingCompose) {
@@ -3971,6 +3974,43 @@ public final class InputLogic {
         }
         // Combining mode: arm the grace timer after a gesture.
         enterCombiningMode(settingsValues, false /* fromTap, unused — kept for clarity */);
+    }
+
+    // Adaptive typing (opt-in, see docs/ADAPTIVE_TYPING.md): a gesture's first point (finger-down)
+    // and last point (finger-up) are clean "I aimed here" samples for the word's first and last
+    // letters — unlike interior keys, which suffer corner-cutting. Fold those two offsets into the
+    // learned model so swipes teach it too. Only for fresh single strokes (merged/extended trails
+    // have ambiguous endpoints). Gated on the opt-in pref + incognito; the DAO write is async.
+    private void maybeRecordGestureEndpoints(final SettingsValues sv, final String word,
+            final boolean extend, final boolean usedMergedTrail,
+            final KeyboardSwitcher keyboardSwitcher) {
+        if (sv == null || !sv.mAdaptiveKeyGeometry || sv.mIncognitoModeEnabled) return;
+        if (extend || usedMergedTrail || word == null || word.isEmpty()) return;
+        final InputPointers pts = mWordComposer.getInputPointers();
+        final int n = pts.getPointerSize();
+        if (n < 2) return; // need a real stroke; taps are handled in PointerTracker
+        final Keyboard keyboard = keyboardSwitcher.getKeyboard();
+        if (keyboard == null) return;
+        final int[] xs = pts.getXCoordinates();
+        final int[] ys = pts.getYCoordinates();
+        recordGestureEndpoint(keyboard, Character.toLowerCase(word.codePointAt(0)), xs[0], ys[0]);
+        recordGestureEndpoint(keyboard, Character.toLowerCase(word.codePointBefore(word.length())),
+                xs[n - 1], ys[n - 1]);
+    }
+
+    private void recordGestureEndpoint(final Keyboard keyboard, final int codePoint,
+            final int x, final int y) {
+        if (!Character.isLetter(codePoint) || x < 0 || y < 0) return;
+        final helium314.keyboard.keyboard.Key key = keyboard.getKey(codePoint);
+        if (key == null) return;
+        final helium314.keyboard.latin.database.TouchModelDao dao =
+                helium314.keyboard.latin.database.TouchModelDao.getInstance(mLatinIME);
+        if (dao == null) return;
+        final android.graphics.Rect hitBox = key.getHitBox();
+        dao.record(codePoint, Integer.toString(keyboard.mId.mElementId),
+                mLatinIME.getResources().getConfiguration().orientation,
+                x - hitBox.exactCenterX(), y - hitBox.exactCenterY(),
+                System.currentTimeMillis());
     }
 
     /**

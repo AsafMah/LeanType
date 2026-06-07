@@ -371,6 +371,11 @@
     <string name="adaptive_key_geometry">Adaptive key geometry (experimental)</string>
     <string name="adaptive_key_geometry_summary">Learn where you actually tap each key and nudge gesture and tap recognition toward your style. Stored on-device only, no text is saved.</string>
     <string name="adaptive_key_geometry_strength">Adaptive geometry strength</string>
+    <string name="adaptive_key_geometry_stats_title">Learned typing model</string>
+    <string name="adaptive_key_geometry_stats_summary">See what the keyboard has learned about your typing</string>
+    <string name="adaptive_key_geometry_stats_explanation">Per key: average offset from the key center (where you land), spread (how consistent you are), and number of samples. Higher samples and lower spread mean a stronger, more confident adjustment. Nothing here ever leaves your device.</string>
+    <string name="adaptive_key_geometry_stats_empty">Nothing learned yet. Turn on adaptive key geometry and type for a while, then come back.</string>
+    <string name="adaptive_key_geometry_reset">Reset learned model</string>
     <string name="shortcut_rows">Shortcut rows</string>
     <string name="shortcut_rows_summary">Enable temporary layout-defined shortcut rows opened by vertical swipes</string>
     <string name="shortcut_top_row">Top shortcut row swipe</string>

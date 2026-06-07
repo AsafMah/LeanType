@@ -85,10 +85,15 @@ geometry).
 
 ### Layer B — learned per-user touch model (persisted, the "learning")
 
-- **Record:** on a *confident* tap (committed and not immediately backspaced /
-  autocorrected away), compute `dx = touchX - keyCenterX`, `dy = touchY - keyCenterY`
-  and fold into that key's running mean/variance via an exponential moving average
-  (recent behavior weighted more; old data decays).
+- **Record (taps):** on a letter tap, compute `dx = touchX - keyCenterX`,
+  `dy = touchY - keyCenterY` and fold into that key's running mean/variance via an
+  exponential moving average (recent behavior weighted more; old data decays).
+  Implemented in `PointerTracker.recordAdaptiveTouchSample`.
+- **Record (gestures):** a swipe also teaches the model, but only via its clean
+  **endpoints**: finger-down ≈ the word's first letter, finger-up ≈ its last letter.
+  Interior keys are skipped (corner-cutting makes them unreliable) and only fresh single
+  strokes count (merged/extended trails have ambiguous ends). Implemented in
+  `InputLogic.maybeRecordGestureEndpoints`.
 - **Apply:** effective center = `center + mean_offset`; effective radius scales with
   consistency (tighter for keys you nail, more forgiving for scattered keys).
 
@@ -182,13 +187,16 @@ stats page to keep it honest. Validate the gesture path explicitly (it's the pri
 
 ## Phased build order
 
-1. **Foundation:** opt-in pref (5-file) + `leantype.db` table + DAO + `TouchModelManager`
-   (EMA update, capped effective-geometry API). Compiles; no behavior yet.
-2. **Learning + gesture injection:** record confident taps; feed learned geometry into
-   `ProximityInfo` sweet spots (the gesture priority) + the capped `KeyDetector`
-   tie-break for taps. Testable on-device.
-3. **Context prior (Layer A):** completion-derived next-char boost for taps.
-4. **Stats page + reset UI + strength tuning.**
+1. ✅ **Foundation:** opt-in pref (5-file) + `leantype.db` table + DAO + `TouchModelManager`
+   (EMA update, capped effective-geometry API).
+2. ✅ **Learning + gesture injection:** record letter taps; feed learned geometry into
+   `ProximityInfo` sweet spots (gestures + tap-correction). The capped literal-tap
+   `KeyDetector` tie-break is deferred (marginal/risky — hitbox-gated).
+3. ✅ **Gesture-endpoint learning:** swipes teach the model via their start/end keys.
+4. ✅ **Stats / "learned typing model" page** (`AdaptiveTypingStatsScreen`) + reset.
+5. ⬜ **Context prior (Layer A):** completion-derived next-char boost for taps.
+6. ⬜ **Strength/cap tuning** + optional heatmap visualization + interior-key gesture
+   learning (needs corner-cutting handling or native alignment).
 
 ## Open questions (tracked)
 

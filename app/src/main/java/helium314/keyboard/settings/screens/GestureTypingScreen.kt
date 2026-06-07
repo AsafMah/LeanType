@@ -19,6 +19,8 @@ import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
+import helium314.keyboard.settings.SettingsDestination
+import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.Theme
@@ -74,8 +76,10 @@ fun GestureTypingScreen(
         add(Settings.PREF_TOUCHPAD_SENSITIVITY)
         add(Settings.PREF_DELETE_SWIPE)
         add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY)
-        if (prefs.getBoolean(Settings.PREF_ADAPTIVE_KEY_GEOMETRY, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY))
+        if (prefs.getBoolean(Settings.PREF_ADAPTIVE_KEY_GEOMETRY, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY)) {
             add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH)
+            add(SettingsWithoutKey.ADAPTIVE_TYPING_STATS)
+        }
         add(Settings.PREF_SHORTCUT_ROWS)
         if (prefs.getBoolean(Settings.PREF_SHORTCUT_ROWS, Defaults.PREF_SHORTCUT_ROWS)) {
             add(Settings.PREF_SHORTCUT_TOP_ROW)
@@ -189,6 +193,17 @@ fun createGestureTypingSettings(context: Context) = listOf(
             range = 0f..100f,
             description = { it.toString() }
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, SettingsWithoutKey.ADAPTIVE_TYPING_STATS,
+        R.string.adaptive_key_geometry_stats_title, R.string.adaptive_key_geometry_stats_summary) {
+        Preference(
+            name = it.title,
+            description = stringResource(R.string.adaptive_key_geometry_stats_summary),
+            onClick = { SettingsDestination.navigateTo(SettingsDestination.AdaptiveTypingStats) }
+        )
+    },
+    Setting(context, SettingsWithoutKey.ADAPTIVE_TYPING_STATS_CONTENT, R.string.adaptive_key_geometry_stats_title) {
+        AdaptiveTypingStatsContent()
     },
     Setting(context, Settings.PREF_SHORTCUT_ROWS, R.string.shortcut_rows, R.string.shortcut_rows_summary) {
         SwitchPreference(it, Defaults.PREF_SHORTCUT_ROWS)
