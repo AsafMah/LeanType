@@ -125,4 +125,21 @@ class DictionaryGroupTest {
         addToBlacklist.invoke(instance, "real")
         assertEquals(true, isInNonHistory.invoke(instance, "real"))
     }
+
+    @Test
+    fun removeFromBlacklist_unblocksWord() {
+        // The C4-ui "Add to dictionary" path (DictionaryFacilitatorImpl.addToUserDictionary) un-blocks a
+        // previously blocked word by calling removeFromBlacklist, so promoting a blocked word works.
+        val cls = Class.forName("helium314.keyboard.latin.DictionaryGroup")
+        val ctor = cls.declaredConstructors.first { it.parameterCount == 4 }.apply { isAccessible = true }
+        val instance = ctor.newInstance(Locale.ENGLISH, null, emptyMap<String, ExpandableBinaryDictionary>(), null)
+        val addToBlacklist = cls.getDeclaredMethod("addToBlacklist", String::class.java).apply { isAccessible = true }
+        val removeFromBlacklist = cls.getDeclaredMethod("removeFromBlacklist", String::class.java).apply { isAccessible = true }
+        val isBlacklisted = cls.getDeclaredMethod("isBlacklisted", String::class.java).apply { isAccessible = true }
+
+        addToBlacklist.invoke(instance, "blockedword")
+        assertEquals(true, isBlacklisted.invoke(instance, "blockedword"))
+        removeFromBlacklist.invoke(instance, "blockedword")
+        assertEquals(false, isBlacklisted.invoke(instance, "blockedword"))
+    }
 }

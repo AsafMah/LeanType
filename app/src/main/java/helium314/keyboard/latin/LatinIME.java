@@ -1784,6 +1784,16 @@ public class LatinIME extends InputMethodService implements
     }
 
     @Override
+    public void addToDictionary(final String word) {
+        mDictionaryFacilitator.addToUserDictionary(word);
+    }
+
+    @Override
+    public void blockWord(final String word) {
+        mDictionaryFacilitator.blockWord(word);
+    }
+
+    @Override
     public void removeExternalSuggestions() {
         setNeutralSuggestionStrip();
         mHandler.postResumeSuggestions(false);
