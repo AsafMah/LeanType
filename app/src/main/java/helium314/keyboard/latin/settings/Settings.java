@@ -229,6 +229,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_ADD_TO_PERSONAL_DICTIONARY = "add_to_personal_dictionary";
     public static final String PREF_FLAG_UNKNOWN_WORDS = "flag_unknown_words";
     public static final String PREF_GRADUATED_TRUST = "graduated_trust";
+    public static final String PREF_SWIPE_UP_SYMBOL = "swipe_up_symbol";
     public static final String PREF_NAVBAR_COLOR = "navbar_color";
     public static final String PREF_NARROW_KEY_GAPS = "narrow_key_gaps";
     public static final String PREF_NARROW_KEY_GAPS_LEVEL = "narrow_key_gaps_level";

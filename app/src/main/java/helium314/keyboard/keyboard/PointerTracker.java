@@ -216,6 +216,11 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private boolean mShortcutBottomRowSwipeAllowed = false;
     private boolean mInShortcutRowSwipe = false;
     private static boolean sInShortcutRowSwipe = false;
+    // Swipe-up-to-symbol (#32): captured at finger-down so the up-flick decision (made on release,
+    // only when no glide engaged) can read the original key + start position.
+    private Key mSwipeUpStartKey = null;
+    private int mSwipeUpStartX;
+    private int mSwipeUpStartY;
 
     // Touchpad mode for cursor control
     public static boolean sPersistentTouchpadModeActive = false;
@@ -991,6 +996,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         mShortcutTopRowSwipeAllowed = isShortcutRowSource(key, true);
         mShortcutBottomRowSwipeAllowed = isShortcutRowSource(key, false);
         mInShortcutRowSwipe = false;
+        mSwipeUpStartKey = null;
         mKeyboardLayoutHasBeenChanged = false;
         mIsTrackingForActionDisabled = false;
         resetKeySelectionByDraggingFinger();
@@ -1014,6 +1020,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             mStartX = x;
             mStartY = y;
             mStartTime = System.currentTimeMillis();
+            mSwipeUpStartKey = key;
+            mSwipeUpStartX = x;
+            mSwipeUpStartY = y;
         }
     }
 
@@ -1099,9 +1108,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return;
         }
         if (tryStartShortcutRowSwipe(x, y, eventTime)) {
-            return;
-        }
-        if (tryStartSwipeUpSymbol(x, y)) {
             return;
         }
 
@@ -1404,58 +1410,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         return true;
     }
 
-    /**
-     * Swipe-up on a non-top-row key: emit the key's first popup symbol (same output as tapping
-     * that popup key after long-press), then cancel tracking so the base letter is not typed.
-     * Top-row keys are excluded because their up-swipe opens the shortcut-row popup, which is
-     * handled by {@link #tryStartShortcutRowSwipe}. Glide typing is unaffected because we set
-     * {@code mIsDetectingGesture = false} (same as the shortcut-row path) and return before the
-     * gesture accumulation code runs.
-     */
-    private boolean tryStartSwipeUpSymbol(final int x, final int y) {
-        // Skip if the top-row shortcut swipe is allowed for this key (handled elsewhere),
-        // or if any conflicting state is active.
-        if (mShortcutTopRowSwipeAllowed || mInShortcutRowSwipe || sInShortcutRowSwipe
-                || isShowingPopupKeysPanel() || sInGesture || sInKeySwipe
-                || mCurrentKey == null) {
-            return false;
-        }
-        // Must be a clear upward swipe: sufficient vertical travel, more vertical than horizontal.
-        final int dX = x - mStartX;
-        final int dY = y - mStartY;
-        if (dY > -sPointerStep || abs(dY) <= abs(dX)) {
-            return false;
-        }
-        // Key must have at least one popup key spec.
-        final PopupKeySpec[] popupKeys = mCurrentKey.getPopupKeys();
-        if (popupKeys == null || popupKeys.length == 0 || popupKeys[0] == null) {
-            return false;
-        }
-        final PopupKeySpec spec = popupKeys[0];
-        sTimerProxy.cancelKeyTimersOf(this);
-        mIsDetectingGesture = false;
-        setReleasedKeyGraphics(mCurrentKey, true);
-        // Emit the popup symbol, mirroring the callListenerOnCodeInput logic but without
-        // proximity correction (symbols do not need it).
-        if (spec.mCode == KeyCode.MULTIPLE_CODE_POINTS) {
-            // Multi-codepoint output (e.g. uppercase Eszett "SS"): emit as text.
-            sListener.onTextInput(spec.mOutputText);
-        } else if (spec.mCode != KeyCode.NOT_SPECIFIED) {
-            sListener.onCodeInput(spec.mCode, Constants.NOT_A_COORDINATE,
-                    Constants.NOT_A_COORDINATE, false);
-        } else if (spec.mOutputText != null) {
-            // Fallback: spec has no code but has output text.
-            sListener.onTextInput(spec.mOutputText);
-        } else {
-            // No usable output — treat as no-op; let normal handling continue.
-            return false;
-        }
-        // Prevent the base letter from being typed on finger-up.
-        cancelTrackingForAction();
-        return true;
-    }
-
-
     private void onMoveEventInternal(final int x, final int y, final long eventTime) {
         final Key oldKey = mCurrentKey;
 
@@ -1634,6 +1588,11 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 && (currentKey.getCode() == currentRepeatingKeyCode) && !isInDraggingFinger) {
             return;
         }
+        // Swipe-up-to-symbol (#32): we only get here if no glide engaged (the sInGesture path
+        // returns above), so this never preempts gliding. Decide on release.
+        if (tryEmitSwipeUpSymbol(x, y)) {
+            return;
+        }
         detectAndSendKey(currentKey, mKeyX, mKeyY, eventTime);
         // Combining-mode seeding: remember the last letter tap so a follow-up gesture can
         // seed its first pointer event with this position and time. Only letter taps qualify
@@ -1652,6 +1611,41 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (isInSlidingKeyInput) {
             callListenerOnFinishSlidingInput();
         }
+    }
+
+    /**
+     * Swipe-up-to-symbol (#32, opt-in): on finger release, if the stroke was a clear, mostly-vertical
+     * UP flick that stayed over the key it started on, emit that key's first popup symbol instead of
+     * the base letter. Called only from the single-key release path (after the gesture path has
+     * returned), so a real glide never reaches here and is never preempted. Returns true if a symbol
+     * was emitted (caller then skips the base-letter commit).
+     */
+    private boolean tryEmitSwipeUpSymbol(final int upX, final int upY) {
+        if (!Settings.getValues().mSwipeUpSymbol) return false;
+        // Top-row up-swipe opens the shortcut-row popup; leave that to tryStartShortcutRowSwipe.
+        if (mShortcutTopRowSwipeAllowed) return false;
+        final Key startKey = mSwipeUpStartKey;
+        if (startKey == null) return false;
+        final PopupKeySpec[] popupKeys = startKey.getPopupKeys();
+        if (popupKeys == null || popupKeys.length == 0 || popupKeys[0] == null) return false;
+        // Require a deliberate upward flick (>= 2 steps up), more vertical than horizontal, that did
+        // not drift more than one key width sideways (i.e. stayed over the start key's column).
+        final int dX = upX - mSwipeUpStartX;
+        final int dY = upY - mSwipeUpStartY;
+        if (dY > -2 * sPointerStep || abs(dY) <= abs(dX) || abs(dX) > startKey.getWidth()) {
+            return false;
+        }
+        final PopupKeySpec spec = popupKeys[0];
+        if (spec.mCode == KeyCode.MULTIPLE_CODE_POINTS) {
+            sListener.onTextInput(spec.mOutputText);
+        } else if (spec.mCode != KeyCode.NOT_SPECIFIED) {
+            sListener.onCodeInput(spec.mCode, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
+        } else if (spec.mOutputText != null) {
+            sListener.onTextInput(spec.mOutputText);
+        } else {
+            return false;
+        }
+        return true;
     }
 
     @Override

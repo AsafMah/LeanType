@@ -84,6 +84,7 @@ fun TwoThumbTypingScreen(
         if (dualThumbHinting) {
             add(Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT)
         }
+        add(Settings.PREF_SWIPE_UP_SYMBOL)
 
         add(R.string.settings_category_two_thumb_typing_troubleshooting)
         add(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS)
@@ -205,6 +206,10 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS,
         R.string.gesture_debug_accumulate_fragments, R.string.gesture_debug_accumulate_fragments_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS)
+    },
+    Setting(context, Settings.PREF_SWIPE_UP_SYMBOL,
+        R.string.swipe_up_symbol, R.string.swipe_up_symbol_summary) {
+        SwitchPreference(it, Defaults.PREF_SWIPE_UP_SYMBOL)
     },
 )
 

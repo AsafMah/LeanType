@@ -156,6 +156,7 @@ public class SettingsValues {
         public final boolean mAddToPersonalDictionary;
         public final boolean mFlagUnknownWords;
         public final boolean mGraduatedTrust;
+        public final boolean mSwipeUpSymbol;
         public final boolean mUseContactsDictionary;
         public final boolean mUseAppsDictionary;
         public final boolean mCustomNavBarColor;
@@ -477,6 +478,8 @@ public class SettingsValues {
                                 Defaults.PREF_FLAG_UNKNOWN_WORDS);
                 mGraduatedTrust = prefs.getBoolean(Settings.PREF_GRADUATED_TRUST,
                                 Defaults.PREF_GRADUATED_TRUST);
+                mSwipeUpSymbol = prefs.getBoolean(Settings.PREF_SWIPE_UP_SYMBOL,
+                                Defaults.PREF_SWIPE_UP_SYMBOL);
                 mUseContactsDictionary = SettingsValues.readUseContactsEnabled(prefs, context);
                 mUseAppsDictionary = prefs.getBoolean(Settings.PREF_USE_APPS, Defaults.PREF_USE_APPS);
                 mCustomNavBarColor = prefs.getBoolean(Settings.PREF_NAVBAR_COLOR, Defaults.PREF_NAVBAR_COLOR);
