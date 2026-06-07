@@ -1048,29 +1048,22 @@ public final class InputLogic {
     }
 
     /**
-     * Handles the UNDO_WORD toolbar action: reverts the last committed word back to its
-     * alternatives in the suggestion strip, as if it had not been auto-picked.
+     * Handles the UNDO_WORD toolbar action: re-opens the word the cursor is on for re-selection,
+     * showing its alternatives in the suggestion strip — exactly like tapping a committed word to
+     * re-edit it. After a gesture commit the trailing space is a pending PHANTOM space (not yet in
+     * the text), so the cursor sits right after the just-committed word and that word is the one
+     * re-opened.
      * <p>
-     * Uses the same {@link #revertCommit} + {@link #restartSuggestionsOnWordTouchedByCursor}
-     * path that backspace uses when reverting an auto-correction. Unlike the backspace path,
-     * this is an explicit user action and is therefore NOT gated by the
-     * {@code mBackspaceRevertsAutocorrect} setting, and it also fires when the committed word
-     * matches the typed word (i.e. no net text change, but alternatives are still shown).
-     * No-ops gracefully if there is no revertible committed word.
+     * Non-destructive: it does not delete or re-commit anything (unlike backspace's revertCommit,
+     * which assumes the cursor is exactly adjacent to a freshly committed word + its real separator
+     * and otherwise deletes the wrong span). {@link #restartSuggestionsOnWordTouchedByCursor}
+     * already no-ops safely when the cursor is not on a word, there is a selection, the language
+     * has no spaces, or suggestions are disabled — so this can neither corrupt text nor over-delete.
      *
      * @param inputTransaction The transaction in progress.
      */
     private void handleUndoWord(final InputTransaction inputTransaction) {
-        // canRevertCommit() covers the active + non-empty-committed-word checks (and NOT_A_COMPOSED_WORD,
-        // which is inactive). For a gesture commit didCommitTypedWord() is false, so this is true.
-        if (!mLastComposedWord.canRevertCommit()) {
-            return;
-        }
-        revertCommit(inputTransaction);
-        if (inputTransaction.getSettingsValues().needsToLookupSuggestions()
-                && inputTransaction.getSettingsValues().mSpacingAndPunctuations.mCurrentLanguageHasSpaces) {
-            restartSuggestionsOnWordTouchedByCursor(inputTransaction.getSettingsValues());
-        }
+        restartSuggestionsOnWordTouchedByCursor(inputTransaction.getSettingsValues());
     }
 
 
