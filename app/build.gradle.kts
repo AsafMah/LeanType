@@ -22,8 +22,8 @@ android {
         applicationId = "com.asafmah.leantypedual"
         minSdk = 21
         targetSdk = 35
-        versionCode = 3850
-        versionName = "3.8.5"
+        versionCode = 3860
+        versionName = "3.8.6"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
