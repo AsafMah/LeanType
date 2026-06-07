@@ -261,7 +261,7 @@ public final class PopupKeysKeyboard extends Keyboard {
          */
         public Builder(final Context context, final Key key, final Keyboard keyboard,
                 final boolean isSinglePopupKeyWithPreview, final int keyPreviewVisibleWidth,
-                final int keyPreviewVisibleHeight, final Paint paintToMeasure) {
+                final int keyPreviewVisibleHeight, final Paint paintToMeasure, final int fixedKeyWidth) {
             super(context, new PopupKeysKeyboardParams());
             mParams.mId = keyboard.mId;
             readAttributes(keyboard.mPopupKeysTemplate);
@@ -283,6 +283,11 @@ public final class PopupKeysKeyboard extends Keyboard {
                 // adjusted with their bottom paddings deducted.
                 keyWidth = keyPreviewVisibleWidth;
                 rowHeight = keyPreviewVisibleHeight + mParams.mVerticalGap;
+            } else if (fixedKeyWidth > 0) {
+                // Shortcut-row popup: force each icon to rowWidth/iconCount so the icons tile the
+                // usable-keys row and a swipe maps proportionally across it.
+                keyWidth = fixedKeyWidth;
+                rowHeight = keyboard.mMostCommonKeyHeight;
             } else {
                 final float padding = context.getResources().getDimension(
                         R.dimen.config_popup_keys_keyboard_key_horizontal_padding)
@@ -292,7 +297,7 @@ public final class PopupKeysKeyboard extends Keyboard {
                 rowHeight = keyboard.mMostCommonKeyHeight;
             }
             final int dividerWidth;
-            if (key.needsDividersInPopupKeys()) {
+            if (fixedKeyWidth <= 0 && key.needsDividersInPopupKeys()) {
                 dividerWidth = (int)(keyWidth * DIVIDER_RATIO);
             } else {
                 dividerWidth = 0;
