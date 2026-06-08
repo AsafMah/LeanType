@@ -29,6 +29,7 @@ import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getTimestampFormatter
 import helium314.keyboard.latin.utils.prefs
 import org.junit.runner.RunWith
+import org.junit.Ignore
 import org.mockito.Mockito
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
@@ -1245,6 +1246,291 @@ class InputLogicTest {
         assertEquals("test", InputLogic.getInlineEmojiSearchString(",:test"))
         assertEquals(null, InputLogic.getInlineEmojiSearchString(":test\nt"))
         assertEquals("/48", InputLogic.getInlineEmojiSearchString("2606:127.0.0.1::/48")) // do we want this?
+    }
+
+    // ------- #21 backspace corpus ---------------------------------------------------
+    // Golden-master regression safety net for the #31 backspace refactor.
+    // Each test documents the behavior CONTRACT it locks; a failing test after refactor
+    // identifies the regression. Run with:
+    //   gradlew :app:testOfflineDebugUnitTest --tests "helium314.keyboard.latin.InputLogicTest.corpus*"
+    //
+    // GESTURE-ONLY behaviors NOT covered here (gesture recognizer needed):
+    //  • Fragment pop on a COMMITTED (post-autospace) gesture word — relies on
+    //    mLastGestureCommittedFragmentLengths; only populated by onCombiningGraceExpired.
+    //  • mWordComposer.isBatchMode() whole-word delete — covered by `remove glide typing
+    //    word on delete` above; batch mode is cleared before our fragment path is taken.
+    // ---------------------------------------------------------------------------------
+
+    /**
+     * CONTRACT: DEFAULT mode — backspace removes exactly one character from the composing word.
+     * Locks the `mWordComposer.applyProcessedEvent(event)` path (~line 2532 in InputLogic.java)
+     * taken when no combining/fragment prefs are set.
+     */
+    @Test fun `corpus - default mode char-by-char backspace`() {
+        reset()
+        chainInput("hello")
+        assertEquals("hello", composingText)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hell", textBeforeCursor)
+        assertEquals("hell", composingText)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hel", textBeforeCursor)
+        assertEquals("hel", composingText)
+
+        // drain to empty — no crash, no negative length
+        functionalKeyPress(KeyCode.DELETE)
+        functionalKeyPress(KeyCode.DELETE)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", textBeforeCursor)
+        assertEquals("", text)
+    }
+
+    /**
+     * CONTRACT: DEFAULT mode — first backspace after a committed word + trailing space removes
+     * the space; subsequent backspaces shrink the re-composed word char by char.
+     */
+    @Test fun `corpus - default mode backspace after committed word and space`() {
+        reset()
+        chainInput("hello ")
+        assertEquals("hello ", text)
+        assertEquals("", composingText)
+
+        // Removes the trailing space and re-composes "hello".
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hello", text)
+        assertEquals("hello", composingText)
+
+        // Shrinks the re-composed word by one char.
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hell", text)
+        assertEquals("hell", composingText)
+    }
+
+    /**
+     * CONTRACT: DEFAULT mode — backspace from within multi-word committed text re-composes the
+     * word immediately left of the cursor and trims it char-by-char; earlier words are NOT touched.
+     */
+    @Test fun `corpus - default mode backspace into committed word recomposes and shrinks`() {
+        reset()
+        setText("hello there ")
+        assertEquals("", composingText)
+
+        // DELETE removes trailing space; "there" is re-composed.
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hello there", text)
+        assertEquals("there", composingText)
+
+        // Second DELETE shrinks "there" → "ther".
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hello ther", text)
+        assertEquals("ther", composingText)
+
+        // "hello " is never touched.
+        assertTrue(text.startsWith("hello "))
+    }
+
+    /**
+     * CONTRACT: RECOMPOSE CORRUPTION GUARD — combining whole-word delete must NOT mash the
+     * composing word into the preceding committed text.
+     *
+     * The comment at InputLogic.java line ~2519 documents the bug this path fixes:
+     *   deleteTextBeforeCursor(4) on composing "cool" in "This is pretty cool" routes through
+     *   InputConnection.deleteSurroundingText which ignores the composing span and deletes
+     *   committed text BEFORE it, yielding "This is precool".
+     * The fix: mWordComposer.reset() + commitText("", 1) clears the composing span instead.
+     *
+     * Prefs to reach this path (else if at ~line 2515):
+     *   PREF_COMBINING_GRACE_MS > 0, PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD = true,
+     *   PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT = true.
+     * The composing word "cool" is typed (not gestured) so !isBatchMode().
+     */
+    @Test fun `corpus - combining whole-word delete does not produce precool corruption`() {
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT, true)
+        }
+
+        // Type the full sentence; "cool" is the composing word after the last char.
+        chainInput("This is pretty cool")
+        assertEquals("This is pretty cool", textBeforeCursor)
+        assertEquals("cool", composingText)
+
+        // One backspace: whole composing word "cool" removed cleanly.
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("This is pretty ", textBeforeCursor)
+        assertEquals("", composingText)
+        // CORRUPTION GUARD: if deleteTextBeforeCursor were used instead of reset+commitText("",1),
+        // this would be "This is precool".
+        assertFalse(text.contains("precool"),
+            "Corruption: 'precool' found — indicates deleteTextBeforeCursor was used instead of " +
+            "mWordComposer.reset()+commitText(\"\",1). See InputLogic.java line ~2519.")
+    }
+
+    /**
+     * CONTRACT: COMBINING whole-word delete mid-sentence — composing word removed in full;
+     * preceding committed words survive intact (no word-mash).
+     */
+    @Test fun `corpus - combining whole-word delete mid-sentence leaves surrounding text intact`() {
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT, true)
+        }
+
+        // Seed editor with committed text; cursor at end → "world" is re-composed.
+        setText("hello world")
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hello ", textBeforeCursor)
+        assertFalse(text.contains("helloworld") || text.contains("hellworld"),
+            "Word mash detected after combining whole-word delete")
+    }
+
+    /**
+     * CONTRACT: FRAGMENT BACKSPACE — legacy MANUAL_SPACING mode, tap input.
+     * With per-tap fragment tracking and gesture-word delete OFF, DELETE pops the last
+     * fragment of the composing word. For tap input each fragment is one char, so the
+     * observable effect is a char-by-char shrink. Locks that fragment-mode backspace does
+     * NOT delete the whole word and does NOT mash into preceding text.
+     *
+     * Reaches tryFragmentBackspace: legacy tracking needs MANUAL_SPACING + FRAGMENT_BACKSPACE,
+     * and DELETES_GESTURE_WORD must be false (else InputLogic ~line 1339 bails to whole-word
+     * delete — which empties "hello" in one press). Asserts observable text only, not the
+     * internal boundary list, so it survives the #31 input-unit-stack refactor.
+     */
+    @Test fun `corpus - fragment backspace legacy tap pops one fragment`() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true)
+            putBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, false)
+        }
+
+        chainInput("hello")
+        assertEquals("hello", composingText)
+
+        // Fragment pop of a one-char fragment → "hell" (NOT whole-word delete to "").
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hell", textBeforeCursor)
+        assertEquals("hell", composingText)
+
+        // Continues shrinking one fragment per press, down to empty, with no word-mash.
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hel", composingText)
+        functionalKeyPress(KeyCode.DELETE)
+        functionalKeyPress(KeyCode.DELETE)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", textBeforeCursor)
+        assertEquals("", composingText)
+    }
+
+    /**
+     * CONTRACT (gesture-only, NOT JVM-reachable): in multipart combining mode a second
+     * gesture EXTENDS the composing word, and DELETE pops the whole appended gesture
+     * fragment atomically (e.g. "technology" → DELETE → "tech").
+     *
+     * @Ignore: the JVM harness cannot simulate combining-mode gesture extension. Two
+     * successive gestureInput() calls compose two independent batch words, so
+     * gestureInput("tech") then gestureInput("technology") yields composing
+     * "techtechnology" (expected:<tech[]nology> but was:<tech[tech]nology>), not an
+     * extended "technology". Real extension needs native batch timing + combining state
+     * carried across strokes. Verify on-device; kept as executable contract documentation.
+     */
+    @Ignore("gesture-only: harness cannot simulate combining gesture-extension across strokes")
+    @Test fun `corpus - fragment backspace pops gesture-sized fragment in multipart combining`() {
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, false)
+        }
+        gestureInput("tech")
+        gestureInput("technology") // would extend on-device; appends in the harness
+        assertEquals("technology", composingText)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("tech", composingText)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", composingText)
+    }
+
+    /**
+     * CONTRACT: CURSOR-FRONT recompose path — when cursor is inside a composing word
+     * (isCursorFrontOrMiddleOfComposingWord()), backspace first commits the word via
+     * resetEntireInputState then removes one char from the committed text.  No surrounding
+     * text is damaged.
+     */
+    @Test fun `corpus - cursor in middle of composing word resets then deletes one char`() {
+        reset()
+        chainInput("hello")
+        assertEquals("hello", composingText)
+        setCursorPosition(2) // cursor between 'e' and first 'l'
+
+        // With cursor inside composing word: reset + delete char at position 2.
+        // resetEntireInputState commits "hello" then deleteTextBeforeCursor(1) removes 'e'.
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("hllo", text)
+        // The word is re-composed after the delete.
+        assertEquals("hllo", composingText)
+    }
+
+    /**
+     * CONTRACT: MONOTONICITY INVARIANT — across a run of backspaces total text length is
+     * non-increasing and characters from earlier committed words never spontaneously appear.
+     * Guards against over-deletion or re-insertion bugs at word boundaries.
+     */
+    @Test fun `corpus - monotonicity repeated backspaces never increase text length`() {
+        reset()
+        chainInput("hello world")
+        val initial = text.length
+        assertTrue(initial > 0)
+
+        var prev = initial
+        // Stop at empty: the mock IC throws on delete-from-empty (real editors no-op),
+        // which is not the behavior under test.
+        var guard = initial + 5
+        while (text.isNotEmpty() && guard-- > 0) {
+            functionalKeyPress(KeyCode.DELETE)
+            val cur = text.length
+            assertTrue(cur <= prev,
+                "Text grew after backspace: $prev → $cur  text='$text'")
+            prev = cur
+        }
+        assertEquals("", text)
+    }
+
+    /**
+     * CONTRACT: MONOTONICITY INVARIANT — combining whole-word delete mode.
+     * commitText("",1) must never over-delete (removing chars from preceding words).
+     */
+    @Test fun `corpus - monotonicity combining whole-word delete never increases length`() {
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD, true)
+            putBoolean(Settings.PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT, true)
+        }
+
+        chainInput("alpha beta gamma")
+        val initial = text.length
+
+        var prev = initial
+        // Stop at empty: the mock IC throws on delete-from-empty (real editors no-op),
+        // which is not the behavior under test.
+        var guard = initial + 5
+        while (text.isNotEmpty() && guard-- > 0) {
+            functionalKeyPress(KeyCode.DELETE)
+            val cur = text.length
+            assertTrue(cur <= prev,
+                "Text grew after backspace: $prev → $cur  text='$text'")
+            prev = cur
+        }
+        assertEquals("", text)
     }
 
     // ------- helper functions ---------
