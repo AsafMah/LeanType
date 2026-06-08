@@ -432,6 +432,19 @@ public final class WordComposer {
     }
 
     /**
+     * The capitalization intent captured when this word started composing (one of the
+     * {@code CAPS_MODE_*} constants). It is seeded from auto-cap + shift state at word-start,
+     * survives {@link #reset()} (so it persists across a {@link #setBatchInputWord} rebuild), and
+     * is cleared only in {@link #commitWord}. This makes it the persistent per-word source of
+     * truth for casing — used by the live-converge re-recognition path so that re-replacing the
+     * word never loses (or latches) its case.
+     * @return the capitalized mode for the current word
+     */
+    public int getCapitalizedMode() {
+        return mCapitalizedMode;
+    }
+
+    /**
      * Before fetching suggestions, we don't necessarily know about the capitalized mode yet.
      * <p>
      * If we don't have a composing word yet, we take a note of this mode so that we can then
