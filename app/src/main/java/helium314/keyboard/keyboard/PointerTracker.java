@@ -162,6 +162,12 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         return seed;
     }
 
+    /** True while a gesture, key-swipe (space/delete), or shortcut-row swipe is in progress.
+     *  Adaptive tap biasing must be suppressed in these states (it only applies to plain taps). */
+    public static boolean isInGestureOrKeySwipe() {
+        return sInGesture || sInKeySwipe || sInShortcutRowSwipe;
+    }
+
     private static TypingTimeRecorder sTypingTimeRecorder;
 
     // The position and time at which first down event occurred.
@@ -1591,11 +1597,33 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 sLastLetterTapTime = eventTime;
                 sLastLetterTapCodepoint = code;
                 pushTapDebugPoint(mKeyX, mKeyY, mPointerId, eventTime);
+                recordAdaptiveTouchSample(currentKey, mKeyX, mKeyY);
             }
         }
         if (isInSlidingKeyInput) {
             callListenerOnFinishSlidingInput();
         }
+    }
+
+    // Adaptive typing (opt-in, see docs/ADAPTIVE_TYPING.md): fold this letter tap's landing
+    // offset (touch minus key center) into the learned per-(key, layout, orientation) model so
+    // the spatial model can later bias gesture sweet-spots toward where the user actually types.
+    // Content-free (geometry only); gated on the opt-in pref and incognito. The DAO write is async.
+    private void recordAdaptiveTouchSample(final Key key, final int x, final int y) {
+        if (key == null || x < 0 || y < 0 || mKeyboard == null) return;
+        final SettingsValues sv = Settings.getValues();
+        if (sv == null || !sv.mAdaptiveKeyGeometry || sv.mIncognitoModeEnabled) return;
+        final android.content.Context context = Settings.getCurrentContext();
+        if (context == null) return;
+        final helium314.keyboard.latin.database.TouchModelDao dao =
+                helium314.keyboard.latin.database.TouchModelDao.getInstance(context);
+        if (dao == null) return;
+        final android.graphics.Rect hitBox = key.getHitBox();
+        final float dx = x - hitBox.exactCenterX();
+        final float dy = y - hitBox.exactCenterY();
+        dao.record(key.getCode(), Integer.toString(mKeyboard.mId.mElementId),
+                context.getResources().getConfiguration().orientation, dx, dy,
+                hitBox.width(), hitBox.height(), System.currentTimeMillis());
     }
 
     @Override

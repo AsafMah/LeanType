@@ -145,6 +145,11 @@ public class SettingsValues {
         public final boolean mMultipartFullWordSuggestions;
         public final boolean mMultipartTapSeedGesture;
         public final boolean mMultipartRerecognizeTaps;
+        // Adaptive typing (opt-in): learn where the user lands and bias tap/gesture key geometry.
+        public final boolean mAdaptiveKeyGeometry;
+        public final int mAdaptiveKeyGeometryStrength;
+        public final boolean mAdaptiveContextPrior;
+        public final boolean mAdaptiveDebugOverlay;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
@@ -396,6 +401,18 @@ public class SettingsValues {
                 mMultipartRerecognizeTaps = prefs.getBoolean(
                                 Settings.PREF_MULTIPART_RERECOGNIZE_TAPS,
                                 Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS);
+                mAdaptiveKeyGeometry = prefs.getBoolean(
+                                Settings.PREF_ADAPTIVE_KEY_GEOMETRY,
+                                Defaults.PREF_ADAPTIVE_KEY_GEOMETRY);
+                mAdaptiveKeyGeometryStrength = prefs.getInt(
+                                Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH,
+                                Defaults.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH);
+                mAdaptiveContextPrior = prefs.getBoolean(
+                                Settings.PREF_ADAPTIVE_CONTEXT_PRIOR,
+                                Defaults.PREF_ADAPTIVE_CONTEXT_PRIOR);
+                mAdaptiveDebugOverlay = prefs.getBoolean(
+                                Settings.PREF_ADAPTIVE_DEBUG_OVERLAY,
+                                Defaults.PREF_ADAPTIVE_DEBUG_OVERLAY);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions

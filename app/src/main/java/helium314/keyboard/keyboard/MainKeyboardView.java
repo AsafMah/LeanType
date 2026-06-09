@@ -37,6 +37,7 @@ import helium314.keyboard.accessibility.MainKeyboardAccessibilityDelegate;
 import helium314.keyboard.compat.ConfigurationCompatKt;
 import helium314.keyboard.keyboard.internal.DrawingPreviewPlacerView;
 import helium314.keyboard.keyboard.internal.DrawingProxy;
+import helium314.keyboard.keyboard.internal.AdaptiveTargetsDrawingPreview;
 import helium314.keyboard.keyboard.internal.GestureDebugPointsDrawingPreview;
 import helium314.keyboard.keyboard.internal.GestureFloatingTextDrawingPreview;
 import helium314.keyboard.keyboard.internal.GestureTrailsDrawingPreview;
@@ -126,6 +127,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private final SlidingKeyInputDrawingPreview mSlidingKeyInputDrawingPreview;
     // Debug overlay for two-thumb point hinting (#2.1), toggled by PREF_GESTURE_DEBUG_DRAW_POINTS.
     private final GestureDebugPointsDrawingPreview mGestureDebugPointsDrawingPreview;
+    // Debug overlay visualizing adaptive typing (learned offsets + next-key prior), toggled by
+    // PREF_ADAPTIVE_DEBUG_OVERLAY. See docs/ADAPTIVE_TYPING.md.
+    private final AdaptiveTargetsDrawingPreview mAdaptiveTargetsDrawingPreview;
 
     // Key preview
     private final KeyPreviewDrawParams mKeyPreviewDrawParams;
@@ -233,6 +237,13 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         // Debug overlay last so it draws ON TOP of the gesture trail / floating preview.
         mGestureDebugPointsDrawingPreview = new GestureDebugPointsDrawingPreview();
         mGestureDebugPointsDrawingPreview.setDrawingView(drawingPreviewPlacerView);
+        // Adaptive-typing visualization overlay. Always "enabled" at the preview layer; the actual
+        // drawing is gated on its live pref each frame, so it costs nothing when toggled off. It
+        // repaints between keystrokes via the AdaptiveKeyContext change listener registered below.
+        mAdaptiveTargetsDrawingPreview = new AdaptiveTargetsDrawingPreview();
+        mAdaptiveTargetsDrawingPreview.setDrawingView(drawingPreviewPlacerView);
+        mAdaptiveTargetsDrawingPreview.setPreviewEnabled(true);
+        AdaptiveKeyContext.setChangeListener(mAdaptiveTargetsDrawingPreview::onAdaptiveContextChanged);
         mainKeyboardViewAttr.recycle();
 
         mDrawingPreviewPlacerView = drawingPreviewPlacerView;
@@ -394,6 +405,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
                 keyboard, -getPaddingLeft(), -getPaddingTop() + getVerticalCorrection());
         PointerTracker.setKeyDetector(mKeyDetector);
         mPopupKeysKeyboardCache.clear();
+        // Keys render at getX()+paddingLeft / getY()+paddingTop; hand those to the adaptive overlay
+        // so its markers line up with the drawn keys.
+        mAdaptiveTargetsDrawingPreview.setKeyboard(keyboard, getPaddingLeft(), getPaddingTop());
 
         mSpaceKey = keyboard.getKey(Constants.CODE_SPACE);
         final int keyHeight = keyboard.mMostCommonKeyHeight - keyboard.mVerticalGap;

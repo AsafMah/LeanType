@@ -6,6 +6,7 @@
 
 package com.android.inputmethod.keyboard;
 
+import android.content.Context;
 import android.graphics.Rect;
 import helium314.keyboard.latin.utils.Log;
 
@@ -14,6 +15,10 @@ import androidx.annotation.NonNull;
 import helium314.keyboard.keyboard.Key;
 import helium314.keyboard.keyboard.internal.TouchPositionCorrection;
 import helium314.keyboard.latin.common.Constants;
+import helium314.keyboard.latin.database.TouchModelDao;
+import helium314.keyboard.latin.database.TouchModelManager;
+import helium314.keyboard.latin.settings.Settings;
+import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.utils.JniUtils;
 
 import java.util.ArrayList;
@@ -48,12 +53,17 @@ public class ProximityInfo {
     private final List<Key> mSortedKeys;
     @NonNull
     private final List<Key>[] mGridNeighbors;
+    // Adaptive typing: the keyboard element this proximity info is for (e.g. alphabet vs symbols).
+    // Keys the learned touch model by (key, this element, orientation) so layouts stay separate.
+    private final int mLayoutElementId;
 
     @SuppressWarnings("unchecked")
     public ProximityInfo(final int gridWidth, final int gridHeight, final int minWidth, final int height,
             final int mostCommonKeyWidth, final int mostCommonKeyHeight,
             @NonNull final List<Key> sortedKeys,
-            @NonNull final TouchPositionCorrection touchPositionCorrection) {
+            @NonNull final TouchPositionCorrection touchPositionCorrection,
+            final int layoutElementId) {
+        mLayoutElementId = layoutElementId;
         mGridWidth = gridWidth;
         mGridHeight = gridHeight;
         mGridSize = mGridWidth * mGridHeight;
@@ -165,14 +175,34 @@ public class ProximityInfo {
             infoIndex++;
         }
 
-        if (touchPositionCorrection.isValid()) {
+        // Adaptive typing (opt-in): when enabled, shift each key's sweet-spot center by the
+        // learned per-user landing offset (capped) so the native recognizer matches swipes — and
+        // tap-correction candidates — against keys where the user's hand actually goes. This
+        // path runs even when the layout ships no static touch-position-correction data, so we
+        // still generate sweet spots in that case. The shift is computed in Java and crosses the
+        // existing JNI; no native change. See docs/ADAPTIVE_TYPING.md.
+        final boolean tpcValid = touchPositionCorrection.isValid();
+        final SettingsValues sv = Settings.getValues();
+        final boolean adaptiveOn = sv != null && sv.mAdaptiveKeyGeometry;
+        final int adaptiveStrength = sv != null ? sv.mAdaptiveKeyGeometryStrength : 0;
+        TouchModelDao adaptiveDao = null;
+        int adaptiveOrientation = 0;
+        if (adaptiveOn && adaptiveStrength > 0) {
+            final Context ctx = Settings.getCurrentContext();
+            if (ctx != null) {
+                adaptiveDao = TouchModelDao.getInstance(ctx);
+                adaptiveOrientation = ctx.getResources().getConfiguration().orientation;
+            }
+        }
+        final boolean applyAdaptive = adaptiveDao != null;
+        if (tpcValid || applyAdaptive) {
             if (DEBUG) {
-                Log.d(TAG, "touchPositionCorrection: ON");
+                Log.d(TAG, "sweet spots: ON (tpc=" + tpcValid + " adaptive=" + applyAdaptive + ")");
             }
             sweetSpotCenterXs = new float[keyCount];
             sweetSpotCenterYs = new float[keyCount];
             sweetSpotRadii = new float[keyCount];
-            final int rows = touchPositionCorrection.getRows();
+            final int rows = tpcValid ? touchPositionCorrection.getRows() : 0;
             final float defaultRadius = DEFAULT_TOUCH_POSITION_CORRECTION_RADIUS
                     * (float)Math.hypot(mMostCommonKeyWidth, mMostCommonKeyHeight);
             for (int infoIndex = 0, keyIndex = 0; keyIndex < sortedKeys.size(); keyIndex++) {
@@ -186,7 +216,7 @@ public class ProximityInfo {
                 sweetSpotCenterYs[infoIndex] = hitBox.exactCenterY();
                 sweetSpotRadii[infoIndex] = defaultRadius;
                 final int row = hitBox.top / mMostCommonKeyHeight;
-                if (row < rows) {
+                if (tpcValid && row < rows) {
                     final int hitBoxWidth = hitBox.width();
                     final int hitBoxHeight = hitBox.height();
                     final float hitBoxDiagonal = (float)Math.hypot(hitBoxWidth, hitBoxHeight);
@@ -197,11 +227,19 @@ public class ProximityInfo {
                     sweetSpotRadii[infoIndex] =
                             touchPositionCorrection.getRadius(row) * hitBoxDiagonal;
                 }
+                if (applyAdaptive) {
+                    final TouchModelDao.Stat stat = adaptiveDao.get(key.getCode(),
+                            Integer.toString(mLayoutElementId), adaptiveOrientation);
+                    final float[] off = TouchModelManager.adjustedOffset(
+                            stat, key.getWidth(), key.getHeight(), adaptiveStrength);
+                    sweetSpotCenterXs[infoIndex] += off[0];
+                    sweetSpotCenterYs[infoIndex] += off[1];
+                }
                 if (DEBUG) {
                     Log.d(TAG, String.format(Locale.US,
                             "  [%2d] row=%d x/y/r=%7.2f/%7.2f/%5.2f %s code=%s", infoIndex, row,
                             sweetSpotCenterXs[infoIndex], sweetSpotCenterYs[infoIndex],
-                            sweetSpotRadii[infoIndex], (row < rows ? "correct" : "default"),
+                            sweetSpotRadii[infoIndex], (tpcValid && row < rows ? "correct" : "default"),
                             Constants.printableCode(key.getCode())));
                 }
                 infoIndex++;
@@ -209,7 +247,7 @@ public class ProximityInfo {
         } else {
             sweetSpotCenterXs = sweetSpotCenterYs = sweetSpotRadii = null;
             if (DEBUG) {
-                Log.d(TAG, "touchPositionCorrection: OFF");
+                Log.d(TAG, "sweet spots: OFF");
             }
         }
 
