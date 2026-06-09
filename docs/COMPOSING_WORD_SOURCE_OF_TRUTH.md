@@ -47,24 +47,28 @@ one when re-recognition is needed.
 
 ## Trigger model (what (re)composes, and what doesn't)
 
-Knowing "the current word" from the editor is for **context**, not for re-typing it. The
-only thing that ever re-composes a word is **a swipe**. Concretely:
+**Re-recognition is the core feature (the Nintype behavior) and must be preserved:**
+combining taps and swipes — before, during, or after each other — into one word that
+re-resolves against the context before the cursor. The rules below govern only *when* it
+fires, so a deliberate tap is never silently reshaped:
 
-- **Taps are exact and bypass live-composition entirely.** A tapped character is inserted
-  literally, exactly as it is today — it never triggers re-recognition and never reshapes
-  the surrounding word. (This replaces the current "re-recognize taps within swiped words"
-  behavior, `PREF_MULTIPART_RERECOGNIZE_TAPS` — taps no longer fold into the stroke.)
-- **Moving the cursor into a word is context-only.** Establishing the composing region over
-  an existing word (so the engine *knows* the word at the cursor) must **not** live-compose,
-  re-recognize, or alter it. Nothing changes on screen until the user acts.
-- **Only a swipe (re)composes.** A swipe added at the cursor builds onto whatever word is
-  there — typed, swiped, or one the cursor was just moved into — by deriving that word's
-  key-center stroke from its text and merging the swipe onto it (the merged-trail path).
-  This is the single entry point to re-recognition.
+- **A swipe always (re)composes, and always carries context.** A swipe at the cursor
+  re-recognizes, pulling in the word at the cursor as context — whether that word was typed,
+  swiped, or one the cursor was just moved into. *Example: move to the end of typed "Doc",
+  swipe "ument" → re-recognizes with the "Doc" context → "Document".*
+- **A tap is exact UNLESS the current word already contains a swipe.** A tap into a word with
+  no swipe in it is literal — it never re-recognizes. *Example: move between "Do" and "c",
+  tap "g" → "Dogc", exactly.* But once the current word's composition includes a swipe, taps
+  before/during/after it **do** contribute and re-recognize — this is the combine-taps-and-
+  swipes feature, kept (today's `PREF_MULTIPART_RERECOGNIZE_TAPS`), just reimplemented on the
+  source-of-truth model.
+- **Moving the cursor is context-only.** It makes the word at the cursor *known* (so a
+  following swipe can build on it) but never re-composes on its own. The next swipe
+  re-recognizes with that context; the next bare tap (no swipe in the word) stays exact.
 
-Net: the source-of-truth model makes any word *available* to build on, but the user stays
-in control — a tap is always a tap, a cursor move is inert, and a word only re-composes
-when they deliberately swipe onto it. Space remains the word-submission point.
+Net: **swipes drive re-recognition and always carry the surrounding-word context; taps stay
+exact until a swipe is in play, then they contribute; cursor moves are inert until you act.**
+Space remains the word-submission point.
 
 ## The foundation already exists
 
@@ -100,12 +104,18 @@ through this existing machinery instead of around it.
   rebuilds its base from whatever text is actually there.
 
 ### State inventory
-- **Retire:** `mLiveStroke` and the whole tap-re-recognition feature
-  (`PREF_MULTIPART_RERECOGNIZE_TAPS`) — taps become exact again; `mGestureFragmentBoundaries`;
-  the bespoke `mInputPointers`-survives-reset contract and its clean-up patches.
-- **Keep:** `mExtendBatchInputBase` as the *mechanism* for feeding "prefix + new gesture" to
-  the recognizer (the re-timing logic stays), but the prefix is sourced from text-derived
-  geometry rather than a stored stroke. It is armed only on the swipe path.
+- **Retire as STORED state — behavior preserved:** `mLiveStroke`. The accumulated raw stroke
+  is replaced by deriving the prefix/context from the *current word's text* on demand. The
+  re-recognition it powered (taps contributing to a swipe-involving word, and swipe-on-word)
+  stays — only its source changes from a drift-prone buffer to the editor text.
+- **Retire:** `mGestureFragmentBoundaries`; the bespoke `mInputPointers`-survives-reset
+  contract and its clean-up patches.
+- **Keep the feature:** the combine-taps-and-swipes re-recognition (today gated by
+  `PREF_MULTIPART_RERECOGNIZE_TAPS`) — re-expressed statelessly. Whether it stays a toggle or
+  becomes always-on core is a follow-up decision; the behavior does not go away.
+- **Keep:** `mExtendBatchInputBase` as the *mechanism* for feeding "context prefix + new
+  input" to the recognizer (the re-timing logic stays), but the prefix is sourced from
+  text-derived key centers rather than a stored stroke.
 - **Reuse:** `getWordRangeAtCursor`, `setComposingRegion`, `setComposingWord`,
   `getCoordinatesForCurrentKeyboard`, `setCursorPositionWithinWord`.
 
@@ -115,16 +125,18 @@ through this existing machinery instead of around it.
    realign `mInputPointers` to the truncated word (rebuild from its key centers) so a
    following swipe-extend no longer merges with the pre-pop stroke. Keeps the current
    architecture; closes the fragment case the fresh-word reset doesn't cover. Small.
-2. **Prove the model (swipe-on-word).** Make a *swipe* that extends the word at the cursor
-   derive its merge base from that word's *text* via `getCoordinatesForCurrentKeyboard`,
-   instead of `mLiveStroke`. Make taps exact (drop tap re-recognition / `mLiveStroke` /
-   `PREF_MULTIPART_RERECOGNIZE_TAPS`). Validate on-device that re-recognition from synthesized
-   key-center geometry holds up. Medium.
+2. **Prove the model (re-recognition from text).** Re-express the existing re-recognition so
+   its prefix/context comes from the *current word's text* via `getCoordinatesForCurrentKeyboard`
+   instead of the stored `mLiveStroke` — for both a swipe extending the word and a tap
+   contributing to a swipe-involving word. Behavior is unchanged; the stored stroke is gone.
+   Validate on-device that re-recognition from synthesized key-center geometry holds up
+   (vs. today's real-stroke accumulation). Medium.
 3. **Generalize.** Route all multi-part composition through "composing region as source of
    truth": derive fragment boundaries from text, and support **swiping onto a word the cursor
-   was moved into** (and after a partial delete) — with the Trigger model strictly enforced
-   (cursor move = context-only; taps exact; only a swipe composes). Retire
-   `mGestureFragmentBoundaries`. Larger; the payoff phase.
+   was moved into** (and after a partial delete), pulling in its text as context. Enforce the
+   Trigger model exactly (swipe always re-recognizes with context; tap exact unless the word
+   already has a swipe; cursor move = context-only). Retire `mGestureFragmentBoundaries`.
+   Larger; the payoff phase.
 
 ## Risks / validation
 
