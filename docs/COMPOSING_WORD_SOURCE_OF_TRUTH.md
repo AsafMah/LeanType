@@ -54,8 +54,10 @@ fires, so a deliberate tap is never silently reshaped:
 
 - **A swipe always (re)composes, and always carries context.** A swipe at the cursor
   re-recognizes, pulling in the word at the cursor as context — whether that word was typed,
-  swiped, or one the cursor was just moved into. *Example: move to the end of typed "Doc",
-  swipe "ument" → re-recognizes with the "Doc" context → "Document".*
+  swiped, one the cursor was just moved into, **or one already committed to the text box**
+  (re-entered via a cursor move). *Example: move to the end of "Doc" — composing OR a
+  committed word in the field — swipe "ument" → re-recognizes with the "Doc" context →
+  "Document".* This swipe-onto-any-existing-word capability is the full payoff (Phase 3).
 - **A tap is exact UNLESS the current word already contains a swipe.** A tap into a word with
   no swipe in it is literal — it never re-recognizes. *Example: move between "Do" and "c",
   tap "g" → "Dogc", exactly.* But once the current word's composition includes a swipe, taps
@@ -132,8 +134,10 @@ through this existing machinery instead of around it.
    Validate on-device that re-recognition from synthesized key-center geometry holds up
    (vs. today's real-stroke accumulation). Medium.
 3. **Generalize.** Route all multi-part composition through "composing region as source of
-   truth": derive fragment boundaries from text, and support **swiping onto a word the cursor
-   was moved into** (and after a partial delete), pulling in its text as context. Enforce the
+   truth": derive fragment boundaries from text, and support **swiping onto any existing word
+   the cursor was moved into — including a word already committed to the text box** (and after
+   a partial delete), re-establishing the composing region over it and pulling in its text as
+   context. Enforce the
    Trigger model exactly (swipe always re-recognizes with context; tap exact unless the word
    already has a swipe; cursor move = context-only). Retire `mGestureFragmentBoundaries`.
    Larger; the payoff phase.
