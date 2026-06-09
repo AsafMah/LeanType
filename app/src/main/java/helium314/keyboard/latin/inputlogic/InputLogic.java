@@ -115,10 +115,11 @@ public final class InputLogic {
     // GESTURE-START, not gesture-end (so a long gesture doesn't lose the promotion).
     private boolean mGestureExtendsByTapPromotion;
 
-    // Snapshot of {@code keyboardSwitcher.getKeyboardShiftMode()} captured at the start of
-    // each gesture. Used by {@link #onUpdateTailBatchInputCompleted} to capitalize the
-    // recognizer's lowercase output. We can't read getKeyboardShiftMode() at gesture-end
-    // because the keyboard typically auto-clears the shifted state during the gesture.
+    // Snapshot of {@code keyboardSwitcher.getKeyboardShiftMode()} captured at the very start of
+    // each gesture, BEFORE any state mutates (a prior word may auto-commit / the shift indicator
+    // may auto-clear within onStartBatchInput). Used ONLY by the FRESH-word capitalization in
+    // {@link #onUpdateTailBatchInputCompleted}. The live-converge / multi-part EXTEND path uses the
+    // persistent {@link WordComposer#getCapitalizedMode()} instead — see that method's javadoc.
     private int mShiftModeAtGestureStart = WordComposer.CAPS_MODE_OFF;
     /** Set to true at the end of {@link #onCombiningGraceExpired} when an autospace was
      *  written, so the next punctuation tap in {@link #handleSeparatorEvent} can strip it
@@ -733,9 +734,10 @@ public final class InputLogic {
         markForceNextSpaceWordStarted();
         // Snapshot the keyboard's shift mode BEFORE any state mutates — the shifted indicator
         // typically auto-clears once the gesture starts moving, so by the time
-        // onUpdateTailBatchInputCompleted fires the live mode reads as UNSHIFTED.
-        // We compute the *actual* caps mode (resolves AUTO_SHIFTED into AUTO_SHIFT_LOCKED if
-        // the input field is in all-caps), so a true all-caps field gives the right answer.
+        // onUpdateTailBatchInputCompleted fires the live mode reads as UNSHIFTED. This drives the
+        // FRESH-word capitalization only; the EXTEND path uses WordComposer.mCapitalizedMode (the
+        // persistent per-word intent). We compute the *actual* caps mode (resolves AUTO_SHIFTED
+        // into AUTO_SHIFT_LOCKED if the input field is all-caps) so a true all-caps field is right.
         mShiftModeAtGestureStart = getActualCapsMode(settingsValues, keyboardSwitcher.getKeyboardShiftMode());
         mWordBeingCorrectedByCursor = null;
         mInputLogicHandler.onStartBatchInput();
@@ -855,8 +857,19 @@ public final class InputLogic {
             }
         }
         mConnection.endBatchEdit();
-        mWordComposer.setCapitalizedModeAtStartComposingTime(
-                getActualCapsMode(settingsValues, keyboardSwitcher.getKeyboardShiftMode()));
+        // Capture the word's casing intent ONLY when this gesture starts a fresh word. When it
+        // EXTENDS an existing composing word (multi-part swipe+swipe / manual spacing), the intent
+        // belongs to the word's first fragment and must be preserved: the keyboard auto-clears its
+        // shifted indicator after the first gesture, so re-capturing here would read UNSHIFTED and
+        // wrongly downcase a word that started capitalized ("Was"+swipe -> "wait" instead of
+        // "Wait"). mCapitalizedMode survives the setBatchInputWord rebuild and is cleared at
+        // commitWord, so leaving it untouched keeps the original intent alive across the extension.
+        // (Live-converge tap extensions bypass onStartBatchInput entirely, so they were already
+        // safe; this closes the same gap for swipe extensions.)
+        if (!extendComposingWord) {
+            mWordComposer.setCapitalizedModeAtStartComposingTime(
+                    getActualCapsMode(settingsValues, keyboardSwitcher.getKeyboardShiftMode()));
+        }
     }
 
     /*
@@ -3768,6 +3781,44 @@ public final class InputLogic {
         return true;
     }
 
+    /**
+     * Apply a word's casing INTENT to a casing-neutral lemma. Used by the live-converge
+     * (merged-trail) re-recognition path, which replaces the whole composing word on every
+     * extending tap. The recognizer's output is treated as letters only — its own casing (e.g. an
+     * all-caps dictionary acronym that the engine happened to rank first) is discarded by
+     * lowercasing — and the case is then re-derived from the persistent per-word intent
+     * ({@link WordComposer#getCapitalizedMode()}, seeded at word-start from auto-cap + shift and
+     * alive until commit). This keeps a sentence-start capital across every re-converge (issue #5)
+     * and, because the lemma is lowercased first, prevents an unsolicited all-caps result from
+     * latching the whole word in caps (issue #4).
+     *
+     * <p>Pure function of its inputs (no engine / native lib), so the casing behaviour is unit
+     * testable directly. {@code public static} for that reason.
+     *
+     * @param lemma           the recognizer's word output (casing not trusted)
+     * @param capitalizedMode one of the {@link WordComposer} {@code CAPS_MODE_*} constants
+     * @param locale          locale for case mapping
+     * @return the lemma cased to match the intent
+     */
+    public static String applyComposingCase(final String lemma, final int capitalizedMode,
+            final Locale locale) {
+        if (lemma == null || lemma.isEmpty()) return lemma;
+        final String lower = lemma.toLowerCase(locale);
+        switch (capitalizedMode) {
+            case WordComposer.CAPS_MODE_AUTO_SHIFT_LOCKED:
+            case WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED:
+                // Deliberate caps-lock (or an all-caps input field) — uppercase the whole word.
+                return lower.toUpperCase(locale);
+            case WordComposer.CAPS_MODE_AUTO_SHIFTED:
+            case WordComposer.CAPS_MODE_MANUAL_SHIFTED:
+                // Sentence-start / shift — first letter only.
+                return StringUtils.capitalizeFirstCodePoint(lower, locale);
+            default:
+                // CAPS_MODE_OFF — no intent, leave the neutral lemma lowercase.
+                return lower;
+        }
+    }
+
     private boolean textBeforeCursorMayBeUrlOrSimilar(final SettingsValues settingsValues, final Boolean forAutoSpace) {
         // URL / mail field and no space -> may be URL
         if (InputTypeUtils.isUriOrEmailType(settingsValues.mInputAttributes.mInputType) &&
@@ -3917,9 +3968,12 @@ public final class InputLogic {
         // those continuation gestures should append in the casing the user already chose for
         // the start of the word.
         if (!extendExistingCompose && !batchInputText.isEmpty()) {
-            // Use the shift mode captured at gesture-start, not the live mode — the
-            // keyboard auto-clears the shifted indicator during the gesture, so a live
-            // read here always returns UNSHIFTED.
+            // Fresh-word capitalization: use the shift mode captured at gesture-start, not the live
+            // mode — the keyboard auto-clears the shifted indicator during the gesture, so a live
+            // read here always returns UNSHIFTED. This is the long-standing path for a plain single
+            // gesture; it ADDS a capital to the recognizer's lowercase output and deliberately does
+            // NOT neutralize an intrinsic all-caps result, so a standalone acronym swipe ("CSA")
+            // stays as-is. (The EXTEND path below handles re-cased re-recognition separately.)
             final int shiftMode = mShiftModeAtGestureStart;
             if (shiftMode == WordComposer.CAPS_MODE_MANUAL_SHIFTED
                     || shiftMode == WordComposer.CAPS_MODE_AUTO_SHIFTED) {
@@ -3929,8 +3983,24 @@ public final class InputLogic {
                 batchInputText = batchInputText.toUpperCase(settingsValues.mLocale);
             }
         }
-        // Clear so a stale value from a previous gesture can't leak into a non-gesture
-        // commit later.
+        // Live-converge (#1.7) casing — gated to the merged-trail re-recognition path, so a plain
+        // single gesture (incl. a standalone acronym swipe, handled by the block above) is
+        // untouched. A merged-trail commit REPLACES the whole word with the recognizer's fresh
+        // output on every extending tap, which otherwise:
+        //   - dropped the first-letter capital the word started with (issue #5); and
+        //   - could latch an unsolicited all-caps acronym ("CSA"), which then stuck the whole word
+        //     in caps via WordComposer.isAllUpperCase forcing every later suggestion upper (#4).
+        // The fix treats the recognizer output as a casing-NEUTRAL lemma and re-applies the word's
+        // persistent intent (WordComposer.mCapitalizedMode). Lowercasing the lemma first is what
+        // dissolves #4 at the source: the composing word is never all-caps, so isAllUpperCase
+        // never arms and Suggest stops force-uppercasing — no shift-lock special-case needed.
+        if (usedMergedTrail) {
+            batchInputText = applyComposingCase(batchInputText, mWordComposer.getCapitalizedMode(),
+                    settingsValues.mLocale);
+        }
+        // Clear the fresh-word snapshot so a stale value from this gesture can't leak into a
+        // later non-gesture commit. (The persistent extend intent lives in mCapitalizedMode and
+        // is cleared by WordComposer.commitWord, not here.)
         mShiftModeAtGestureStart = WordComposer.CAPS_MODE_OFF;
         final String composedText = prevTypedWord + batchInputText;
         if (settingsValues.mGestureDebugDrawPoints) {
