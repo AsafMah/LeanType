@@ -130,6 +130,144 @@ public class WordComposerTest {
         assertTrue("base must end before the new gesture begins", times[1] < times[2]);
     }
 
+    // Phase 1 (COMPOSING_WORD_SOURCE_OF_TRUTH.md): after a fragment-pop truncates the word, the
+    // raw stroke buffer still holds the longer pre-pop geometry (reset() doesn't clear it; the
+    // length doesn't shrink). seedInputPointersFromKeyCenters realigns it to the truncated word's
+    // key centers, so a following swipe-extend merges with geometry that matches the text instead
+    // of building an ever-longer garbage word.
+    @Test
+    public void testSeedInputPointersFromKeyCentersRealignsToText() {
+        final WordComposer wordComposer = new WordComposer();
+
+        // Stale 5-point stroke left by a prior, longer word.
+        final InputPointers stale = new InputPointers(16);
+        for (int i = 0; i < 5; i++) {
+            stale.addPointer(i, i, 0, i * 10);
+        }
+        wordComposer.setBatchInputPointers(stale);
+        assertEquals(5, wordComposer.getInputPointers().getPointerSize());
+
+        // reset() deliberately does NOT clear mInputPointers — the stale buffer survives.
+        wordComposer.reset();
+        assertEquals(5, wordComposer.getInputPointers().getPointerSize());
+
+        // Realign to a 2-char truncated word's key centers (CoordinateUtils format: x0,y0,x1,y1).
+        final int[] codePoints = new int[] { 't', 'h' };
+        final int[] coords = new int[] { 100, 200, 110, 210 };
+        wordComposer.seedInputPointersFromKeyCenters(codePoints, coords);
+
+        final InputPointers result = wordComposer.getInputPointers();
+        assertEquals(2, result.getPointerSize());
+        assertEquals(100, result.getXCoordinates()[0]);
+        assertEquals(200, result.getYCoordinates()[0]);
+        assertEquals(110, result.getXCoordinates()[1]);
+        assertEquals(210, result.getYCoordinates()[1]);
+    }
+
+    // A key the layout can't resolve comes back as NOT_A_COORDINATE; feeding that to the
+    // recognizer as a real point would warp the stroke toward (-1,-1). The seed must skip it.
+    @Test
+    public void testSeedInputPointersSkipsUnresolvableKeys() {
+        final WordComposer wordComposer = new WordComposer();
+
+        final InputPointers stale = new InputPointers(16);
+        for (int i = 0; i < 5; i++) {
+            stale.addPointer(i, i, 0, i * 10);
+        }
+        wordComposer.setBatchInputPointers(stale);
+
+        // 3-char word whose middle key has no geometry on the current layout.
+        final int[] codePoints = new int[] { 't', '\'', 'h' };
+        final int[] coords = new int[] { 100, 200,
+                Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE,
+                110, 210 };
+        wordComposer.seedInputPointersFromKeyCenters(codePoints, coords);
+
+        final InputPointers result = wordComposer.getInputPointers();
+        assertEquals(2, result.getPointerSize());
+        assertEquals(100, result.getXCoordinates()[0]);
+        assertEquals(200, result.getYCoordinates()[0]);
+        assertEquals(110, result.getXCoordinates()[1]);
+        assertEquals(210, result.getYCoordinates()[1]);
+    }
+
+    // End-to-end simulation of the on-device "th ing backspace ing -> thinking" failure
+    // (fragment-pop stale stroke). Replays the exact WordComposer call sequence InputLogic
+    // makes: tap T,H -> arm extend base -> first gesture (24 pts, merged trail) ->
+    // gesture-end rebuild as "Thing" -> backspace fragment-pop ("Th" + unsetBatchMode +
+    // seed realignment) -> re-arm extend base -> second gesture (25 pts). The second
+    // gesture's merged stroke must be base(2) + batch(25) = 27 points anchored at the
+    // truncated word's key centers — NOT ~51 points carrying the popped fragment's
+    // geometry. If this passes but the device still misbehaves, the contamination lives
+    // outside WordComposer (threading / a caller repopulating the buffer).
+    @Test
+    public void testFragmentPopThenReswipeUsesSeededBaseNotStaleTrail() {
+        final WordComposer wordComposer = new WordComposer();
+
+        // Key centers for t and h (CoordinateUtils format).
+        final int T_X = 520, T_Y = 84, H_X = 637, H_Y = 230;
+        final int[] thCodePoints = new int[] { 't', 'h' };
+        final int[] thCoords = new int[] { T_X, T_Y, H_X, H_Y };
+
+        // 1. Taps T, H — the non-batch applyProcessedEvent path records tap coords.
+        wordComposer.setComposingWord(thCodePoints, thCoords);
+        assertEquals(2, wordComposer.getInputPointers().getPointerSize());
+
+        // 2. First swipe starts: InputLogic#onStartBatchInput arms the merged-trail base
+        //    from the composer's own pointers.
+        wordComposer.setExtendBatchInputBase(wordComposer.getInputPointers());
+        assertEquals(2, wordComposer.getExtendBatchInputBaseSize());
+
+        // 3. First gesture ("ing"-shaped, 24 raw points) merges onto the base.
+        final InputPointers firstGesture = new InputPointers(32);
+        for (int i = 0; i < 24; i++) {
+            firstGesture.addPointer(700 + i * 4, 100 + i * 6, 0, 2000 + i * 16);
+        }
+        wordComposer.setBatchInputPointers(firstGesture);
+        assertEquals(26, wordComposer.getInputPointers().getPointerSize());
+
+        // 4. Gesture end (onUpdateTailBatchInputCompleted): clear the base, rebuild the
+        //    composer text as the recognized word. Pointers are deliberately untouched.
+        wordComposer.setExtendBatchInputBase(null);
+        wordComposer.setBatchInputWord("Thing");
+        assertEquals(26, wordComposer.getInputPointers().getPointerSize());
+        assertTrue(wordComposer.isBatchMode());
+
+        // 5. Backspace fragment-pop (InputLogic#tryFragmentBackspace truncation branch):
+        //    rebuild as the truncated word, leave batch mode, realign the stroke buffer
+        //    to the truncated word's key centers.
+        wordComposer.setBatchInputWord("Th");
+        wordComposer.unsetBatchMode();
+        wordComposer.seedInputPointersFromKeyCenters(thCodePoints, thCoords);
+        assertEquals("after the pop the stroke buffer must hold ONLY the truncated word's"
+                + " key centers", 2, wordComposer.getInputPointers().getPointerSize());
+
+        // 6. Second swipe starts: re-arm the base from the (now seeded) pointers.
+        wordComposer.setExtendBatchInputBase(wordComposer.getInputPointers());
+        assertEquals("the re-armed base must be the 2-point seed, not the stale 26-point"
+                + " pre-pop trail", 2, wordComposer.getExtendBatchInputBaseSize());
+
+        // 7. Second gesture (re-swiped "ing", 25 raw points).
+        final InputPointers secondGesture = new InputPointers(32);
+        for (int i = 0; i < 25; i++) {
+            secondGesture.addPointer(700 + i * 4, 100 + i * 6, 0, 9000 + i * 16);
+        }
+        wordComposer.setBatchInputPointers(secondGesture);
+
+        final InputPointers merged = wordComposer.getInputPointers();
+        assertEquals("merged stroke must be seed(2) + new gesture(25)",
+                27, merged.getPointerSize());
+        // The stroke is anchored at t and h key centers, then the new gesture follows.
+        assertEquals(T_X, merged.getXCoordinates()[0]);
+        assertEquals(H_X, merged.getXCoordinates()[1]);
+        assertEquals(700, merged.getXCoordinates()[2]);
+        // Times strictly increase across the whole synthetic stroke.
+        final int[] times = merged.getTimes();
+        for (int i = 1; i < merged.getPointerSize(); i++) {
+            assertTrue("times must strictly increase at index " + i, times[i] > times[i - 1]);
+        }
+    }
+
     @Test
     public void testExtendBatchInputBaseEmptyIsNoOp() {
         final WordComposer wordComposer = new WordComposer();

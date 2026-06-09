@@ -807,6 +807,15 @@ public final class InputLogic {
                 // SettingsValues#isMultipartComposeActive.
                 if (settingsValues.isMultipartComposeActive()) {
                     mWordComposer.setExtendBatchInputBase(mWordComposer.getInputPointers());
+                    if (settingsValues.mGestureDebugDrawPoints) {
+                        // Diagnostic for the fragment-pop stale-stroke bug: the base copied
+                        // here is the exact geometry every setBatchInputPointers call will
+                        // prepend, so its size at arm time is the ground truth for whether
+                        // the seed-after-pop realignment actually stuck.
+                        Log.d(TAG, "extend arm baseSize="
+                                + mWordComposer.getExtendBatchInputBaseSize()
+                                + " composing='" + mWordComposer.getTypedWord() + "'");
+                    }
                 }
             } else if (mWordComposer.isSingleLetter() && !isInlineEmojiSearchAction()) {
                 // We auto-correct the previous (typed, not gestured) string iff it's one
@@ -1349,6 +1358,20 @@ public final class InputLogic {
             // appends correctly and the suggestion strip looks at it as typed text.
             mWordComposer.setBatchInputWord(newWord);
             mWordComposer.unsetBatchMode();
+            // Phase 1 (COMPOSING_WORD_SOURCE_OF_TRUTH.md): realign the raw stroke buffer to the
+            // truncated word's key centers. setBatchInputWord leaves mInputPointers at the
+            // longer pre-pop geometry; without this, a following swipe-extend would snapshot
+            // that stale buffer as its merged-trail base and build an ever-longer garbage word.
+            // Key lookup (Keyboard#getCoordinates -> getKey) is an exact code-point match and
+            // layouts store lowercase, so lowercase the word first — an uppercase first letter
+            // ("Th") would otherwise resolve to NOT_A_COORDINATE and drop out of the seed.
+            final int[] newCps = StringUtils.toCodePointArray(newWord.toLowerCase(sv.mLocale));
+            mWordComposer.seedInputPointersFromKeyCenters(
+                    newCps, mLatinIME.getCoordinatesForCurrentKeyboard(newCps));
+            if (sv.mGestureDebugDrawPoints) {
+                Log.d(TAG, "fragment pop '" + oldWord + "' -> '" + newWord
+                        + "' seededPointers=" + mWordComposer.getInputPointers().getPointerSize());
+            }
             setComposingTextInternal(newWord, 1);
         }
         mConnection.endBatchEdit();
@@ -3870,6 +3893,8 @@ public final class InputLogic {
                     + " top=" + batchInputText
                     + " composingBefore=" + mWordComposer.getTypedWord()
                     + " extendBase=" + mWordComposer.isExtendBatchInputBaseSet()
+                    + " baseSize=" + mWordComposer.getExtendBatchInputBaseSize()
+                    + " mergedPts=" + mWordComposer.getInputPointers().getPointerSize()
                     + " candidates=[" + candidates + "]");
         }
         // Multi-part word composition (#1.6): when the merged-trail extend-base path was

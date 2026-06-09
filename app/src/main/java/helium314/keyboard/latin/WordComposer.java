@@ -13,6 +13,7 @@ import helium314.keyboard.event.Event;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo;
 import helium314.keyboard.latin.common.ComposedData;
+import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.CoordinateUtils;
 import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.common.StringUtils;
@@ -324,6 +325,11 @@ public final class WordComposer {
         return mExtendBatchInputBaseSet;
     }
 
+    /** Diagnostic: how many points the armed merged-trail base holds (0 when not armed). */
+    public int getExtendBatchInputBaseSize() {
+        return mExtendBatchInputBaseSet ? mExtendBatchInputBase.getPointerSize() : 0;
+    }
+
     public void setBatchInputWord(final String word) {
         reset();
         mIsBatchMode = true;
@@ -334,6 +340,35 @@ public final class WordComposer {
             // (See {@link #add(int,int,int)}).
             final Event processedEvent = processEvent(Event.createEventForCodePointFromUnknownSource(codePoint));
             applyProcessedEvent(processedEvent);
+        }
+    }
+
+    /**
+     * Realign the raw stroke buffer ({@link #mInputPointers}) to a word's key centers.
+     * <p>
+     * Phase 1 of {@code docs/COMPOSING_WORD_SOURCE_OF_TRUTH.md}: after a fragment-pop /
+     * partial delete truncates the composing word, the stored stroke still holds the longer
+     * pre-edit geometry (reset() does not clear it, and addPointerAt overwrites in place
+     * without shrinking the length). A following swipe-extend would then snapshot that stale
+     * buffer as its merged-trail base and build an ever-longer word. Rebuilding the buffer
+     * from the truncated word's key centers keeps the stroke aligned with the text. This is a
+     * local preview of the broader "derive stroke from text" direction.
+     * @param codePoints the code points of the (truncated) word
+     * @param coordinates key-center x/y in CoordinateUtils format (e.g. from
+     *                    {@code getCoordinatesForCurrentKeyboard})
+     */
+    public void seedInputPointersFromKeyCenters(final int[] codePoints, final int[] coordinates) {
+        mInputPointers.reset();
+        final int count = (codePoints == null) ? 0 : codePoints.length;
+        for (int i = 0; i < count; i++) {
+            final int x = CoordinateUtils.xFromArray(coordinates, i);
+            final int y = CoordinateUtils.yFromArray(coordinates, i);
+            // A code point the current layout can't resolve (symbol, or a case mismatch in the
+            // lookup) has no key geometry. NOT_A_COORDINATE fed to the gesture recognizer as a
+            // real point would warp the whole stroke toward (-1,-1), so skip it — a slightly
+            // shorter seed is far better than a corrupted one.
+            if (x == Constants.NOT_A_COORDINATE || y == Constants.NOT_A_COORDINATE) continue;
+            mInputPointers.addPointer(x, y, 0, 0);
         }
     }
 
