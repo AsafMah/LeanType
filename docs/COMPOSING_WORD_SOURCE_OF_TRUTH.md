@@ -45,6 +45,27 @@ A word's plausible stroke is just the sequence of its keys' centers — recovera
 *text* alone. So we never need to remember a stroke across edits; we can always reconstruct
 one when re-recognition is needed.
 
+## Trigger model (what (re)composes, and what doesn't)
+
+Knowing "the current word" from the editor is for **context**, not for re-typing it. The
+only thing that ever re-composes a word is **a swipe**. Concretely:
+
+- **Taps are exact and bypass live-composition entirely.** A tapped character is inserted
+  literally, exactly as it is today — it never triggers re-recognition and never reshapes
+  the surrounding word. (This replaces the current "re-recognize taps within swiped words"
+  behavior, `PREF_MULTIPART_RERECOGNIZE_TAPS` — taps no longer fold into the stroke.)
+- **Moving the cursor into a word is context-only.** Establishing the composing region over
+  an existing word (so the engine *knows* the word at the cursor) must **not** live-compose,
+  re-recognize, or alter it. Nothing changes on screen until the user acts.
+- **Only a swipe (re)composes.** A swipe added at the cursor builds onto whatever word is
+  there — typed, swiped, or one the cursor was just moved into — by deriving that word's
+  key-center stroke from its text and merging the swipe onto it (the merged-trail path).
+  This is the single entry point to re-recognition.
+
+Net: the source-of-truth model makes any word *available* to build on, but the user stays
+in control — a tap is always a tap, a cursor move is inert, and a word only re-composes
+when they deliberately swipe onto it. Space remains the word-submission point.
+
 ## The foundation already exists
 
 HeliBoard already reconstructs a composing word from editor text when the cursor lands in a
@@ -68,21 +89,23 @@ through this existing machinery instead of around it.
 - **The word being built = the composing region in the editor.** It can be (re)established
   from any cursor position via `getWordRangeAtCursor` + `setComposingRegion`, which the
   editor already maintains.
-- **Live-converge becomes (near) stateless.** To fold a tap/gesture into the current word:
-  take the current word's *text* → synthesize its key-center stroke
-  (`getCoordinatesForCurrentKeyboard`) → append the new gesture's raw points → re-recognize.
-  No `mLiveStroke` accumulator to leak.
+- **Swipe-on-word composition becomes (near) stateless.** When a *swipe* extends the word
+  at the cursor: take that word's *text* → synthesize its key-center stroke
+  (`getCoordinatesForCurrentKeyboard`) → append the swipe's raw points → re-recognize. No
+  `mLiveStroke` accumulator to leak. Taps never enter this path (see Trigger model).
 - **Fragment boundaries become derived,** not stored. "Delete last fragment" is computed
   from the text/recognition at delete time, so there is nothing to keep in sync.
 - **Backspace, partial delete, and cursor moves stop being special cases.** Each just
-  changes the text; the next gesture rebuilds its base from whatever text is actually there.
+  changes the text (a cursor move is otherwise inert — context-only); the *next swipe*
+  rebuilds its base from whatever text is actually there.
 
 ### State inventory
-- **Retire:** `mLiveStroke`, `mGestureFragmentBoundaries`, the bespoke
-  `mInputPointers`-survives-reset contract and its clean-up patches.
+- **Retire:** `mLiveStroke` and the whole tap-re-recognition feature
+  (`PREF_MULTIPART_RERECOGNIZE_TAPS`) — taps become exact again; `mGestureFragmentBoundaries`;
+  the bespoke `mInputPointers`-survives-reset contract and its clean-up patches.
 - **Keep:** `mExtendBatchInputBase` as the *mechanism* for feeding "prefix + new gesture" to
   the recognizer (the re-timing logic stays), but the prefix is sourced from text-derived
-  geometry rather than a stored stroke.
+  geometry rather than a stored stroke. It is armed only on the swipe path.
 - **Reuse:** `getWordRangeAtCursor`, `setComposingRegion`, `setComposingWord`,
   `getCoordinatesForCurrentKeyboard`, `setCursorPositionWithinWord`.
 
@@ -92,13 +115,16 @@ through this existing machinery instead of around it.
    realign `mInputPointers` to the truncated word (rebuild from its key centers) so a
    following swipe-extend no longer merges with the pre-pop stroke. Keeps the current
    architecture; closes the fragment case the fresh-word reset doesn't cover. Small.
-2. **Prove the model.** Make live-converge derive its merge base from the *current word's
-   text* via `getCoordinatesForCurrentKeyboard`, instead of `mLiveStroke`. Validate on-device
-   that re-recognition from synthesized key-center geometry holds up. If so, delete
-   `mLiveStroke`. Medium.
+2. **Prove the model (swipe-on-word).** Make a *swipe* that extends the word at the cursor
+   derive its merge base from that word's *text* via `getCoordinatesForCurrentKeyboard`,
+   instead of `mLiveStroke`. Make taps exact (drop tap re-recognition / `mLiveStroke` /
+   `PREF_MULTIPART_RERECOGNIZE_TAPS`). Validate on-device that re-recognition from synthesized
+   key-center geometry holds up. Medium.
 3. **Generalize.** Route all multi-part composition through "composing region as source of
-   truth": derive fragment boundaries from text, support mid-word cursor + partial-delete
-   continuation, retire `mGestureFragmentBoundaries`. Larger; the payoff phase.
+   truth": derive fragment boundaries from text, and support **swiping onto a word the cursor
+   was moved into** (and after a partial delete) — with the Trigger model strictly enforced
+   (cursor move = context-only; taps exact; only a swipe composes). Retire
+   `mGestureFragmentBoundaries`. Larger; the payoff phase.
 
 ## Risks / validation
 
