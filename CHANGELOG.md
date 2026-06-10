@@ -12,7 +12,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 > records **LeanTypeDual's own releases**. Points where upstream code was merged in are noted as
 > **`Upstream`** markers; everything else is original to this fork.
 
-## [3.9.0] - Unreleased
+## [Unreleased]
+
+## [3.9.0] - 2026-06-10
 
 ### Added
 - **HCESAR keyboard layout** for Latin-script subtypes. (#74)
