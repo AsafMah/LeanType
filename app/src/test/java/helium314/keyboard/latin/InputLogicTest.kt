@@ -362,6 +362,37 @@ class InputLogicTest {
         assertEquals("hello ", textBeforeCursor)
     }
 
+    @Test fun deferredGraceSpaceMaterializesOnNextInput() {
+        // #23: with PREF_SPACING_DEFER_GRACE_SPACE on, the grace commit does NOT write the space
+        // eagerly (the default path gives "hello "); it arms PHANTOM so the space appears on the
+        // next input instead.
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_SPACING_DEFER_GRACE_SPACE, true)
+        }
+        gestureInput("hello")
+        expireCombiningGrace()
+        assertEquals("hello", textBeforeCursor)        // deferred: no trailing space yet
+        chainInput("world")
+        assertEquals("hello world", textBeforeCursor)  // materialized on the next letter
+    }
+
+    @Test fun deferredGraceCommitIsBackspaceReversible() {
+        // The deferred commit leaves no eager space to orphan; the first backspace deletes the
+        // gesture word cleanly (PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD default on).
+        reset()
+        latinIME.prefs().edit {
+            putInt(Settings.PREF_COMBINING_GRACE_MS, 1000)
+            putBoolean(Settings.PREF_SPACING_DEFER_GRACE_SPACE, true)
+        }
+        gestureInput("hello")
+        expireCombiningGrace()
+        assertEquals("hello", textBeforeCursor)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", textBeforeCursor)
+    }
+
     @Test fun tapThenGestureCombiningWordStillAutospacesWhenGestureGateEnabled() {
         reset()
         latinIME.prefs().edit {

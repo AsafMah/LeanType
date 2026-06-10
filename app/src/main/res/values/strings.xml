@@ -295,6 +295,10 @@
     <string name="two_thumb_tap_autospace_grace_summary">Add this much extra time when the last input was a tapped letter, so tap-then-swipe combinations are easier to continue.</string>
     <string name="combining_autospace_only_after_gesture">Only auto-space after swipes</string>
     <string name="combining_autospace_only_after_gesture_summary">When enabled, tap-only words are committed without an automatic space. Words that include a swipe still auto-space.</string>
+    <!-- Title of the experimental toggle that defers the two-thumb grace auto-commit space. -->
+    <string name="spacing_defer_grace_space">Defer grace space (experimental)</string>
+    <!-- Description for spacing_defer_grace_space. -->
+    <string name="spacing_defer_grace_space_summary">Route the two-thumb grace auto-commit space through the deferred mechanism (like the default swipe path) instead of writing it immediately. The space appears on your next input and stays backspace-reversible.</string>
     <!-- Title of the toggle that makes the first backspace after a gesture delete the whole word. -->
     <string name="combining_backspace_deletes_gesture_word">Backspace deletes last swipe</string>
     <!-- Description for combining_backspace_deletes_gesture_word. -->
