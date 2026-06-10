@@ -1,0 +1,8 @@
+- Two-thumb: smarter learned-word trust — a just-learned word stays below dictionary suggestions until you've used it a few times, so it won't hijack autocorrect early
+- New "undo word" toolbar key: revert the last committed word back to its suggestion alternatives
+- Add the HCESAR keyboard layout
+- Touchpad: hold near the edge to auto-scroll the cursor with acceleration
+- Toolbar: optionally swipe down on the toolbar to hide the keyboard
+- Toolbar: option to show only the toolbar when a hardware keyboard is connected
+- Two-thumb down-swipe shortcut popup now spaces its icons evenly across the row
+- Under the hood: native engine + backspace now covered by automated tests for fewer regressions

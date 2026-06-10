@@ -104,3 +104,10 @@ The roadmap lives in GitHub Project #3 ("Two-Thumb & Keyboard Roadmap", `gh proj
 - **Add** any issue/PR you create to the project, and close issues a merged PR resolves (use `Fixes #N` in the PR body, or `gh issue close` if the squash/merge message only referenced `(#N)`).
 - Field/option IDs for scripting: project `PVT_kwHOAGIGz84BZwMC`, Status field `PVTSSF_lAHOAGIGz84BZwMCzhUsrio` (Todo `f75ad846`, In Progress `47fc9ee4`, Done `98236657`); set via `gh project item-edit --id <itemId> --field-id <fieldId> --single-select-option-id <optId> --project-id <projId>`.
 This convention is loaded every session, so any agent (and future-you) is expected to follow it without being re-told.
+
+## Changelog & Releases
+Keep `CHANGELOG.md` current — it is LeanTypeDual's own history, not a per-line provenance log.
+- **Every user-facing or notable change** gets a line under `## [Unreleased]` (or the in-progress version), grouped `Added` / `Changed` / `Fixed` / `Reliability & testing`, with the `(#N)` issue/PR ref. Internal-only refactors go under `Changed`/`Reliability`; do not enumerate them in the user-facing fastlane note.
+- **Provenance is coarse, not per-entry.** Do NOT tag each line ours/LeanType/HeliBoard. When upstream code is merged in, add a single `Upstream` marker line under that release (e.g. `Upstream — merged HeliBoard 3.9`). Everything not under an `Upstream` marker is original to this fork by default. The fork-only feature set lives in the README, not the changelog.
+- **Versioning:** SemVer `versionName` in `app/build.gradle.kts`; `versionCode` follows `major*1000 + minor*100 + patch*10` (e.g. `3.9.0` → `3900`). On release, also add `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` (terse, user-facing bullets only). Release chores: `tools/release.py`.
+- On cutting a release, rename `[Unreleased]` to the version + date and start a fresh `[Unreleased]`.
