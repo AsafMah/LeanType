@@ -1799,6 +1799,11 @@ public class LatinIME extends InputMethodService implements
         mHandler.postResumeSuggestions(false);
     }
 
+    @Override
+    public void onSwipeDownOnToolbar() {
+        requestHideSelf(0);
+    }
+
     private void loadKeyboard() {
         // Since we are switching languages, the most urgent thing is to let the
         // keyboard graphics
