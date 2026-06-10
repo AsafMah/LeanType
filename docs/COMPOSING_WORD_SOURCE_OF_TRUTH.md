@@ -72,6 +72,29 @@ Net: **swipes drive re-recognition and always carry the surrounding-word context
 exact until a swipe is in play, then they contribute; cursor moves are inert until you act.**
 Space remains the word-submission point.
 
+### Current behavior (pre-Phase 3) — how cursor moves actually behave today
+
+The Trigger model above is the *target*. Until Phase 3 lands, moving the cursor onto an
+existing word behaves differently for swipe vs. tap, and this is worth knowing:
+
+- **Move the cursor into another word, or midway through a word, then SWIPE** → the keyboard
+  commits/clears the re-entered word, inserts an autospace, and **starts a brand-new word**.
+  It does *not* re-recognize the word the cursor is in. *Mechanism:* a cursor landing in the
+  front/middle of the composing word makes `isCursorFrontOrMiddleOfComposingWord()` true, so
+  `onStartBatchInput` takes the reset branch (`InputLogic.java` ~line 787); with no composing
+  word left to extend and a letter before the cursor, the autospace (`SpaceState.PHANTOM`)
+  branch fires (~line 846) and the gesture recognizes fresh.
+- **Move the cursor into/onto a word, then TAP** → you **edit that existing word** with a
+  literal character at the cursor. *Mechanism:* `tryLiveConvergeTap` returns early on the same
+  front/middle guard (and on `!mCombiningWordHasGestureFragment` for a word with no swipe in
+  it), so the tap falls through to normal literal insertion.
+
+This is *not a bug* — it's a usable split: swipe = "start fresh here," tap = "edit what's
+here." **Phase 3 is precisely what changes the swipe half**: a swipe onto a re-entered word
+would instead re-establish the composing region over that word and re-recognize *with its
+text as context* (the "move to end of `Doc`, swipe `ument` → `Document`" payoff). Whether to
+take that step — or keep today's simpler split — is an open product decision (see Phases).
+
 ## The foundation already exists
 
 HeliBoard already reconstructs a composing word from editor text when the cursor lands in a
@@ -106,10 +129,13 @@ through this existing machinery instead of around it.
   rebuilds its base from whatever text is actually there.
 
 ### State inventory
-- **Retire as STORED state — behavior preserved:** `mLiveStroke`. The accumulated raw stroke
-  is replaced by deriving the prefix/context from the *current word's text* on demand. The
-  re-recognition it powered (taps contributing to a swipe-involving word, and swipe-on-word)
-  stays — only its source changes from a drift-prone buffer to the editor text.
+- **KEEP as PRIMARY (revised after Phase 2 feel testing):** `mLiveStroke`. Originally slated
+  for retirement, but the real captured stroke re-recognizes better than synthesized
+  key-centers, so it stays as the high-fidelity primary prefix. It is **backed by** a
+  text-derived fallback (`buildStrokeFromWordText`) for when it has been invalidated, so the
+  drift it used to cause is now a graceful degradation rather than a bug: an invalid stroke
+  just means "fall back to text," not "produce garbage." The re-recognition it powers (taps
+  contributing to a swipe-involving word) is unchanged.
 - **Retire:** `mGestureFragmentBoundaries`; the bespoke `mInputPointers`-survives-reset
   contract and its clean-up patches.
 - **Keep the feature:** the combine-taps-and-swipes re-recognition (today gated by
@@ -123,16 +149,25 @@ through this existing machinery instead of around it.
 
 ## Phases (each independently shippable + on-device validated)
 
-1. **Stop the bleeding in fragment mode.** On a fragment-pop (`tryFragmentBackspace`),
-   realign `mInputPointers` to the truncated word (rebuild from its key centers) so a
-   following swipe-extend no longer merges with the pre-pop stroke. Keeps the current
-   architecture; closes the fragment case the fresh-word reset doesn't cover. Small.
-2. **Prove the model (re-recognition from text).** Re-express the existing re-recognition so
-   its prefix/context comes from the *current word's text* via `getCoordinatesForCurrentKeyboard`
-   instead of the stored `mLiveStroke` — for both a swipe extending the word and a tap
-   contributing to a swipe-involving word. Behavior is unchanged; the stored stroke is gone.
-   Validate on-device that re-recognition from synthesized key-center geometry holds up
-   (vs. today's real-stroke accumulation). Medium.
+1. **Stop the bleeding in fragment mode.** ✅ **LANDED & on-device validated.** On a
+   fragment-pop (`tryFragmentBackspace`), realign `mInputPointers` to the truncated word
+   (rebuild from its key centers via `seedInputPointersFromKeyCenters`) so a following
+   swipe-extend no longer merges with the pre-pop stroke. Keeps the current architecture;
+   closes the fragment case the fresh-word reset doesn't cover. Small. (Lowercases the word
+   before key lookup and skips `NOT_A_COORDINATE` keys — see the implementation notes.)
+2. **Add a text-derived FALLBACK for re-recognition.** ✅ **LANDED & on-device validated.**
+   *(Plan changed here based on feel testing — see note below.)* The original intent was to
+   *replace* `mLiveStroke` with text-derived geometry. On-device that felt subpar: the
+   recognizer reads the user's **real captured swipe curves** noticeably better than
+   synthesized key-centers. So instead the live-converge tap path now uses a **hybrid prefix**:
+   the real `mLiveStroke` is the high-fidelity PRIMARY, and `buildStrokeFromWordText`
+   (key-centers from the current word's text, the Phase 1 primitive) is the FALLBACK, used only
+   when the real stroke was invalidated — after a backspace, a cursor move into a word, a
+   partial delete, a commit, or a desync. Those are exactly the "we no longer know the real
+   stroke" cases; previously they dropped to literal typing, now they still re-recognize (just
+   from clean key-centers). Net: the original good feel during continuous swipe+tap building is
+   preserved, and the edit/re-entry cases degrade gracefully instead of failing. `mLiveStroke`
+   is **kept** (not retired) as the primary source. Medium.
 3. **Generalize.** Route all multi-part composition through "composing region as source of
    truth": derive fragment boundaries from text, and support **swiping onto any existing word
    the cursor was moved into — including a word already committed to the text box** (and after
