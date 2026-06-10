@@ -90,10 +90,12 @@ existing word behaves differently for swipe vs. tap, and this is worth knowing:
   it), so the tap falls through to normal literal insertion.
 
 This is *not a bug* — it's a usable split: swipe = "start fresh here," tap = "edit what's
-here." **Phase 3 is precisely what changes the swipe half**: a swipe onto a re-entered word
-would instead re-establish the composing region over that word and re-recognize *with its
-text as context* (the "move to end of `Doc`, swipe `ument` → `Document`" payoff). Whether to
-take that step — or keep today's simpler split — is an open product decision (see Phases).
+here." Phase 3 would have changed the swipe half (re-recognize the re-entered word with its
+text as context — the "move to end of `Doc`, swipe `ument` → `Document`" payoff).
+
+> **Product decision (2026-06): keep this split.** The swipe = start-fresh / tap = edit
+> behavior is the intended design, not a stepping stone. The swipe-onto-an-existing-word
+> re-recognition described in the Trigger model is **descoped** — see Phase 3 below.
 
 ## The foundation already exists
 
@@ -168,14 +170,16 @@ through this existing machinery instead of around it.
    from clean key-centers). Net: the original good feel during continuous swipe+tap building is
    preserved, and the edit/re-entry cases degrade gracefully instead of failing. `mLiveStroke`
    is **kept** (not retired) as the primary source. Medium.
-3. **Generalize.** Route all multi-part composition through "composing region as source of
-   truth": derive fragment boundaries from text, and support **swiping onto any existing word
-   the cursor was moved into — including a word already committed to the text box** (and after
-   a partial delete), re-establishing the composing region over it and pulling in its text as
-   context. Enforce the
-   Trigger model exactly (swipe always re-recognizes with context; tap exact unless the word
-   already has a swipe; cursor move = context-only). Retire `mGestureFragmentBoundaries`.
-   Larger; the payoff phase.
+3. **Generalize.** 🚫 **Descoped (2026-06) — swipe-onto-word re-recognition will NOT be
+   pursued.** The headline of this phase was supporting *swiping onto any existing word the
+   cursor was moved into* (incl. a committed word) and re-recognizing it with context. Per the
+   product decision above, today's split — **swipe at a moved cursor starts a fresh word, tap
+   edits the existing word** — is the intended behavior, so this is dropped. The Trigger
+   model's "a swipe always re-recognizes the word at the cursor" rule therefore does *not*
+   apply to a re-entered word; it governs only a word actively being built at the cursor end.
+   *Optional leftover:* deriving fragment boundaries from text to retire
+   `mGestureFragmentBoundaries` is an independent internal cleanup that could still be done on
+   its own merits, but it is no longer blocked on (or part of) a behavioral phase.
 
 ## Risks / validation
 
