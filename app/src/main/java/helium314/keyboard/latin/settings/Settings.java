@@ -157,6 +157,9 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // was a tap (peck-typists need more headroom than swipers between letters). 0 = no extra.
     public static final String PREF_COMBINING_TAP_EXTRA_MS = "combining_tap_extra_ms";
     public static final String PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE = "combining_autospace_only_after_gesture";
+    // #23: route the two-thumb grace-mode auto-commit space through the deferred PHANTOM
+    // mechanism (like the default gesture path) instead of writing it eagerly. Experimental.
+    public static final String PREF_SPACING_DEFER_GRACE_SPACE = "spacing_defer_grace_space";
     // What the suggestion strip shows after the combining grace timer auto-commits a word.
     // Values: "keep_alternatives" (1) | "next_word" (2, default) | "alternatives_then_next_word" (3).
     public static final String PREF_COMBINING_AUTOSPACE_SUGGESTIONS = "combining_autospace_suggestions";

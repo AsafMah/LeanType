@@ -69,6 +69,7 @@ fun TwoThumbTypingScreen(
             add(Settings.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE)
             add(Settings.PREF_COMBINING_AUTOCORRECT_ON_AUTOSPACE)
             add(Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS)
+            add(Settings.PREF_SPACING_DEFER_GRACE_SPACE)
         }
         if (nonNormalSpacing) {
             add(Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS)
@@ -145,6 +146,11 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
         R.string.combining_autospace_only_after_gesture,
         R.string.combining_autospace_only_after_gesture_summary) {
         SwitchPreference(it, Defaults.PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE)
+    },
+    Setting(context, Settings.PREF_SPACING_DEFER_GRACE_SPACE,
+        R.string.spacing_defer_grace_space,
+        R.string.spacing_defer_grace_space_summary) {
+        SwitchPreference(it, Defaults.PREF_SPACING_DEFER_GRACE_SPACE)
     },
     Setting(context, Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS,
         R.string.combining_autospace_suggestions, R.string.combining_autospace_suggestions_summary) { def ->
