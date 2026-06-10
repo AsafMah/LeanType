@@ -66,6 +66,7 @@ import helium314.keyboard.latin.utils.setToolbarButtonsActivatedState
 import helium314.keyboard.latin.utils.setToolbarButtonsActivatedStateOnPrefChange
 import helium314.keyboard.settings.SettingsWithoutKey
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.abs
 import kotlin.math.min
 
 @SuppressLint("InflateParams")
@@ -82,6 +83,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         fun removeExternalSuggestions()
         fun addToDictionary(word: String)
         fun blockWord(word: String)
+        fun onSwipeDownOnToolbar()
     }
 
     private val moreSuggestionsContainer: View
@@ -293,6 +295,11 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             override fun onScroll(down: MotionEvent?, me: MotionEvent, deltaX: Float, deltaY: Float): Boolean {
                 if (down == null) return false
                 val dy = me.y - down.y
+                val dx = me.x - down.x
+                if (Settings.getValues().mToolbarSwipeDownToHide && dy > 50.dpToPx(resources) && abs(dy) > abs(dx)) {
+                    listener.onSwipeDownOnToolbar()
+                    return true
+                }
                 return if (toolbarContainer.visibility != VISIBLE && deltaY > 0 && dy < (-10).dpToPx(resources)) showMoreSuggestions()
                 else false
             }
