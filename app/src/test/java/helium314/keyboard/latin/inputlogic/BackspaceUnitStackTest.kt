@@ -120,6 +120,16 @@ class BackspaceUnitStackTest {
         assertEquals(listOf(4, 7), s.copyCommittedFragmentLengths())
     }
 
+    @Test fun `setCommitted with no fragments still arms whole-word delete`() {
+        // A gesture word committed with no recorded fragments: committedLength must STILL be
+        // set (it arms the first-backspace whole-word delete) while the fragment list stays
+        // empty. The empty-list commit is the easiest place to silently drop the length.
+        val s = BackspaceUnitStack()
+        s.setCommitted(7, emptyList())
+        assertEquals(7, s.committedLength())
+        assertEquals(emptyList<Int>(), s.copyCommittedFragmentLengths())
+    }
+
     @Test fun `setCommittedFragmentLengths replaces fragments but keeps length`() {
         val s = BackspaceUnitStack()
         s.setCommitted(11, listOf(4, 7))
