@@ -80,4 +80,22 @@ class SettingsContainerTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         assertEquals("Delete last fragment", context.getString(R.string.two_thumb_backspace_fragment))
     }
+
+    @Test
+    fun touchpadEdgeScrollSettingIsRegistered() {
+        assertEquals(Settings.PREF_TOUCHPAD_EDGE_SCROLL,
+            container[Settings.PREF_TOUCHPAD_EDGE_SCROLL]?.key)
+    }
+
+    @Test
+    fun toolbarSwipeDownToHideSettingIsRegistered() {
+        assertEquals(Settings.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE,
+            container[Settings.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE]?.key)
+    }
+
+    @Test
+    fun onlyToolbarWithHardwareKeyboardSettingIsRegistered() {
+        assertEquals(Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD,
+            container[Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD]?.key)
+    }
 }

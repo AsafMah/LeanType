@@ -564,6 +564,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         includeAtLeastTwoWordSuggestions(suggestionResults, suggestionsArray, composedData.mTypedWord)
 
+        // Graduated trust (#39): runs LAST (after session boost) so it can't be undone, and caps
+        // rather than scales so the guarantee holds regardless of native score magnitudes.
+        if (Settings.getValues().mGraduatedTrust)
+            applyGraduatedTrust(suggestionResults)
+
         return suggestionResults
     }
 
@@ -638,6 +643,42 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         for (item in boosted) {
             results.add(item)
         }
+    }
+
+    /**
+     * Graduated trust (#39): cap an uncurated learned word (one in no real dictionary) just below the
+     * best real-dictionary candidate until it has been confirmed by enough repetitions. This
+     * guarantees a single misfire can't out-rank a real word with better geometry, while a
+     * deliberately repeated new word still learns and, once confirmed, keeps its full score. Runs
+     * after session boost so it can't be undone, and only when a real candidate exists to protect.
+     */
+    private fun applyGraduatedTrust(results: SuggestionResults) {
+        var maxRealScore = Int.MIN_VALUE
+        for (info in results) {
+            when (info.mSourceDict?.mDictType) {
+                Dictionary.TYPE_MAIN, Dictionary.TYPE_CONTACTS, Dictionary.TYPE_APPS, Dictionary.TYPE_USER ->
+                    if (info.mScore > maxRealScore) maxRealScore = info.mScore
+            }
+        }
+        if (maxRealScore == Int.MIN_VALUE) return // no real word to protect — keep new words offerable
+
+        val toRemove = mutableListOf<SuggestedWordInfo>()
+        val capped = mutableListOf<SuggestedWordInfo>()
+        for (info in results) {
+            if (info.mSourceDict?.mDictType != Dictionary.TYPE_USER_HISTORY) continue
+            if (info.mScore < maxRealScore) continue // already ranked below a real word
+            val word = info.mWord
+            if (word.length <= 1) continue
+            if (dictionaryGroups.any { it.isInNonHistoryDictionary(word) }) continue // curated, trust it
+            val freq = dictionaryGroups.maxOf { it.getSubDict(Dictionary.TYPE_USER_HISTORY)?.getFrequency(word) ?: -1 }
+            if (!shouldPenalizeUnconfirmedWord(true, freq)) continue
+            toRemove.add(info)
+            capped.add(SuggestedWordInfo(info.mWord, info.mPrevWordsContext, maxRealScore - 1,
+                info.mKindAndFlags, info.mSourceDict, info.mIndexOfTouchPointOfSecondWord,
+                info.mAutoCommitFirstWordConfidence))
+        }
+        for (item in toRemove) results.remove(item)
+        for (item in capped) results.add(item)
     }
 
     // Spell checker is using this, and has its own instance of DictionaryFacilitatorImpl,
@@ -725,6 +766,18 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         // Multiplier to convert session boost values into score-space (native scores are ~1_000_000)
         private const val BOOST_SCORE_MULTIPLIER = 1000f
+
+        // Graduated trust (#39): a non-dictionary learned word (one not in main/contacts/apps/the
+        // user's personal dict) that has not yet been confirmed by enough repetitions must not
+        // out-rank a real dictionary word with better geometry. Until then it is capped just below
+        // the best real candidate (see applyGraduatedTrust); once repeated past the threshold it
+        // keeps full score, so deliberate new words still get learned (slowly). History frequency
+        // rises with use (~111 after 2 uses, ~120 after 3), so 120 ≈ 3 confirmations. Tunable.
+        private const val GRAD_TRUST_CONFIRM_FREQUENCY = 120
+
+        /** Graduated-trust decision (#39): penalize an uncurated learned word until it is confirmed. */
+        fun shouldPenalizeUnconfirmedWord(isUncurated: Boolean, historyFrequency: Int): Boolean =
+            isUncurated && historyFrequency < GRAD_TRUST_CONFIRM_FREQUENCY
 
         private fun createSubDict(
             dictType: String, context: Context, locale: Locale, dictFile: File?, dictNamePrefix: String

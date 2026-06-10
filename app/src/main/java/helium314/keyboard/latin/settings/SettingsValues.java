@@ -82,6 +82,7 @@ public class SettingsValues {
         public final int mSpaceSwipeVertical;
         public final int mLanguageSwipeDistance;
         public final int mTouchpadSensitivity;
+        public final boolean mTouchpadEdgeScroll;
         public final boolean mForceAutoCaps;
         public final boolean mDeleteSwipeEnabled;
         public final boolean mShortcutRowsEnabled;
@@ -146,6 +147,7 @@ public class SettingsValues {
         public final boolean mMultipartTapSeedGesture;
         public final boolean mMultipartRerecognizeTaps;
         public final boolean mSlidingKeyInputPreviewEnabled;
+        public final boolean mRecordInputTraces;
         public final int mKeyLongpressTimeout;
         public final boolean mEnableEmojiAltPhysicalKey;
         public final boolean mIsSplitKeyboardEnabled;
@@ -154,6 +156,7 @@ public class SettingsValues {
         public final int mScreenMetrics;
         public final boolean mAddToPersonalDictionary;
         public final boolean mFlagUnknownWords;
+        public final boolean mGraduatedTrust;
         public final boolean mUseContactsDictionary;
         public final boolean mUseAppsDictionary;
         public final boolean mCustomNavBarColor;
@@ -169,6 +172,8 @@ public class SettingsValues {
         public final boolean mAutoHideToolbar;
         public final boolean mAutoHidePinnedKeys;
         public final boolean mRememberToolbarState;
+        public final boolean mToolbarSwipeDownToHide;
+        public final boolean mShowOnlyToolbarWithHardwareKeyboard;
         public final boolean mAlphaAfterEmojiInEmojiView;
         public final boolean mAlphaAfterClipHistoryEntry;
         public final boolean mAlphaAfterSymbolAndSpace;
@@ -239,6 +244,8 @@ public class SettingsValues {
                 mKeyPreviewPopupOn = prefs.getBoolean(Settings.PREF_POPUP_ON, Defaults.PREF_POPUP_ON);
                 mSlidingKeyInputPreviewEnabled = prefs.getBoolean(
                                 DebugSettings.PREF_SLIDING_KEY_INPUT_PREVIEW, Defaults.PREF_SLIDING_KEY_INPUT_PREVIEW);
+                mRecordInputTraces = prefs.getBoolean(
+                                DebugSettings.PREF_RECORD_INPUT_TRACES, Defaults.PREF_RECORD_INPUT_TRACES);
                 mShowsVoiceInputKey = mInputAttributes.mShouldShowVoiceInputKey;
                 final String languagePref = prefs.getString(Settings.PREF_LANGUAGE_SWITCH_KEY,
                                 Defaults.PREF_LANGUAGE_SWITCH_KEY);
@@ -422,6 +429,8 @@ public class SettingsValues {
                                 Defaults.PREF_LANGUAGE_SWIPE_DISTANCE);
                 mTouchpadSensitivity = prefs.getInt(Settings.PREF_TOUCHPAD_SENSITIVITY,
                                 Defaults.PREF_TOUCHPAD_SENSITIVITY);
+                mTouchpadEdgeScroll = prefs.getBoolean(Settings.PREF_TOUCHPAD_EDGE_SCROLL,
+                                Defaults.PREF_TOUCHPAD_EDGE_SCROLL);
                 mForceAutoCaps = prefs.getBoolean(Settings.PREF_FORCE_AUTO_CAPS, Defaults.PREF_FORCE_AUTO_CAPS);
                 mDeleteSwipeEnabled = prefs.getBoolean(Settings.PREF_DELETE_SWIPE, Defaults.PREF_DELETE_SWIPE);
                 mShortcutRowsEnabled = prefs.getBoolean(Settings.PREF_SHORTCUT_ROWS, Defaults.PREF_SHORTCUT_ROWS);
@@ -471,6 +480,8 @@ public class SettingsValues {
                                 Defaults.PREF_ADD_TO_PERSONAL_DICTIONARY);
                 mFlagUnknownWords = prefs.getBoolean(Settings.PREF_FLAG_UNKNOWN_WORDS,
                                 Defaults.PREF_FLAG_UNKNOWN_WORDS);
+                mGraduatedTrust = prefs.getBoolean(Settings.PREF_GRADUATED_TRUST,
+                                Defaults.PREF_GRADUATED_TRUST);
                 mUseContactsDictionary = SettingsValues.readUseContactsEnabled(prefs, context);
                 mUseAppsDictionary = prefs.getBoolean(Settings.PREF_USE_APPS, Defaults.PREF_USE_APPS);
                 mCustomNavBarColor = prefs.getBoolean(Settings.PREF_NAVBAR_COLOR, Defaults.PREF_NAVBAR_COLOR);
@@ -499,6 +510,11 @@ public class SettingsValues {
                                 && prefs.getBoolean(Settings.PREF_AUTO_HIDE_PINNED_KEYS, Defaults.PREF_AUTO_HIDE_PINNED_KEYS);
                 mRememberToolbarState = prefs.getBoolean(Settings.PREF_REMEMBER_TOOLBAR_STATE,
                                 Defaults.PREF_REMEMBER_TOOLBAR_STATE);
+                mToolbarSwipeDownToHide = prefs.getBoolean(Settings.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE,
+                                Defaults.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE);
+                mShowOnlyToolbarWithHardwareKeyboard = prefs.getBoolean(
+                                Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD,
+                                Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD);
                 // Migration: clear any old saved value and reset to default
                 if (!prefs.contains(Settings.PREF_AUTO_HIDE_PINNED_KEYS)) {
                     prefs.edit().putBoolean(Settings.PREF_AUTO_HIDE_PINNED_KEYS, Defaults.PREF_AUTO_HIDE_PINNED_KEYS).apply();

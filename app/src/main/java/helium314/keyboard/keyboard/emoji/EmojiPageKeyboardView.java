@@ -201,7 +201,7 @@ public final class EmojiPageKeyboardView extends KeyboardView implements
         Keyboard popupKeysKeyboard = mPopupKeysKeyboardCache.get(key);
         if (popupKeysKeyboard == null) {
             final PopupKeysKeyboard.Builder builder = new PopupKeysKeyboard.Builder(
-                    getContext(), key, getKeyboard(), false, 0, 0, newLabelPaint(key));
+                    getContext(), key, getKeyboard(), false, 0, 0, newLabelPaint(key), 0);
             popupKeysKeyboard = builder.build();
             mPopupKeysKeyboardCache.put(key, popupKeysKeyboard);
         }

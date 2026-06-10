@@ -331,8 +331,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private void setMainKeyboardFrame(
             @NonNull final SettingsValues settingsValues,
             @NonNull final KeyboardSwitchState toggleState) {
-        final int visibility = isImeSuppressedByHardwareKeyboard(settingsValues, toggleState) ? View.GONE
-                : View.VISIBLE;
+        final boolean suppressKeyboard = isImeSuppressedByHardwareKeyboard(settingsValues, toggleState)
+                || (settingsValues.mShowOnlyToolbarWithHardwareKeyboard && settingsValues.mHasHardwareKeyboard);
+        final int visibility = suppressKeyboard ? View.GONE : View.VISIBLE;
         final int stripVisibility = settingsValues.mToolbarMode == ToolbarMode.HIDDEN ? View.GONE : View.VISIBLE;
         mStripContainer.setVisibility(stripVisibility);
         PointerTracker.switchTo(mKeyboardView);

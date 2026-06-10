@@ -180,6 +180,7 @@ object Defaults {
     const val PREF_SPACE_TO_CHANGE_LANG = true
     const val PREF_LANGUAGE_SWIPE_DISTANCE = 5
     const val PREF_TOUCHPAD_SENSITIVITY = 50
+    const val PREF_TOUCHPAD_EDGE_SCROLL = false
     const val PREF_FORCE_AUTO_CAPS = false
     const val PREF_OFFLINE_TEMP = 0.1f  // Lower for faster, more deterministic proofreading
     const val PREF_OFFLINE_TOP_P = 0.5f  // Lower for faster token sampling
@@ -194,6 +195,7 @@ object Defaults {
     const val PREF_CLEAR_CLIPBOARD_ICON = "bin"
     const val PREF_ADD_TO_PERSONAL_DICTIONARY = true
     const val PREF_FLAG_UNKNOWN_WORDS = true
+    const val PREF_GRADUATED_TRUST = true
     @JvmField
     val PREF_NAVBAR_COLOR = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
     const val PREF_NARROW_KEY_GAPS = true
@@ -213,6 +215,8 @@ object Defaults {
     const val PREF_AUTO_HIDE_TOOLBAR = true
     const val PREF_AUTO_HIDE_PINNED_KEYS = true
     const val PREF_REMEMBER_TOOLBAR_STATE = false
+    const val PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE = false
+    const val PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD = false
     const val PREF_TOOLBAR_EXPANDED = false
     val PREF_CLIPBOARD_TOOLBAR_KEYS = defaultClipboardToolbarPref
     const val PREF_ABC_AFTER_EMOJI = false
@@ -229,6 +233,7 @@ object Defaults {
     const val PREF_SHOW_SUGGESTION_INFOS = false
     const val PREF_FORCE_NON_DISTINCT_MULTITOUCH = false
     const val PREF_SLIDING_KEY_INPUT_PREVIEW = true
+    const val PREF_RECORD_INPUT_TRACES = false
     const val PREF_USER_COLORS = "[]"
     const val PREF_USER_MORE_COLORS = 0
     const val PREF_USER_ALL_COLORS = ""

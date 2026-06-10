@@ -36,6 +36,7 @@ internal class KeyCodeDescriptionMapper private constructor() {
         put(KeyCode.ACTION_PREVIOUS, R.string.spoken_description_action_previous)
         put(KeyCode.JOIN_NEXT, R.string.spoken_description_join_next)
         put(KeyCode.FORCE_NEXT_SPACE, R.string.spoken_description_force_next_space)
+        put(KeyCode.UNDO_WORD, R.string.spoken_description_undo_word)
         put(KeyCode.EMOJI, R.string.spoken_description_emoji)
         // Because the upper-case and lower-case mappings of the following letters is depending on
         // the locale, the upper case descriptions should be defined here. The lower case

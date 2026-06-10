@@ -173,6 +173,41 @@ fun DictionaryScreen(
                     )
                 }
                 androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                // Graduated Trust Setting
+                var graduatedTrustEnabled by remember { mutableStateOf(ctx.prefs().getBoolean(Settings.PREF_GRADUATED_TRUST, Defaults.PREF_GRADUATED_TRUST)) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .padding(vertical = 4.dp, horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .clickable {
+                            val newValue = !graduatedTrustEnabled
+                            graduatedTrustEnabled = newValue
+                            ctx.prefs().edit { putBoolean(Settings.PREF_GRADUATED_TRUST, newValue) }
+                        }
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.graduated_trust),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            stringResource(R.string.graduated_trust_summary),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = graduatedTrustEnabled,
+                        onCheckedChange = {
+                            graduatedTrustEnabled = it
+                            ctx.prefs().edit { putBoolean(Settings.PREF_GRADUATED_TRUST, it) }
+                        }
+                    )
+                }
+                androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
                 
                 // Personal Dictionary Setting
                 val prefs = ctx.prefs()

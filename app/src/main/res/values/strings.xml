@@ -116,6 +116,10 @@
     <string name="flag_unknown_words">Flag unknown words</string>
     <!-- Description for the flag-unknown-words option -->
     <string name="flag_unknown_words_summary">Mark suggestions that are only learned/typed (not in a dictionary) and offer Add/Block on long-press</string>
+    <!-- Option name for graduated trust of newly learned words -->
+    <string name="graduated_trust">Graduated trust for new words</string>
+    <!-- Description for the graduated-trust option -->
+    <string name="graduated_trust_summary">A learned word that is not in a dictionary must be repeated a few times before it can outrank a real word — so a single misfire can\'t hijack your typing</string>
     <!-- Action: add the long-pressed word to the personal dictionary -->
     <string name="add_to_dictionary">Add to dictionary</string>
     <!-- Action: permanently block the long-pressed word from suggestions -->
@@ -465,6 +469,7 @@
     <string name="autospace">Autospace</string>
     <string name="join_next">Join next</string>
     <string name="force_next_space">Force next space</string>
+    <string name="undo_word">Undo word</string>
     <!-- Description for "prefs_force_incognito_mode" option. -->
     <string name="prefs_force_incognito_mode_summary">Disable learning of new words</string>
     <!-- Content description for "popup keys" suggestions view -->
@@ -1296,6 +1301,8 @@ New dictionary:
     <!-- Option to enable touchpad mode when swiping the spacebar -->
     <string name="space_swipe_touchpad_mode_entry">Touchpad mode</string>
     <string name="touchpad_sensitivity">Touchpad sensitivity</string>
+    <string name="touchpad_edge_scroll">Touchpad edge scrolling</string>
+    <string name="touchpad_edge_scroll_summary">Accelerate cursor movement when holding near the edge of the touchpad</string>
     <string name="force_auto_caps">Force auto-capitalize</string>
     <string name="force_auto_caps_title">Force auto-capitalization</string>
     <string name="force_auto_caps_summary">Force sentence capitalization on all text fields except passwords</string>
@@ -1330,6 +1337,10 @@ New dictionary:
     <string name="auto_hide_pinned_keys_summary">Hide pinned keys when the toolbar is expanded</string>
     <string name="remember_toolbar_state">Remember toolbar state</string>
     <string name="remember_toolbar_state_summary">Keep the toolbar expanded or collapsed between sessions and while typing</string>
+    <string name="toolbar_swipe_down_to_hide">Swipe down to hide</string>
+    <string name="toolbar_swipe_down_to_hide_summary">Swipe down on the toolbar to hide the keyboard</string>
+    <string name="toolbar_only_with_hw_keyboard">Only show toolbar with hardware keyboard</string>
+    <string name="toolbar_only_with_hw_keyboard_summary">When a physical keyboard is connected, show only the toolbar instead of the full on-screen keyboard</string>
     <!-- Content description for the close button in translate language selector -->
     <string name="close_translate_language_selector">Close language selector</string>
     <!-- Toast message shown when content is copied to the clipboard -->

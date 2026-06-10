@@ -127,18 +127,11 @@ public final class InputLogic {
      *  because PHANTOM would make the next letter ALSO write a space, double-spacing. */
     private boolean mAutospaceJustWritten;
 
-    // Two-thumb typing (#1.1, sub-option PREF_GESTURE_FRAGMENT_BACKSPACE): char-offsets that
-    // mark the END of each "fragment" appended to the current composing word under manual
-    // spacing. A fragment is one gesture's output OR one tap's letter. With the pref on,
-    // backspace pops the most recent fragment in one keystroke instead of deleting one
-    // character at a time. The list is kept in sync with {@code mWordComposer.getTypedWord()}:
-    // entries past the current length are filtered at read time, and the list is cleared
-    // outright whenever the composing word is committed or reset.
-    private final ArrayList<Integer> mGestureFragmentBoundaries = new ArrayList<>();
-    /** Fragment lengths within the most recent gesture-driven commit. The last entry includes
-     *  the trailing autospace if one was inserted. Used by "Delete last fragment" after the
-     *  composing word has already been auto-committed. */
-    private final ArrayList<Integer> mLastGestureCommittedFragmentLengths = new ArrayList<>();
+    // Backspace input-unit stack (#31): the single home for the fragment- / whole-word-backspace
+    // length bookkeeping. Owns both the active composing word's fragment boundaries (one entry
+    // per recorded gesture/tap fragment, kept in sync with mWordComposer.getTypedWord()) and the
+    // last committed gesture word's total + per-fragment lengths. See BackspaceUnitStack.
+    private final BackspaceUnitStack mBackspaceUnits = new BackspaceUnitStack();
 
     // ---- Unified combining-mode state machine ----------------------------------------------
     // After every composing-word-extending event (tap of a letter OR gesture completion),
@@ -956,25 +949,16 @@ public final class InputLogic {
     /** Record a fragment boundary at a known composing-word length. */
     private void recordFragmentBoundaryIfTracking(final SettingsValues sv, final int len) {
         if (!shouldTrackFragmentBoundaries(sv)) return;
-        if (len <= 0) return;
-        // Don't record duplicates (e.g. the same fragment appended twice in quick succession).
-        if (!mGestureFragmentBoundaries.isEmpty()
-                && mGestureFragmentBoundaries.get(mGestureFragmentBoundaries.size() - 1) == len) {
-            return;
-        }
-        mGestureFragmentBoundaries.add(len);
+        mBackspaceUnits.recordComposingBoundary(len);
     }
 
     /** Clear all recorded fragment boundaries. Call after committing / resetting the composing word. */
     private void clearFragmentBoundaries() {
-        if (!mGestureFragmentBoundaries.isEmpty()) mGestureFragmentBoundaries.clear();
+        mBackspaceUnits.clearComposing();
     }
 
     private void clearCommittedGestureBackspaceState() {
-        mLastGestureCommittedLength = 0;
-        if (!mLastGestureCommittedFragmentLengths.isEmpty()) {
-            mLastGestureCommittedFragmentLengths.clear();
-        }
+        mBackspaceUnits.clearCommitted();
     }
 
     // ---- Unified combining-mode helpers --------------------------------------------------
@@ -1046,6 +1030,53 @@ public final class InputLogic {
             }
         }
     }
+
+    /**
+     * Handles the UNDO_WORD toolbar action: re-opens the last word for re-selection, showing its
+     * alternatives (the gesture/autocorrect candidates) so a different one can be picked. Most useful
+     * AFTER you've pressed space to move on — the strip already shows a word's alternatives right
+     * after it is committed.
+     * <p>
+     * The candidates live in the committed text's {@link android.text.style.SuggestionSpan}s in the
+     * EDITOR ({@code mLastComposedWord.mCommittedWord} is a plain string without them). So we move the
+     * cursor to the end of the last word before the cursor (skipping a trailing space) and post a
+     * resume — the standard recorrection path then re-acquires that word and its editor spans once
+     * the cursor has settled. Non-destructive: no text is deleted. No-ops if there is no word before
+     * the cursor.
+     *
+     * @param inputTransaction The transaction in progress.
+     */
+    private void handleUndoWord(final InputTransaction inputTransaction) {
+        final SettingsValues settingsValues = inputTransaction.getSettingsValues();
+        if (!settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
+                || !settingsValues.needsToLookupSuggestions()
+                || mInputLogicHandler.isInBatchInput()
+                || mConnection.hasSelection()) {
+            return;
+        }
+        final int cursor = mConnection.getExpectedSelectionStart();
+        if (cursor <= 0) return;
+        // Find the end of the last word before the cursor, skipping a trailing separator (the space
+        // you typed to move on; after a gesture it may be a pending phantom space that is absent).
+        final CharSequence before = mConnection.getTextBeforeCursor(48, 0);
+        if (TextUtils.isEmpty(before)) return;
+        int trailing = 0;
+        while (before.length() - trailing > 0
+                && Character.isWhitespace(before.charAt(before.length() - 1 - trailing))) {
+            trailing++;
+        }
+        if (before.length() - trailing == 0) return; // only whitespace before the cursor
+        final int wordEnd = cursor - trailing;
+        // Move the cursor into that word, then resume suggestions for it once the cursor settles.
+        // restartSuggestionsOnWordTouchedByCursor reads the word's editor SuggestionSpans — the real
+        // gesture/autocorrect candidates — and shows them in the strip.
+        if (wordEnd != cursor) {
+            mConnection.setSelection(wordEnd, wordEnd);
+        }
+        mSpaceState = SpaceState.NONE;
+        mLatinIME.mHandler.postResumeSuggestions(true /* shouldDelay */);
+    }
+
 
     private void resumeWordAtCursorForJoining(final SettingsValues settingsValues) {
         final TextRange range = mConnection.getWordRangeAtCursor(settingsValues.mSpacingAndPunctuations,
@@ -1130,13 +1161,6 @@ public final class InputLogic {
      *  Cleared on any new input that arms combining mode, on cancel, on the next space tap,
      *  and after a suggestion-pick. */
     private int mAutoCommitRevertLength;
-    /** Length of the most recent gesture-driven commit (typed word + autospace). Set in
-     *  {@link #onCombiningGraceExpired} when {@code mWordComposer.isBatchMode()} was true at
-     *  commit time. Consumed by the first backspace tap when
-     *  {@code PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD} is on, deleting the whole word
-     *  + space in one keystroke (unless an autocorrect-revert applies first — that always
-     *  wins). Cleared on any new input that arms combining mode. */
-    private int mLastGestureCommittedLength;
     /** Set in {@link #onPickSuggestionManually} when the picker reverted an auto-committed
      *  word; consumed at the bottom of the same method to insert a visible trailing space so
      *  the cursor lands at "the |" instead of "the|". */
@@ -1253,8 +1277,7 @@ public final class InputLogic {
         // arm "first backspace deletes the whole word" — see handleBackspaceEvent. Stays
         // 0 for tap-only commits, where char-by-char delete is the right behavior.
         if (wordHadGestureFragment) {
-            mLastGestureCommittedLength = writtenChars;
-            mLastGestureCommittedFragmentLengths.clear();
+            final ArrayList<Integer> committedFragments = new ArrayList<>();
             if (!fragmentLengthsAtCommit.isEmpty()) {
                 final int committedDelta = committedLen - typedWordAtCommit.length();
                 final int lastIndex = fragmentLengthsAtCommit.size() - 1;
@@ -1262,13 +1285,14 @@ public final class InputLogic {
                         fragmentLengthsAtCommit.get(lastIndex) + committedDelta + autospaceChars;
                 if (adjustedLastFragmentLen > 0) {
                     fragmentLengthsAtCommit.set(lastIndex, adjustedLastFragmentLen);
-                    mLastGestureCommittedFragmentLengths.addAll(fragmentLengthsAtCommit);
+                    committedFragments.addAll(fragmentLengthsAtCommit);
                 } else if (writtenChars > 0) {
-                    mLastGestureCommittedFragmentLengths.add(writtenChars);
+                    committedFragments.add(writtenChars);
                 }
             } else if (writtenChars > 0) {
-                mLastGestureCommittedFragmentLengths.add(writtenChars);
+                committedFragments.add(writtenChars);
             }
+            mBackspaceUnits.setCommitted(writtenChars, committedFragments);
         }
         // "keep_alternatives" — fall through, do nothing.
     }
@@ -1290,7 +1314,7 @@ public final class InputLogic {
                 && sv.mGestureFragmentBackspace;
         if (!legacyTracking && !multipartTracking) return false;
         if (sv.mCombiningBackspaceDeletesGestureWord) return false;
-        if (mGestureFragmentBoundaries.isEmpty()) return false;
+        if (!mBackspaceUnits.hasComposingBoundaries()) return false;
         if (!mWordComposer.isComposingWord()) {
             clearFragmentBoundaries();
             return false;
@@ -1298,26 +1322,8 @@ public final class InputLogic {
         if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()) return false;
 
         final int currentLen = mWordComposer.getTypedWord().length();
-        // Filter out stale boundaries past the current length.
-        while (!mGestureFragmentBoundaries.isEmpty()
-                && mGestureFragmentBoundaries.get(mGestureFragmentBoundaries.size() - 1) > currentLen) {
-            mGestureFragmentBoundaries.remove(mGestureFragmentBoundaries.size() - 1);
-        }
-        if (mGestureFragmentBoundaries.isEmpty()) return false;
-
-        final int lastBoundary = mGestureFragmentBoundaries.get(mGestureFragmentBoundaries.size() - 1);
-        final int newLen;
-        if (lastBoundary == currentLen) {
-            // The last marker is the end of the current fragment. Pop it and shrink to the
-            // previous marker, or to 0 for a single-fragment word.
-            mGestureFragmentBoundaries.remove(mGestureFragmentBoundaries.size() - 1);
-            newLen = mGestureFragmentBoundaries.isEmpty()
-                    ? 0
-                    : mGestureFragmentBoundaries.get(mGestureFragmentBoundaries.size() - 1);
-        } else {
-            // Defensive fallback for words whose current fragment end was not recorded.
-            newLen = lastBoundary;
-        }
+        final int newLen = mBackspaceUnits.popComposingFragment(currentLen);
+        if (newLen < 0) return false;
 
         final String oldWord = mWordComposer.getTypedWord();
         final String newWord = newLen <= 0
@@ -1345,19 +1351,7 @@ public final class InputLogic {
     }
 
     private ArrayList<Integer> getFragmentLengthsForCommit(final int currentLen) {
-        final ArrayList<Integer> fragmentLengths = new ArrayList<>();
-        if (currentLen <= 0) return fragmentLengths;
-        int previousBoundary = 0;
-        for (int i = 0; i < mGestureFragmentBoundaries.size(); ++i) {
-            final int boundary = mGestureFragmentBoundaries.get(i);
-            if (boundary <= previousBoundary || boundary > currentLen) continue;
-            fragmentLengths.add(boundary - previousBoundary);
-            previousBoundary = boundary;
-        }
-        if (previousBoundary < currentLen) {
-            fragmentLengths.add(currentLen - previousBoundary);
-        }
-        return fragmentLengths;
+        return mBackspaceUnits.fragmentLengthsForCommit(currentLen);
     }
 
     // TODO: on the long term, this method should become private, but it will be
@@ -1665,6 +1659,9 @@ public final class InputLogic {
                 break;
             case KeyCode.FORCE_NEXT_SPACE:
                 forceSpaceBeforeNextWord(event, inputTransaction, handler);
+                break;
+            case KeyCode.UNDO_WORD:
+                handleUndoWord(inputTransaction);
                 break;
             case KeyCode.LANGUAGE_SWITCH:
                 handleLanguageSwitchKey();
@@ -2358,9 +2355,9 @@ public final class InputLogic {
         // Combining mode: snapshot the gesture-word-length flag BEFORE cancelCombiningMode
         // clears it. If non-zero (the previous commit was a gesture), this backspace MIGHT
         // delete the whole word — see further down, after the autocorrect-revert branch.
-        final int gestureCommittedLen = mLastGestureCommittedLength;
+        final int gestureCommittedLen = mBackspaceUnits.committedLength();
         final ArrayList<Integer> gestureCommittedFragmentLengths =
-                new ArrayList<>(mLastGestureCommittedFragmentLengths);
+                mBackspaceUnits.copyCommittedFragmentLengths();
         // Combining mode: a backspace always cancels the pending commit. The user is
         // explicitly retracting input; we don't want the timer to fire mid-correction.
         cancelCombiningMode();
@@ -2528,8 +2525,7 @@ public final class InputLogic {
                 mConnection.beginBatchEdit();
                 mConnection.deleteTextBeforeCursor(gestureCommittedFragmentLen);
                 mConnection.endBatchEdit();
-                mLastGestureCommittedFragmentLengths.clear();
-                mLastGestureCommittedFragmentLengths.addAll(gestureCommittedFragmentLengths);
+                mBackspaceUnits.setCommittedFragmentLengths(gestureCommittedFragmentLengths);
                 StatsUtils.onBackspaceWordDelete(gestureCommittedFragmentLen);
                 inputTransaction.setRequiresUpdateSuggestions();
                 return;
@@ -3908,6 +3904,16 @@ public final class InputLogic {
         // commit later.
         mShiftModeAtGestureStart = WordComposer.CAPS_MODE_OFF;
         final String composedText = prevTypedWord + batchInputText;
+        // Trace recorder (A3a): capture gesture trace + committed word for replay debugging.
+        // At this point composedText is the full word, mWordComposer.getInputPointers() holds
+        // the gesture trail (merged if multi-part), and the keyboard geometry is available.
+        if (settingsValues.mRecordInputTraces) {
+            helium314.keyboard.latin.utils.TraceRecorder.INSTANCE.record(
+                    mLatinIME,
+                    mWordComposer.getInputPointers(),
+                    composedText,
+                    keyboardSwitcher.getKeyboard());
+        }
         if (settingsValues.mGestureDebugDrawPoints) {
             Log.d(TAG, "batch composed='" + composedText + "'");
         }
