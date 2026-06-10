@@ -3,7 +3,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/leantype_banner_dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/images/leantype_banner_light.svg">
-  <img alt="LeanType Banner" src="docs/images/leantype_banner_light.svg">
+  <img alt="LeanTypeDual Banner" src="docs/images/leantype_banner_light.svg">
 </picture>
 
 [![Download](https://img.shields.io/github/v/release/AsafMah/LeanType?label=Download&style=for-the-badge&color=7C4DFF)](https://github.com/AsafMah/LeanType/releases/latest) [![Downloads](https://img.shields.io/github/downloads/AsafMah/LeanType/total?style=for-the-badge&color=7C4DFF&label=Downloads)](https://github.com/AsafMah/LeanType/releases) [![Stars](https://img.shields.io/github/stars/AsafMah/LeanType?style=for-the-badge&color=7C4DFF)](https://github.com/AsafMah/LeanType/stargazers)
@@ -61,17 +61,12 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 <table border="0">
   <tr>
     <td align="center" valign="middle">
-      <a href="https://github.com/LeanBitLab/HeliboardL/releases/latest">
+      <a href="https://github.com/AsafMah/LeanType/releases/latest">
         <img alt="Get it on GitHub" src="docs/images/get-it-on-github.png" height="90">
       </a>
     </td>
     <td align="center" valign="middle">
-      <a href="https://f-droid.org/en/packages/com.leanbitlab.leantype/index.html">
-        <img alt="Get it on F-Droid" src="docs/images/get-it-on-fdroid.png" height="90">
-      </a>
-    </td>
-    <td align="center" valign="middle">
-      <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/LeanBitLab/HeliboardL">
+      <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/AsafMah/LeanType">
         <img alt="Get it on Obtainium" src="docs/images/get-it-on-obtainium.png" height="60">
       </a>
     </td>

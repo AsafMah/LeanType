@@ -5,6 +5,6 @@
     .purple { fill: #7C4DFF; }
   </style>
   <text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" class="text">
-    <tspan class="dark">Lean</tspan><tspan class="purple">Type</tspan>
+    <tspan class="dark">Lean</tspan><tspan class="purple">Type</tspan><tspan class="dark">Dual</tspan>
   </text>
 </svg>
