@@ -985,6 +985,14 @@ public final class InputLogic {
         // separators / cursor-front recompositions there's nothing to auto-commit, and arming
         // the timer would draw a spurious progress bar.
         if (!mWordComposer.isComposingWord()) return;
+        // #14: "auto-finish only after swipes" — don't arm the auto-commit timer for a tap-only
+        // word (no gesture fragment yet). Pure tap-typing shouldn't get auto-finished. A
+        // tap-then-swipe word still arms: the gesture trigger re-enters here with fromTap=false
+        // once the fragment is present.
+        if (fromTap && settingsValues.mCombiningGraceOnlyAfterGesture
+                && !mCombiningWordHasGestureFragment && !mWordComposer.isBatchMode()) {
+            return;
+        }
         final int graceMs = baseGraceMs + Math.max(0, settingsValues.mCombiningTapExtraMs);
         cancelCombiningTimerOnly();
         mInCombiningMode = true;
@@ -1309,6 +1317,12 @@ public final class InputLogic {
             mBackspaceUnits.setCommitted(writtenChars, committedFragments);
         }
         // "keep_alternatives" — fall through, do nothing.
+        // #14 bug fix: this commit ran on the async grace timer, OFF the normal onCodeInput path
+        // that refreshes the shift state after a commit. Without this, the next word's auto-caps
+        // is stale — auto-caps gets dropped after a grace auto-commit and capitalization comes out
+        // erratic. Mirror the gesture-commit path's requestUpdatingShiftState.
+        KeyboardSwitcher.getInstance().requestUpdatingShiftState(
+                getCurrentAutoCapsState(sv), getCurrentRecapitalizeState());
     }
 
     /**

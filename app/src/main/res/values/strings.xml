@@ -299,6 +299,10 @@
     <string name="spacing_defer_grace_space">Defer grace space (experimental)</string>
     <!-- Description for spacing_defer_grace_space. -->
     <string name="spacing_defer_grace_space_summary">Route the two-thumb grace auto-commit space through the deferred mechanism (like the default swipe path) instead of writing it immediately. The space appears on your next input and stays backspace-reversible.</string>
+    <!-- Title of the toggle that limits the grace auto-commit timer to swiped words. -->
+    <string name="combining_grace_only_after_gesture">Auto-finish only after swipes</string>
+    <!-- Description for combining_grace_only_after_gesture. -->
+    <string name="combining_grace_only_after_gesture_summary">When enabled, the grace timer only auto-commits words that include a swipe. Words you tap out letter-by-letter are never auto-finished by the timer \u2014 tap space yourself when you\'re done.</string>
     <!-- Title of the toggle that makes the first backspace after a gesture delete the whole word. -->
     <string name="combining_backspace_deletes_gesture_word">Backspace deletes last swipe</string>
     <!-- Description for combining_backspace_deletes_gesture_word. -->
