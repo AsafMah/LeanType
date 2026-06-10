@@ -82,6 +82,7 @@ public class SettingsValues {
         public final int mSpaceSwipeVertical;
         public final int mLanguageSwipeDistance;
         public final int mTouchpadSensitivity;
+        public final boolean mTouchpadEdgeScroll;
         public final boolean mForceAutoCaps;
         public final boolean mDeleteSwipeEnabled;
         public final boolean mShortcutRowsEnabled;
@@ -171,6 +172,8 @@ public class SettingsValues {
         public final boolean mAutoHideToolbar;
         public final boolean mAutoHidePinnedKeys;
         public final boolean mRememberToolbarState;
+        public final boolean mToolbarSwipeDownToHide;
+        public final boolean mShowOnlyToolbarWithHardwareKeyboard;
         public final boolean mAlphaAfterEmojiInEmojiView;
         public final boolean mAlphaAfterClipHistoryEntry;
         public final boolean mAlphaAfterSymbolAndSpace;
@@ -426,6 +429,8 @@ public class SettingsValues {
                                 Defaults.PREF_LANGUAGE_SWIPE_DISTANCE);
                 mTouchpadSensitivity = prefs.getInt(Settings.PREF_TOUCHPAD_SENSITIVITY,
                                 Defaults.PREF_TOUCHPAD_SENSITIVITY);
+                mTouchpadEdgeScroll = prefs.getBoolean(Settings.PREF_TOUCHPAD_EDGE_SCROLL,
+                                Defaults.PREF_TOUCHPAD_EDGE_SCROLL);
                 mForceAutoCaps = prefs.getBoolean(Settings.PREF_FORCE_AUTO_CAPS, Defaults.PREF_FORCE_AUTO_CAPS);
                 mDeleteSwipeEnabled = prefs.getBoolean(Settings.PREF_DELETE_SWIPE, Defaults.PREF_DELETE_SWIPE);
                 mShortcutRowsEnabled = prefs.getBoolean(Settings.PREF_SHORTCUT_ROWS, Defaults.PREF_SHORTCUT_ROWS);
@@ -505,6 +510,11 @@ public class SettingsValues {
                                 && prefs.getBoolean(Settings.PREF_AUTO_HIDE_PINNED_KEYS, Defaults.PREF_AUTO_HIDE_PINNED_KEYS);
                 mRememberToolbarState = prefs.getBoolean(Settings.PREF_REMEMBER_TOOLBAR_STATE,
                                 Defaults.PREF_REMEMBER_TOOLBAR_STATE);
+                mToolbarSwipeDownToHide = prefs.getBoolean(Settings.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE,
+                                Defaults.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE);
+                mShowOnlyToolbarWithHardwareKeyboard = prefs.getBoolean(
+                                Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD,
+                                Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD);
                 // Migration: clear any old saved value and reset to default
                 if (!prefs.contains(Settings.PREF_AUTO_HIDE_PINNED_KEYS)) {
                     prefs.edit().putBoolean(Settings.PREF_AUTO_HIDE_PINNED_KEYS, Defaults.PREF_AUTO_HIDE_PINNED_KEYS).apply();

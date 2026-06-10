@@ -1301,6 +1301,8 @@ New dictionary:
     <!-- Option to enable touchpad mode when swiping the spacebar -->
     <string name="space_swipe_touchpad_mode_entry">Touchpad mode</string>
     <string name="touchpad_sensitivity">Touchpad sensitivity</string>
+    <string name="touchpad_edge_scroll">Touchpad edge scrolling</string>
+    <string name="touchpad_edge_scroll_summary">Accelerate cursor movement when holding near the edge of the touchpad</string>
     <string name="force_auto_caps">Force auto-capitalize</string>
     <string name="force_auto_caps_title">Force auto-capitalization</string>
     <string name="force_auto_caps_summary">Force sentence capitalization on all text fields except passwords</string>
@@ -1335,6 +1337,10 @@ New dictionary:
     <string name="auto_hide_pinned_keys_summary">Hide pinned keys when the toolbar is expanded</string>
     <string name="remember_toolbar_state">Remember toolbar state</string>
     <string name="remember_toolbar_state_summary">Keep the toolbar expanded or collapsed between sessions and while typing</string>
+    <string name="toolbar_swipe_down_to_hide">Swipe down to hide</string>
+    <string name="toolbar_swipe_down_to_hide_summary">Swipe down on the toolbar to hide the keyboard</string>
+    <string name="toolbar_only_with_hw_keyboard">Only show toolbar with hardware keyboard</string>
+    <string name="toolbar_only_with_hw_keyboard_summary">When a physical keyboard is connected, show only the toolbar instead of the full on-screen keyboard</string>
     <!-- Content description for the close button in translate language selector -->
     <string name="close_translate_language_selector">Close language selector</string>
     <!-- Toast message shown when content is copied to the clipboard -->
