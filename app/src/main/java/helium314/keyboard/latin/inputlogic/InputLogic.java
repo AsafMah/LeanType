@@ -95,6 +95,11 @@ public final class InputLogic {
     private int mSpaceState;
     // Never null
     private SuggestedWords mSuggestedWords = SuggestedWords.getEmptyInstance();
+    // #14 spacing-policy signals — recomputed every keystroke from the suggestion results at zero
+    // extra native cost (see computeSpacingSignals / setSuggestedWords). Consumed by the upcoming
+    // signal-driven grace + two-gate Assisted-tier logic.
+    private boolean mSpacingComplete;        // typed word is a real dictionary word
+    private float mSpacingPrefixRichScore;   // fraction of candidates that are completions [0..1]
     private final Suggest mSuggest;
     private final DictionaryFacilitator mDictionaryFacilitator;
     private SingleDictionaryFacilitator mEmojiDictionaryFacilitator;
@@ -1399,6 +1404,9 @@ public final class InputLogic {
             mWordComposer.setAutoCorrection(suggestedWordInfo);
         }
         mSuggestedWords = suggestedWords;
+        final SpacingSignals spacingSignals = computeSpacingSignals(suggestedWords);
+        mSpacingComplete = spacingSignals.complete;
+        mSpacingPrefixRichScore = spacingSignals.prefixRichScore;
         final boolean newAutoCorrectionIndicator = suggestedWords.mWillAutoCorrect;
 
         // Put a blue underline to a word in TextView which will be auto-corrected.
@@ -1414,6 +1422,43 @@ public final class InputLogic {
             // the practice.
             setComposingTextInternal(textWithUnderline, 1);
         }
+    }
+
+    /**
+     * #14 spacing-policy signals derived from the current suggestion results, computed every
+     * keystroke at zero extra native cost.
+     * <ul>
+     *   <li>{@code complete} — the typed word is a real dictionary word (valid AND not just
+     *       user-typed). A confident "this is a finished word".</li>
+     *   <li>{@code prefixRichScore} — fraction of candidates that are completions (longer words
+     *       sharing this stem), in [0..1]. High = lots left to extend to (keep the word open);
+     *       low = little left (safe to auto-commit).</li>
+     * </ul>
+     * Static + pure so it can be unit-tested without a live InputLogic.
+     */
+    static final class SpacingSignals {
+        final boolean complete;
+        final float prefixRichScore;
+        SpacingSignals(final boolean complete, final float prefixRichScore) {
+            this.complete = complete;
+            this.prefixRichScore = prefixRichScore;
+        }
+    }
+
+    static SpacingSignals computeSpacingSignals(final SuggestedWords suggestedWords) {
+        final int n = suggestedWords.size();
+        if (n == 0) return new SpacingSignals(false, 0f);
+        final SuggestedWordInfo typed = suggestedWords.mTypedWordInfo;
+        final boolean complete = suggestedWords.mTypedWordValid
+                && typed != null && typed.mSourceDict != null
+                && !Dictionary.TYPE_USER_TYPED.equals(typed.mSourceDict.mDictType);
+        int completions = 0;
+        for (int i = 0; i < n; i++) {
+            if (suggestedWords.getInfo(i).getKind() == SuggestedWordInfo.KIND_COMPLETION) {
+                completions++;
+            }
+        }
+        return new SpacingSignals(complete, (float) completions / n);
     }
 
     /**
