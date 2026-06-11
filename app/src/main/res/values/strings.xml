@@ -303,6 +303,13 @@
     <string name="combining_grace_only_after_gesture">Only auto-finish swiped words</string>
     <!-- Description for combining_grace_only_after_gesture. -->
     <string name="combining_grace_only_after_gesture_summary">The pause timer auto-commits a word only when it includes a swipe. Words you tap out stay open until you press space or pick a suggestion, so tapped shortcuts and corrections won\'t fire early. On by default \u2014 this controls whether the word commits (the auto-space option above only controls the trailing space).</string>
+    <!-- #24 signal-driven grace toggle + its two tuning sliders (experimental). -->
+    <string name="spacing_signal_driven_grace">Adapt pause to the word (experimental)</string>
+    <string name="spacing_signal_driven_grace_summary">Vary the auto-finish pause by what you\'re typing: a finished dictionary word commits sooner, while a stem that many longer words start with waits longer. Tune the two amounts below.</string>
+    <string name="spacing_complete_bonus">Finished-word speed-up</string>
+    <string name="spacing_complete_bonus_summary">How much sooner a complete dictionary word auto-finishes.</string>
+    <string name="spacing_prefix_penalty">Extendable-stem patience</string>
+    <string name="spacing_prefix_penalty_summary">Extra wait when many longer words start with what you\'ve typed (so you can keep going).</string>
     <!-- Title of the toggle that makes the first backspace after a gesture delete the whole word. -->
     <string name="combining_backspace_deletes_gesture_word">Backspace deletes last swipe</string>
     <!-- Description for combining_backspace_deletes_gesture_word. -->

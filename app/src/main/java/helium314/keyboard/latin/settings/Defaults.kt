@@ -151,6 +151,9 @@ object Defaults {
     const val PREF_COMBINING_AUTOSPACE_ONLY_AFTER_GESTURE = false
     const val PREF_SPACING_DEFER_GRACE_SPACE = false
     const val PREF_COMBINING_GRACE_ONLY_AFTER_GESTURE = true // default on: tapped words shouldn't auto-finish
+    const val PREF_SPACING_SIGNAL_DRIVEN_GRACE = false
+    const val PREF_SPACING_COMPLETE_BONUS_MS = 200   // complete word commits this much sooner
+    const val PREF_SPACING_PREFIX_PENALTY_MS = 400   // max extra wait when fully prefix-rich
     const val PREF_COMBINING_AUTOSPACE_SUGGESTIONS = "alternatives_then_next_word"
     const val PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD = true
     const val PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT = true

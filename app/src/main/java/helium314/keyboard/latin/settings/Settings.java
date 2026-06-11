@@ -163,6 +163,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // #14: when on, the combining grace timer only auto-commits words that include a swipe —
     // pure tap-typed words are never auto-finished by the timer. Experimental, default off.
     public static final String PREF_COMBINING_GRACE_ONLY_AFTER_GESTURE = "combining_grace_only_after_gesture";
+    // #14/#24 signal-driven grace: vary the grace-timer duration by the per-keystroke word-state
+    // signals (complete / prefix-richness) instead of a fixed value. Experimental, default off.
+    public static final String PREF_SPACING_SIGNAL_DRIVEN_GRACE = "spacing_signal_driven_grace";
+    public static final String PREF_SPACING_COMPLETE_BONUS_MS = "spacing_complete_bonus_ms";
+    public static final String PREF_SPACING_PREFIX_PENALTY_MS = "spacing_prefix_penalty_ms";
     // What the suggestion strip shows after the combining grace timer auto-commits a word.
     // Values: "keep_alternatives" (1) | "next_word" (2, default) | "alternatives_then_next_word" (3).
     public static final String PREF_COMBINING_AUTOSPACE_SUGGESTIONS = "combining_autospace_suggestions";

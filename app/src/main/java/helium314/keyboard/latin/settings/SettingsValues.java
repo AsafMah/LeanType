@@ -139,6 +139,9 @@ public class SettingsValues {
         public final boolean mCombiningAutospaceOnlyAfterGesture;
         public final boolean mSpacingDeferGraceSpace;
         public final boolean mCombiningGraceOnlyAfterGesture;
+        public final boolean mSpacingSignalDrivenGrace;
+        public final int mSpacingCompleteBonusMs;
+        public final int mSpacingPrefixPenaltyMs;
         // Raw string value: "keep_alternatives" | "next_word" | "alternatives_then_next_word"
         public final String mCombiningAutospaceSuggestions;
         public final boolean mCombiningBackspaceDeletesGestureWord;
@@ -390,6 +393,13 @@ public class SettingsValues {
                 mCombiningGraceOnlyAfterGesture = prefs.getBoolean(
                                 Settings.PREF_COMBINING_GRACE_ONLY_AFTER_GESTURE,
                                 Defaults.PREF_COMBINING_GRACE_ONLY_AFTER_GESTURE);
+                mSpacingSignalDrivenGrace = prefs.getBoolean(
+                                Settings.PREF_SPACING_SIGNAL_DRIVEN_GRACE,
+                                Defaults.PREF_SPACING_SIGNAL_DRIVEN_GRACE);
+                mSpacingCompleteBonusMs = prefs.getInt(Settings.PREF_SPACING_COMPLETE_BONUS_MS,
+                                Defaults.PREF_SPACING_COMPLETE_BONUS_MS);
+                mSpacingPrefixPenaltyMs = prefs.getInt(Settings.PREF_SPACING_PREFIX_PENALTY_MS,
+                                Defaults.PREF_SPACING_PREFIX_PENALTY_MS);
                 mCombiningAutospaceSuggestions = prefs.getString(Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS,
                                 Defaults.PREF_COMBINING_AUTOSPACE_SUGGESTIONS);
                 final boolean nonNormalTwoThumbSpacing = mGestureManualSpacing || mCombiningGraceMs > 0;

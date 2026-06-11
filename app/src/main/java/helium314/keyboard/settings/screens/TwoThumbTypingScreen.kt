@@ -71,6 +71,9 @@ fun TwoThumbTypingScreen(
             add(Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS)
             add(Settings.PREF_SPACING_DEFER_GRACE_SPACE)
             add(Settings.PREF_COMBINING_GRACE_ONLY_AFTER_GESTURE)
+            add(Settings.PREF_SPACING_SIGNAL_DRIVEN_GRACE)
+            add(Settings.PREF_SPACING_COMPLETE_BONUS_MS)
+            add(Settings.PREF_SPACING_PREFIX_PENALTY_MS)
         }
         if (nonNormalSpacing) {
             add(Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS)
@@ -157,6 +160,30 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
         R.string.combining_grace_only_after_gesture,
         R.string.combining_grace_only_after_gesture_summary) {
         SwitchPreference(it, Defaults.PREF_COMBINING_GRACE_ONLY_AFTER_GESTURE)
+    },
+    Setting(context, Settings.PREF_SPACING_SIGNAL_DRIVEN_GRACE,
+        R.string.spacing_signal_driven_grace, R.string.spacing_signal_driven_grace_summary) {
+        SwitchPreference(it, Defaults.PREF_SPACING_SIGNAL_DRIVEN_GRACE)
+    },
+    Setting(context, Settings.PREF_SPACING_COMPLETE_BONUS_MS,
+        R.string.spacing_complete_bonus, R.string.spacing_complete_bonus_summary) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_SPACING_COMPLETE_BONUS_MS,
+            range = 0f..1000f,
+            description = { stringResource(R.string.abbreviation_unit_milliseconds, it.toString()) }
+        )
+    },
+    Setting(context, Settings.PREF_SPACING_PREFIX_PENALTY_MS,
+        R.string.spacing_prefix_penalty, R.string.spacing_prefix_penalty_summary) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_SPACING_PREFIX_PENALTY_MS,
+            range = 0f..1500f,
+            description = { stringResource(R.string.abbreviation_unit_milliseconds, it.toString()) }
+        )
     },
     Setting(context, Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS,
         R.string.combining_autospace_suggestions, R.string.combining_autospace_suggestions_summary) { def ->

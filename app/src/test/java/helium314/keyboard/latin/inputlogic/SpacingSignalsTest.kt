@@ -66,4 +66,27 @@ class SpacingSignalsTest {
         assertEquals(0f,
             InputLogic.computeSpacingSignals(words(typed, true, listOf(typed))).prefixRichScore, 0f)
     }
+
+    // ---- signalDrivenGraceMs ----
+
+    @Test fun `signal grace is base when neutral`() {
+        assertEquals(800, InputLogic.signalDrivenGraceMs(800, 200, 400, false, 0f))
+    }
+
+    @Test fun `complete word shortens grace`() {
+        assertEquals(600, InputLogic.signalDrivenGraceMs(800, 200, 400, true, 0f))
+    }
+
+    @Test fun `prefix-rich stem lengthens grace`() {
+        assertEquals(1000, InputLogic.signalDrivenGraceMs(800, 200, 400, false, 0.5f)) // 800 + 400*0.5
+    }
+
+    @Test fun `complete and prefix-rich combine`() {
+        assertEquals(800, InputLogic.signalDrivenGraceMs(800, 200, 400, true, 0.5f)) // 800 - 200 + 200
+    }
+
+    @Test fun `grace clamps to the floor and ceiling`() {
+        assertEquals(100, InputLogic.signalDrivenGraceMs(150, 200, 0, true, 0f))    // -50 -> 100
+        assertEquals(3000, InputLogic.signalDrivenGraceMs(2900, 0, 400, false, 1f)) // 3300 -> 3000
+    }
 }

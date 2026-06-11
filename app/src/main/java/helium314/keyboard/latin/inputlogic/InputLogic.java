@@ -990,7 +990,14 @@ public final class InputLogic {
         // separators / cursor-front recompositions there's nothing to auto-commit, and arming
         // the timer would draw a spurious progress bar.
         if (!mWordComposer.isComposingWord()) return;
-        final int graceMs = baseGraceMs + Math.max(0, settingsValues.mCombiningTapExtraMs);
+        final int graceMs;
+        if (settingsValues.mSpacingSignalDrivenGrace) {
+            // #24: vary the grace duration by the per-keystroke word-state signals.
+            graceMs = signalDrivenGraceMs(baseGraceMs, settingsValues.mSpacingCompleteBonusMs,
+                    settingsValues.mSpacingPrefixPenaltyMs, mSpacingComplete, mSpacingPrefixRichScore);
+        } else {
+            graceMs = baseGraceMs + Math.max(0, settingsValues.mCombiningTapExtraMs);
+        }
         cancelCombiningTimerOnly();
         mInCombiningMode = true;
         // #14 "only auto-finish swiped words": still ENTER combining mode (so a following swipe
@@ -1459,6 +1466,21 @@ public final class InputLogic {
             }
         }
         return new SpacingSignals(complete, (float) completions / n);
+    }
+
+    private static final int SIGNAL_GRACE_MIN_MS = 100;
+    private static final int SIGNAL_GRACE_MAX_MS = 3000;
+
+    /**
+     * #24 signal-driven grace duration: a confident complete word commits sooner (subtract
+     * {@code completeBonus}), while an extendable prefix-rich stem waits longer (add
+     * {@code prefixPenalty} scaled by the score), clamped to a sane range. Pure for testability.
+     */
+    static int signalDrivenGraceMs(final int baseMs, final int completeBonusMs,
+            final int prefixPenaltyMs, final boolean complete, final float prefixRichScore) {
+        final int ms = baseMs - (complete ? completeBonusMs : 0)
+                + Math.round(prefixPenaltyMs * prefixRichScore);
+        return Math.max(SIGNAL_GRACE_MIN_MS, Math.min(SIGNAL_GRACE_MAX_MS, ms));
     }
 
     /**

@@ -73,6 +73,16 @@ class SettingsContainerTest {
     }
 
     @Test
+    fun signalDrivenGraceSettingsAreRegistered() {
+        assertEquals(Settings.PREF_SPACING_SIGNAL_DRIVEN_GRACE,
+            container[Settings.PREF_SPACING_SIGNAL_DRIVEN_GRACE]?.key)
+        assertEquals(Settings.PREF_SPACING_COMPLETE_BONUS_MS,
+            container[Settings.PREF_SPACING_COMPLETE_BONUS_MS]?.key)
+        assertEquals(Settings.PREF_SPACING_PREFIX_PENALTY_MS,
+            container[Settings.PREF_SPACING_PREFIX_PENALTY_MS]?.key)
+    }
+
+    @Test
     fun twoThumbLowLevelBackspaceSettingIsHiddenFromSearchRegistry() {
         assertNull(container[Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD])
     }
