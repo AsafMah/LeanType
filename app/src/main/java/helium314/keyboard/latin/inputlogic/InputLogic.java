@@ -3932,7 +3932,10 @@ public final class InputLogic {
         // Clear so a stale value from a previous gesture can't leak into a non-gesture
         // commit later.
         mShiftModeAtGestureStart = WordComposer.CAPS_MODE_OFF;
-        final String composedText = prevTypedWord + batchInputText;
+        // B7a (#98): a better merged fake-track can make the recognizer return the WHOLE word
+        // (prefix already included) rather than just the continuation; join without doubling
+        // the prefix. Falls back to plain concat when the result is only the continuation.
+        final String composedText = StringUtils.concatWithoutDuplicatedPrefix(prevTypedWord, batchInputText);
         // Trace recorder (A3a): capture gesture trace + committed word for replay debugging.
         // At this point composedText is the full word, mWordComposer.getInputPointers() holds
         // the gesture trail (merged if multi-part), and the keyboard geometry is available.

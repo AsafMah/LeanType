@@ -77,6 +77,33 @@ public final class StringUtils {
                 + s.substring(cutoff);
     }
 
+    /**
+     * Joins a composing prefix with a gesture recognizer's output without double-counting the
+     * prefix (multi-part word composition, #98). When {@code text} already begins with
+     * {@code prefix} (case-insensitively — which a merged / whole-word recognition makes likely),
+     * the user's prefix casing is kept and only the continuation is appended; otherwise the
+     * recognizer returned just the continuation, so the two are concatenated.
+     *
+     * <pre>
+     *   ("tech", "nology")     -&gt; "technology"
+     *   ("tech", "technology") -&gt; "technology"   (no double-count)
+     *   ("Tech", "technology") -&gt; "Technology"   (prefix casing preserved)
+     *   ("tech", "tea")        -&gt; "techtea"      (no shared prefix)
+     *   ("",     "hello")      -&gt; "hello"
+     * </pre>
+     */
+    @NonNull
+    public static String concatWithoutDuplicatedPrefix(@NonNull final String prefix,
+                                                       @NonNull final String text) {
+        if (prefix.isEmpty()) return text;
+        final int prefixLength = prefix.length();
+        if (text.length() >= prefixLength
+                && text.regionMatches(true /* ignoreCase */, 0, prefix, 0, prefixLength)) {
+            return prefix + text.substring(prefixLength);
+        }
+        return prefix + text;
+    }
+
     @NonNull
     public static String capitalizeFirstAndDowncaseRest(@NonNull final String s,
                                                         @NonNull final Locale locale) {

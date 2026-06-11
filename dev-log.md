@@ -914,3 +914,41 @@ the base.
 - Build the standard debug APK and install for on-device validation.
 - Decide whether to also tackle the re-extend-after-partial-delete (stale
   `mInputPointers`) follow-up.
+
+## 2026-06-10 — B7a (#98): prefix-aware gesture result stripping
+
+### Context
+First step of the multi-part fake-track synthesis epic (#97). Today the gesture-commit concat in
+`InputLogic.onUpdateTailBatchInputCompleted` relies on the `usedMergedTrail` flag to decide whether to
+prepend the composing prefix. On the seed / tap-promotion extend path (`extendExistingCompose && !usedMergedTrail`)
+it does a plain `prevTypedWord + batchInputText`; if a better fake-track makes the recognizer return the
+**whole** word (e.g. prefix `tech` + recognized `technology`) it double-counts (`techtechnology`). The
+existing single-char seed-strip only catches a one-letter overlap.
+
+### Actions Taken
+- Added `StringUtils.concatWithoutDuplicatedPrefix(prefix, text)` (pure, generic): if `text` already begins
+  with `prefix` (case-insensitive), keep the user's prefix casing and append only the continuation; else
+  concatenate. Handles whole-word returns, continuation returns, casing, empty prefix, short continuation.
+- Wired it into `onUpdateTailBatchInputCompleted` in place of the raw `prevTypedWord + batchInputText`.
+- Added `StringUtilsConcatTest` (pure JUnit, 6 cases). Named distinctly to avoid colliding with the
+  existing Robolectric `latin.StringUtilsTest`.
+
+### Decisions Made
+- Generic util (not gesture-specific) so it is pure-JVM unit-testable without the native recognizer
+  (the JVM harness cannot simulate native recognition — the synthesis steps B7b–d are on-device).
+- Correct-by-construction: works regardless of which extend path set `prevTypedWord`, rather than relying
+  on the `usedMergedTrail` proxy flag.
+
+### Manual Tests — build + unit (JVM)
+`./gradlew :app:testOfflineDebugUnitTest --tests "*StringUtilsConcatTest" --tests "*InputLogicTest"`
+- `StringUtilsConcatTest`: **6/6 pass**.
+- `InputLogicTest`: composition tests (`manualSpacingTapThenGestureBuildsOneOpenWord`,
+  `manualSpacingGestureThenTapExtendsWithoutAutospace`, `liveConvergeOffAppendsTapLiterally`) green.
+- 3 failures (`tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`,
+  `insertLetterIntoWordHangulFails`, `revert autocorrect on delete`) are **pre-existing on clean `main`**
+  (verified by running the suite without these changes) — unrelated to B7a.
+
+### Open Questions / Next Steps
+- B7b (#99) ideal prefix trail, B7c (#100) adaptive bridge, B7d (#101) hybrid — these change what the
+  native recognizer returns, so they need the on-device / native replay harness (#78), not the JVM suite.
+- Pre-existing red tests on `main` (the 3 above) are tech-debt (testing epic #13 / #80 theme), not B7a.
