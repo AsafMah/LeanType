@@ -1,0 +1,4 @@
+- Two-thumb: fixed capitalization going wrong after the grace timer auto-finishes a word (dropped sentence capitals / stray mid-word capitals)
+- Two-thumb: words you tap out no longer auto-finish on a pause by default — they stay open until you press space or pick a suggestion, so tapped shortcuts and corrections don't fire early (only swiped words auto-finish). Toggle under Two-thumb settings.
+- Clearer labels for the two spacing options ("Only auto-space after swipes" vs "Only auto-finish swiped words")
+- Experimental (off by default): defer the two-thumb grace space like the default swipe path

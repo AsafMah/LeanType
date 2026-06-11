@@ -14,6 +14,26 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [3.9.1] - 2026-06-11
+
+### Fixed
+- **Erratic capitalization in two-thumb grace mode.** After the grace timer auto-committed a
+  word, the shift/auto-caps state wasn't refreshed, so the next word's capitalization came out
+  wrong (dropped sentence caps, or mid-word capitals). (#14)
+
+### Changed
+- **Tapped words no longer auto-finish by default** in two-thumb grace mode — the new
+  "Only auto-finish swiped words" option defaults on, so a word you tap out stays open until you
+  press space or pick a suggestion (fixes tapped shortcuts/corrections firing early). Only swiped
+  words auto-commit on a pause. (#14)
+- Reworded the two easily-confused spacing toggles: **"Only auto-space after swipes"** (the
+  trailing space) vs **"Only auto-finish swiped words"** (whether the word commits at all). (#14)
+
+### Added
+- **Experimental: defer grace-mode space** (`PREF_SPACING_DEFER_GRACE_SPACE`, default off) — routes
+  the two-thumb grace auto-commit space through the same deferred mechanism as the default swipe
+  path. (#23)
+
 ## [3.9.0] - 2026-06-10
 
 ### Added
