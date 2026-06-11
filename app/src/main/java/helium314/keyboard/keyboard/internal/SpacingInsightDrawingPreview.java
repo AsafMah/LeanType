@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -21,14 +22,11 @@ import helium314.keyboard.latin.common.CoordinateUtils;
  *
  * <p>Gated behind {@code PREF_GESTURE_DEBUG_DRAW_POINTS}; no new preference required.
  *
- * <p>Displayed fields:
+ * <p>Displayed as decision-first, human-readable text:
  * <ul>
- *   <li>{@code complete} – whether the typed stem is a known dictionary word (Y/N)</li>
- *   <li>{@code prefix} – fraction of candidates that are completions of this stem [0.00..1.00]</li>
- *   <li>{@code grace} – resolved grace duration in milliseconds</li>
- *   <li>{@code gate} – which gate controls the commit; defaults to {@code timer} for the
- *       single-timer model. The two-gate branch can pass its own label via
- *       {@link #update(boolean, float, int, String)}.</li>
+ *   <li>{@code FAST 300ms} – finished word, shorter timer</li>
+ *   <li>{@code WAIT 620ms} – many continuations, longer timer</li>
+ *   <li>{@code INSTANT} / {@code PAUSE} – Assisted-tier gate labels once enabled</li>
  * </ul>
  *
  * <p>The snapshot string is built once per signal update (in {@link #update}), not per draw
@@ -40,12 +38,12 @@ import helium314.keyboard.latin.common.CoordinateUtils;
  */
 public final class SpacingInsightDrawingPreview extends AbstractDrawingPreview {
 
-    private static final float TEXT_SIZE_SP  = 11f;  // scaled in setKeyboardViewGeometry
-    private static final float PADDING_PX    = 6f;
-    private static final int   BG_COLOR      = 0xCC1A1A2E;  // dark navy, 80% opaque
-    private static final int   TEXT_COLOR    = 0xFFD0E8FF;  // soft blue-white
-    private static final int   LABEL_COLOR   = 0xFF90B8D8;  // dimmer for key labels
-
+    private static final float TEXT_SIZE_SP       = 11f;  // scaled in setKeyboardViewGeometry
+    private static final float PADDING_PX         = 8f;
+    private static final long  LINGER_AFTER_CLEAR = 1800L; // keep visible long enough to read
+    private static final int   BG_COLOR           = 0xDD1A1A2E;  // dark navy, ~87% opaque
+    private static final int   TEXT_COLOR         = 0xFFFFFFFF;  // primary line
+    private static final int   LABEL_COLOR        = 0xFFD0E8FF;  // detail line
     /** Gate label used when the caller passes {@code null}. */
     public static final String GATE_TIMER = "timer";
     /** Sentinel gate label for "no gate / idle". */
@@ -65,11 +63,10 @@ public final class SpacingInsightDrawingPreview extends AbstractDrawingPreview {
     private int     mGraceMs;
     @Nullable private String mGate;
 
-    /**
-     * Pre-formatted snapshot string; {@code null} means no active combining-mode arm
-     * (overlay draws nothing).
-     */
-    @Nullable private String mSnapshot;
+    /** Primary/detail readout lines; {@code null} primary means overlay draws nothing. */
+    @Nullable private String mPrimary;
+    @Nullable private String mDetail;
+    private long mVisibleUntilMs;
 
     public SpacingInsightDrawingPreview() {
         mBgPaint.setStyle(Paint.Style.FILL);
@@ -110,15 +107,19 @@ public final class SpacingInsightDrawingPreview extends AbstractDrawingPreview {
     public void update(final boolean complete, final float prefixRichScore,
             final int graceMs, @Nullable final String gate) {
         if (graceMs <= 0) {
-            mSnapshot = null;
-            invalidateDrawingView();
+            // Don't disappear immediately on commit/cancel — leave the last decision readable.
+            if (mPrimary != null) {
+                mVisibleUntilMs = SystemClock.uptimeMillis() + LINGER_AFTER_CLEAR;
+                invalidateDrawingView();
+            }
             return;
         }
         mComplete        = complete;
         mPrefixRichScore = prefixRichScore;
         mGraceMs         = graceMs;
         mGate            = gate;
-        mSnapshot        = buildSnapshot(complete, prefixRichScore, graceMs, gate);
+        buildSnapshot(complete, prefixRichScore, graceMs, gate);
+        mVisibleUntilMs = SystemClock.uptimeMillis() + Math.max(LINGER_AFTER_CLEAR, graceMs + 800L);
         invalidateDrawingView();
     }
 
@@ -132,48 +133,72 @@ public final class SpacingInsightDrawingPreview extends AbstractDrawingPreview {
      * @param gate new gate label; {@code null} falls back to {@value #GATE_TIMER}
      */
     public void updateGate(@Nullable final String gate) {
-        if (mSnapshot == null) return;
-        mGate     = gate;
-        mSnapshot = buildSnapshot(mComplete, mPrefixRichScore, mGraceMs, gate);
+        if (mPrimary == null) return;
+        mGate = gate;
+        buildSnapshot(mComplete, mPrefixRichScore, mGraceMs, gate);
+        mVisibleUntilMs = SystemClock.uptimeMillis() + Math.max(LINGER_AFTER_CLEAR, mGraceMs + 800L);
         invalidateDrawingView();
     }
 
-    private static String buildSnapshot(final boolean complete, final float prefixRichScore,
+    private void buildSnapshot(final boolean complete, final float prefixRichScore,
             final int graceMs, @Nullable final String gate) {
-        // Avoid String.format for the numeric fields to reduce alloc pressure; still called
-        // only once per keystroke/gesture commit (not per frame), so a bit of string work here
-        // is fine.
         final int prefixPct = Math.round(prefixRichScore * 100f);
-        return "spacing | c:" + (complete ? "Y" : "N")
-                + " px:" + prefixPct + "%"
-                + " g:" + graceMs + "ms"
-                + " [" + (gate != null ? gate : GATE_TIMER) + "]";
+        final String gateLabel = gate == null ? GATE_TIMER : gate;
+
+        if ("instant".equals(gateLabel)) {
+            mPrimary = "INSTANT";
+            mDetail = "finished word + low prefix";
+        } else if ("pause".equals(gateLabel)) {
+            mPrimary = "WAIT " + graceMs + "ms";
+            mDetail = "many continuations · px " + prefixPct + "%";
+        } else if (complete) {
+            mPrimary = "FAST " + graceMs + "ms";
+            mDetail = "finished word · px " + prefixPct + "%";
+        } else if (prefixRichScore >= 0.50f) {
+            mPrimary = "WAIT " + graceMs + "ms";
+            mDetail = "many continuations · px " + prefixPct + "%";
+        } else {
+            mPrimary = "TIMER " + graceMs + "ms";
+            mDetail = "not complete · px " + prefixPct + "%";
+        }
     }
 
     @Override
     public void drawPreview(@NonNull final Canvas canvas) {
         if (!isPreviewEnabled()) return;
-        final String snap = mSnapshot;
-        if (snap == null) return;
+        final String primary = mPrimary;
+        if (primary == null) return;
+        if (SystemClock.uptimeMillis() > mVisibleUntilMs) {
+            mPrimary = null;
+            mDetail = null;
+            return;
+        }
+        final String detail = mDetail == null ? "" : mDetail;
 
         final float textH  = mTextPaint.getTextSize();
-        final float textW  = mTextPaint.measureText(snap);
-        final float padH   = PADDING_PX;
-        final float padV   = PADDING_PX;
+        final float lineGap = Math.max(2f, textH * 0.18f);
+        final float primaryW = mTextPaint.measureText(primary);
+        final float detailW = mLabelPaint.measureText(detail);
+        final float boxW = Math.min(mKeyboardWidth - PADDING_PX * 2f,
+                Math.max(primaryW, detailW) + PADDING_PX * 2f);
+        final float boxH = textH * 2f + lineGap + PADDING_PX * 2f;
 
-        // Position: bottom-left of the keyboard area with a small margin.
-        final float left   = padH;
-        final float top    = mKeyboardHeight - textH - padV * 2f;
-        final float right  = left + textW + padH * 2f;
-        final float bottom = mKeyboardHeight - padV * 0.4f;
+        // Position: bottom-left of the keyboard area, inset enough to avoid clipping.
+        final float left   = PADDING_PX;
+        final float top    = Math.max(PADDING_PX, mKeyboardHeight - boxH - PADDING_PX);
+        final float right  = left + boxW;
+        final float bottom = top + boxH;
 
-        canvas.drawRoundRect(left, top, right, bottom, 4f, 4f, mBgPaint);
-        canvas.drawText(snap, left + padH, bottom - padV * 0.6f, mTextPaint);
+        canvas.drawRoundRect(left, top, right, bottom, 8f, 8f, mBgPaint);
+        canvas.drawText(primary, left + PADDING_PX, top + PADDING_PX + textH, mTextPaint);
+        canvas.drawText(detail, left + PADDING_PX,
+                top + PADDING_PX + textH * 2f + lineGap, mLabelPaint);
     }
 
     @Override
     public void onDeallocateMemory() {
-        mSnapshot = null;
+        mPrimary = null;
+        mDetail = null;
     }
 
     @Override
