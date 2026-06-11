@@ -100,6 +100,10 @@ public final class InputLogic {
     // signal-driven grace + two-gate Assisted-tier logic.
     private boolean mSpacingComplete;        // typed word is a real dictionary word
     private float mSpacingPrefixRichScore;   // fraction of candidates that are completions [0..1]
+    // #24 last gate-decision snapshot — null when the Assisted tier is off (default).
+    // Read by A11y / TraceRecorder / replay harness; never drives commit behaviour yet.
+    @Nullable
+    private SpacingGateDecision mLastSpacingGateDecision;
     private final Suggest mSuggest;
     private final DictionaryFacilitator mDictionaryFacilitator;
     private SingleDictionaryFacilitator mEmojiDictionaryFacilitator;
@@ -1414,6 +1418,15 @@ public final class InputLogic {
         final SpacingSignals spacingSignals = computeSpacingSignals(suggestedWords);
         mSpacingComplete = spacingSignals.complete;
         mSpacingPrefixRichScore = spacingSignals.prefixRichScore;
+        // #24 gate-decision: evaluate and snapshot whenever the Assisted tier is on.
+        // Stored for trace/A11y consumption; does NOT drive any commit behaviour yet.
+        final SettingsValues sv = Settings.getInstance().getCurrent();
+        if (sv != null && sv.mSpacingAssistedTier) {
+            mLastSpacingGateDecision = SpacingGateDecision.evaluate(
+                    true, mSpacingComplete, mSpacingPrefixRichScore, sv.mSpacingLowThreshold);
+        } else {
+            mLastSpacingGateDecision = null;
+        }
         final boolean newAutoCorrectionIndicator = suggestedWords.mWillAutoCorrect;
 
         // Put a blue underline to a word in TextView which will be auto-corrected.
@@ -1481,6 +1494,16 @@ public final class InputLogic {
         final int ms = baseMs - (complete ? completeBonusMs : 0)
                 + Math.round(prefixPenaltyMs * prefixRichScore);
         return Math.max(SIGNAL_GRACE_MIN_MS, Math.min(SIGNAL_GRACE_MAX_MS, ms));
+    }
+
+    /**
+     * Returns the last gate-decision snapshot (for A11y / TraceRecorder / replay-harness
+     * consumption), or {@code null} when the Assisted tier is disabled (the default).
+     * Never drives commit behaviour on its own.
+     */
+    @Nullable
+    public SpacingGateDecision getLastSpacingGateDecision() {
+        return mLastSpacingGateDecision;
     }
 
     /**

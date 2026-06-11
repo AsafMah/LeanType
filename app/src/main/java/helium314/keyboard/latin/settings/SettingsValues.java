@@ -142,6 +142,9 @@ public class SettingsValues {
         public final boolean mSpacingSignalDrivenGrace;
         public final int mSpacingCompleteBonusMs;
         public final int mSpacingPrefixPenaltyMs;
+        // #24 two-gate Assisted-tier (experimental, default off).
+        public final boolean mSpacingAssistedTier;
+        public final float mSpacingLowThreshold;
         // Raw string value: "keep_alternatives" | "next_word" | "alternatives_then_next_word"
         public final String mCombiningAutospaceSuggestions;
         public final boolean mCombiningBackspaceDeletesGestureWord;
@@ -400,6 +403,10 @@ public class SettingsValues {
                                 Defaults.PREF_SPACING_COMPLETE_BONUS_MS);
                 mSpacingPrefixPenaltyMs = prefs.getInt(Settings.PREF_SPACING_PREFIX_PENALTY_MS,
                                 Defaults.PREF_SPACING_PREFIX_PENALTY_MS);
+                mSpacingAssistedTier = prefs.getBoolean(Settings.PREF_SPACING_ASSISTED_TIER,
+                                Defaults.PREF_SPACING_ASSISTED_TIER);
+                mSpacingLowThreshold = prefs.getFloat(Settings.PREF_SPACING_LOW_THRESHOLD,
+                                Defaults.PREF_SPACING_LOW_THRESHOLD);
                 mCombiningAutospaceSuggestions = prefs.getString(Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS,
                                 Defaults.PREF_COMBINING_AUTOSPACE_SUGGESTIONS);
                 final boolean nonNormalTwoThumbSpacing = mGestureManualSpacing || mCombiningGraceMs > 0;

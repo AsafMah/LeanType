@@ -83,6 +83,14 @@ class SettingsContainerTest {
     }
 
     @Test
+    fun assistedTierSettingsAreRegistered() {
+        assertEquals(Settings.PREF_SPACING_ASSISTED_TIER,
+            container[Settings.PREF_SPACING_ASSISTED_TIER]?.key)
+        assertEquals(Settings.PREF_SPACING_LOW_THRESHOLD,
+            container[Settings.PREF_SPACING_LOW_THRESHOLD]?.key)
+    }
+
+    @Test
     fun twoThumbLowLevelBackspaceSettingIsHiddenFromSearchRegistry() {
         assertNull(container[Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD])
     }

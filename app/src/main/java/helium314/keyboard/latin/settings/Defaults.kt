@@ -154,6 +154,10 @@ object Defaults {
     const val PREF_SPACING_SIGNAL_DRIVEN_GRACE = false
     const val PREF_SPACING_COMPLETE_BONUS_MS = 200   // complete word commits this much sooner
     const val PREF_SPACING_PREFIX_PENALTY_MS = 400   // max extra wait when fully prefix-rich
+    // #24 two-gate Assisted-tier: master switch (default off) + Gate-A low-threshold.
+    // 0.1f is conservative: only clearly non-extendable words (very few completions) get Gate A.
+    const val PREF_SPACING_ASSISTED_TIER = false
+    const val PREF_SPACING_LOW_THRESHOLD = 0.1f
     const val PREF_COMBINING_AUTOSPACE_SUGGESTIONS = "alternatives_then_next_word"
     const val PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD = true
     const val PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT = true

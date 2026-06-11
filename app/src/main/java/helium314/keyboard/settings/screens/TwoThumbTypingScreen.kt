@@ -185,6 +185,20 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
             description = { stringResource(R.string.abbreviation_unit_milliseconds, it.toString()) }
         )
     },
+    Setting(context, Settings.PREF_SPACING_ASSISTED_TIER,
+        R.string.spacing_assisted_tier, R.string.spacing_assisted_tier_summary) {
+        SwitchPreference(it, Defaults.PREF_SPACING_ASSISTED_TIER)
+    },
+    Setting(context, Settings.PREF_SPACING_LOW_THRESHOLD,
+        R.string.spacing_low_threshold, R.string.spacing_low_threshold_summary) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_SPACING_LOW_THRESHOLD,
+            range = 0f..1f,
+            description = { value -> "%.2f".format(value) }
+        )
+    },
     Setting(context, Settings.PREF_COMBINING_AUTOSPACE_SUGGESTIONS,
         R.string.combining_autospace_suggestions, R.string.combining_autospace_suggestions_summary) { def ->
         val items = listOf(

@@ -168,6 +168,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SPACING_SIGNAL_DRIVEN_GRACE = "spacing_signal_driven_grace";
     public static final String PREF_SPACING_COMPLETE_BONUS_MS = "spacing_complete_bonus_ms";
     public static final String PREF_SPACING_PREFIX_PENALTY_MS = "spacing_prefix_penalty_ms";
+    // #24 two-gate Assisted-tier: master on/off + Gate-A low-threshold. Both experimental,
+    // default off / conservative. The gate decision model is in SpacingGateModel.kt; production
+    // wiring into enterCombiningMode is deferred to the next phase.
+    public static final String PREF_SPACING_ASSISTED_TIER = "spacing_assisted_tier";
+    public static final String PREF_SPACING_LOW_THRESHOLD = "spacing_low_threshold";
     // What the suggestion strip shows after the combining grace timer auto-commits a word.
     // Values: "keep_alternatives" (1) | "next_word" (2, default) | "alternatives_then_next_word" (3).
     public static final String PREF_COMBINING_AUTOSPACE_SUGGESTIONS = "combining_autospace_suggestions";

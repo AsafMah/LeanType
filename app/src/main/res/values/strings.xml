@@ -310,6 +310,11 @@
     <string name="spacing_complete_bonus_summary">How much sooner a complete dictionary word auto-finishes.</string>
     <string name="spacing_prefix_penalty">Extendable-stem patience</string>
     <string name="spacing_prefix_penalty_summary">Extra wait when many longer words start with what you\'ve typed (so you can keep going).</string>
+    <!-- #24 two-gate Assisted-tier master switch + Gate-A low-threshold slider. -->
+    <string name="spacing_assisted_tier">Assisted auto-commit (experimental)</string>
+    <string name="spacing_assisted_tier_summary">Instantly commit clearly finished words (Gate A) and hold extendable stems until you pause (Gate B). Default off \u2014 requires the pause timer above to be active.</string>
+    <string name="spacing_low_threshold">Finished-word certainty</string>
+    <string name="spacing_low_threshold_summary">Words whose prefix-richness score is at or below this value get instant auto-commit (Gate A). Lower = more selective (fewer instant commits). Default 0.10.</string>
     <!-- Title of the toggle that makes the first backspace after a gesture delete the whole word. -->
     <string name="combining_backspace_deletes_gesture_word">Backspace deletes last swipe</string>
     <!-- Description for combining_backspace_deletes_gesture_word. -->
