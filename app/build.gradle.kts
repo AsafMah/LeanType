@@ -24,6 +24,9 @@ android {
         targetSdk = 35
         versionCode = 3910
         versionName = "3.9.1"
+        // B7b (#99): ideal-prefix fake-track synthesis. Default OFF; enabled only in the
+        // `swipetest` build type so the daily-driver builds keep the current behavior.
+        buildConfigField("boolean", "FAKE_TRACK_V2", "false")
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
@@ -99,6 +102,17 @@ android {
             isJniDebuggable = false
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
+        }
+        create("swipetest") { // B7 fake-track on-device test build (#97), side-by-side with daily builds
+            initWith(getByName("debug"))
+            isDebuggable = true
+            isMinifyEnabled = false
+            isJniDebuggable = false
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".swipetest"
+            versionNameSuffix = "-swipetest"
+            matchingFallbacks += "debug"
+            buildConfigField("boolean", "FAKE_TRACK_V2", "true")
         }
         // base.archivesBaseName = "HeliboardL_" + defaultConfig.versionName // replaced by dynamic naming below
         applicationVariants.all {

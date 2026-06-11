@@ -39,6 +39,7 @@ import helium314.keyboard.latin.DictionaryFacilitator;
 import helium314.keyboard.latin.dictionary.DictionaryFactory;
 import helium314.keyboard.latin.LastComposedWord;
 import helium314.keyboard.latin.LatinIME;
+import helium314.keyboard.latin.BuildConfig;
 import helium314.keyboard.latin.NgramContext;
 import helium314.keyboard.latin.RichInputConnection;
 import helium314.keyboard.latin.SingleDictionaryFacilitator;
@@ -797,7 +798,15 @@ public final class InputLogic {
                 // word simply stays open until the user taps space), see
                 // SettingsValues#isMultipartComposeActive.
                 if (settingsValues.isMultipartComposeActive()) {
-                    mWordComposer.setExtendBatchInputBase(mWordComposer.getInputPointers());
+                    // B7b (#99): in the swipetest build, feed the merge an IDEAL key-center trail
+                    // for the composing prefix instead of the raw prior-fragment trail (taps become
+                    // a micro-stroke). Daily builds keep the raw trail (FAKE_TRACK_V2 == false).
+                    final InputPointers extendBase = BuildConfig.FAKE_TRACK_V2
+                            ? IdealPrefixTrailBuilder.build(mWordComposer.getTypedWord(),
+                                    keyboardSwitcher.getKeyboard())
+                            : null;
+                    mWordComposer.setExtendBatchInputBase(
+                            extendBase != null ? extendBase : mWordComposer.getInputPointers());
                 }
             } else if (mWordComposer.isSingleLetter() && !isInlineEmojiSearchAction()) {
                 // We auto-correct the previous (typed, not gestured) string iff it's one

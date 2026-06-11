@@ -952,3 +952,46 @@ existing single-char seed-strip only catches a one-letter overlap.
 - B7b (#99) ideal prefix trail, B7c (#100) adaptive bridge, B7d (#101) hybrid — these change what the
   native recognizer returns, so they need the on-device / native replay harness (#78), not the JVM suite.
 - Pre-existing red tests on `main` (the 3 above) are tech-debt (testing epic #13 / #80 theme), not B7a.
+
+## 2026-06-10 — B7b (#99): ideal prefix trail, gated to the swipetest build
+
+### Context
+Second step of the fake-track epic (#97). The merged-trail base was the prior fragment's RAW pointer
+trail (sparse for taps, noisy for swipes). B7b synthesizes an IDEAL key-center trail for the composing
+prefix instead, so the recognizer sees a plausible whole-word swipe.
+
+### Actions Taken
+- `IdealPrefixTrailBuilder` (inputlogic): traces the composing prefix's key centers, densified to
+  ~keyWidth/4 spacing; a single-letter (tap) prefix becomes a small out-and-back micro-stroke around
+  the key center (subsumes #30/B5). Coordinates only — `WordComposer.setBatchInputPointers` re-times
+  the base.
+- Wired at the multipart extend-base arming site (`InputLogic.onStartBatchInput`, the
+  `isMultipartComposeActive()` branch): when the gate is on, the ideal trail replaces the raw
+  `getInputPointers()` base; otherwise unchanged.
+- **Gated to the `.swipetest` build** per request: `BuildConfig.FAKE_TRACK_V2` (default `false`;
+  `true` only in the new `swipetest` build type). Daily builds (`com.asafmah.leantypedual.*`) keep the
+  raw-trail behavior untouched.
+- Added the `swipetest` build type (`applicationIdSuffix=.swipetest`, debug-signed, label
+  "LeanType Swipe (B7)" via `src/swipetest/res`) for side-by-side on-device testing.
+
+### Decisions Made
+- Always-ideal prefix for B7b (the hybrid raw-vs-ideal choice is B7d/#101).
+- Build-variant gate (not a runtime pref) so the experiment can't affect the production keyboard.
+- B7b changes what the NATIVE recognizer returns, so it is **not JVM-testable** (the harness can't
+  simulate native recognition); verification is on-device A/B only.
+
+### Manual Tests — on device (`offlinelite` swipetest APK installed + IME enabled)
+Build: `assembleOfflineliteSwipetest` → BUILD SUCCESSFUL; installed `com.asafmah.leantypedual.offlinelite.swipetest`.
+| # | Steps | Expected |
+|---|---|---|
+| 1 | Use "LeanType Swipe (B7)"; tap `te`, then swipe `chnology`. | one word `technology` (tap prefix → micro-stroke + ideal join) |
+| 2 | Swipe `tech`, lift, swipe `nology`. | `technology` (ideal prefix trail for the recognized first fragment) |
+| 3 | Compare the SAME combos on a daily build (raw-trail). | B7 build should be ≥ daily on these; note regressions on simple single swipes |
+| 4 | Single-finger swipe of common words. | unchanged vs daily (gate only affects multipart extend) |
+
+### Open Questions / Next Steps
+- A/B result of the manual matrix decides whether ideal-prefix beats raw — if mixed, that motivates
+  B7d (#101) hybrid selection.
+- B7c (#100) adaptive connector/teleport timing is the next lever (the ideal trail still joins the
+  suffix via WordComposer's fixed 25/60 ms re-timing).
+- Pre-warm / no perf change here (trail build is tiny, per-gesture).
