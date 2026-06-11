@@ -294,7 +294,15 @@
     <string name="two_thumb_tap_autospace_grace">Extra autospace delay after taps</string>
     <string name="two_thumb_tap_autospace_grace_summary">Add this much extra time when the last input was a tapped letter, so tap-then-swipe combinations are easier to continue.</string>
     <string name="combining_autospace_only_after_gesture">Only auto-space after swipes</string>
-    <string name="combining_autospace_only_after_gesture_summary">When enabled, tap-only words are committed without an automatic space. Words that include a swipe still auto-space.</string>
+    <string name="combining_autospace_only_after_gesture_summary">Controls the automatic space only \u2014 not whether a word commits. When on, a tap-only word still commits but without an auto-space; swiped words still get one.</string>
+    <!-- Title of the experimental toggle that defers the two-thumb grace auto-commit space. -->
+    <string name="spacing_defer_grace_space">Defer grace space (experimental)</string>
+    <!-- Description for spacing_defer_grace_space. -->
+    <string name="spacing_defer_grace_space_summary">Route the two-thumb grace auto-commit space through the deferred mechanism (like the default swipe path) instead of writing it immediately. The space appears on your next input and stays backspace-reversible.</string>
+    <!-- Title of the toggle that limits the grace auto-commit timer to swiped words. -->
+    <string name="combining_grace_only_after_gesture">Only auto-finish swiped words</string>
+    <!-- Description for combining_grace_only_after_gesture. -->
+    <string name="combining_grace_only_after_gesture_summary">The pause timer auto-commits a word only when it includes a swipe. Words you tap out stay open until you press space or pick a suggestion, so tapped shortcuts and corrections won\'t fire early. On by default \u2014 this controls whether the word commits (the auto-space option above only controls the trailing space).</string>
     <!-- Title of the toggle that makes the first backspace after a gesture delete the whole word. -->
     <string name="combining_backspace_deletes_gesture_word">Backspace deletes last swipe</string>
     <!-- Description for combining_backspace_deletes_gesture_word. -->

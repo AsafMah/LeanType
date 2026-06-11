@@ -61,6 +61,18 @@ class SettingsContainerTest {
     }
 
     @Test
+    fun spacingDeferGraceSpaceSettingIsRegistered() {
+        assertEquals(Settings.PREF_SPACING_DEFER_GRACE_SPACE,
+            container[Settings.PREF_SPACING_DEFER_GRACE_SPACE]?.key)
+    }
+
+    @Test
+    fun combiningGraceOnlyAfterGestureSettingIsRegistered() {
+        assertEquals(Settings.PREF_COMBINING_GRACE_ONLY_AFTER_GESTURE,
+            container[Settings.PREF_COMBINING_GRACE_ONLY_AFTER_GESTURE]?.key)
+    }
+
+    @Test
     fun twoThumbLowLevelBackspaceSettingIsHiddenFromSearchRegistry() {
         assertNull(container[Settings.PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD])
     }

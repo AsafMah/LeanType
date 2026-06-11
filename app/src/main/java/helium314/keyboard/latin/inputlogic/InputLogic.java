@@ -988,12 +988,21 @@ public final class InputLogic {
         final int graceMs = baseGraceMs + Math.max(0, settingsValues.mCombiningTapExtraMs);
         cancelCombiningTimerOnly();
         mInCombiningMode = true;
+        // #14 "only auto-finish swiped words": still ENTER combining mode (so a following swipe
+        // can extend this word), but DON'T arm the auto-commit timer for a pure tap word — it
+        // stays open until the user commits. A tap-then-swipe still arms: the gesture re-enters
+        // here with fromTap=false and the fragment present, so it arms then.
+        final boolean armTimer = !(fromTap && settingsValues.mCombiningGraceOnlyAfterGesture
+                && !mCombiningWordHasGestureFragment && !mWordComposer.isBatchMode());
         final long startTime = SystemClock.uptimeMillis();
-        mPendingCombiningCommit = () -> onCombiningGraceExpired();
-        mCombiningHandler.postDelayed(mPendingCombiningCommit, graceMs);
+        if (armTimer) {
+            mPendingCombiningCommit = () -> onCombiningGraceExpired();
+            mCombiningHandler.postDelayed(mPendingCombiningCommit, graceMs);
+        }
         final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
         if (kv != null) {
-            final boolean showAutospaceIndicator = settingsValues.shouldInsertSpacesAutomatically()
+            final boolean showAutospaceIndicator = armTimer
+                    && settingsValues.shouldInsertSpacesAutomatically()
                     && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
                     && (!settingsValues.mCombiningAutospaceOnlyAfterGesture
                             || mCombiningWordHasGestureFragment)
@@ -1200,40 +1209,54 @@ public final class InputLogic {
         } else {
             commitTyped(sv, LastComposedWord.NOT_A_SEPARATOR);
         }
-        // Track whether the helper actually wrote a space (skipped for URL / e-mail / phantom).
-        final int beforeSpace = mConnection.getExpectedSelectionEnd();
-        if (!sv.mCombiningAutospaceOnlyAfterGesture || wordHadGestureFragment) {
-            insertAutomaticSpaceIfOptionsAndTextAllow(sv);
+        // #23 (PREF_SPACING_DEFER_GRACE_SPACE): defer the grace-mode space through PHANTOM
+        // instead of writing it eagerly, so it materializes on the NEXT input via the same path
+        // as the default gesture word — URL/e-mail/punctuation gates + backspace-reversibility
+        // are applied at materialization time, with no eager space to patch.
+        final boolean autospaceInserted;
+        if (sv.mSpacingDeferGraceSpace) {
+            if (!sv.mCombiningAutospaceOnlyAfterGesture || wordHadGestureFragment) {
+                // Arm the deferred space; the PHANTOM consumer (handleNonSeparatorEvent /
+                // handleSeparatorEvent) writes or suppresses it on the next input.
+                mSpaceState = SpaceState.PHANTOM;
+            } else {
+                clearOneShotSpaceActionAndNotifyIfChanged();
+                mSpaceState = SpaceState.NONE;
+            }
+            // No eager write: the cursor-delta accounting below treats this as "no space".
+            autospaceInserted = false;
+            mAutospaceJustWritten = false;
         } else {
-            clearOneShotSpaceActionAndNotifyIfChanged();
+            // Eager path (default). Track whether the helper actually wrote a space (skipped for
+            // URL / e-mail / phantom).
+            final int beforeSpace = mConnection.getExpectedSelectionEnd();
+            if (!sv.mCombiningAutospaceOnlyAfterGesture || wordHadGestureFragment) {
+                insertAutomaticSpaceIfOptionsAndTextAllow(sv);
+            } else {
+                clearOneShotSpaceActionAndNotifyIfChanged();
+            }
+            autospaceInserted = mConnection.getExpectedSelectionEnd() > beforeSpace;
+            // If we DID insert an autospace, fix up mLastComposedWord so revertCommit (backspace +
+            // PREF_BACKSPACE_REVERTS_AUTOCORRECT) deletes the space along with the word. Without
+            // this the revert's `deleteLength = cancelLength + separatorLength` only deletes the
+            // word, and the DEBUG assertion (last cancelLength chars equals committedWord) throws.
+            if (autospaceInserted && mLastComposedWord != null
+                    && mLastComposedWord != LastComposedWord.NOT_A_COMPOSED_WORD
+                    && Constants.STRING_SPACE.equals(mLastComposedWord.mSeparatorString) == false) {
+                mLastComposedWord = new LastComposedWord(
+                        mLastComposedWord.mEvents,
+                        mLastComposedWord.mInputPointers,
+                        mLastComposedWord.mTypedWord,
+                        mLastComposedWord.mCommittedWord,
+                        Constants.STRING_SPACE,
+                        mLastComposedWord.mNgramContext,
+                        mLastComposedWord.mCapitalizedMode);
+            }
+            // Don't set PHANTOM here — we already wrote the space; PHANTOM would make the next
+            // letter insert a second one.
+            mAutospaceJustWritten = autospaceInserted;
+            mSpaceState = SpaceState.NONE;
         }
-        final boolean autospaceInserted = mConnection.getExpectedSelectionEnd() > beforeSpace;
-        // If we DID insert an autospace, fix up mLastComposedWord so revertCommit (backspace +
-        // PREF_BACKSPACE_REVERTS_AUTOCORRECT) deletes the space along with the word. Without
-        // this the existing revert code's `deleteLength = cancelLength + separatorLength`
-        // would only delete the word, and in DEBUG builds the bundled assertion against
-        // `getTextBeforeCursor(...).subSequence(0, cancelLength) equals committedWord` throws
-        // because the last cancelLength chars now include the trailing space, not the word.
-        if (autospaceInserted && mLastComposedWord != null
-                && mLastComposedWord != LastComposedWord.NOT_A_COMPOSED_WORD
-                && Constants.STRING_SPACE.equals(mLastComposedWord.mSeparatorString) == false) {
-            mLastComposedWord = new LastComposedWord(
-                    mLastComposedWord.mEvents,
-                    mLastComposedWord.mInputPointers,
-                    mLastComposedWord.mTypedWord,
-                    mLastComposedWord.mCommittedWord,
-                    Constants.STRING_SPACE,
-                    mLastComposedWord.mNgramContext,
-                    mLastComposedWord.mCapitalizedMode);
-        }
-        // Don't set PHANTOM here — we already wrote the space to the editor. PHANTOM would
-        // make the next letter call insertAutomaticSpaceIfOptionsAndTextAllow AGAIN (see
-        // handleNonSeparatorEvent line ~1760), giving a double space. Instead, set a
-        // dedicated one-shot flag that handleSeparatorEvent uses to strip the autospace if
-        // a punctuation character follows. The flag is cleared by enterCombiningMode (next
-        // input took over), cancelCombiningMode (backspace etc), or once consumed.
-        mAutospaceJustWritten = autospaceInserted;
-        mSpaceState = SpaceState.NONE;
         mConnection.endBatchEdit();
         final int cursorAfter = mConnection.getExpectedSelectionEnd();
         // The commit doesn't move the cursor for the composing text itself (it was already
@@ -1295,6 +1318,12 @@ public final class InputLogic {
             mBackspaceUnits.setCommitted(writtenChars, committedFragments);
         }
         // "keep_alternatives" — fall through, do nothing.
+        // #14 bug fix: this commit ran on the async grace timer, OFF the normal onCodeInput path
+        // that refreshes the shift state after a commit. Without this, the next word's auto-caps
+        // is stale — auto-caps gets dropped after a grace auto-commit and capitalization comes out
+        // erratic. Mirror the gesture-commit path's requestUpdatingShiftState.
+        KeyboardSwitcher.getInstance().requestUpdatingShiftState(
+                getCurrentAutoCapsState(sv), getCurrentRecapitalizeState());
     }
 
     /**
