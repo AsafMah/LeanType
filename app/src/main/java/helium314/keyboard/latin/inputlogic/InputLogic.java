@@ -160,6 +160,18 @@ public final class InputLogic {
     private boolean mInCombiningMode;
     private boolean mCombiningWordHasGestureFragment;
 
+    // True when the composing word has been EDITED (a delete of any kind) since the raw stroke
+    // buffer (WordComposer#mInputPointers) was last built to match it. A delete shrinks the typed
+    // word but never shrinks the buffer, so the buffer goes stale — and a following swipe-extend
+    // that arms its base from the buffer rebuilds a longer word (delete "ng" from "Thing" -> "Thi",
+    // swipe "ng" -> "Whining"). At the one place the stroke is consumed as a swipe-extend base
+    // (onStartBatchInput), if this is set we realign the base from the authoritative text instead.
+    // Set on every backspace (handleBackspaceEvent); cleared whenever the buffer is rebuilt to
+    // match the word — a gesture (onUpdateTailBatchInputCompleted) — or the word ends (commit,
+    // reset). NOT set for a plain tap-then-gesture (no delete), so that continuous swipe+swipe and
+    // tap+swipe keep their real captured stroke.
+    private boolean mComposingStrokeStale;
+
     // Live-converge (multi-part, opt-in PREF_MULTIPART_RERECOGNIZE_TAPS): the accumulated raw
     // pointer trail of the CURRENT word — the latest gesture fragment's points plus any tap
     // key-centers appended by {@link #tryLiveConvergeTap}. This must persist across fragments
@@ -806,15 +818,25 @@ public final class InputLogic {
                 // word simply stays open until the user taps space), see
                 // SettingsValues#isMultipartComposeActive.
                 if (settingsValues.isMultipartComposeActive()) {
+                    // The extend base is the geometry every setBatchInputPointers call prepends.
+                    // mInputPointers is only trustworthy if the composing text still matches what
+                    // the last gesture produced (continuous swipe+swipe). If the text was edited
+                    // since — single-char backspace, fragment-pop, selection / multi-char delete,
+                    // cursor re-compose — the buffer is stale (it never shrinks on a delete), so
+                    // rebuild the base from the authoritative text. This is the single consumption
+                    // point, so realigning here fixes the whole class regardless of HOW the text
+                    // was edited (delete "ng" from "Thing" -> "Thi", swipe "ng" -> "Thing", not
+                    // "Whining"). Equal text -> keep the real captured stroke (higher fidelity).
+                    final String composingNow = mWordComposer.getTypedWord();
+                    if (mComposingStrokeStale) {
+                        realignComposerStrokeToText(composingNow, settingsValues);
+                    }
                     mWordComposer.setExtendBatchInputBase(mWordComposer.getInputPointers());
                     if (settingsValues.mGestureDebugDrawPoints) {
-                        // Diagnostic for the fragment-pop stale-stroke bug: the base copied
-                        // here is the exact geometry every setBatchInputPointers call will
-                        // prepend, so its size at arm time is the ground truth for whether
-                        // the seed-after-pop realignment actually stuck.
                         Log.d(TAG, "extend arm baseSize="
                                 + mWordComposer.getExtendBatchInputBaseSize()
-                                + " composing='" + mWordComposer.getTypedWord() + "'");
+                                + " composing='" + composingNow + "'"
+                                + " realigned=" + mComposingStrokeStale);
                     }
                 }
             } else if (mWordComposer.isSingleLetter() && !isInlineEmojiSearchAction()) {
@@ -1296,6 +1318,34 @@ public final class InputLogic {
     }
 
     /**
+     * Realign the composer's raw stroke buffer ({@code WordComposer#mInputPointers}) to
+     * {@code word}'s key centers.
+     * <p>
+     * Phase 1 of {@code docs/COMPOSING_WORD_SOURCE_OF_TRUTH.md}, generalized: the stroke buffer
+     * is parallel state that drifts stale whenever the composing word is edited by anything other
+     * than a gesture — a fragment-pop, a single-char backspace, a selection / multi-char delete,
+     * or a cursor-driven re-compose. None of those shrink {@code mInputPointers}, so a following
+     * swipe-extend that arms its base from the buffer rebuilds a longer word. Rebuilding from the
+     * surviving text's key centers keeps the base aligned. Lowercases for the exact key lookup
+     * ({@link Keyboard#getCoordinates} matches lowercase layout keys); the seed skips unresolvable
+     * keys so one bad point can't warp the stroke toward (-1,-1).
+     */
+    private void realignComposerStrokeToText(final String word, final SettingsValues sv) {
+        final int[] cps = StringUtils.toCodePointArray(word.toLowerCase(sv.mLocale));
+        final int[] coords = mLatinIME.getCoordinatesForCurrentKeyboard(cps);
+        // Defensive: if the layout resolves NO key (no keyboard yet, or an all-symbol word), the
+        // seed would empty the buffer and disarm the extend entirely. A slightly-stale base beats
+        // no base — leave the buffer untouched in that case. (coords is CoordinateUtils format:
+        // x at even indices, y at odd.)
+        boolean anyResolved = false;
+        for (int i = 0; i < coords.length; i += 2) {
+            if (coords[i] != Constants.NOT_A_COORDINATE) { anyResolved = true; break; }
+        }
+        if (!anyResolved) return;
+        mWordComposer.seedInputPointersFromKeyCenters(cps, coords);
+    }
+
+    /**
      * Try to handle a backspace as a fragment-pop rather than a char-delete. Returns true if
      * handled (the caller should then return without touching the editor further); false if
      * the caller should fall through to its normal char-by-char path.
@@ -1362,12 +1412,10 @@ public final class InputLogic {
             // truncated word's key centers. setBatchInputWord leaves mInputPointers at the
             // longer pre-pop geometry; without this, a following swipe-extend would snapshot
             // that stale buffer as its merged-trail base and build an ever-longer garbage word.
-            // Key lookup (Keyboard#getCoordinates -> getKey) is an exact code-point match and
-            // layouts store lowercase, so lowercase the word first — an uppercase first letter
-            // ("Th") would otherwise resolve to NOT_A_COORDINATE and drop out of the seed.
-            final int[] newCps = StringUtils.toCodePointArray(newWord.toLowerCase(sv.mLocale));
-            mWordComposer.seedInputPointersFromKeyCenters(
-                    newCps, mLatinIME.getCoordinatesForCurrentKeyboard(newCps));
+            // (See realignComposerStrokeToText.) The swipe-extend arm site also realigns when the
+            // text was edited, so this is belt-and-suspenders, but doing it here keeps the buffer
+            // consistent for any intervening consumer too.
+            realignComposerStrokeToText(newWord, sv);
             if (sv.mGestureDebugDrawPoints) {
                 Log.d(TAG, "fragment pop '" + oldWord + "' -> '" + newWord
                         + "' seededPointers=" + mWordComposer.getInputPointers().getPointerSize());
@@ -2426,6 +2474,12 @@ public final class InputLogic {
         // explicitly retracting input; we don't want the timer to fire mid-correction.
         cancelCombiningMode();
         clearOneShotSpaceActionAndNotifyIfChanged();
+        // A backspace of ANY kind (single-char, fragment-pop, whole-word, selection / multi-char
+        // delete) shrinks the typed word but never shrinks the raw stroke buffer, so the buffer is
+        // now stale relative to the text. Mark it: the next swipe-extend will realign its base from
+        // the text instead of arming the leftover (longer) stroke. Set once here, before any
+        // backspace branch runs, so every delete path is covered from the single consumption point.
+        mComposingStrokeStale = true;
         // Live-converge (#1.7): a backspace invalidates the accumulated gesture stroke — we
         // can't reliably trim the raw trail to match a partially-deleted word, and leaving it
         // intact would make the NEXT swipe/tap merge with stale geometry (e.g. delete "ing"
@@ -3625,6 +3679,8 @@ public final class InputLogic {
         // Two-thumb typing (#1.1): composing word is wiped — drop the matching boundaries.
         clearFragmentBoundaries();
         mCombiningWordHasGestureFragment = false;
+        // Composing word is gone — start the next word with a clean (not-stale) slate.
+        mComposingStrokeStale = false;
         // Live-converge (#1.7): the word is gone, so its accumulated stroke is stale.
         mLiveStroke.reset();
         // Two-thumb typing: likewise drop the merged-trail extend-base. This path also covers
@@ -4055,6 +4111,9 @@ public final class InputLogic {
         maybeRecordGestureEndpoints(settingsValues, composedText, extendExistingCompose,
                 usedMergedTrail, keyboardSwitcher);
         mWordComposer.setBatchInputWord(composedText);
+        // The raw stroke buffer now matches this word (the gesture just (re)built it), so a
+        // following swipe-extend can trust it — until an edit marks it stale again.
+        mComposingStrokeStale = false;
         setComposingTextInternal(composedText, 1);
         if (extendExistingCompose) {
             // Two-thumb typing (#1.1 + #1.4): downgrade the composer out of batch mode so
@@ -4357,6 +4416,8 @@ public final class InputLogic {
         // boundaries are now stale and would point past the end of the (empty) word.
         clearFragmentBoundaries();
         mCombiningWordHasGestureFragment = false;
+        // Word committed — next word starts with a clean (not-stale) slate.
+        mComposingStrokeStale = false;
         // Live-converge (#1.7): word committed — its accumulated stroke no longer applies.
         mLiveStroke.reset();
         // Two-thumb typing: the merged-trail extend-base belongs to the just-committed word too.
