@@ -985,23 +985,24 @@ public final class InputLogic {
         // separators / cursor-front recompositions there's nothing to auto-commit, and arming
         // the timer would draw a spurious progress bar.
         if (!mWordComposer.isComposingWord()) return;
-        // #14: "auto-finish only after swipes" — don't arm the auto-commit timer for a tap-only
-        // word (no gesture fragment yet). Pure tap-typing shouldn't get auto-finished. A
-        // tap-then-swipe word still arms: the gesture trigger re-enters here with fromTap=false
-        // once the fragment is present.
-        if (fromTap && settingsValues.mCombiningGraceOnlyAfterGesture
-                && !mCombiningWordHasGestureFragment && !mWordComposer.isBatchMode()) {
-            return;
-        }
         final int graceMs = baseGraceMs + Math.max(0, settingsValues.mCombiningTapExtraMs);
         cancelCombiningTimerOnly();
         mInCombiningMode = true;
+        // #14 "only auto-finish swiped words": still ENTER combining mode (so a following swipe
+        // can extend this word), but DON'T arm the auto-commit timer for a pure tap word — it
+        // stays open until the user commits. A tap-then-swipe still arms: the gesture re-enters
+        // here with fromTap=false and the fragment present, so it arms then.
+        final boolean armTimer = !(fromTap && settingsValues.mCombiningGraceOnlyAfterGesture
+                && !mCombiningWordHasGestureFragment && !mWordComposer.isBatchMode());
         final long startTime = SystemClock.uptimeMillis();
-        mPendingCombiningCommit = () -> onCombiningGraceExpired();
-        mCombiningHandler.postDelayed(mPendingCombiningCommit, graceMs);
+        if (armTimer) {
+            mPendingCombiningCommit = () -> onCombiningGraceExpired();
+            mCombiningHandler.postDelayed(mPendingCombiningCommit, graceMs);
+        }
         final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
         if (kv != null) {
-            final boolean showAutospaceIndicator = settingsValues.shouldInsertSpacesAutomatically()
+            final boolean showAutospaceIndicator = armTimer
+                    && settingsValues.shouldInsertSpacesAutomatically()
                     && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
                     && (!settingsValues.mCombiningAutospaceOnlyAfterGesture
                             || mCombiningWordHasGestureFragment)
