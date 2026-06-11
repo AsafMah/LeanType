@@ -988,12 +988,21 @@ public final class InputLogic {
         final int graceMs = baseGraceMs + Math.max(0, settingsValues.mCombiningTapExtraMs);
         cancelCombiningTimerOnly();
         mInCombiningMode = true;
+        // #14 "only auto-finish swiped words": still ENTER combining mode (so a following swipe
+        // can extend this word), but DON'T arm the auto-commit timer for a pure tap word — it
+        // stays open until the user commits. A tap-then-swipe still arms: the gesture re-enters
+        // here with fromTap=false and the fragment present, so it arms then.
+        final boolean armTimer = !(fromTap && settingsValues.mCombiningGraceOnlyAfterGesture
+                && !mCombiningWordHasGestureFragment && !mWordComposer.isBatchMode());
         final long startTime = SystemClock.uptimeMillis();
-        mPendingCombiningCommit = () -> onCombiningGraceExpired();
-        mCombiningHandler.postDelayed(mPendingCombiningCommit, graceMs);
+        if (armTimer) {
+            mPendingCombiningCommit = () -> onCombiningGraceExpired();
+            mCombiningHandler.postDelayed(mPendingCombiningCommit, graceMs);
+        }
         final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
         if (kv != null) {
-            final boolean showAutospaceIndicator = settingsValues.shouldInsertSpacesAutomatically()
+            final boolean showAutospaceIndicator = armTimer
+                    && settingsValues.shouldInsertSpacesAutomatically()
                     && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
                     && (!settingsValues.mCombiningAutospaceOnlyAfterGesture
                             || mCombiningWordHasGestureFragment)
@@ -1309,6 +1318,12 @@ public final class InputLogic {
             mBackspaceUnits.setCommitted(writtenChars, committedFragments);
         }
         // "keep_alternatives" — fall through, do nothing.
+        // #14 bug fix: this commit ran on the async grace timer, OFF the normal onCodeInput path
+        // that refreshes the shift state after a commit. Without this, the next word's auto-caps
+        // is stale — auto-caps gets dropped after a grace auto-commit and capitalization comes out
+        // erratic. Mirror the gesture-commit path's requestUpdatingShiftState.
+        KeyboardSwitcher.getInstance().requestUpdatingShiftState(
+                getCurrentAutoCapsState(sv), getCurrentRecapitalizeState());
     }
 
     /**
