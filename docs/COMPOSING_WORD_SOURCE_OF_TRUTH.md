@@ -1,8 +1,10 @@
 # Composing word: editor text as the single source of truth (design)
 
-> Status: **design / not yet implemented**. Tracking: see the "Composing word source of
-> truth" epic on the fork. This note is the plan of record for a multi-phase refactor of
-> two-thumb / multi-part composition. Update it as phases land.
+> Status: **partially shipped — see "Phases / outcome" below.** The drift-prone-stroke bug
+> class this note set out to kill is fixed and on-device validated; the broader "retire all
+> parallel state" refactor was *not* pursued in full (the targeted fix proved sufficient and
+> the real captured stroke beat synthesized geometry on feel). This note is now the record of
+> what shipped and why the plan changed, not a forward plan.
 >
 > Grounding: claims below were verified by read-only scouting of `InputLogic`,
 > `WordComposer`, `RichInputConnection`. File/symbol refs are a snapshot — prefer the named
@@ -115,7 +117,11 @@ design needs. Today it is used for **tap recorrection only**; it is never wired 
 gesture / live-converge path. The refactor is largely about routing two-thumb composition
 through this existing machinery instead of around it.
 
-## Target design
+## Target design (original aspiration — only partially realized)
+
+> The bullets below are the *original* "remove all parallel state" vision. In practice only the
+> stroke-from-text primitive was adopted, and only at the swipe-extend consumption point — see
+> "Phases / outcome" above for what actually shipped. Kept here for context.
 
 - **The word being built = the composing region in the editor.** It can be (re)established
   from any cursor position via `getWordRangeAtCursor` + `setComposingRegion`, which the
@@ -130,56 +136,72 @@ through this existing machinery instead of around it.
   changes the text (a cursor move is otherwise inert — context-only); the *next swipe*
   rebuilds its base from whatever text is actually there.
 
-### State inventory
-- **KEEP as PRIMARY (revised after Phase 2 feel testing):** `mLiveStroke`. Originally slated
-  for retirement, but the real captured stroke re-recognizes better than synthesized
-  key-centers, so it stays as the high-fidelity primary prefix. It is **backed by** a
-  text-derived fallback (`buildStrokeFromWordText`) for when it has been invalidated, so the
-  drift it used to cause is now a graceful degradation rather than a bug: an invalid stroke
-  just means "fall back to text," not "produce garbage." The re-recognition it powers (taps
-  contributing to a swipe-involving word) is unchanged.
-- **Retire:** `mGestureFragmentBoundaries`; the bespoke `mInputPointers`-survives-reset
-  contract and its clean-up patches.
-- **Keep the feature:** the combine-taps-and-swipes re-recognition (today gated by
-  `PREF_MULTIPART_RERECOGNIZE_TAPS`) — re-expressed statelessly. Whether it stays a toggle or
-  becomes always-on core is a follow-up decision; the behavior does not go away.
-- **Keep:** `mExtendBatchInputBase` as the *mechanism* for feeding "context prefix + new
-  input" to the recognizer (the re-timing logic stays), but the prefix is sourced from
-  text-derived key centers rather than a stored stroke.
-- **Reuse:** `getWordRangeAtCursor`, `setComposingRegion`, `setComposingWord`,
-  `getCoordinatesForCurrentKeyboard`, `setCursorPositionWithinWord`.
+### State inventory — what actually happened
+- **`mLiveStroke`: KEPT, UNCHANGED.** The plan was to retire it (derive the tap-re-recognition
+  prefix from text). An attempt to do so — and a follow-up "real stroke primary, text-derived
+  fallback" hybrid (`buildStrokeFromWordText`, `mComposingWordHasSwipeContent`) — was **reverted**:
+  the fallback turned out to be effectively dead code (the guards that admit a re-recognizing tap
+  are cleared on the same edits that empty the stroke, so it never fired), and the real captured
+  stroke re-recognizes better than synthesized key-centers anyway. The live-converge tap path
+  still uses `mLiveStroke` exactly as before.
+- **`mInputPointers` drift: FIXED, not retired.** The "buffer survives reset / doesn't shrink on
+  delete" contract stays, but the drift it caused is now corrected **at the point of consumption**
+  rather than by removing the buffer (see Phases / outcome). `mGestureFragmentBoundaries` is also
+  still in use (not retired).
+- **`mExtendBatchInputBase`** remains the mechanism for feeding "context prefix + new input" to
+  the recognizer. The prefix is the *real* stroke when it still matches the text, and is rebuilt
+  from text-derived key centers only when an edit made it stale.
+- **Reused as planned:** `getCoordinatesForCurrentKeyboard` (text → key-center geometry) is the
+  one primitive from this plan that did get wired into the gesture path, via
+  `seedInputPointersFromKeyCenters` / `realignComposerStrokeToText`.
 
-## Phases (each independently shippable + on-device validated)
+## Phases / outcome (what was planned vs what shipped)
 
-1. **Stop the bleeding in fragment mode.** ✅ **LANDED & on-device validated.** On a
+1. **Stop the bleeding in fragment mode.** ✅ **SHIPPED & on-device validated.** On a
    fragment-pop (`tryFragmentBackspace`), realign `mInputPointers` to the truncated word
    (rebuild from its key centers via `seedInputPointersFromKeyCenters`) so a following
-   swipe-extend no longer merges with the pre-pop stroke. Keeps the current architecture;
-   closes the fragment case the fresh-word reset doesn't cover. Small. (Lowercases the word
-   before key lookup and skips `NOT_A_COORDINATE` keys — see the implementation notes.)
-2. **Add a text-derived FALLBACK for re-recognition.** ✅ **LANDED & on-device validated.**
-   *(Plan changed here based on feel testing — see note below.)* The original intent was to
-   *replace* `mLiveStroke` with text-derived geometry. On-device that felt subpar: the
-   recognizer reads the user's **real captured swipe curves** noticeably better than
-   synthesized key-centers. So instead the live-converge tap path now uses a **hybrid prefix**:
-   the real `mLiveStroke` is the high-fidelity PRIMARY, and `buildStrokeFromWordText`
-   (key-centers from the current word's text, the Phase 1 primitive) is the FALLBACK, used only
-   when the real stroke was invalidated — after a backspace, a cursor move into a word, a
-   partial delete, a commit, or a desync. Those are exactly the "we no longer know the real
-   stroke" cases; previously they dropped to literal typing, now they still re-recognize (just
-   from clean key-centers). Net: the original good feel during continuous swipe+tap building is
-   preserved, and the edit/re-entry cases degrade gracefully instead of failing. `mLiveStroke`
-   is **kept** (not retired) as the primary source. Medium.
-3. **Generalize.** 🚫 **Descoped (2026-06) — swipe-onto-word re-recognition will NOT be
-   pursued.** The headline of this phase was supporting *swiping onto any existing word the
-   cursor was moved into* (incl. a committed word) and re-recognizing it with context. Per the
-   product decision above, today's split — **swipe at a moved cursor starts a fresh word, tap
-   edits the existing word** — is the intended behavior, so this is dropped. The Trigger
-   model's "a swipe always re-recognizes the word at the cursor" rule therefore does *not*
-   apply to a re-entered word; it governs only a word actively being built at the cursor end.
-   *Optional leftover:* deriving fragment boundaries from text to retire
-   `mGestureFragmentBoundaries` is an independent internal cleanup that could still be done on
-   its own merits, but it is no longer blocked on (or part of) a behavioral phase.
+   swipe-extend no longer merges with the pre-pop stroke. Lowercases the word before the
+   exact key lookup and skips `NOT_A_COORDINATE` keys.
+2. **Re-express re-recognition from text (retire `mLiveStroke`).** ❌ **ATTEMPTED, then
+   REVERTED.** Two variants were tried: (a) replace `mLiveStroke` with text-derived geometry —
+   felt subpar, the real captured curves re-recognize better; (b) a "real primary + text-derived
+   fallback" hybrid (`buildStrokeFromWordText`, `mComposingWordHasSwipeContent`) — the fallback
+   was effectively unreachable (the guards that admit a re-recognizing tap are cleared by the
+   same edits that empty the stroke), so it changed nothing. Both were rolled back; `mLiveStroke`
+   stays as-is. **Lesson:** the parallel stroke state isn't worth removing for the tap path; it's
+   only a problem for the *swipe-extend base*, which is fixed surgically below.
+3. **Generalize / swipe-onto-committed-word.** 🚫 **Descoped (2026-06).** Today's split —
+   **swipe at a moved cursor starts a fresh word, tap edits the existing word** — is the intended
+   behavior (product decision), so the Trigger model's "a swipe always re-recognizes the word at
+   the cursor" does *not* apply to a re-entered committed word; it governs only a word actively
+   being built at the cursor end.
+
+### What actually fixed the bug (the shipped general fix)
+
+Instead of removing the parallel stroke buffer, the drift is corrected **at the single point it
+is consumed** — when a swipe arms its merged-trail extend base in `onStartBatchInput`:
+
+- `mComposingStrokeStale` is set on **any** backspace and cleared when a gesture rebuilds the
+  buffer (or the word ends). It means "the composing text was edited since the stroke last
+  matched it."
+- At the extend-arm site, if stale, the base is rebuilt from the composing word's text via
+  `realignComposerStrokeToText` (→ `getCoordinatesForCurrentKeyboard` →
+  `seedInputPointersFromKeyCenters`); if not stale, the **real captured stroke** is used.
+- This covers every edit path at once (single-char, fragment-pop, selection / multi-char delete,
+  cursor re-compose) without per-path patches, and leaves continuous swipe+swipe and tap+swipe
+  using their real stroke. `realignComposerStrokeToText` no-ops if the layout can't resolve any
+  key, so it never disarms the extend. **Shipped & on-device validated** (the recurring
+  "Thing→delete→Whining" failure is gone).
+
+### Next: Nintype-style whole-word backspace (planned, not yet built)
+
+A follow-up, independent of the above: in **"Whole word" backspace mode**, pop the last swipe
+fragment while composing, then delete a **whole previous word** (any word, swiped or typed) once
+past the composing word — gated by the existing `PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT`
+toggle (to be relabelled to describe this), with key-repeat deleting whole words. Requires
+relaxing `tryFragmentBackspace`'s whole-word-mode bail and adding a word-boundary delete for
+committed text (`getTextBeforeCursor` + `SpacingAndPunctuations`), gated to two-thumb mode so
+plain typists are unaffected.
 
 ## Risks / validation
 
