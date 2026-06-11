@@ -103,4 +103,22 @@ public interface DrawingProxy {
      *     normal commit / cancel / continuation.
      */
     void setGestureCommitPending(boolean pending);
+
+    /**
+     * Push a spacing-policy signal snapshot to the debug overlay (#A11), gated behind
+     * {@code PREF_GESTURE_DEBUG_DRAW_POINTS}. Called from {@code InputLogic} each time the
+     * combining-mode timer is armed or cleared.
+     *
+     * <p>Implementations must guard on the debug-draw setting internally; calling with
+     * the setting off must be a cheap no-op.
+     *
+     * @param complete        whether the current typed stem is a dictionary word
+     * @param prefixRichScore fraction of suggestions that are prefix-completions [0..1]
+     * @param graceMs         resolved grace duration (ms); {@code <= 0} clears the overlay
+     * @param gate            active gate label; pass {@code null} to use the default
+     *                        ({@value SpacingInsightDrawingPreview#GATE_TIMER}). The two-gate
+     *                        branch passes its own label here.
+     */
+    void setSpacingInsight(boolean complete, float prefixRichScore, int graceMs,
+            @Nullable String gate);
 }

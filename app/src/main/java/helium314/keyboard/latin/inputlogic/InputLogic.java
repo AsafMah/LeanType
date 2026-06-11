@@ -1021,6 +1021,8 @@ public final class InputLogic {
                     && !mSuppressAutospaceForForceNextSpace;
             kv.setCombiningMode(showAutospaceIndicator, startTime, graceMs,
                     true /* compositionActiveForDebug */);
+            // #A11: push spacing-policy signals to the debug overlay.
+            kv.setSpacingInsight(mSpacingComplete, mSpacingPrefixRichScore, graceMs, null);
         }
     }
 
@@ -1144,7 +1146,10 @@ public final class InputLogic {
         if (mInCombiningMode) {
             mInCombiningMode = false;
             final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
-            if (kv != null) kv.setCombiningMode(false, 0L, 0);
+            if (kv != null) {
+                kv.setCombiningMode(false, 0L, 0);
+                kv.setSpacingInsight(false, 0f, 0, null); // clear the #A11 readout
+            }
         }
     }
 
@@ -1198,7 +1203,10 @@ public final class InputLogic {
         mPendingCombiningCommit = null;
         mInCombiningMode = false;
         final MainKeyboardView kv = KeyboardSwitcher.getInstance().getMainKeyboardView();
-        if (kv != null) kv.setCombiningMode(false, 0L, 0);
+        if (kv != null) {
+            kv.setCombiningMode(false, 0L, 0);
+            kv.setSpacingInsight(false, 0f, 0, null); // clear the #A11 readout
+        }
         final SettingsValues sv = Settings.getInstance().getCurrent();
         if (!mWordComposer.isComposingWord()) return;
         // Capture whether the word being committed by this timer came from a gesture. We

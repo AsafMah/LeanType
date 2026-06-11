@@ -48,6 +48,7 @@ import helium314.keyboard.keyboard.internal.KeyPreviewView;
 import helium314.keyboard.keyboard.internal.PopupKeySpec;
 import helium314.keyboard.keyboard.internal.NonDistinctMultitouchHelper;
 import helium314.keyboard.keyboard.internal.SlidingKeyInputDrawingPreview;
+import helium314.keyboard.keyboard.internal.SpacingInsightDrawingPreview;
 import helium314.keyboard.keyboard.internal.TimerHandler;
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
@@ -126,6 +127,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private final SlidingKeyInputDrawingPreview mSlidingKeyInputDrawingPreview;
     // Debug overlay for two-thumb point hinting (#2.1), toggled by PREF_GESTURE_DEBUG_DRAW_POINTS.
     private final GestureDebugPointsDrawingPreview mGestureDebugPointsDrawingPreview;
+    // Spacing-policy signal readout (#A11), co-gated by PREF_GESTURE_DEBUG_DRAW_POINTS.
+    private final SpacingInsightDrawingPreview mSpacingInsightDrawingPreview;
 
     // Key preview
     private final KeyPreviewDrawParams mKeyPreviewDrawParams;
@@ -233,6 +236,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         // Debug overlay last so it draws ON TOP of the gesture trail / floating preview.
         mGestureDebugPointsDrawingPreview = new GestureDebugPointsDrawingPreview();
         mGestureDebugPointsDrawingPreview.setDrawingView(drawingPreviewPlacerView);
+        mSpacingInsightDrawingPreview = new SpacingInsightDrawingPreview();
+        mSpacingInsightDrawingPreview.setDrawingView(drawingPreviewPlacerView);
         mainKeyboardViewAttr.recycle();
 
         mDrawingPreviewPlacerView = drawingPreviewPlacerView;
@@ -518,8 +523,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         mGestureTrailsDrawingPreview.setPreviewEnabled(isGestureTrailEnabled);
         // The debug overlay tracks its own pref and is independent of the user-visible trail —
         // enable the preview whenever the pref is on so the drawing pass actually runs.
-        mGestureDebugPointsDrawingPreview.setPreviewEnabled(
-                Settings.getValues().mGestureDebugDrawPoints);
+        final boolean debugEnabled = Settings.getValues().mGestureDebugDrawPoints;
+        mGestureDebugPointsDrawingPreview.setPreviewEnabled(debugEnabled);
+        mSpacingInsightDrawingPreview.setPreviewEnabled(debugEnabled);
     }
 
     public void showGestureFloatingPreviewText(@NonNull final SuggestedWords suggestedWords,
@@ -586,6 +592,16 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     @Override
     public void setGestureCommitPending(final boolean pending) {
         mGestureFloatingTextDrawingPreview.setCommitPending(pending);
+    }
+
+    // Implements {@link DrawingProxy#setSpacingInsight} (#A11). The readout is co-gated by
+    // PREF_GESTURE_DEBUG_DRAW_POINTS so there are no new settings to expose.
+    @Override
+    public void setSpacingInsight(final boolean complete, final float prefixRichScore,
+            final int graceMs, @Nullable final String gate) {
+        if (!Settings.getValues().mGestureDebugDrawPoints) return;
+        locatePreviewPlacerView();
+        mSpacingInsightDrawingPreview.update(complete, prefixRichScore, graceMs, gate);
     }
 
     // Note that this method is called from a non-UI thread.
