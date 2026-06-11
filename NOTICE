@@ -1,0 +1,21 @@
+LeanType
+Copyright (C) The LeanType / LeanBitLab contributors
+
+LeanType is licensed under the GNU General Public License v3.0 (see LICENSE).
+
+This product includes software developed by third parties and used under the
+Apache License, Version 2.0 (see LICENSE-Apache-2.0):
+
+- Statistical swipe (glide) decoder
+  Files under: app/src/main/java/helium314/keyboard/keyboard/internal/gesture/
+  Derived from FlorisBoard's StatisticalGlideTypingClassifier
+  (Copyright 2025 The FlorisBoard Contributors, Apache-2.0,
+  https://github.com/florisboard/florisboard).
+  That code is itself based on Etienne Desticourt's gesture classifier
+  contributed to AnySoftKeyboard (Apache-2.0,
+  https://github.com/AnySoftKeyboard/AnySoftKeyboard, PR #1870) and the SHARK^2
+  word-gesture algorithm (Kristensson & Zhai, "SHARK2: A Large Vocabulary
+  Shorthand Writing System for Pen-based Computers", UIST 2004).
+  The LeanType port decouples the algorithm from FlorisBoard/Android types so it
+  runs as engine-agnostic, unit-testable JVM logic; the per-file SPDX headers
+  retain the Apache-2.0 license.

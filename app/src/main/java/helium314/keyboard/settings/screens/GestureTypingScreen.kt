@@ -39,7 +39,9 @@ fun GestureTypingScreen(
         Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
     val hasGestureLib = JniUtils.sHaveGestureLib
     val gestureFloatingPreviewEnabled = prefs.getBoolean(Settings.PREF_GESTURE_FLOATING_PREVIEW_TEXT, Defaults.PREF_GESTURE_FLOATING_PREVIEW_TEXT)
-    val gestureEnabled = hasGestureLib && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
+    val useBuiltinDecoder = prefs.getBoolean(Settings.PREF_GESTURE_USE_BUILTIN_DECODER, Defaults.PREF_GESTURE_USE_BUILTIN_DECODER)
+    val gestureBackendAvailable = hasGestureLib || useBuiltinDecoder
+    val gestureEnabled = gestureBackendAvailable && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
     
     // Always show library loader first when no library
     val items = buildList {
@@ -50,8 +52,9 @@ fun GestureTypingScreen(
         }
         // Show all gesture settings (they will be disabled if no library)
         add(Settings.PREF_GESTURE_INPUT)
+        add(Settings.PREF_GESTURE_USE_BUILTIN_DECODER)
 
-        if (hasGestureLib && gestureEnabled) {
+        if (gestureEnabled) {
             add(R.string.settings_category_visuals)
             add(Settings.PREF_GESTURE_PREVIEW_TRAIL)
             add(Settings.PREF_GESTURE_FLOATING_PREVIEW_TEXT)
@@ -89,6 +92,10 @@ fun GestureTypingScreen(
 fun createGestureTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_GESTURE_INPUT, R.string.gesture_input, R.string.gesture_input_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_INPUT)
+    },
+    Setting(context, Settings.PREF_GESTURE_USE_BUILTIN_DECODER,
+        R.string.gesture_use_builtin_decoder, R.string.gesture_use_builtin_decoder_summary) {
+        SwitchPreference(it, Defaults.PREF_GESTURE_USE_BUILTIN_DECODER)
     },
     Setting(context, Settings.PREF_GESTURE_PREVIEW_TRAIL, R.string.gesture_preview_trail) {
         SwitchPreference(it, Defaults.PREF_GESTURE_PREVIEW_TRAIL)

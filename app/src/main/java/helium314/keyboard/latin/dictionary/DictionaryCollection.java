@@ -80,6 +80,19 @@ public final class DictionaryCollection extends Dictionary {
     }
 
     @Override
+    public java.util.Map<String, Integer> getWordsForGesture() {
+        final java.util.LinkedHashMap<String, Integer> merged = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < mDictionaries.size(); i++) {
+            final java.util.Map<String, Integer> words = mDictionaries.get(i).getWordsForGesture();
+            for (final java.util.Map.Entry<String, Integer> e : words.entrySet()) {
+                final Integer prev = merged.get(e.getKey());
+                if (prev == null || e.getValue() > prev) merged.put(e.getKey(), e.getValue());
+            }
+        }
+        return merged;
+    }
+
+    @Override
     public int getMaxFrequencyOfExactMatches(final String word) {
         int maxFreq = -1;
         for (int i = mDictionaries.size() - 1; i >= 0; --i) {

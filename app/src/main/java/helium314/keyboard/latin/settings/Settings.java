@@ -136,6 +136,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GESTURE_SPACE_AWARE = "gesture_space_aware";
     public static final String PREF_GESTURE_FAST_TYPING_COOLDOWN = "gesture_fast_typing_cooldown";
     public static final String PREF_GESTURE_TRAIL_FADEOUT_DURATION = "gesture_trail_fadeout_duration";
+    public static final String PREF_GESTURE_USE_BUILTIN_DECODER = "gesture_use_builtin_decoder";
     // Two-thumb typing prefs (behaviour is wired in follow-up changes; defaults preserve current behaviour).
     public static final String PREF_GESTURE_MANUAL_SPACING = "gesture_manual_spacing";
     public static final String PREF_GESTURE_FRAGMENT_BACKSPACE = "gesture_fragment_backspace";

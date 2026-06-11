@@ -171,6 +171,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         synchronized(this) {
             oldDictionaryGroups = dictionaryGroups
             dictionaryGroups = newDictionaryGroups
+            cachedGestureLexicon = null // force the gesture lexicon to rebuild for the new dictionaries
             if (hasAtLeastOneUninitializedMainDictionary()) {
                 asyncReloadUninitializedMainDictionaries(context, locales, listener)
             }
@@ -663,6 +664,20 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         }
 
     override fun dump(context: Context) = getDictionaryStats(context).joinToString("\n")
+
+    @Volatile private var cachedGestureLexicon: Map<String, Int>? = null
+    @Volatile private var cachedGestureLexiconLocale: Locale? = null
+
+    override fun getGestureLexicon(): Map<String, Int> {
+        val locale = dictionaryGroups[0].locale
+        cachedGestureLexicon?.let { if (cachedGestureLexiconLocale == locale) return it }
+        val lexicon = dictionaryGroups[0].getDict(Dictionary.TYPE_MAIN)?.getWordsForGesture() ?: emptyMap()
+        if (lexicon.isNotEmpty()) {
+            cachedGestureLexicon = lexicon
+            cachedGestureLexiconLocale = locale
+        }
+        return lexicon
+    }
 
     companion object {
         private val TAG = DictionaryFacilitatorImpl::class.java.simpleName

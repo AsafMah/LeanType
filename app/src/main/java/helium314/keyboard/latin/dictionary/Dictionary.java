@@ -115,6 +115,14 @@ public abstract class Dictionary {
     }
 
     /**
+     * Enumerates this dictionary's words for gesture template matching.
+     * @return a map of word -&gt; probability (0..MAX_PROBABILITY), or empty if unsupported.
+     */
+    public java.util.Map<String, Integer> getWordsForGesture() {
+        return java.util.Collections.emptyMap();
+    }
+
+    /**
      * Compares the contents of the character array with the typed word and returns true if they
      * are the same.
      * @param word the array of characters that make up the word

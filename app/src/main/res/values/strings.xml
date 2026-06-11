@@ -202,6 +202,10 @@
     <string name="gesture_space_aware">Phrase gesture</string>
     <!-- Description for "gesture_space_aware" option. The user can input multiple words by gliding through the space key during a gesture input.-->
     <string name="gesture_space_aware_summary">Input spaces during gestures by gliding to the space key</string>
+    <!-- Title of the setting to use the on-device gesture decoder instead of the downloadable native library. -->
+    <string name="gesture_use_builtin_decoder">Built-in gesture decoder (experimental)</string>
+    <!-- Description for the built-in gesture decoder option. -->
+    <string name="gesture_use_builtin_decoder_summary">Decode swipes on-device without the downloadable gesture library</string>
     <!-- Title of the setting to adjust the fast-typing gesture cooldown-->
     <string name="gesture_fast_typing_cooldown">Rapid typing cooldown</string>
     <!-- The text that represents no cooldown-->

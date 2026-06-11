@@ -98,6 +98,29 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
     }
 
     @Override
+    public java.util.Map<String, Integer> getWordsForGesture() {
+        final java.util.LinkedHashMap<String, Integer> out = new java.util.LinkedHashMap<>();
+        if (mLock.readLock().tryLock()) {
+            try {
+                int token = 0;
+                do {
+                    final BinaryDictionary.GetNextWordPropertyResult result =
+                            mBinaryDictionary.getNextWordProperty(token);
+                    final WordProperty wordProperty = result.mWordProperty;
+                    if (wordProperty == null) break;
+                    if (!wordProperty.mIsNotAWord && !wordProperty.mIsPossiblyOffensive) {
+                        out.put(wordProperty.mWord, wordProperty.getProbability());
+                    }
+                    token = result.mNextToken;
+                } while (token != 0);
+            } finally {
+                mLock.readLock().unlock();
+            }
+        }
+        return out;
+    }
+
+    @Override
     public int getMaxFrequencyOfExactMatches(final String word) {
         if (mLock.readLock().tryLock()) {
             try {

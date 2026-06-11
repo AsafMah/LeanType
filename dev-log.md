@@ -653,3 +653,221 @@ The backspace fixes were ready in PR #8, and the user asked to merge them to `ma
 
 ### Open Questions / Next Steps
 - Push the updated shortcuts PR branch.
+
+## 2026-06-10 — Native-free statistical swipe decoder (port + seams)
+
+### Context
+Gesture typing currently depends on Google's proprietary `libjni_latinimegoogle.so`, downloaded at
+runtime by `GestureLibraryDownloader` and loaded into the native engine (it registers the gesture
+`SuggestPolicy` that the open engine leaves null). That blob is closed (can't be modified for the
+two-thumb / tap-merge feature) and a third-party dependency. FUTO's open swipe decoder was ruled out
+on licensing (FUTO Source First License 1.1-kb is non-commercial and GPL-incompatible). FlorisBoard's
+`StatisticalGlideTypingClassifier` is Apache-2.0 (GPL-3.0-compatible) and ML-free (a SHARK²-style
+template matcher), so it is portable.
+
+### Actions Taken
+- Created worktree `../LeanType-swipe` on branch `feat/statistical-swipe-decoder`.
+- Ported FlorisBoard's statistical glide decoder into
+  `app/src/main/java/helium314/keyboard/keyboard/internal/gesture/`, **decoupled** from
+  FlorisBoard/Android types so it is pure JVM logic (no `Context`, no view layer, no native engine):
+  - `SwipeDecoderModel.kt` — `GestureKey`, `GestureWordSource`, `GestureAnchor` seams.
+  - `SwipeGesture.kt` — path geometry: resample / `normalizeByBoxSide` / `generateIdealGestures` (incl.
+    the double-letter loop variant) / length.
+  - `GesturePruner.kt` — extremity + length pruning over the lexicon.
+  - `StatisticalSwipeDecoder.kt` — shape + location channels + Gaussian + unigram-frequency ranking;
+    `decode(pathX, pathY, max, anchors)` takes a full (optionally multi-stroke-merged) path in one call.
+- Added the two LeanType extension points:
+  - `pruneByAnchors(...)` — **functional basic** tap-anchor filter (keeps words containing every
+    committed-tap code point); position-awareness + key-equivalence (Hebrew final/regular forms) left
+    as documented TODO.
+  - `rescoreWithNgram(...)` — **stub** (identity) pending the `NgramContext` bridge from the engine.
+- Added Apache-2.0 SPDX headers on all ported files + a top-level `NOTICE`.
+- Added `app/src/test/java/.../gesture/StatisticalSwipeDecoderTest.kt` (pure JVM, no Robolectric).
+
+### Decisions Made
+- **Decode in Kotlin, not native.** A Kotlin decoder bypasses the native `mGestureSuggest`/downloaded
+  blob entirely, lives next to `DualThumbHinter`, and gives full control of scoring/pruning for the
+  two-thumb feature (anchors/segments) — the whole reason for owning the decoder.
+- **Engine-agnostic seams** (`GestureKey` / `GestureWordSource`) instead of binding to HeliBoard
+  `Key`/`DictionaryFacilitator` directly, so the algorithm is unit-testable on the JVM (closes the
+  gesture-recognition coverage gap noted in `Agents.md` / `IMPROVEMENT_PLAN.md`).
+- Kept the Apache-2.0 license on the ported files (compatible inside the GPL-3.0 combined work).
+
+### Manual Tests — Swipe decoder (unit, JVM)
+`./gradlew :app:testOfflineDebugUnitTest --tests "*StatisticalSwipeDecoderTest"` → **7/7 pass**.
+
+| # | Scenario | Expected |
+|---|---|---|
+| 1 | Straight trace c→a→t on toy keyboard | top suggestion = `cat` (over `cot`) |
+| 2 | V-shaped trace c→o→t | top suggestion = `cot` (over `cat`) |
+| 3 | c→a→t trace + committed tap anchor on `o` | `cat` pruned, `cot` kept |
+| 4 | Anchor on a letter absent from the lexicon | no candidates |
+| 5 | `generateIdealGestures` for `cat` vs doubled-letter `all` | 1 variant vs 2 |
+| 6 | `normalizeByBoxSide` | centered, longest side bounded |
+| 7 | Empty path | no suggestions |
+
+On-device manual testing is N/A this session: the decoder is not yet wired into the live input path.
+
+### Open Questions / Next Steps
+- **Integration layer (next):** adapt HeliBoard `Key` → `GestureKey` and `DictionaryFacilitator` →
+  `GestureWordSource` (the word-list source is the main design question — the native dict is a Patricia
+  trie; needs a word enumeration or a parallel list), then route `isGesture()` batch input to
+  `StatisticalSwipeDecoder.decode(...)` and drop the `GestureLibraryDownloader` dependency.
+- Implement `rescoreWithNgram` once the `NgramContext`/previous-word signal is bridged in (largest
+  accuracy win remaining).
+- Extend `pruneByAnchors` with position-awareness + Hebrew final/regular-form equivalence.
+- Per `Agents.md` review workflow: run a `rubber_duck` cross-model pass before merging, as this is
+  correctness-sensitive suggestion logic.
+
+## 2026-06-10 — Built-in swipe decoder: live integration as an alternative to the native library
+
+### Context
+Follow-up to the native-free statistical swipe decoder port. Goal: wire it into the live gesture
+pipeline and expose it as a user-selectable option *alongside* the existing downloadable native
+library (`GestureLibraryDownloader` -> `libjni_latinimegoogle.so`), not as a replacement.
+
+### Actions Taken
+- **Setting (5-file pattern):** `PREF_GESTURE_USE_BUILTIN_DECODER` (default off, "experimental") in
+  `Settings.java`, `Defaults.kt`, `SettingsValues.java`, `strings.xml`, `GestureTypingScreen.kt`.
+  Also relaxed the gesture-enabled gate so the built-in decoder works without the native lib:
+  `mGestureInputEnabled = (JniUtils.sHaveGestureLib || mGestureUseBuiltinDecoder) && PREF_GESTURE_INPUT`.
+- **Dictionary word enumeration** (for template matching): added `getWordsForGesture(): Map<word,prob>`
+  to `Dictionary` (empty default), `ReadOnlyBinaryDictionary` (token loop via
+  `BinaryDictionary.getNextWordProperty`, skipping not-a-word/offensive), and `DictionaryCollection`
+  (merge children, max prob). Exposed via a new `DictionaryFacilitator.getGestureLexicon()` on the
+  interface + both impls (`DictionaryFacilitatorImpl` caches per main-locale; `SingleDictionaryFacilitator`).
+- **Adapters/controller** in `keyboard/internal/gesture/`:
+  - `KeyboardGestureAdapter.toGestureKeys(keyboard)` — letter keys -> `GestureKey` (centers in the
+    InputPointers coordinate space; no transform needed).
+  - `DictionaryGestureWordSource` — wraps the `word->prob` lexicon.
+  - `GestureDecoderController` — caches the decoder; rebuilds keys on `Keyboard.mId` change and the
+    word source on lexicon-identity change; converts `InputPointers` -> float path; calls `decode`.
+- **Branch point** (`Suggest.getSuggestedWordsForBatchInput`): when the pref is on, decode with the
+  built-in controller and build `SuggestedWords`; returns null -> falls back to the native path when
+  the lexicon isn't loaded yet or there are no candidates, so the existing flow is untouched.
+
+### Decisions Made
+- **Branch in `Suggest`, not `InputLogic`.** It is the single point where batch input becomes
+  `SuggestedWords`; both decoders feed the identical downstream commit path.
+- **Lexicon cached in the facilitator, keyed by main locale; empty (not-yet-loaded) results are NOT
+  cached** so the first gesture after async dictionary load still rebuilds once loaded.
+- **Fall back, never fail.** Built-in decoder returning null keeps the native library fully usable;
+  the two are genuinely parallel options.
+- Decoder runs on the background suggestion thread (batch path), so the one-off pruner build over the
+  lexicon does not block the UI thread.
+
+### Manual Tests — build + decoder unit (JVM)
+`./gradlew :app:testOfflineDebugUnitTest --tests "*StatisticalSwipeDecoderTest"` → compiles the full
+app (14 changed files) + **7/7 decoder tests pass**.
+
+On-device manual plan (not run this session — needs a device + a loaded dictionary):
+
+| # | Steps | Expected |
+|---|---|---|
+| 1 | Settings → Gesture typing → enable "Built-in gesture decoder". | Toggle persists; gesture works even with no native lib downloaded. |
+| 2 | Swipe a common word (e.g. "hello"). | Correct word committed; suggestion strip shows alternatives. |
+| 3 | Toggle the built-in decoder OFF with the native lib present. | Gesture still works via the native library (fallback path intact). |
+| 4 | Switch keyboard locale, then swipe. | Lexicon rebuilds for the new locale; decoding matches the new language. |
+
+### Open Questions / Next Steps
+- **Perf:** first gesture per locale enumerates the whole main dict + builds the pruner on the
+  suggestion thread. Acceptable but should be pre-warmed on dictionary load and the lexicon cache
+  invalidated on same-locale dict reload (currently only locale-change invalidates).
+- **Scoring parity:** `SuggestedWordInfo` scores are synthetic (rank-based). Tune vs. the native path,
+  and wire `rescoreWithNgram` using `NgramContext` for the real accuracy win.
+- **Anchors:** two-thumb tap anchors are plumbed in the decoder but not yet fed from the gesture
+  input layer (`BatchInputArbiter`/`PointerTracker` tap seeding) — the next feature step.
+- Per `Agents.md`: run a `rubber_duck` cross-model review before merging (touches `Suggest`,
+  `DictionaryFacilitator`, and the dictionary class hierarchy).
+
+## 2026-06-10 — Built-in swipe decoder: review fixes (cross-model pass)
+
+### Context
+Adversarial review of the built-in-decoder integration surfaced correctness gaps. Addressed the
+blocking ones before any merge.
+
+### Actions Taken (fixes)
+- **Settings gating** (`GestureTypingScreen.kt`): gesture settings were hidden unless the native lib
+  existed. Now `gestureBackendAvailable = hasGestureLib || useBuiltinDecoder` and the section shows
+  whenever `gestureEnabled`, so the built-in decoder is configurable with no downloaded library.
+- **Shared post-processing + safe fallback** (`Suggest.kt`): the built-in path previously returned a
+  finished `SuggestedWords` early, skipping capitalization / rejected-suggestion / dedupe / emoji /
+  threshold / pseudo-typed-word handling. Reworked: `getBatchSuggestionResults()` picks the source
+  (built-in vs native) and returns a `SuggestionResults`, which flows through the *same* downstream
+  batch post-processing. When built-in is selected but yields nothing, it falls back to native **only**
+  if `JniUtils.sHaveGestureLib` — otherwise returns empty (no accidental native routing).
+- **Lexicon cache invalidation + identity key** (`DictionaryFacilitatorImpl.kt`, `GestureDecoderController.kt`):
+  `cachedGestureLexicon` is now cleared in `resetDictionaries()` (was stale on same-locale reload).
+  The controller keys the word source on the lexicon **instance identity** (`!==`) — the facilitator
+  returns a stable cached instance until invalidated, so rebuilds happen on real changes without an
+  O(n) map comparison.
+- **Testability** (`GestureDecoderController.kt`): split `decode` into the `Keyboard`/`InputPointers`
+  entry point + an engine-agnostic `internal decode(layoutKey, keys, pathX, pathY, lexicon, lexiconKey, max)`.
+
+### Decisions Made
+- Built-in results use synthetic descending scores well above `SUPPRESS_SUGGEST_THRESHOLD (-2e9)`;
+  `KIND_WHITELIST` + `DICTIONARY_USER_TYPED` (a `PhonyDictionary`, null locale handled by the existing
+  `?: locale`). Tuning kind/source/score vs. the native path remains a follow-up.
+- Lexicon still main-dictionary-only (no user-history/multilingual merge yet) — acceptable for the
+  experimental backend; documented as a follow-up.
+
+### Manual Tests — build + unit (JVM)
+`./gradlew :app:testOfflineDebugUnitTest --tests "*gesture.StatisticalSwipeDecoderTest" --tests "*gesture.GestureDecoderControllerTest"`
+→ full app compiles + **10/10 pass** (7 decoder, 3 controller caching: cache-hit, lexicon-identity
+rebuild, empty inputs).
+
+### Open Questions / Next Steps (still open)
+- Suggest-level test (backend selection + no-native-fallback) not added — needs heavy `Suggest`/facilitator
+  fakes; controller + decoder are covered. On-device QA per the prior entry's table still required.
+- Pre-warm lexicon off the suggestion thread; `getNextWordProperty` enumeration is heavy on first gesture.
+- Multilingual / user-history lexicon merge; n-gram rescoring; two-thumb tap-anchor feed.
+- Run a final `rubber_duck` pass after these, then open the PR.
+
+## 2026-06-10 — Built-in swipe decoder: test coverage (automatic + manual)
+
+### Context
+Review asked for automatic tests where feasible, manual plans where not. Added unit coverage for the
+new pure/glue/decision logic; the genuinely native/on-device parts get a manual plan.
+
+### Automatic tests added (JVM, no device) — 21 total, all green
+`./gradlew :app:testOfflineDebugUnitTest --tests "*gesture.*Test" --tests "*SuggestBatchSourceTest" --tests "*DictionaryCollectionGestureTest"`
+
+| Test | Count | Covers |
+|---|---|---|
+| `StatisticalSwipeDecoderTest` | 7 | SHARK² decode: shape+location channels, tap anchors, geometry |
+| `GestureDecoderControllerTest` | 3 | caching: cache-hit, lexicon-identity rebuild, empty inputs |
+| `DictionaryGestureWordSourceTest` | 3 | frequency normalization (prob/255), missing word, getWords |
+| `DictionaryCollectionGestureTest` | 3 | lexicon enumeration merge (union, max-prob dedup, base default empty) |
+| `KeyboardGestureAdapterTest` | 1 | key filtering: letters only, lowercased, centered (Mockito mocks of Key/Keyboard) |
+| `SuggestBatchSourceTest` | 4 | backend selection: BUILTIN / EMPTY (no-fallback w/o native lib) / NATIVE |
+
+- Refactored the backend choice into a pure `chooseGestureBatchSource(useBuiltin, builtinProducedResults,
+  haveNativeGestureLib)` in `Suggest.kt` specifically so the selection + the critical "don't silently
+  fall back to native when the user picked built-in and no library exists" rule is unit-testable.
+- Split `GestureDecoderController.decode` into a `Keyboard`/`InputPointers` entry point + an
+  engine-agnostic `internal decode(...)` so caching is testable without Android objects.
+
+### Manual tests (cannot be automated here)
+
+**A. Native lexicon enumeration** — `ReadOnlyBinaryDictionary.getWordsForGesture()` needs the native
+library + a real compiled `.dict`, so it cannot run in JVM unit tests.
+| # | Steps | Expected |
+|---|---|---|
+| A1 | Debug-log `getGestureLexicon().size` after the English main dict loads. | Non-zero, ~ dictionary word count; excludes not-a-word/offensive entries. |
+| A2 | Switch locale, re-check. | Count changes to the new locale's dictionary; no stale words. |
+
+**B. End-to-end gesture (on device/emulator)** — needs a loaded dictionary + touch input.
+| # | Steps | Expected |
+|---|---|---|
+| B1 | Settings → Gesture typing → enable "Built-in gesture decoder" (no native lib downloaded). | Gesture settings visible & toggle persists; swiping produces words. |
+| B2 | Swipe "hello", "keyboard", "the". | Correct word committed; strip shows alternatives; capitalization respects shift/caps (verifies shared post-processing). |
+| B3 | With native lib present, toggle built-in OFF, swipe. | Still works via the native library (fallback path intact). |
+| B4 | Built-in ON, native lib absent, swipe gibberish with no candidate. | No crash; no word committed (EMPTY, no native routing). |
+| B5 | Switch keyboard locale, swipe. | Lexicon rebuilds; decoding matches the new language. |
+| B6 | Rapidly swipe many words. | No UI jank after the first-gesture lexicon build (note: first gesture per locale is heavy — see perf follow-up). |
+
+### Open Questions / Next Steps (unchanged)
+- A full Robolectric `Suggest.getSuggestedWordsForBatchInput` wiring test (that the decision is actually
+  invoked and results reach commit) is still manual (B2) — the *decision* is now unit-tested.
+- Perf pre-warm, multilingual/user-history lexicon, n-gram rescoring, two-thumb anchor feed; final
+  `rubber_duck` pass before PR.

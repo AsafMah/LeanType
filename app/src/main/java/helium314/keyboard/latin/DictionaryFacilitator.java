@@ -151,4 +151,7 @@ public interface DictionaryFacilitator {
     void dumpDictionaryForDebug(final String dictName);
 
     @NonNull List<DictionaryStats> getDictionaryStats(final Context context);
+
+    /** word -&gt; probability (0..255) for the current main-locale dictionary, used by the built-in gesture decoder. */
+    @NonNull java.util.Map<String, Integer> getGestureLexicon();
 }

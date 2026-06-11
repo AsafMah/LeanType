@@ -131,6 +131,7 @@ object Defaults {
     const val PREF_GESTURE_SPACE_AWARE = false
     const val PREF_GESTURE_FAST_TYPING_COOLDOWN = 500
     const val PREF_GESTURE_TRAIL_FADEOUT_DURATION = 800
+    const val PREF_GESTURE_USE_BUILTIN_DECODER = false
     // Two-thumb typing defaults — every default preserves current behaviour (off / 0).
     const val PREF_GESTURE_MANUAL_SPACING = false
     const val PREF_GESTURE_FRAGMENT_BACKSPACE = true

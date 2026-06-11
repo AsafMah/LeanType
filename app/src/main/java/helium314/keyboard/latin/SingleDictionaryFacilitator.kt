@@ -140,6 +140,8 @@ class SingleDictionaryFacilitator(private val dict: Dictionary) : DictionaryFaci
 
     override fun dump(context: Context) = getDictionaryStats(context).joinToString("\n")
 
+    override fun getGestureLexicon(): Map<String, Int> = dict.getWordsForGesture()
+
     companion object {
         interface SuggestionLogger {
             /** provides input data and suggestions returned by the library */

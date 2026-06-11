@@ -114,6 +114,7 @@ public class SettingsValues {
         public final boolean mSuggestPunctuation;
         public final boolean mCenterSuggestionTextToEnter;
         public final boolean mGestureInputEnabled;
+        public final boolean mGestureUseBuiltinDecoder;
         public final boolean mGestureTrailEnabled;
         public final boolean mGestureFloatingPreviewTextEnabled;
         public final boolean mGestureFloatingPreviewDynamicEnabled;
@@ -327,7 +328,9 @@ public class SettingsValues {
                                 Defaults.PREF_KEYPRESS_SOUND_VOLUME);
                 mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
                                 Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY);
-                mGestureInputEnabled = JniUtils.sHaveGestureLib
+                mGestureUseBuiltinDecoder = prefs.getBoolean(Settings.PREF_GESTURE_USE_BUILTIN_DECODER,
+                                Defaults.PREF_GESTURE_USE_BUILTIN_DECODER);
+                mGestureInputEnabled = (JniUtils.sHaveGestureLib || mGestureUseBuiltinDecoder)
                                 && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT);
                 mGestureTrailEnabled = prefs.getBoolean(Settings.PREF_GESTURE_PREVIEW_TRAIL,
                                 Defaults.PREF_GESTURE_PREVIEW_TRAIL);

@@ -9,6 +9,7 @@ import android.text.TextUtils
 import android.util.LruCache
 import com.android.inputmethod.latin.utils.BinaryDictionaryUtils
 import helium314.keyboard.keyboard.Keyboard
+import helium314.keyboard.keyboard.internal.gesture.GestureDecoderController
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
 import helium314.keyboard.latin.common.ComposedData
 import helium314.keyboard.latin.common.Constants
@@ -22,6 +23,7 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.suggestions.SuggestionStripView
 import helium314.keyboard.latin.utils.AutoCorrectionUtils
+import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SuggestionResults
 import java.util.Locale
@@ -34,6 +36,7 @@ import kotlin.math.min
 class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     private var mAutoCorrectionThreshold = 0f
     private val mPlausibilityThreshold = 0f
+    private val gestureDecoderController = GestureDecoderController()
     // Use LRU cache with size limit instead of HashMap to avoid clearing and preserve frequently used entries
     // Cache size of 50 should cover most typing scenarios while limiting memory usage
     private val nextWordSuggestionsCache = object : LruCache<NgramContext, SuggestionResults>(50) {
@@ -317,9 +320,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         settingsValuesForSuggestion: SettingsValuesForSuggestion,
         inputStyle: Int, sequenceNumber: Int
     ): SuggestedWords {
-        val suggestionResults = mDictionaryFacilitator.getSuggestionResults(
-            wordComposer.composedDataSnapshot, ngramContext, keyboard,
-            settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
+        val suggestionResults = getBatchSuggestionResults(
+            wordComposer, ngramContext, keyboard, settingsValuesForSuggestion, inputStyle
         )
         replaceSingleLetterFirstSuggestion(suggestionResults)
 
@@ -389,6 +391,50 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         }
         return SuggestedWords(suggestionsList, suggestionResults.mRawSuggestions, pseudoTypedWordInfo, true,
             false, false, inputStyle, sequenceNumber)
+    }
+
+    /**
+     * Chooses the source of batch (gesture) suggestions: the built-in statistical decoder when the
+     * user selected it (falling back to the native library only when that library is present), else
+     * the native dictionary path. Either source then flows through the same batch post-processing.
+     */
+    private fun getBatchSuggestionResults(
+        wordComposer: WordComposer, ngramContext: NgramContext, keyboard: Keyboard,
+        settingsValuesForSuggestion: SettingsValuesForSuggestion, inputStyle: Int
+    ): SuggestionResults {
+        val useBuiltin = Settings.getValues().mGestureUseBuiltinDecoder
+        val builtin = if (useBuiltin) buildBuiltinGestureResults(wordComposer, keyboard) else null
+        return when (chooseGestureBatchSource(useBuiltin, builtin != null, JniUtils.sHaveGestureLib)) {
+            GestureBatchSource.BUILTIN -> builtin!!
+            GestureBatchSource.EMPTY -> SuggestionResults(SuggestedWords.MAX_SUGGESTIONS, false, false)
+            GestureBatchSource.NATIVE -> mDictionaryFacilitator.getSuggestionResults(
+                wordComposer.composedDataSnapshot, ngramContext, keyboard,
+                settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
+            )
+        }
+    }
+
+    /**
+     * Built-in (downloadable-library-free) statistical gesture decode. Returns null when it cannot
+     * produce results (lexicon not loaded yet, or no candidates) so the caller decides on fallback.
+     * The lexicon map instance doubles as its own cache key (the facilitator returns a stable
+     * instance until invalidated), so the controller rebuilds its word source only on real changes.
+     */
+    private fun buildBuiltinGestureResults(wordComposer: WordComposer, keyboard: Keyboard): SuggestionResults? {
+        val lexicon = mDictionaryFacilitator.getGestureLexicon()
+        if (lexicon.isEmpty()) return null
+        val words = gestureDecoderController.decode(
+            keyboard, wordComposer.inputPointers, lexicon, lexicon, SuggestedWords.MAX_SUGGESTIONS
+        )
+        if (words.isEmpty()) return null
+        val results = SuggestionResults(SuggestedWords.MAX_SUGGESTIONS, false, false)
+        var score = words.size * 1000
+        for (w in words) {
+            results.add(SuggestedWordInfo(w, "", score, SuggestedWordInfo.KIND_WHITELIST,
+                Dictionary.DICTIONARY_USER_TYPED, SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE))
+            score -= 1000
+        }
+        return results
     }
 
     /** get suggestions based on the current ngram context, with an empty typed word (that's what next word suggestions do)  */
@@ -592,4 +638,24 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             return pseudoTypedWordInfo
         }
     }
+}
+
+/** Which backend supplies batch (gesture) suggestions. */
+internal enum class GestureBatchSource { BUILTIN, NATIVE, EMPTY }
+
+/**
+ * Pure decision for [Suggest]'s gesture backend selection (extracted so it can be unit-tested):
+ *  - built-in selected and it produced candidates -> BUILTIN;
+ *  - built-in selected, no candidates, and no native gesture library present -> EMPTY, so we never
+ *    silently route into a native gesture path the user opted out of (or that isn't available);
+ *  - otherwise -> NATIVE.
+ */
+internal fun chooseGestureBatchSource(
+    useBuiltinDecoder: Boolean,
+    builtinProducedResults: Boolean,
+    haveNativeGestureLib: Boolean,
+): GestureBatchSource = when {
+    useBuiltinDecoder && builtinProducedResults -> GestureBatchSource.BUILTIN
+    useBuiltinDecoder && !haveNativeGestureLib -> GestureBatchSource.EMPTY
+    else -> GestureBatchSource.NATIVE
 }
