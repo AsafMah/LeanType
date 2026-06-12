@@ -10,35 +10,31 @@
 //
 // DISABLED tests  (DISABLED_GestureReplayTest.*)
 //   Compile-checked stubs that would feed a loaded trace through the latinime
-//   gesture recognizer.  Disabled because two blockers must be resolved first:
+//   gesture recognizer.  Disabled because the open-source tree does NOT contain
+//   a gesture suggest policy implementation: it only has GestureSuggestPolicyFactory,
+//   whose factory method is null in the host build. Dictionary::getSuggestions(...)
+//   with IS_GESTURE therefore constructs Suggest with a null policy and would crash
+//   at TRAVERSAL->getMaxSpatialDistance().
 //
-//   BLOCKER 1 — JNI runtime required by ProximityInfo:
-//     ProximityInfo::ProximityInfo(JNIEnv*, ...) calls env->GetArrayLength() and
-//     env->GetIntArrayRegion() unconditionally on the very first line of the
-//     constructor body (proximity_info.cpp:76).  There is no non-JNI constructor
-//     overload.  A live JVM (JavaVM + JNI_CreateJavaVM, or an Android runtime)
-//     must be available to create a ProximityInfo with real keyboard geometry.
+//   What is proven here:
+//     a) TraceRecorder-style fixtures parse into the exact x/y/time/pointer arrays
+//        expected by Dictionary::getSuggestions.
+//     b) ProximityInfo can now be constructed on the host from raw arrays — no JNIEnv
+//        required — and QWERTY key lookup works.
 //
-//   BLOCKER 2 — binary dictionary asset required:
-//     Dictionary wraps a DictionaryStructureWithBufferPolicy that is loaded from
-//     a compiled binary .dict file (the Android asset pipeline provides these at
-//     runtime; they are not part of the source tree and are not downloaded by the
-//     CMake build).  Without a valid dict the gesture scorer has nothing to search.
-//
-//   Next concrete steps to get real replay assertions:
-//     a) Either create a minimal fake JNIEnv shim (filling JNINativeInterface_
-//        function pointers) so ProximityInfo can be constructed on the host, OR
-//        add a non-JNI constructor that accepts raw int*/float* arrays directly.
-//     b) Download / bundle a small compiled English .dict (e.g. the AOSP
-//        "en_US" dict, ~1 MB) as a test asset via CMake FetchContent, OR
-//        generate a tiny programmatic dict using the existing v4 writer classes.
-//     c) Wire ProximityInfo + Dictionary + DicTraverseSession together and
-//        uncomment the assertion in DISABLED_GestureReplayTest.ReplayHelloQwerty.
+//   Next concrete step to get real replay assertions:
+//     provide an open/host-buildable GestureSuggestPolicy implementation (e.g. the
+//     future NLnet recognizer) or a test double with the same policy interface. Once
+//     GestureSuggestPolicyFactory returns a real policy, this scaffold can wire the
+//     fixture + ProximityInfo + Dictionary together and assert the suggestion.
 // =============================================================================
 
 #include <gtest/gtest.h>
+#include <string>
+#include <vector>
 
 #include "replay/trace_fixture.h"
+#include "suggest/core/layout/proximity_info.h"
 
 namespace latinime {
 namespace replay {
@@ -194,112 +190,68 @@ TEST(TraceFixtureParserTest, LoadsHelloQwertyFromFile) {
 }
 #endif
 
-// =============================================================================
-// DISABLED_GestureReplayTest — compile-checked scaffolding; skipped in ctest.
-//
-// Blocked by:
-//   1. ProximityInfo requires JNIEnv* + jintArray/jfloatArray (JVM must be live).
-//   2. Dictionary requires a binary .dict asset loaded from disk.
-//
-// To re-enable, prefix the test name with nothing (remove "DISABLED_") after
-// both blockers are resolved.  See file header for the resolution path.
-// =============================================================================
+static std::vector<int> buildEmptyProximityChars(const int gridWidth, const int gridHeight) {
+    return std::vector<int>(gridWidth * gridHeight * MAX_PROXIMITY_CHARS_SIZE, NOT_A_CODE_POINT);
+}
 
-// Prevent "unused include" warnings while the DISABLED_ tests are inactive.
-// The includes below are intentional — they document the API seam and will be
-// used once the blockers are lifted.
-//
-// #include "suggest/core/layout/proximity_info.h"           // needs JNIEnv*
-// #include "suggest/core/dictionary/dictionary.h"           // needs .dict asset
-// #include "suggest/core/session/dic_traverse_session.h"    // needs JNIEnv*
-// #include "suggest/core/result/suggestion_results.h"
-// #include "suggest/core/suggest_options.h"
-// #include "dictionary/property/ngram_context.h"
+TEST(GestureReplayHostSeamTest, BuildsProximityInfoWithoutJNI) {
+    // Minimal QWERTY row geometry sufficient to prove the replay harness can construct
+    // ProximityInfo from raw host arrays. The full recognizer assertion is still blocked on
+    // a binary .dict asset; this removes the JNIEnv blocker.
+    constexpr int keyboardWidth = 1080;
+    constexpr int keyboardHeight = 310;
+    constexpr int gridWidth = 10;
+    constexpr int gridHeight = 5;
+    constexpr int keyWidth = 108;
+    constexpr int keyHeight = 90;
+    const char *letters = "qwertyuiopasdfghjklzxcvbnm";
+    constexpr int keyCount = 26;
+
+    int xs[keyCount];
+    int ys[keyCount];
+    int widths[keyCount];
+    int heights[keyCount];
+    int codes[keyCount];
+    float sweetXs[keyCount];
+    float sweetYs[keyCount];
+    float radii[keyCount];
+
+    for (int i = 0; i < keyCount; ++i) {
+        const int row = i < 10 ? 0 : (i < 19 ? 1 : 2);
+        const int col = i < 10 ? i : (i < 19 ? i - 10 : i - 19);
+        const int rowOffset = row == 0 ? 0 : (row == 1 ? keyWidth / 2 : keyWidth);
+        xs[i] = rowOffset + col * keyWidth;
+        ys[i] = row * keyHeight;
+        widths[i] = keyWidth;
+        heights[i] = keyHeight;
+        codes[i] = letters[i];
+        sweetXs[i] = xs[i] + keyWidth / 2.0f;
+        sweetYs[i] = ys[i] + keyHeight / 2.0f;
+        radii[i] = keyWidth / 2.0f;
+    }
+    const std::vector<int> proximityChars = buildEmptyProximityChars(gridWidth, gridHeight);
+    ProximityInfo info(keyboardWidth, keyboardHeight, gridWidth, gridHeight, keyWidth, keyHeight,
+            proximityChars.data(), static_cast<int>(proximityChars.size()), keyCount,
+            xs, ys, widths, heights, codes, sweetXs, sweetYs, radii);
+
+    EXPECT_EQ(keyCount, info.getKeyCount());
+    EXPECT_TRUE(info.isCodePointOnKeyboard('h'));
+    EXPECT_TRUE(info.isCodePointOnKeyboard('e'));
+    EXPECT_TRUE(info.isCodePointOnKeyboard('l'));
+    EXPECT_TRUE(info.isCodePointOnKeyboard('o'));
+    EXPECT_FALSE(info.isCodePointOnKeyboard('#'));
+    EXPECT_EQ('h', info.getCodePointOf(info.getKeyIndexOf('h')));
+}
 
 TEST(DISABLED_GestureReplayTest, ReplayHelloQwerty) {
-    // --- Step 1: Load fixture ---
     const TraceFixture fix = parseFixture(kHelloQwertyJson);
     ASSERT_EQ("hello", fix.committedWord);
 
-    // --- Step 2: Build ProximityInfo from fixture keyboard geometry ---
-    //
-    // BLOCKED: ProximityInfo constructor signature (proximity_info.h:31):
-    //
-    //   ProximityInfo(JNIEnv *env,
-    //                 int keyboardWidth, int keyboardHeight,
-    //                 int gridWidth, int gridHeight,
-    //                 int mostCommonKeyWidth, int mostCommonKeyHeight,
-    //                 jintArray proximityChars,   // JNI array — needs live JVM
-    //                 int keyCount,
-    //                 jintArray keyXCoordinates,  // JNI array
-    //                 jintArray keyYCoordinates,  // JNI array
-    //                 jintArray keyWidths,        // JNI array
-    //                 jintArray keyHeights,       // JNI array
-    //                 jintArray keyCharCodes,     // JNI array
-    //                 jfloatArray sweetSpotCenterXs,  // JNI float array
-    //                 jfloatArray sweetSpotCenterYs,  // JNI float array
-    //                 jfloatArray sweetSpotRadii);    // JNI float array
-    //
-    // The body immediately calls env->GetArrayLength(proximityChars) and
-    // env->GetIntArrayRegion(...), so even a null JNIEnv* would crash.
-    // Resolution: add a non-JNI constructor that accepts raw int*/float* arrays.
-
-    // ProximityInfo pInfo(env, fix.keyboard.width, fix.keyboard.height, ...);
-
-    // --- Step 3: Load a binary dictionary ---
-    //
-    // BLOCKED: requires a compiled en_US .dict binary.  The latinime app loads
-    // these from its APK assets folder at runtime; they are not in the source
-    // tree.  For host tests, a small test dictionary must be bundled (e.g. via
-    // CMake FetchContent) or generated programmatically using the v4 writer.
-
-    // const char *dictPath = "/path/to/en_US.dict";
-    // auto policy = DictionaryStructureWithBufferPolicyFactory::newPolicyForExistingDictFile(
-    //     dictPath, 0, fileSize, false);
-    // Dictionary dict(env, std::move(policy));
-
-    // --- Step 4: Create DicTraverseSession ---
-    //
-    // DicTraverseSession also takes JNIEnv* + jstring locale (same blocker).
-
-    // DicTraverseSession session(env, localeJstr, /*usesLargeCache=*/false);
-    // session.init(&dict, nullptr, &suggestOptions);
-
-    // --- Step 5: Call getSuggestions ---
-    //
-    // Suggest::getSuggestions(ProximityInfo*, void* traverseSession,
-    //   int* inputXs, int* inputYs, int* times, int* pointerIds,
-    //   int* inputCodePoints, int inputSize,
-    //   float weightOfLangModelVsSpatialModel,
-    //   SuggestionResults* outSuggestionResults)
-    //
-    // Once unblocked, wire like:
-    //
-    // auto xs  = fix.xCoordinates();
-    // auto ys  = fix.yCoordinates();
-    // auto ts  = fix.times();
-    // auto ids = fix.pointerIds();
-    // SuggestionResults results(MAX_RESULTS);
-    // NgramContext ngramCtx;
-    // SuggestOptions opts;
-    // dict.getSuggestions(&pInfo, &session,
-    //                     xs.data(), ys.data(), ts.data(), ids.data(),
-    //                     /*inputCodePoints=*/nullptr, fix.inputSize(),
-    //                     &ngramCtx, &opts,
-    //                     NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL,
-    //                     &results);
-    //
-    // Then assert the top suggestion matches committedWord:
-    //
-    // ASSERT_GT(results.getSuggestionsCount(), 0);
-    // int topWordCodePoints[MAX_WORD_LENGTH];
-    // results.getSortedScores();  // sort descending
-    // // decode first result and compare to fix.committedWord
-    // char topWord[MAX_WORD_LENGTH * 4 + 1];
-    // intArrayToCharArray(topWordCodePoints, topWordLen, topWord, sizeof(topWord));
-    // EXPECT_EQ(fix.committedWord, std::string(topWord));
-
-    GTEST_SKIP() << "GestureReplayTest disabled: see file header for blocker details.";
+    // The host replay harness can now parse the trace and construct ProximityInfo without JNI.
+    // It still cannot call the actual gesture recognizer because this open-source tree has no
+    // GestureSuggestPolicy implementation; GestureSuggestPolicyFactory::getGestureSuggestPolicy()
+    // returns nullptr in host tests. Enabling this assertion requires an open/host-buildable
+    // policy implementation (or a test policy) first.
 }
 
 } // namespace

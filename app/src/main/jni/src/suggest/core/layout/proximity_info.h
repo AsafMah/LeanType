@@ -35,6 +35,18 @@ class ProximityInfo {
             const jintArray keyYCoordinates, const jintArray keyWidths, const jintArray keyHeights,
             const jintArray keyCharCodes, const jfloatArray sweetSpotCenterXs,
             const jfloatArray sweetSpotCenterYs, const jfloatArray sweetSpotRadii);
+
+    // Host-test constructor: same data as the JNI constructor, but passed as raw arrays so
+    // native unit tests can build ProximityInfo without a live JVM/JNIEnv.
+    ProximityInfo(const int keyboardWidth, const int keyboardHeight,
+            const int gridWidth, const int gridHeight,
+            const int mostCommonKeyWidth, const int mostCommonKeyHeight,
+            const int *const proximityChars, const int proximityCharsLength,
+            const int keyCount, const int *const keyXCoordinates,
+            const int *const keyYCoordinates, const int *const keyWidths,
+            const int *const keyHeights, const int *const keyCharCodes,
+            const float *const sweetSpotCenterXs, const float *const sweetSpotCenterYs,
+            const float *const sweetSpotRadii);
     ~ProximityInfo();
     bool hasSpaceProximity(const int x, const int y) const;
     float getNormalizedSquaredDistanceFromCenterFloatG(
