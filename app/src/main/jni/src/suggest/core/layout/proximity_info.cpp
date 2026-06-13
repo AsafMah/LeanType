@@ -49,6 +49,24 @@ static AK_FORCE_INLINE void safeGetOrFillZeroFloatArrayRegion(JNIEnv *env, jfloa
     }
 }
 
+static AK_FORCE_INLINE void copyOrFillZeroIntArray(const int *const source,
+        const int len, int *const buffer) {
+    if (source && buffer) {
+        memcpy(buffer, source, len * sizeof(buffer[0]));
+    } else if (buffer) {
+        memset(buffer, 0, len * sizeof(buffer[0]));
+    }
+}
+
+static AK_FORCE_INLINE void copyOrFillZeroFloatArray(const float *const source,
+        const int len, float *const buffer) {
+    if (source && buffer) {
+        memcpy(buffer, source, len * sizeof(buffer[0]));
+    } else if (buffer) {
+        memset(buffer, 0, len * sizeof(buffer[0]));
+    }
+}
+
 ProximityInfo::ProximityInfo(JNIEnv *env, const int keyboardWidth, const int keyboardHeight,
         const int gridWidth, const int gridHeight, const int mostCommonKeyWidth,
         const int mostCommonKeyHeight, const jintArray proximityChars, const int keyCount,
@@ -92,6 +110,50 @@ ProximityInfo::ProximityInfo(JNIEnv *env, const int keyboardWidth, const int key
     safeGetOrFillZeroFloatArrayRegion(env, sweetSpotCenterXs, KEY_COUNT, mSweetSpotCenterXs);
     safeGetOrFillZeroFloatArrayRegion(env, sweetSpotCenterYs, KEY_COUNT, mSweetSpotCenterYs);
     safeGetOrFillZeroFloatArrayRegion(env, sweetSpotRadii, KEY_COUNT, mSweetSpotRadii);
+    initializeG();
+}
+
+ProximityInfo::ProximityInfo(const int keyboardWidth, const int keyboardHeight,
+        const int gridWidth, const int gridHeight, const int mostCommonKeyWidth,
+        const int mostCommonKeyHeight, const int *const proximityChars,
+        const int proximityCharsLength, const int keyCount,
+        const int *const keyXCoordinates, const int *const keyYCoordinates,
+        const int *const keyWidths, const int *const keyHeights,
+        const int *const keyCharCodes, const float *const sweetSpotCenterXs,
+        const float *const sweetSpotCenterYs, const float *const sweetSpotRadii)
+        : GRID_WIDTH(gridWidth), GRID_HEIGHT(gridHeight), MOST_COMMON_KEY_WIDTH(mostCommonKeyWidth),
+          MOST_COMMON_KEY_WIDTH_SQUARE(mostCommonKeyWidth * mostCommonKeyWidth),
+          NORMALIZED_SQUARED_MOST_COMMON_KEY_HYPOTENUSE(1.0f +
+                  GeometryUtils::SQUARE_FLOAT(static_cast<float>(mostCommonKeyHeight) /
+                          static_cast<float>(mostCommonKeyWidth))),
+          CELL_WIDTH((keyboardWidth + gridWidth - 1) / gridWidth),
+          CELL_HEIGHT((keyboardHeight + gridHeight - 1) / gridHeight),
+          KEY_COUNT(std::min(keyCount, MAX_KEY_COUNT_IN_A_KEYBOARD)),
+          KEYBOARD_WIDTH(keyboardWidth), KEYBOARD_HEIGHT(keyboardHeight),
+          KEYBOARD_HYPOTENUSE(hypotf(KEYBOARD_WIDTH, KEYBOARD_HEIGHT)),
+          HAS_TOUCH_POSITION_CORRECTION_DATA(keyCount > 0 && keyXCoordinates && keyYCoordinates
+                  && keyWidths && keyHeights && keyCharCodes && sweetSpotCenterXs
+                  && sweetSpotCenterYs && sweetSpotRadii),
+          mProximityCharsArray(new int[GRID_WIDTH * GRID_HEIGHT * MAX_PROXIMITY_CHARS_SIZE
+                  /* proximityCharsLength */]),
+          mLowerCodePointToKeyMap() {
+    const int expectedLength = GRID_WIDTH * GRID_HEIGHT * MAX_PROXIMITY_CHARS_SIZE;
+    if (proximityCharsLength != expectedLength) {
+        AKLOGE("Invalid host proximityCharsLength: %d expected: %d", proximityCharsLength,
+                expectedLength);
+        ASSERT(false);
+        memset(mProximityCharsArray, 0, expectedLength * sizeof(mProximityCharsArray[0]));
+    } else {
+        copyOrFillZeroIntArray(proximityChars, expectedLength, mProximityCharsArray);
+    }
+    copyOrFillZeroIntArray(keyXCoordinates, KEY_COUNT, mKeyXCoordinates);
+    copyOrFillZeroIntArray(keyYCoordinates, KEY_COUNT, mKeyYCoordinates);
+    copyOrFillZeroIntArray(keyWidths, KEY_COUNT, mKeyWidths);
+    copyOrFillZeroIntArray(keyHeights, KEY_COUNT, mKeyHeights);
+    copyOrFillZeroIntArray(keyCharCodes, KEY_COUNT, mKeyCodePoints);
+    copyOrFillZeroFloatArray(sweetSpotCenterXs, KEY_COUNT, mSweetSpotCenterXs);
+    copyOrFillZeroFloatArray(sweetSpotCenterYs, KEY_COUNT, mSweetSpotCenterYs);
+    copyOrFillZeroFloatArray(sweetSpotRadii, KEY_COUNT, mSweetSpotRadii);
     initializeG();
 }
 
