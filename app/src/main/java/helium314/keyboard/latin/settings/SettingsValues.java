@@ -81,6 +81,7 @@ public class SettingsValues {
         public final int mSpaceSwipeHorizontal;
         public final int mSpaceSwipeVertical;
         public final int mLanguageSwipeDistance;
+        public final String mSourceKeyActionTargets;
         public final int mTouchpadSensitivity;
         public final boolean mTouchpadEdgeScroll;
         public final boolean mForceAutoCaps;
@@ -435,6 +436,8 @@ public class SettingsValues {
                 mSpaceSwipeVertical = Settings.readVerticalSpaceSwipe(prefs);
                 mLanguageSwipeDistance = prefs.getInt(Settings.PREF_LANGUAGE_SWIPE_DISTANCE,
                                 Defaults.PREF_LANGUAGE_SWIPE_DISTANCE);
+                mSourceKeyActionTargets = prefs.getString(Settings.PREF_SOURCE_KEY_ACTION_TARGETS,
+                                Defaults.PREF_SOURCE_KEY_ACTION_TARGETS);
                 mTouchpadSensitivity = prefs.getInt(Settings.PREF_TOUCHPAD_SENSITIVITY,
                                 Defaults.PREF_TOUCHPAD_SENSITIVITY);
                 mTouchpadEdgeScroll = prefs.getBoolean(Settings.PREF_TOUCHPAD_EDGE_SCROLL,
