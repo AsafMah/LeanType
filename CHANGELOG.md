@@ -14,6 +14,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+- **Source-key swipe actions** — configurable MVP for mapping swipes from Enter/action, period,
+  and comma keys to existing toolbar/key-code actions such as `JOIN_NEXT`, `FORCE_NEXT_SPACE`,
+  or `UNDO_WORD`. (#37)
+
 ## [3.9.1] - 2026-06-11
 
 ### Fixed

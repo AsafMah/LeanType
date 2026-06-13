@@ -89,6 +89,7 @@ fun AdvancedSettingsScreen(
             || Settings.readVerticalSpaceSwipe(prefs) == KeyboardActionListener.SWIPE_SWITCH_LANGUAGE)
             Settings.PREF_LANGUAGE_SWIPE_DISTANCE else null,
         Settings.PREF_SPACE_TO_CHANGE_LANG,
+        Settings.PREF_SOURCE_KEY_SWIPE_ACTIONS,
         Settings.PREFS_LONG_PRESS_SYMBOLS_FOR_NUMPAD,
         Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) Settings.PREF_SHOW_SETUP_WIZARD_ICON else null,
@@ -192,6 +193,26 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                 neutralButtonText = if (prefs.contains(setting.key)) stringResource(R.string.button_default) else null,
                 onNeutral = { prefs.edit { remove(setting.key)}; KeyboardLayoutSet.onSystemLocaleChanged() },
                 checkTextValid = { text -> text.splitOnWhitespace().none { it.length > 8 } }
+            )
+        }
+    },
+    Setting(context, Settings.PREF_SOURCE_KEY_SWIPE_ACTIONS, R.string.source_key_swipe_actions, R.string.source_key_swipe_actions_summary) { setting ->
+        var showDialog by rememberSaveable { mutableStateOf(false) }
+        Preference(
+            name = setting.title,
+            description = setting.description,
+            onClick = { showDialog = true }
+        )
+        if (showDialog) {
+            val prefs = LocalContext.current.prefs()
+            TextInputDialog(
+                onDismissRequest = { showDialog = false },
+                textInputLabel = { Text(stringResource(R.string.source_key_swipe_actions_hint)) },
+                initialText = prefs.getString(setting.key, Defaults.PREF_SOURCE_KEY_SWIPE_ACTIONS)!!,
+                onConfirmed = { prefs.edit { putString(setting.key, it) } },
+                title = { Text(stringResource(R.string.source_key_swipe_actions)) },
+                neutralButtonText = if (prefs.contains(setting.key)) stringResource(R.string.button_default) else null,
+                onNeutral = { prefs.edit { remove(setting.key) } },
             )
         }
     },

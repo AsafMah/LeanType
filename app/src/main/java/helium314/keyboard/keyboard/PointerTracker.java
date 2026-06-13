@@ -40,6 +40,7 @@ import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LayoutType;
 import helium314.keyboard.latin.utils.Log;
+import helium314.keyboard.latin.utils.SourceKeySwipeActions;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -215,6 +216,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private boolean mShortcutBottomRowSwipeAllowed = false;
     private boolean mInShortcutRowSwipe = false;
     private static boolean sInShortcutRowSwipe = false;
+    private boolean mSourceKeySwipeAllowed = false;
+    private boolean mInSourceKeySwipe = false;
+    private int mSourceKeySwipeCode = Constants.NOT_A_CODE;
 
     // Touchpad mode for cursor control
     public static boolean sPersistentTouchpadModeActive = false;
@@ -987,6 +991,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             mKeySwipeAllowed = true;
             sInKeySwipe = true;
         }
+        mSourceKeySwipeAllowed = key != null && !sInGesture && !mKeySwipeAllowed
+                && SourceKeySwipeActions.hasBindingForSource(key.getCode(), Settings.getValues().mSourceKeySwipeActions);
+        mInSourceKeySwipe = false;
+        mSourceKeySwipeCode = mSourceKeySwipeAllowed ? key.getCode() : Constants.NOT_A_CODE;
         mShortcutTopRowSwipeAllowed = isShortcutRowSource(key, true);
         mShortcutBottomRowSwipeAllowed = isShortcutRowSource(key, false);
         mInShortcutRowSwipe = false;
@@ -1340,6 +1348,35 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
     }
 
+    private boolean onSourceKeySwipe(final int x, final int y) {
+        if (!mSourceKeySwipeAllowed || mInSourceKeySwipe || mSourceKeySwipeCode == Constants.NOT_A_CODE) {
+            return false;
+        }
+        final int dX = x - mStartX;
+        final int dY = y - mStartY;
+        final int absX = abs(dX);
+        final int absY = abs(dY);
+        if (absX < sPointerStep && absY < sPointerStep) {
+            return false;
+        }
+        final int direction;
+        if (absX >= absY) {
+            direction = dX < 0 ? SourceKeySwipeActions.SWIPE_LEFT : SourceKeySwipeActions.SWIPE_RIGHT;
+        } else {
+            direction = dY < 0 ? SourceKeySwipeActions.SWIPE_UP : SourceKeySwipeActions.SWIPE_DOWN;
+        }
+        final int code = SourceKeySwipeActions.codeForSwipe(
+                mSourceKeySwipeCode, direction, Settings.getValues().mSourceKeySwipeActions);
+        if (code == KeyCode.UNSPECIFIED) {
+            return false;
+        }
+        sTimerProxy.cancelKeyTimersOf(this);
+        mInSourceKeySwipe = true;
+        mIsTrackingForActionDisabled = true;
+        sListener.onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
+        return true;
+    }
+
     private boolean isShortcutRowSource(final Key key, final boolean topRow) {
         final SettingsValues sv = Settings.getValues();
         if (!sv.mShortcutRowsEnabled
@@ -1407,6 +1444,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         // extend it)
         if (mKeySwipeAllowed) {
             onKeySwipe(oldKey.getCode(), x, y, eventTime);
+            return;
+        }
+        if (onSourceKeySwipe(x, y)) {
+            setReleasedKeyGraphics(oldKey, true);
             return;
         }
 
