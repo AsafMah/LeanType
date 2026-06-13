@@ -468,6 +468,12 @@
     <string name="show_popup_keys_all">Add all available variants</string>
     <!-- Preferences item for enabling URL detection -->
     <string name="url_detection_title">URL detection</string>
+    <!-- Preferences item for source-key action target layers -->
+    <string name="source_key_action_targets">Source-key action targets</string>
+    <!-- Description for "source_key_action_targets" setting -->
+    <string name="source_key_action_targets_summary">Slide from Enter, period, or comma to choose existing toolbar actions</string>
+    <!-- Input hint for "source_key_action_targets" setting -->
+    <string name="source_key_action_targets_hint">Example: ACTION=JOIN_NEXT,FORCE_NEXT_SPACE,UNDO_WORD;PERIOD=UNDO_WORD</string>
     <!-- Description for "url_detection_title" option. -->
     <string name="url_detection_summary">Try to detect URLs and similar as a single word</string>
     <!-- Preferences item for disabling word learning -->

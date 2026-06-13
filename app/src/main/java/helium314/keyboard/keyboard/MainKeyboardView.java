@@ -686,6 +686,19 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
 
     @Override
     @Nullable
+    public PopupKeysPanel showSourceKeyActionKeyboard(@NonNull final Key key,
+            @NonNull final PointerTracker tracker, @NonNull final PopupKeySpec[] popupKeys) {
+        if (popupKeys.length == 0) {
+            return null;
+        }
+        final Key popupParentKey = Key.copyWithShortcutPopupKeys(key, popupKeys);
+        final int fixedKeyWidth = popupKeys.length > 0 ? key.getWidth() : 0;
+        return showPopupKeysKeyboard(popupParentKey, tracker, false,
+                PopupKeysKeyboardView.NO_ROW_ALIGN, fixedKeyWidth);
+    }
+
+    @Override
+    @Nullable
     public PopupKeysPanel showShortcutRowKeyboard(@NonNull final Key key,
             @NonNull final PointerTracker tracker, @NonNull final LayoutType layoutType,
             final boolean belowSourceKey) {

@@ -28,6 +28,7 @@ import helium314.keyboard.keyboard.internal.GestureStrokeDrawingPoints;
 import helium314.keyboard.keyboard.internal.GestureStrokeRecognitionParams;
 import helium314.keyboard.keyboard.internal.PointerTrackerQueue;
 import helium314.keyboard.keyboard.internal.TimerProxy;
+import helium314.keyboard.keyboard.internal.PopupKeySpec;
 import helium314.keyboard.keyboard.internal.TypingTimeRecorder;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.R;
@@ -40,6 +41,7 @@ import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LayoutType;
 import helium314.keyboard.latin.utils.Log;
+import helium314.keyboard.latin.utils.SourceKeyActionTargets;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -215,6 +217,8 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private boolean mShortcutBottomRowSwipeAllowed = false;
     private boolean mInShortcutRowSwipe = false;
     private static boolean sInShortcutRowSwipe = false;
+    private boolean mSourceKeyActionAllowed = false;
+    private boolean mInSourceKeyAction = false;
 
     // Touchpad mode for cursor control
     public static boolean sPersistentTouchpadModeActive = false;
@@ -969,6 +973,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             mInShortcutRowSwipe = false;
             sInShortcutRowSwipe = false;
         }
+        mInSourceKeyAction = false;
     }
 
     private void onDownEventInternal(final int x, final int y, final long eventTime) {
@@ -987,6 +992,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             mKeySwipeAllowed = true;
             sInKeySwipe = true;
         }
+        mSourceKeyActionAllowed = key != null && !sInGesture && !mKeySwipeAllowed
+                && SourceKeyActionTargets.hasTargetsForSource(
+                        key.getCode(), Settings.getValues().mSourceKeyActionTargets);
+        mInSourceKeyAction = false;
         mShortcutTopRowSwipeAllowed = isShortcutRowSource(key, true);
         mShortcutBottomRowSwipeAllowed = isShortcutRowSource(key, false);
         mInShortcutRowSwipe = false;
@@ -1340,6 +1349,37 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
     }
 
+    private boolean tryStartSourceKeyAction(final int x, final int y, final long eventTime) {
+        if (!mSourceKeyActionAllowed || mInSourceKeyAction || isShowingPopupKeysPanel()
+                || sInGesture || mCurrentKey == null) {
+            return mInSourceKeyAction;
+        }
+        final int dX = x - mStartX;
+        final int dY = y - mStartY;
+        if (abs(dX) < sPointerStep && abs(dY) < sPointerStep) {
+            return false;
+        }
+        final PopupKeySpec[] popupKeys = SourceKeyActionTargets.popupKeysForSource(
+                mCurrentKey.getCode(), Settings.getValues().mSourceKeyActionTargets, Locale.getDefault());
+        if (popupKeys == null || popupKeys.length == 0) {
+            return false;
+        }
+        final PopupKeysPanel popupKeysPanel = sDrawingProxy.showSourceKeyActionKeyboard(
+                mCurrentKey, this, popupKeys);
+        if (popupKeysPanel == null) {
+            return false;
+        }
+        sTimerProxy.cancelKeyTimersOf(this);
+        mIsDetectingGesture = false;
+        setReleasedKeyGraphics(mCurrentKey, true);
+        final int translatedX = popupKeysPanel.translateX(x);
+        final int translatedY = popupKeysPanel.translateY(y);
+        popupKeysPanel.onDownEvent(translatedX, translatedY, mPointerId, eventTime);
+        mPopupKeysPanel = popupKeysPanel;
+        mInSourceKeyAction = true;
+        return true;
+    }
+
     private boolean isShortcutRowSource(final Key key, final boolean topRow) {
         final SettingsValues sv = Settings.getValues();
         if (!sv.mShortcutRowsEnabled
@@ -1407,6 +1447,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         // extend it)
         if (mKeySwipeAllowed) {
             onKeySwipe(oldKey.getCode(), x, y, eventTime);
+            return;
+        }
+        if (tryStartSourceKeyAction(x, y, eventTime)) {
             return;
         }
 

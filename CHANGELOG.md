@@ -14,6 +14,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+- **Source-key action targets** — slide from the Enter/action key into a temporary action target
+  panel for existing actions like `JOIN_NEXT`, `FORCE_NEXT_SPACE`, and `UNDO_WORD`. (#37)
+
 ## [3.9.1] - 2026-06-11
 
 ### Fixed

@@ -42,6 +42,10 @@ public interface DrawingProxy {
     PopupKeysPanel showShortcutRowKeyboard(@NonNull Key key, @NonNull PointerTracker tracker,
             @NonNull LayoutType layoutType, boolean belowSourceKey);
 
+    @Nullable
+    PopupKeysPanel showSourceKeyActionKeyboard(@NonNull Key key, @NonNull PointerTracker tracker,
+            @NonNull PopupKeySpec[] popupKeys);
+
     /**
      * Start a while-typing-animation.
      * @param fadeInOrOut {@link #FADE_IN} starts while-typing-fade-in animation.
