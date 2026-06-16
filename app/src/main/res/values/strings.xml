@@ -395,6 +395,23 @@
     <string name="delete_swipe">Delete swipe</string>
     <!-- Description for "delete_swipe" option. -->
     <string name="delete_swipe_summary">Perform a swipe from the delete key to select and remove bigger portions of text at once</string>
+    <!-- Adaptive typing (learned per-user key geometry) -->
+    <string name="adaptive_key_geometry">Adaptive key geometry (experimental)</string>
+    <string name="adaptive_key_geometry_summary">Learn where you actually tap each key and nudge gesture and tap recognition toward your style. Stored on-device only, no text is saved.</string>
+    <string name="adaptive_key_geometry_strength">Adaptive geometry strength</string>
+    <string name="adaptive_forget_window">Forget older typing after (months)</string>
+    <string name="adaptive_forget_window_summary">Learned key positions fade out over roughly this many months, so the keyboard tracks your recent typing instead of your all-time average.</string>
+    <string name="adaptive_typing_category">Adaptive typing</string>
+    <string name="adaptive_context_prior">Anticipate likely keys (experimental)</string>
+    <string name="adaptive_context_prior_summary">Make the next key the suggestions predict slightly easier to press. Averages the top suggestions and is capped so it never overrides a clear press. Applies to taps, not swipes.</string>
+    <string name="adaptive_debug_overlay">Show adaptive targets on keyboard (debug)</string>
+    <string name="adaptive_debug_overlay_summary">Draw each key\'s learned landing point and a halo that grows on keys the suggestions predict, so you can watch the adaptive model work as you type. Visual only — does not change typing.</string>
+    <string name="adaptive_key_geometry_stats_title">Learned typing model</string>
+    <string name="adaptive_key_geometry_stats_summary">See what the keyboard has learned about your typing</string>
+    <string name="adaptive_key_geometry_stats_explanation">Per key: average offset from the key center (where you land), spread (how consistent you are), and number of samples. Higher samples and lower spread mean a stronger, more confident adjustment. Nothing here ever leaves your device.</string>
+    <string name="adaptive_key_geometry_stats_empty">Nothing learned yet. Turn on adaptive key geometry and type for a while, then come back.</string>
+    <string name="adaptive_key_geometry_stats_legend">On each key, the dot shows where you tend to land relative to the center, and the ring shows your spread. Solid dots are confident; faded dots are still learning.</string>
+    <string name="adaptive_key_geometry_reset">Reset learned model</string>
     <string name="shortcut_rows">Shortcut rows</string>
     <string name="shortcut_rows_summary">Enable temporary layout-defined shortcut rows opened by vertical swipes</string>
     <string name="shortcut_top_row">Top shortcut row swipe</string>

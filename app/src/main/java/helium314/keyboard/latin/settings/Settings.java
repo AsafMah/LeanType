@@ -189,6 +189,18 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // re-recognize the whole word, instead of literally appending it to a (possibly
     // mis-resolved) fragment. Makes a slow tap-after-swipe behave like a fast one. Default off.
     public static final String PREF_MULTIPART_RERECOGNIZE_TAPS = "multipart_rerecognize_taps";
+    // Adaptive typing (opt-in): learn per-user key landing offsets and bias both tap resolution
+    // and gesture sweet-spots toward where the user actually types. Content-free (geometry only),
+    // incognito-gated. Strength scales the cap (0 = off). See docs/ADAPTIVE_TYPING.md.
+    public static final String PREF_ADAPTIVE_KEY_GEOMETRY = "adaptive_key_geometry";
+    public static final String PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH = "adaptive_key_geometry_strength";
+    public static final String PREF_ADAPTIVE_FORGET_WINDOW_MONTHS = "adaptive_forget_window_months";
+    // Context prior: enlarge the touch target of the next key the suggestions predict. Independent
+    // of the learned-geometry toggle above; both share the strength slider. See ADAPTIVE_TYPING.md.
+    public static final String PREF_ADAPTIVE_CONTEXT_PRIOR = "adaptive_context_prior";
+    // Debug visualization: draw the effective per-key targets (learned-offset shift + prior bulge)
+    // on the live keyboard so the adaptive behavior is visible as you type. See ADAPTIVE_TYPING.md.
+    public static final String PREF_ADAPTIVE_DEBUG_OVERLAY = "adaptive_debug_overlay";
     public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREF_USE_CONTACTS = "use_contacts";
     public static final String PREF_USE_APPS = "use_apps";

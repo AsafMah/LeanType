@@ -159,6 +159,14 @@ object Defaults {
     const val PREF_MULTIPART_FULL_WORD_SUGGESTIONS = true
     const val PREF_MULTIPART_TAP_SEED_GESTURE = true
     const val PREF_MULTIPART_RERECOGNIZE_TAPS = false
+    // Adaptive typing (opt-in). Off by default; strength is a 0..100 percentage of the cap.
+    const val PREF_ADAPTIVE_KEY_GEOMETRY = false
+    const val PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH = 50
+    // Adaptive forget window in months: learned touch geometry fades by this half-life so the model
+    // tracks recent typing rather than an unbounded all-time average. 0 = never forget.
+    const val PREF_ADAPTIVE_FORGET_WINDOW_MONTHS = 3
+    const val PREF_ADAPTIVE_CONTEXT_PRIOR = false
+    const val PREF_ADAPTIVE_DEBUG_OVERLAY = false
     const val PREF_SHOW_SETUP_WIZARD_ICON = true
     const val PREF_USE_CONTACTS = false
     const val PREF_USE_APPS = false

@@ -1404,6 +1404,33 @@ public final class InputLogic {
             mWordComposer.setAutoCorrection(suggestedWordInfo);
         }
         mSuggestedWords = suggestedWords;
+        // Adaptive typing: refresh the "likely next key" prior from the strip so the next tap can
+        // bias toward likely keys. The next-character index is the current composing-word length
+        // (or 0 for a new word, where the predictions' first letters are the likely next keys).
+        // Cheap, and runs on suggestion updates rather than the tap hot path.
+        final SettingsValues svAdaptive = Settings.getValues();
+        if (svAdaptive != null && svAdaptive.mAdaptiveContextPrior) {
+            final int nextCharIndex = mWordComposer.isComposingWord()
+                    ? mWordComposer.getTypedWord().length() : 0;
+            helium314.keyboard.keyboard.AdaptiveKeyContext.update(suggestedWords, nextCharIndex);
+            if (svAdaptive.mAdaptiveDebugOverlay) {
+                final StringBuilder words = new StringBuilder();
+                for (int i = 0; i < Math.min(5, suggestedWords.size()); i++) {
+                    if (i > 0) words.append('|');
+                    words.append(suggestedWords.getWord(i));
+                }
+                Log.d("AdaptivePrior", "setSuggested style=" + suggestedWords.mInputStyle
+                        + " composing=" + mWordComposer.isComposingWord()
+                        + " typed='" + mWordComposer.getTypedWord() + "'"
+                        + " pos=" + nextCharIndex
+                        + " words=[" + words + "]"
+                        + " -> prior=" + helium314.keyboard.keyboard.AdaptiveKeyContext.debugString());
+            }
+        } else {
+            helium314.keyboard.keyboard.AdaptiveKeyContext.clear();
+        }
+        // #24 spacing-policy signals (upstream): independent per-keystroke signals derived from the
+        // same suggestion results; passive groundwork, consumed by the upcoming signal-driven grace.
         final SpacingSignals spacingSignals = computeSpacingSignals(suggestedWords);
         mSpacingComplete = spacingSignals.complete;
         mSpacingPrefixRichScore = spacingSignals.prefixRichScore;
@@ -4011,6 +4038,9 @@ public final class InputLogic {
         if (settingsValues.mMultipartRerecognizeTaps) {
             mLiveStroke.set(mWordComposer.getInputPointers());
         }
+        // Adaptive typing: learn this gesture's clean endpoints so swipes teach the model too.
+        maybeRecordGestureEndpoints(settingsValues, composedText, extendExistingCompose,
+                usedMergedTrail, keyboardSwitcher);
         mWordComposer.setBatchInputWord(composedText);
         setComposingTextInternal(composedText, 1);
         if (extendExistingCompose) {
@@ -4073,6 +4103,44 @@ public final class InputLogic {
         }
         // Combining mode: arm the grace timer after a gesture.
         enterCombiningMode(settingsValues, false /* fromTap, unused — kept for clarity */);
+    }
+
+    // Adaptive typing (opt-in, see docs/ADAPTIVE_TYPING.md): a gesture's first point (finger-down)
+    // and last point (finger-up) are clean "I aimed here" samples for the word's first and last
+    // letters — unlike interior keys, which suffer corner-cutting. Fold those two offsets into the
+    // learned model so swipes teach it too. Only for fresh single strokes (merged/extended trails
+    // have ambiguous endpoints). Gated on the opt-in pref + incognito; the DAO write is async.
+    private void maybeRecordGestureEndpoints(final SettingsValues sv, final String word,
+            final boolean extend, final boolean usedMergedTrail,
+            final KeyboardSwitcher keyboardSwitcher) {
+        if (sv == null || !sv.mAdaptiveKeyGeometry || sv.mIncognitoModeEnabled) return;
+        if (extend || usedMergedTrail || word == null || word.isEmpty()) return;
+        final InputPointers pts = mWordComposer.getInputPointers();
+        final int n = pts.getPointerSize();
+        if (n < 2) return; // need a real stroke; taps are handled in PointerTracker
+        final Keyboard keyboard = keyboardSwitcher.getKeyboard();
+        if (keyboard == null) return;
+        final int[] xs = pts.getXCoordinates();
+        final int[] ys = pts.getYCoordinates();
+        final long halfLifeMs = sv.adaptiveForgetHalfLifeMs();
+        recordGestureEndpoint(keyboard, Character.toLowerCase(word.codePointAt(0)), xs[0], ys[0], halfLifeMs);
+        recordGestureEndpoint(keyboard, Character.toLowerCase(word.codePointBefore(word.length())),
+                xs[n - 1], ys[n - 1], halfLifeMs);
+    }
+
+    private void recordGestureEndpoint(final Keyboard keyboard, final int codePoint,
+            final int x, final int y, final long halfLifeMs) {
+        if (!Character.isLetter(codePoint) || x < 0 || y < 0) return;
+        final helium314.keyboard.keyboard.Key key = keyboard.getKey(codePoint);
+        if (key == null) return;
+        final helium314.keyboard.latin.database.TouchModelDao dao =
+                helium314.keyboard.latin.database.TouchModelDao.getInstance(mLatinIME);
+        if (dao == null) return;
+        final android.graphics.Rect hitBox = key.getHitBox();
+        dao.record(codePoint, Integer.toString(keyboard.mId.mElementId),
+                mLatinIME.getResources().getConfiguration().orientation,
+                x - hitBox.exactCenterX(), y - hitBox.exactCenterY(),
+                hitBox.width(), hitBox.height(), System.currentTimeMillis(), halfLifeMs);
     }
 
     /**

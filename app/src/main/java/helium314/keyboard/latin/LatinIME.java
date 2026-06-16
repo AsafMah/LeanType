@@ -294,8 +294,25 @@ public class LatinIME extends InputMethodService implements
         }
 
         public void postUpdateSuggestionStrip(final int inputStyle) {
+            long delay = mDelayInMillisecondsToUpdateSuggestions;
+            // While the debug overlay + context prior are both on, compute the prediction
+            // immediately (no debounce) so the visualization keeps up with fast typing. The overlay
+            // repaints the instant the prior updates, so "no debounce" is the safe equivalent of
+            // "update as soon as the suggestion is made". The remaining floor is the suggestion
+            // compute itself, which briefly blocks the UI thread by design (see
+            // performUpdateSuggestionStripSync) — fast on release, slower on debug builds. Scoped to
+            // the overlay so ordinary typing keeps the full, smooth debounce.
+            if (inputStyle == SuggestedWords.INPUT_STYLE_TYPING) {
+                final LatinIME latinIme = getOwnerInstance();
+                if (latinIme != null) {
+                    final SettingsValues sv = latinIme.mSettings.getCurrent();
+                    if (sv != null && sv.mAdaptiveDebugOverlay && sv.mAdaptiveContextPrior) {
+                        delay = 0;
+                    }
+                }
+            }
             sendMessageDelayed(obtainMessage(MSG_UPDATE_SUGGESTION_STRIP, inputStyle,
-                    0 /* ignored */), mDelayInMillisecondsToUpdateSuggestions);
+                    0 /* ignored */), delay);
         }
 
         public void postReopenDictionaries() {

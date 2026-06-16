@@ -18,6 +18,7 @@ import helium314.keyboard.latin.settings.SettingsSubtype.Companion.toSettingsSub
 import helium314.keyboard.latin.settings.getTransitionAnimationScale
 import helium314.keyboard.settings.screens.AIIntegrationScreen
 import helium314.keyboard.settings.screens.AboutScreen
+import helium314.keyboard.settings.screens.AdaptiveTypingStatsScreen
 import helium314.keyboard.settings.screens.AdvancedSettingsScreen
 import helium314.keyboard.settings.screens.AppearanceScreen
 import helium314.keyboard.settings.screens.ColorsScreen
@@ -107,6 +108,9 @@ fun SettingsNavHost(
         composable(SettingsDestination.TwoThumbTyping) {
             TwoThumbTypingScreen(onClickBack = ::goBack)
         }
+        composable(SettingsDestination.AdaptiveTypingStats) {
+            AdaptiveTypingStatsScreen(onClickBack = ::goBack)
+        }
         composable(SettingsDestination.Advanced) {
             AdvancedSettingsScreen(onClickBack = ::goBack)
         }
@@ -187,6 +191,7 @@ object SettingsDestination {
     const val Toolbar = "toolbar"
     const val GestureTyping = "gesture_typing"
     const val TwoThumbTyping = "two_thumb_typing"
+    const val AdaptiveTypingStats = "adaptive_typing_stats_screen"
     const val Advanced = "advanced"
     const val Libraries = "libraries_hub"
     const val AIIntegration = "ai_integration"

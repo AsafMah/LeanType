@@ -19,6 +19,8 @@ import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
+import helium314.keyboard.settings.SettingsDestination
+import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.Theme
@@ -79,6 +81,17 @@ fun GestureTypingScreen(
             add(Settings.PREF_SHORTCUT_TOP_ROW)
             add(Settings.PREF_SHORTCUT_BOTTOM_ROW)
         }
+
+        // Adaptive typing — both sub-features grouped in one section.
+        add(R.string.adaptive_typing_category)
+        add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY)
+        add(Settings.PREF_ADAPTIVE_CONTEXT_PRIOR)
+        val learnOn = prefs.getBoolean(Settings.PREF_ADAPTIVE_KEY_GEOMETRY, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY)
+        val priorOn = prefs.getBoolean(Settings.PREF_ADAPTIVE_CONTEXT_PRIOR, Defaults.PREF_ADAPTIVE_CONTEXT_PRIOR)
+        if (learnOn || priorOn) add(Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH)
+        if (learnOn) add(Settings.PREF_ADAPTIVE_FORGET_WINDOW_MONTHS) // only the learned half stores geometry
+        if (learnOn || priorOn) add(Settings.PREF_ADAPTIVE_DEBUG_OVERLAY) // visualize the effect on the live keyboard
+        if (learnOn) add(SettingsWithoutKey.ADAPTIVE_TYPING_STATS) // the learned model only fills with the geometry half
     }
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -175,6 +188,52 @@ fun createGestureTypingSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_DELETE_SWIPE, R.string.delete_swipe, R.string.delete_swipe_summary) {
         SwitchPreference(it, Defaults.PREF_DELETE_SWIPE)
+    },
+    Setting(context, Settings.PREF_ADAPTIVE_KEY_GEOMETRY,
+        R.string.adaptive_key_geometry, R.string.adaptive_key_geometry_summary) {
+        SwitchPreference(it, Defaults.PREF_ADAPTIVE_KEY_GEOMETRY) {
+            KeyboardSwitcher.getInstance().setThemeNeedsReload() // rebuild keyboard so sweet spots refresh
+        }
+    },
+    Setting(context, Settings.PREF_ADAPTIVE_CONTEXT_PRIOR,
+        R.string.adaptive_context_prior, R.string.adaptive_context_prior_summary) {
+        SwitchPreference(it, Defaults.PREF_ADAPTIVE_CONTEXT_PRIOR)
+    },
+    Setting(context, Settings.PREF_ADAPTIVE_DEBUG_OVERLAY,
+        R.string.adaptive_debug_overlay, R.string.adaptive_debug_overlay_summary) {
+        SwitchPreference(it, Defaults.PREF_ADAPTIVE_DEBUG_OVERLAY) {
+            KeyboardSwitcher.getInstance().setThemeNeedsReload() // rebuild so the overlay attaches/detaches at once
+        }
+    },
+    Setting(context, Settings.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH, R.string.adaptive_key_geometry_strength) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_ADAPTIVE_KEY_GEOMETRY_STRENGTH,
+            range = 0f..100f,
+            description = { it.toString() }
+        ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_ADAPTIVE_FORGET_WINDOW_MONTHS,
+        R.string.adaptive_forget_window, R.string.adaptive_forget_window_summary) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_ADAPTIVE_FORGET_WINDOW_MONTHS,
+            range = 1f..12f,
+            description = { "$it" }
+        ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, SettingsWithoutKey.ADAPTIVE_TYPING_STATS,
+        R.string.adaptive_key_geometry_stats_title, R.string.adaptive_key_geometry_stats_summary) {
+        Preference(
+            name = it.title,
+            description = stringResource(R.string.adaptive_key_geometry_stats_summary),
+            onClick = { SettingsDestination.navigateTo(SettingsDestination.AdaptiveTypingStats) }
+        )
+    },
+    Setting(context, SettingsWithoutKey.ADAPTIVE_TYPING_STATS_CONTENT, R.string.adaptive_key_geometry_stats_title) {
+        AdaptiveTypingStatsContent()
     },
     Setting(context, Settings.PREF_SHORTCUT_ROWS, R.string.shortcut_rows, R.string.shortcut_rows_summary) {
         SwitchPreference(it, Defaults.PREF_SHORTCUT_ROWS)

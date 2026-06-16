@@ -96,6 +96,8 @@ object SettingsWithoutKey {
     const val LOAD_GESTURE_LIB = "load_gesture_library"
     const val TWO_THUMB_SPACING_MODE = "two_thumb_spacing_mode"
     const val TWO_THUMB_BACKSPACE_BEHAVIOR = "two_thumb_backspace_behavior"
+    const val ADAPTIVE_TYPING_STATS = "adaptive_typing_stats"             // entry row (navigates)
+    const val ADAPTIVE_TYPING_STATS_CONTENT = "adaptive_typing_stats_content" // the stats body
     const val BACKGROUND_IMAGE = "background_image"
     const val BACKGROUND_IMAGE_LANDSCAPE = "background_image_landscape"
     const val CUSTOM_FONT = "custom_font"
