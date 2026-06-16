@@ -724,6 +724,91 @@ class InputLogicTest {
         assertFalse(composer.isExtendBatchInputBaseSet)
     }
 
+    // --- Live-converge casing (#4 stuck all-caps, #5 dropped auto-cap). The merged-trail
+    // re-recognition path replaces the whole composing word on every extending tap; its casing is
+    // derived from the persistent per-word intent (WordComposer.mCapitalizedMode) applied to a
+    // casing-NEUTRAL lemma, via InputLogic.applyComposingCase. That transform is a pure function
+    // (no native engine), so the casing behaviour is testable here directly — the on-device
+    // recognition that produces the lemma is not (no gesture lib / tap coords in the JVM harness).
+    private val enLocale = "en".constructLocale()
+
+    // #5: a word that started capitalized (sentence-start / shift) keeps its leading capital when
+    // the recognizer re-resolves it lowercase on an extending tap. "Hello" must not become "hellow".
+    @Test fun applyComposingCaseKeepsLeadingCapitalAcrossReconverge() {
+        assertEquals("Hellow",
+            InputLogic.applyComposingCase("hellow", WordComposer.CAPS_MODE_AUTO_SHIFTED, enLocale))
+        assertEquals("Hellow",
+            InputLogic.applyComposingCase("hellow", WordComposer.CAPS_MODE_MANUAL_SHIFTED, enLocale))
+    }
+
+    // #4: an unsolicited all-caps recognizer result ("CSA") is neutralized to the word's intent
+    // instead of latching. Sentence-start intent -> "Can"; no intent (mid-sentence) -> "can".
+    // This is the exact case the old prior-word heuristic got wrong (it produced "can" at a
+    // sentence start because it could only see the previous all-caps fragment).
+    @Test fun applyComposingCaseNeutralizesUnsolicitedAllCaps() {
+        assertEquals("Can",
+            InputLogic.applyComposingCase("CAN", WordComposer.CAPS_MODE_AUTO_SHIFTED, enLocale))
+        assertEquals("can",
+            InputLogic.applyComposingCase("CAN", WordComposer.CAPS_MODE_OFF, enLocale))
+    }
+
+    // Deliberate caps-lock (or an all-caps input field) still produces all-caps on the
+    // merged-trail path — the one case where the whole word legitimately stays upper.
+    @Test fun applyComposingCaseUppercasesUnderShiftLock() {
+        assertEquals("CAME",
+            InputLogic.applyComposingCase("came", WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED, enLocale))
+        assertEquals("CAME",
+            InputLogic.applyComposingCase("CAME", WordComposer.CAPS_MODE_AUTO_SHIFT_LOCKED, enLocale))
+    }
+
+    // No casing intent: the neutral lemma is left lowercase regardless of the recognizer's own
+    // casing, so a mid-sentence re-converge never injects stray capitals.
+    @Test fun applyComposingCaseLeavesLowercaseWhenNoIntent() {
+        assertEquals("game",
+            InputLogic.applyComposingCase("Game", WordComposer.CAPS_MODE_OFF, enLocale))
+        assertEquals("game",
+            InputLogic.applyComposingCase("game", WordComposer.CAPS_MODE_OFF, enLocale))
+    }
+
+    // Defensive: empty / null lemma passes through untouched (the caller also guards, but the
+    // helper must be safe on its own).
+    @Test fun applyComposingCaseHandlesEmptyAndNull() {
+        assertEquals("", InputLogic.applyComposingCase("", WordComposer.CAPS_MODE_AUTO_SHIFTED, enLocale))
+        assertEquals(null, InputLogic.applyComposingCase(null, WordComposer.CAPS_MODE_AUTO_SHIFTED, enLocale))
+    }
+
+    // An EXTENDING gesture (swipe+swipe / manual-spacing multi-part) must NOT re-capture the
+    // word's casing intent at onStartBatchInput. The keyboard auto-clears its shift indicator
+    // after the first gesture, so re-capturing would overwrite the word-start intent with
+    // UNSHIFTED and downcase a capitalized word ("Was"+swipe -> "wait" instead of "Wait", the
+    // on-device regression this guards). Intent must survive to the merged-trail casing step.
+    // (Live-converge tap extensions bypass onStartBatchInput, so they were never affected.)
+    @Test fun extendingGestureStartPreservesCasingIntent() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
+        chainInput("wa")                       // open a composing word, cursor at end
+        // Simulate the word having started while shifted (as "Was" did on-device).
+        composer.setCapitalizedModeAtStartComposingTime(WordComposer.CAPS_MODE_MANUAL_SHIFTED)
+        // A second gesture starts to EXTEND it (manual spacing -> extendComposingWord = true).
+        inputLogic.onStartBatchInput(settingsValues, KeyboardSwitcher.getInstance(), latinIME.mHandler)
+        handleMessages()
+        // Pre-fix this was clobbered to CAPS_MODE_OFF by the unconditional re-capture.
+        assertEquals(WordComposer.CAPS_MODE_MANUAL_SHIFTED, composer.capitalizedMode)
+    }
+
+    // Sanity: a FRESH gesture (no composing word) still captures the current intent — the guard
+    // must not freeze a stale mode from a previous word.
+    @Test fun freshGestureStartStillCapturesCasingIntent() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, true) }
+        composer.setCapitalizedModeAtStartComposingTime(WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED)
+        // No composing word -> extendComposingWord = false -> intent is re-captured from the
+        // keyboard (not shift-locked on a fresh field), not frozen at the stale locked value.
+        inputLogic.onStartBatchInput(settingsValues, KeyboardSwitcher.getInstance(), latinIME.mHandler)
+        handleMessages()
+        assertFalse(composer.capitalizedMode == WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED)
+    }
+
     // Static-seed reachability guard. PointerTracker's tap-seed path (sLastLetterTap*) is gated
     // on (!isMultipartComposeActive() && mCombiningGraceMs > 0). But grace > 0 forces multi-part
     // composition active, so that conjunction is unsatisfiable and the seed is currently

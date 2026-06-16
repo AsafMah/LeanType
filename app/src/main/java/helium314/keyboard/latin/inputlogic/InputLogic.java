@@ -120,10 +120,11 @@ public final class InputLogic {
     // GESTURE-START, not gesture-end (so a long gesture doesn't lose the promotion).
     private boolean mGestureExtendsByTapPromotion;
 
-    // Snapshot of {@code keyboardSwitcher.getKeyboardShiftMode()} captured at the start of
-    // each gesture. Used by {@link #onUpdateTailBatchInputCompleted} to capitalize the
-    // recognizer's lowercase output. We can't read getKeyboardShiftMode() at gesture-end
-    // because the keyboard typically auto-clears the shifted state during the gesture.
+    // Snapshot of {@code keyboardSwitcher.getKeyboardShiftMode()} captured at the very start of
+    // each gesture, BEFORE any state mutates (a prior word may auto-commit / the shift indicator
+    // may auto-clear within onStartBatchInput). Used ONLY by the FRESH-word capitalization in
+    // {@link #onUpdateTailBatchInputCompleted}. The live-converge / multi-part EXTEND path uses the
+    // persistent {@link WordComposer#getCapitalizedMode()} instead — see that method's javadoc.
     private int mShiftModeAtGestureStart = WordComposer.CAPS_MODE_OFF;
     /** Set to true at the end of {@link #onCombiningGraceExpired} when an autospace was
      *  written, so the next punctuation tap in {@link #handleSeparatorEvent} can strip it
@@ -156,6 +157,18 @@ public final class InputLogic {
     @Nullable private Runnable mPendingCombiningCommit;
     private boolean mInCombiningMode;
     private boolean mCombiningWordHasGestureFragment;
+
+    // True when the composing word has been EDITED (a delete of any kind) since the raw stroke
+    // buffer (WordComposer#mInputPointers) was last built to match it. A delete shrinks the typed
+    // word but never shrinks the buffer, so the buffer goes stale — and a following swipe-extend
+    // that arms its base from the buffer rebuilds a longer word (delete "ng" from "Thing" -> "Thi",
+    // swipe "ng" -> "Whining"). At the one place the stroke is consumed as a swipe-extend base
+    // (onStartBatchInput), if this is set we realign the base from the authoritative text instead.
+    // Set on every backspace (handleBackspaceEvent); cleared whenever the buffer is rebuilt to
+    // match the word — a gesture (onUpdateTailBatchInputCompleted) — or the word ends (commit,
+    // reset). NOT set for a plain tap-then-gesture (no delete), so that continuous swipe+swipe and
+    // tap+swipe keep their real captured stroke.
+    private boolean mComposingStrokeStale;
 
     // Live-converge (multi-part, opt-in PREF_MULTIPART_RERECOGNIZE_TAPS): the accumulated raw
     // pointer trail of the CURRENT word — the latest gesture fragment's points plus any tap
@@ -731,10 +744,11 @@ public final class InputLogic {
         markForceNextSpaceWordStarted();
         // Snapshot the keyboard's shift mode BEFORE any state mutates — the shifted indicator
         // typically auto-clears once the gesture starts moving, so by the time
-        // onUpdateTailBatchInputCompleted fires the live mode reads as UNSHIFTED.
-        // We compute the *actual* caps mode (resolves AUTO_SHIFTED into AUTO_SHIFT_LOCKED if
-        // the input field is in all-caps), so a true all-caps field gives the right answer.
-        mShiftModeAtGestureStart = getActualCapsMode(settingsValues, keyboardSwitcher.getKeyboardShiftMode());
+        // onUpdateTailBatchInputCompleted fires the live mode reads as UNSHIFTED. This drives the
+        // FRESH-word capitalization only; the EXTEND path uses WordComposer.mCapitalizedMode (the
+        // persistent per-word intent). We compute the *actual* caps mode (resolves AUTO_SHIFTED
+        // into AUTO_SHIFT_LOCKED if the input field is all-caps) so a true all-caps field is right.
+        mShiftModeAtGestureStart = gestureStartCapsMode(settingsValues, keyboardSwitcher.getKeyboardShiftMode());
         mWordBeingCorrectedByCursor = null;
         mInputLogicHandler.onStartBatchInput();
         handler.showGesturePreviewAndSetSuggestions(SuggestedWords.getEmptyBatchInstance(), false);
@@ -802,7 +816,26 @@ public final class InputLogic {
                 // word simply stays open until the user taps space), see
                 // SettingsValues#isMultipartComposeActive.
                 if (settingsValues.isMultipartComposeActive()) {
+                    // The extend base is the geometry every setBatchInputPointers call prepends.
+                    // mInputPointers is only trustworthy if the composing text still matches what
+                    // the last gesture produced (continuous swipe+swipe). If the text was edited
+                    // since — single-char backspace, fragment-pop, selection / multi-char delete,
+                    // cursor re-compose — the buffer is stale (it never shrinks on a delete), so
+                    // rebuild the base from the authoritative text. This is the single consumption
+                    // point, so realigning here fixes the whole class regardless of HOW the text
+                    // was edited (delete "ng" from "Thing" -> "Thi", swipe "ng" -> "Thing", not
+                    // "Whining"). Equal text -> keep the real captured stroke (higher fidelity).
+                    final String composingNow = mWordComposer.getTypedWord();
+                    if (mComposingStrokeStale) {
+                        realignComposerStrokeToText(composingNow, settingsValues);
+                    }
                     mWordComposer.setExtendBatchInputBase(mWordComposer.getInputPointers());
+                    if (settingsValues.mGestureDebugDrawPoints) {
+                        Log.d(TAG, "extend arm baseSize="
+                                + mWordComposer.getExtendBatchInputBaseSize()
+                                + " composing='" + composingNow + "'"
+                                + " realigned=" + mComposingStrokeStale);
+                    }
                 }
             } else if (mWordComposer.isSingleLetter() && !isInlineEmojiSearchAction()) {
                 // We auto-correct the previous (typed, not gestured) string iff it's one
@@ -853,8 +886,27 @@ public final class InputLogic {
             }
         }
         mConnection.endBatchEdit();
-        mWordComposer.setCapitalizedModeAtStartComposingTime(
-                getActualCapsMode(settingsValues, keyboardSwitcher.getKeyboardShiftMode()));
+        // Capture the word's casing intent ONLY when this gesture starts a fresh word. When it
+        // EXTENDS an existing composing word (multi-part swipe+swipe / manual spacing), the intent
+        // belongs to the word's first fragment and must be preserved: the keyboard auto-clears its
+        // shifted indicator after the first gesture, so re-capturing here would read UNSHIFTED and
+        // wrongly downcase a word that started capitalized ("Was"+swipe -> "wait" instead of
+        // "Wait"). mCapitalizedMode survives the setBatchInputWord rebuild and is cleared at
+        // commitWord, so leaving it untouched keeps the original intent alive across the extension.
+        // (Live-converge tap extensions bypass onStartBatchInput entirely, so they were already
+        // safe; this closes the same gap for swipe extensions.)
+        if (!extendComposingWord) {
+            mWordComposer.setCapitalizedModeAtStartComposingTime(
+                    gestureStartCapsMode(settingsValues, keyboardSwitcher.getKeyboardShiftMode()));
+        }
+        if (settingsValues.mGestureDebugDrawPoints) {
+            Log.d(TAG, "caps@start extend=" + extendComposingWord
+                    + " recapture=" + (!extendComposingWord)
+                    + " capsMode=" + mWordComposer.getCapitalizedMode()
+                    + " composing='" + mWordComposer.getTypedWord() + "'"
+                    + " cursorFrontOrMid=" + mWordComposer.isCursorFrontOrMiddleOfComposingWord()
+                    + " stale=" + mComposingStrokeStale);
+        }
     }
 
     /*
@@ -1332,6 +1384,37 @@ public final class InputLogic {
     }
 
     /**
+     * Realign the composer's raw stroke buffer ({@code WordComposer#mInputPointers}) to
+     * {@code word}'s key centers.
+     * <p>
+     * Phase 1 of {@code docs/COMPOSING_WORD_SOURCE_OF_TRUTH.md}, generalized: the stroke buffer
+     * is parallel state that drifts stale whenever the composing word is edited by anything other
+     * than a gesture — a fragment-pop, a single-char backspace, a selection / multi-char delete,
+     * or a cursor-driven re-compose. None of those shrink {@code mInputPointers}, so a following
+     * swipe-extend that arms its base from the buffer rebuilds a longer word. Rebuilding from the
+     * surviving text's key centers keeps the base aligned. Lowercases for the exact key lookup
+     * ({@link Keyboard#getCoordinates} matches lowercase layout keys); the seed skips unresolvable
+     * keys so one bad point can't warp the stroke toward (-1,-1).
+     */
+    private void realignComposerStrokeToText(final String word, final SettingsValues sv) {
+        final int[] cps = StringUtils.toCodePointArray(word.toLowerCase(sv.mLocale));
+        final int[] coords = mLatinIME.getCoordinatesForCurrentKeyboard(cps);
+        // Defensive: if the layout resolves NO key, the seed would empty the buffer and disarm the
+        // extend entirely, so we leave the buffer untouched. This covers: no keyboard yet, an
+        // all-symbol word, AND a letters-word while a non-letter layer (symbols/numeric) is active —
+        // in the last case the leftover base is fully stale, but you can't gesture-type letters on a
+        // symbol layer anyway, so it's effectively unreachable; and emptying here would also break
+        // unit tests whose harness has no resolvable layout. A slightly-stale base beats no base.
+        // (coords is CoordinateUtils format: x at even indices, y at odd.)
+        boolean anyResolved = false;
+        for (int i = 0; i < coords.length; i += 2) {
+            if (coords[i] != Constants.NOT_A_COORDINATE) { anyResolved = true; break; }
+        }
+        if (!anyResolved) return;
+        mWordComposer.seedInputPointersFromKeyCenters(cps, coords);
+    }
+
+    /**
      * Try to handle a backspace as a fragment-pop rather than a char-delete. Returns true if
      * handled (the caller should then return without touching the editor further); false if
      * the caller should fall through to its normal char-by-char path.
@@ -1376,6 +1459,18 @@ public final class InputLogic {
             // appends correctly and the suggestion strip looks at it as typed text.
             mWordComposer.setBatchInputWord(newWord);
             mWordComposer.unsetBatchMode();
+            // Phase 1 (COMPOSING_WORD_SOURCE_OF_TRUTH.md): realign the raw stroke buffer to the
+            // truncated word's key centers. setBatchInputWord leaves mInputPointers at the
+            // longer pre-pop geometry; without this, a following swipe-extend would snapshot
+            // that stale buffer as its merged-trail base and build an ever-longer garbage word.
+            // (See realignComposerStrokeToText.) The swipe-extend arm site also realigns when the
+            // text was edited, so this is belt-and-suspenders, but doing it here keeps the buffer
+            // consistent for any intervening consumer too.
+            realignComposerStrokeToText(newWord, sv);
+            if (sv.mGestureDebugDrawPoints) {
+                Log.d(TAG, "fragment pop '" + oldWord + "' -> '" + newWord
+                        + "' seededPointers=" + mWordComposer.getInputPointers().getPointerSize());
+            }
             setComposingTextInternal(newWord, 1);
         }
         mConnection.endBatchEdit();
@@ -1404,6 +1499,8 @@ public final class InputLogic {
             mWordComposer.setAutoCorrection(suggestedWordInfo);
         }
         mSuggestedWords = suggestedWords;
+        // #24 spacing-policy signals (upstream): independent per-keystroke signals derived from the
+        // same suggestion results; passive groundwork, consumed by the upcoming signal-driven grace.
         final SpacingSignals spacingSignals = computeSpacingSignals(suggestedWords);
         mSpacingComplete = spacingSignals.complete;
         mSpacingPrefixRichScore = spacingSignals.prefixRichScore;
@@ -2436,6 +2533,12 @@ public final class InputLogic {
         // explicitly retracting input; we don't want the timer to fire mid-correction.
         cancelCombiningMode();
         clearOneShotSpaceActionAndNotifyIfChanged();
+        // A backspace of ANY kind (single-char, fragment-pop, whole-word, selection / multi-char
+        // delete) shrinks the typed word but never shrinks the raw stroke buffer, so the buffer is
+        // now stale relative to the text. Mark it: the next swipe-extend will realign its base from
+        // the text instead of arming the leftover (longer) stroke. Set once here, before any
+        // backspace branch runs, so every delete path is covered from the single consumption point.
+        mComposingStrokeStale = true;
         // Live-converge (#1.7): a backspace invalidates the accumulated gesture stroke — we
         // can't reliably trim the raw trail to match a partially-deleted word, and leaving it
         // intact would make the NEXT swipe/tap merge with stale geometry (e.g. delete "ing"
@@ -2560,6 +2663,14 @@ public final class InputLogic {
                 // composing span in the editor. commitText("", 1) is the correct primitive for
                 // removing composing text — unlike deleteTextBeforeCursor.
                 mConnection.commitText("", 1);
+                // The composing word's fragment boundaries index into a word that no longer
+                // exists. The batch- and whole-word-delete branches above reach here via
+                // mWordComposer.reset() (which doesn't touch the boundary stack), and a
+                // char-delete that removed the last letter reaches here too. Drop the stale
+                // boundaries at this single exit so they can't leak into the next word's
+                // fragment math (a leaked boundary <= the next word's length would otherwise
+                // make a later fragment-backspace shrink to the wrong length).
+                clearFragmentBoundaries();
             }
             updateInlineEmojiSearch();
             inputTransaction.setRequiresUpdateSuggestions();
@@ -3446,6 +3557,23 @@ public final class InputLogic {
     }
 
     /**
+     * Caps mode to seed a STARTING gesture's casing. {@link #getActualCapsMode} only resolves
+     * auto-caps when the visual shift mode is already AUTO_SHIFTED, but that indicator updates
+     * asynchronously — a swipe that begins right at a sentence/field start can still read UNSHIFTED,
+     * dropping the leading capital (swiping the first word of a sentence gave "yeah" instead of
+     * "Yeah"). When the visual mode is OFF but auto-caps genuinely applies at the cursor (computed
+     * from context and gated by the user's auto-capitalization setting), treat it as AUTO_SHIFTED.
+     */
+    private int gestureStartCapsMode(final SettingsValues settingsValues, final int keyboardShiftMode) {
+        int shiftMode = keyboardShiftMode;
+        if (shiftMode == WordComposer.CAPS_MODE_OFF
+                && getCurrentAutoCapsState(settingsValues) != Constants.TextUtils.CAP_MODE_OFF) {
+            shiftMode = WordComposer.CAPS_MODE_AUTO_SHIFTED;
+        }
+        return getActualCapsMode(settingsValues, shiftMode);
+    }
+
+    /**
      * Gets the current auto-caps state, factoring in the space state.
      * <p>
      * This method tries its best to do this in the most efficient possible manner.
@@ -3634,6 +3762,14 @@ public final class InputLogic {
         // Two-thumb typing (#1.1): composing word is wiped — drop the matching boundaries.
         clearFragmentBoundaries();
         mCombiningWordHasGestureFragment = false;
+        // The composing word is wiped, but reset() deliberately does NOT shrink mInputPointers
+        // (touch coords are kept for cursor-move resume), so the raw stroke buffer is now stale
+        // relative to whatever word comes next. Mark it stale: a following swipe-extend must
+        // realign its base from the new text rather than arm the leftover geometry. This is the
+        // path the backspace handler doesn't cover — e.g. select-and-delete then retype, or a
+        // cursor-move reset — where the next gesture would otherwise extend the deleted word's
+        // stroke ("Should" deleted, "W" tapped, swipe -> "Whirlpools").
+        mComposingStrokeStale = true;
         // Live-converge (#1.7): the word is gone, so its accumulated stroke is stale.
         mLiveStroke.reset();
         // Two-thumb typing: likewise drop the merged-trail extend-base. This path also covers
@@ -3813,6 +3949,44 @@ public final class InputLogic {
         return true;
     }
 
+    /**
+     * Apply a word's casing INTENT to a casing-neutral lemma. Used by the live-converge
+     * (merged-trail) re-recognition path, which replaces the whole composing word on every
+     * extending tap. The recognizer's output is treated as letters only — its own casing (e.g. an
+     * all-caps dictionary acronym that the engine happened to rank first) is discarded by
+     * lowercasing — and the case is then re-derived from the persistent per-word intent
+     * ({@link WordComposer#getCapitalizedMode()}, seeded at word-start from auto-cap + shift and
+     * alive until commit). This keeps a sentence-start capital across every re-converge (issue #5)
+     * and, because the lemma is lowercased first, prevents an unsolicited all-caps result from
+     * latching the whole word in caps (issue #4).
+     *
+     * <p>Pure function of its inputs (no engine / native lib), so the casing behaviour is unit
+     * testable directly. {@code public static} for that reason.
+     *
+     * @param lemma           the recognizer's word output (casing not trusted)
+     * @param capitalizedMode one of the {@link WordComposer} {@code CAPS_MODE_*} constants
+     * @param locale          locale for case mapping
+     * @return the lemma cased to match the intent
+     */
+    public static String applyComposingCase(final String lemma, final int capitalizedMode,
+            final Locale locale) {
+        if (lemma == null || lemma.isEmpty()) return lemma;
+        final String lower = lemma.toLowerCase(locale);
+        switch (capitalizedMode) {
+            case WordComposer.CAPS_MODE_AUTO_SHIFT_LOCKED:
+            case WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED:
+                // Deliberate caps-lock (or an all-caps input field) — uppercase the whole word.
+                return lower.toUpperCase(locale);
+            case WordComposer.CAPS_MODE_AUTO_SHIFTED:
+            case WordComposer.CAPS_MODE_MANUAL_SHIFTED:
+                // Sentence-start / shift — first letter only.
+                return StringUtils.capitalizeFirstCodePoint(lower, locale);
+            default:
+                // CAPS_MODE_OFF — no intent, leave the neutral lemma lowercase.
+                return lower;
+        }
+    }
+
     private boolean textBeforeCursorMayBeUrlOrSimilar(final SettingsValues settingsValues, final Boolean forAutoSpace) {
         // URL / mail field and no space -> may be URL
         if (InputTypeUtils.isUriOrEmailType(settingsValues.mInputAttributes.mInputType) &&
@@ -3864,6 +4038,8 @@ public final class InputLogic {
                     + " top=" + batchInputText
                     + " composingBefore=" + mWordComposer.getTypedWord()
                     + " extendBase=" + mWordComposer.isExtendBatchInputBaseSet()
+                    + " baseSize=" + mWordComposer.getExtendBatchInputBaseSize()
+                    + " mergedPts=" + mWordComposer.getInputPointers().getPointerSize()
                     + " candidates=[" + candidates + "]");
         }
         // Multi-part word composition (#1.6): when the merged-trail extend-base path was
@@ -3882,6 +4058,11 @@ public final class InputLogic {
             }
         }
         if (TextUtils.isEmpty(batchInputText)) {
+            // The gesture consumed/merged the stroke buffer but recognized nothing. On an EXTEND
+            // the buffer now holds the merged (prior + this) trail while the composing text is
+            // unchanged, so it's stale — mark it so the next swipe-extend realigns from the text
+            // instead of arming this leftover (doubled) geometry.
+            mComposingStrokeStale = true;
             // Still need to clear the seed slot so it doesn't leak into the next gesture.
             helium314.keyboard.keyboard.PointerTracker.consumeGestureSeedCodepoint();
             return;
@@ -3907,7 +4088,12 @@ public final class InputLogic {
                 batchInputText = batchInputText.substring(Character.charCount(firstCp));
             }
         }
-        if (batchInputText.isEmpty()) return;
+        if (batchInputText.isEmpty()) {
+            // Seed-strip left nothing (the recognized word was only the seeded letter): same stale
+            // situation as above — the merged buffer no longer matches the composing text.
+            mComposingStrokeStale = true;
+            return;
+        }
         mCombiningWordHasGestureFragment = true;
         mConnection.beginBatchEdit();
         // Two-thumb typing (#1.1 + #1.4): when either manual spacing OR tap-promotion-extend
@@ -3962,9 +4148,12 @@ public final class InputLogic {
         // those continuation gestures should append in the casing the user already chose for
         // the start of the word.
         if (!extendExistingCompose && !batchInputText.isEmpty()) {
-            // Use the shift mode captured at gesture-start, not the live mode — the
-            // keyboard auto-clears the shifted indicator during the gesture, so a live
-            // read here always returns UNSHIFTED.
+            // Fresh-word capitalization: use the shift mode captured at gesture-start, not the live
+            // mode — the keyboard auto-clears the shifted indicator during the gesture, so a live
+            // read here always returns UNSHIFTED. This is the long-standing path for a plain single
+            // gesture; it ADDS a capital to the recognizer's lowercase output and deliberately does
+            // NOT neutralize an intrinsic all-caps result, so a standalone acronym swipe ("CSA")
+            // stays as-is. (The EXTEND path below handles re-cased re-recognition separately.)
             final int shiftMode = mShiftModeAtGestureStart;
             if (shiftMode == WordComposer.CAPS_MODE_MANUAL_SHIFTED
                     || shiftMode == WordComposer.CAPS_MODE_AUTO_SHIFTED) {
@@ -3974,8 +4163,60 @@ public final class InputLogic {
                 batchInputText = batchInputText.toUpperCase(settingsValues.mLocale);
             }
         }
-        // Clear so a stale value from a previous gesture can't leak into a non-gesture
-        // commit later.
+        // Live-converge (#1.7) casing — gated to the merged-trail re-recognition path, so a plain
+        // single gesture (incl. a standalone acronym swipe, handled by the block above) is
+        // untouched. A merged-trail commit REPLACES the whole word with the recognizer's fresh
+        // output on every extending tap, which otherwise:
+        //   - dropped the first-letter capital the word started with (issue #5); and
+        //   - could latch an unsolicited all-caps acronym ("CSA"), which then stuck the whole word
+        //     in caps via WordComposer.isAllUpperCase forcing every later suggestion upper (#4).
+        // The fix treats the recognizer output as a casing-NEUTRAL lemma and re-applies the word's
+        // persistent intent (WordComposer.mCapitalizedMode). Lowercasing the lemma first is what
+        // dissolves #4 at the source: the composing word is never all-caps, so isAllUpperCase
+        // never arms and Suggest stops force-uppercasing — no shift-lock special-case needed.
+        if (usedMergedTrail) {
+            final String preCaseLemma = batchInputText;
+            // mCapitalizedMode is the persistent per-word caps intent, but commitWord() zeroes it.
+            // After a word is auto-committed (e.g. an autospace) and then re-composed by backspacing
+            // back into it, the intent is lost (CAPS_MODE_OFF) even though the visible composing text
+            // is still capitalized ("Thi"). Because the merged-trail recognizer REPLACES the whole
+            // word with a lowercase lemma, relying on capsMode alone downcases a word the user sees
+            // as capitalized. Recover the intent from the existing composing word's own case when
+            // capsMode has lost it: all-caps -> shift-locked (keeps "CSA"), else first-letter shift.
+            int effectiveCapsMode = mWordComposer.getCapitalizedMode();
+            final String existingWord = mWordComposer.getTypedWord();
+            if (effectiveCapsMode == WordComposer.CAPS_MODE_OFF
+                    && existingWord != null && !existingWord.isEmpty()
+                    && Character.isUpperCase(existingWord.codePointAt(0))) {
+                // Only treat the existing word as a deliberate ALL-CAPS run (shift-lock) when it
+                // has at least two letters; a lone leading capital like "I" or "A" is just a
+                // sentence-start cap, so use first-letter shift — otherwise the whole re-recognized
+                // word would be upper-cased ("I" -> "ILL", "A" -> "AND").
+                int letterCount = 0;
+                for (int ci = 0; ci < existingWord.length(); ) {
+                    final int cp = existingWord.codePointAt(ci);
+                    if (Character.isLetter(cp)) letterCount++;
+                    ci += Character.charCount(cp);
+                }
+                final boolean deliberateAllCaps =
+                        letterCount >= 2 && StringUtils.isIdenticalAfterUpcase(existingWord);
+                effectiveCapsMode = deliberateAllCaps
+                        ? WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED
+                        : WordComposer.CAPS_MODE_MANUAL_SHIFTED;
+            }
+            batchInputText = applyComposingCase(batchInputText, effectiveCapsMode,
+                    settingsValues.mLocale);
+            if (settingsValues.mGestureDebugDrawPoints) {
+                Log.d(TAG, "caps@extend capsMode=" + mWordComposer.getCapitalizedMode()
+                        + " effective=" + effectiveCapsMode
+                        + " existing='" + existingWord + "'"
+                        + " prevTyped='" + prevTypedWord + "'"
+                        + " lemma='" + preCaseLemma + "' -> '" + batchInputText + "'");
+            }
+        }
+        // Clear the fresh-word snapshot so a stale value from this gesture can't leak into a
+        // later non-gesture commit. (The persistent extend intent lives in mCapitalizedMode and
+        // is cleared by WordComposer.commitWord, not here.)
         mShiftModeAtGestureStart = WordComposer.CAPS_MODE_OFF;
         final String composedText = prevTypedWord + batchInputText;
         // Trace recorder (A3a): capture gesture trace + committed word for replay debugging.
@@ -4012,6 +4253,9 @@ public final class InputLogic {
             mLiveStroke.set(mWordComposer.getInputPointers());
         }
         mWordComposer.setBatchInputWord(composedText);
+        // The raw stroke buffer now matches this word (the gesture just (re)built it), so a
+        // following swipe-extend can trust it — until an edit marks it stale again.
+        mComposingStrokeStale = false;
         setComposingTextInternal(composedText, 1);
         if (extendExistingCompose) {
             // Two-thumb typing (#1.1 + #1.4): downgrade the composer out of batch mode so
@@ -4025,7 +4269,17 @@ public final class InputLogic {
             // the gesture and reflects only the LAST fragment, which would mislead the user
             // if they tapped it (replacing the whole composing span with one fragment). Two
             // options: blank the strip (legacy) or repopulate it for the full composing word.
-            if (settingsValues.mMultipartFullWordSuggestions) {
+            if (usedMergedTrail) {
+                // Merged-trail extend: the recognizer saw the WHOLE merged stroke, so its
+                // candidates are whole words ([speer, super, supper, ...]) — not fragments. Keep
+                // them on the strip so the recognizer's own alternatives stay one tap away when it
+                // ranks the wrong one first (e.g. "super" when "speer" won). Picking one routes
+                // through commitChosenWord (which reads mSuggestedWords) and cleanly replaces the
+                // composing word — there is no fragment data-loss here, which is the only reason the
+                // concatenation branch below re-runs typed-word suggestions instead.
+                setSuggestedWords(suggestedWords);
+                mSuggestionStripViewAccessor.setSuggestions(suggestedWords);
+            } else if (settingsValues.mMultipartFullWordSuggestions) {
                 performUpdateSuggestionStripSync(settingsValues, SuggestedWords.INPUT_STYLE_TYPING);
             } else {
                 setSuggestedWords(SuggestedWords.getEmptyInstance());
@@ -4277,6 +4531,8 @@ public final class InputLogic {
         // boundaries are now stale and would point past the end of the (empty) word.
         clearFragmentBoundaries();
         mCombiningWordHasGestureFragment = false;
+        // Word committed — next word starts with a clean (not-stale) slate.
+        mComposingStrokeStale = false;
         // Live-converge (#1.7): word committed — its accumulated stroke no longer applies.
         mLiveStroke.reset();
         // Two-thumb typing: the merged-trail extend-base belongs to the just-committed word too.

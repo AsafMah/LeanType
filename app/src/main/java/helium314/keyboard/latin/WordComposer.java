@@ -13,6 +13,7 @@ import helium314.keyboard.event.Event;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo;
 import helium314.keyboard.latin.common.ComposedData;
+import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.CoordinateUtils;
 import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.common.StringUtils;
@@ -68,6 +69,27 @@ public final class WordComposer {
     // current gesture. Pretends the user briefly paused at the prefix endpoint before
     // continuing the stroke — within the recogniser's "single stroke" tolerance.
     private static final int EXTEND_BASE_GAP_BEFORE_NEW_MS = 60;
+    // Prefix densification: a stored base is one key-center vertex per prefix letter, so a
+    // 2-letter tapped prefix is just 2 points glued to a 20+ point swipe — the recogniser scores
+    // by sampled-point density along the path, so the sparse prefix is out-voted by the dense
+    // swipe tail and words that drop the typed prefix can out-rank the intended word (tap "s","h"
+    // + swipe -> "would" beats "should"). We resample the prefix polyline at ~the swipe's own
+    // point spacing so it carries comparable weight. Fallback spacing (px) when the swipe is too
+    // short to measure, and a hard cap so a long prefix can never swamp the swipe.
+    private static final float DENSIFY_FALLBACK_SPACING_PX = 30f;
+    private static final int DENSIFY_MAX_BASE_POINTS = 64;
+    // A base whose average inter-point distance exceeds this multiple of the swipe's spacing is
+    // treated as the SPARSE key-center representation (a tapped prefix or a realigned-after-edit
+    // seed) and gets per-key clustering; anything denser is a real captured stroke (a prior swipe
+    // we're extending) and is passed through unchanged.
+    private static final float DENSIFY_SPARSE_RATIO = 2.5f;
+    // Cluster size (samples added per sparse key center) scales mildly with swipe richness within
+    // these bounds, so a tapped letter carries weight comparable to — not exceeding — a swiped one.
+    private static final int DENSIFY_MIN_CLUSTER = 2;
+    private static final int DENSIFY_MAX_CLUSTER = 4;
+    // Pixel step between samples within a key cluster. A few px so the cluster reads as a brief
+    // dwell / micro-move at the key without ever reaching a neighbouring key.
+    private static final float DENSIFY_CLUSTER_STEP_PX = 6f;
 
     // Cache these values for performance
     private CharSequence mTypedWordCache;
@@ -286,23 +308,125 @@ public final class WordComposer {
                 && batchPointers.getPointerSize() > 0) {
             // Multi-part composition: feed the lib the merged trail (prior fragments +
             // current gesture) with synthesised timestamps so the base looks like a
-            // natural continuation of the new gesture.
-            final int baseSize = mExtendBatchInputBase.getPointerSize();
-            final int[] baseX = mExtendBatchInputBase.getXCoordinates();
-            final int[] baseY = mExtendBatchInputBase.getYCoordinates();
-            final int firstNewTime = batchPointers.getTimes()[0];
-            final int baseLastTime = firstNewTime - EXTEND_BASE_GAP_BEFORE_NEW_MS;
-            final int baseFirstTime = baseLastTime - (baseSize - 1) * EXTEND_BASE_POINT_INTERVAL_MS;
-            mInputPointers.reset();
-            for (int i = 0; i < baseSize; i++) {
-                mInputPointers.addPointer(baseX[i], baseY[i], 0,
-                        baseFirstTime + i * EXTEND_BASE_POINT_INTERVAL_MS);
-            }
+            // natural continuation of the new gesture. The base is resampled to the swipe's
+            // own density first (see appendDensifiedExtendBase) so the typed prefix isn't
+            // out-weighted by the dense swipe tail.
+            appendDensifiedExtendBase(batchPointers);
             mInputPointers.appendAll(batchPointers);
         } else {
             mInputPointers.set(batchPointers);
         }
         mIsBatchMode = true;
+    }
+
+    /**
+     * Build the merged-trail prefix into {@link #mInputPointers}, adding weight to a SPARSE
+     * key-center base so the recogniser respects the typed prefix.
+     * <p>
+     * The stored base ({@link #mExtendBatchInputBase}) is one of two things:
+     * <ul>
+     *   <li>a <b>sparse</b> key-center stub — one point per letter of a tapped prefix or a
+     *       realigned-after-edit seed, with large jumps between keys; the recogniser
+     *       under-weights it against the dense real swipe appended after it, so words that match
+     *       the swipe tail but drop the typed prefix can win ("sh" + swipe -> "would"); or</li>
+     *   <li>a <b>dense</b> real stroke — a prior swipe we're extending, already at swipe density.</li>
+     * </ul>
+     * For a dense base we pass the points through unchanged (the real geometry is best). For a
+     * sparse base we add a small <em>cluster</em> of samples AT each key center — a brief dwell —
+     * so each tapped/realigned letter carries weight comparable to a swiped one. We deliberately
+     * do NOT interpolate a straight line between the centers: tapped keys are often far apart
+     * (e.g. "p"->"r" spans the whole top row), and filling that line lays phantom points over keys
+     * the user never touched, wrecking recognition. Clustering adds evidence only at the real keys.
+     */
+    private void appendDensifiedExtendBase(final InputPointers batchPointers) {
+        mInputPointers.reset();
+        final int baseSize = mExtendBatchInputBase.getPointerSize();
+        final int[] baseX = mExtendBatchInputBase.getXCoordinates();
+        final int[] baseY = mExtendBatchInputBase.getYCoordinates();
+        final int newSize = batchPointers.getPointerSize();
+        final int[] newX = batchPointers.getXCoordinates();
+        final int[] newY = batchPointers.getYCoordinates();
+        final int lastTime = batchPointers.getTimes()[0] - EXTEND_BASE_GAP_BEFORE_NEW_MS;
+
+        float swipeSpacing = averageStepDistance(newX, newY, newSize);
+        if (swipeSpacing < 1f) swipeSpacing = DENSIFY_FALLBACK_SPACING_PX;
+        final float baseSpacing = averageStepDistance(baseX, baseY, baseSize);
+
+        // A base much coarser than the swipe is the sparse key-center representation; anything near
+        // swipe density is a real captured stroke and is kept verbatim. When the new gesture is a
+        // single point (newSize < 2, e.g. the swipe-then-tap extension path) we can't measure swipe
+        // spacing, so we never reclassify the base as sparse — clustering a real captured stroke
+        // would smear it.
+        final boolean sparse = newSize >= 2
+                && (baseSize <= 1 || baseSpacing > swipeSpacing * DENSIFY_SPARSE_RATIO);
+
+        // Build coordinates first (count not known until clustering is done), then assign times.
+        final int[] dx = new int[DENSIFY_MAX_BASE_POINTS];
+        final int[] dy = new int[DENSIFY_MAX_BASE_POINTS];
+        int n = 0;
+
+        if (!sparse) {
+            // Dense base (or an unmeasurable single-point new gesture): keep the real stroke as-is.
+            for (int i = 0; i < baseSize && n < DENSIFY_MAX_BASE_POINTS; i++) {
+                dx[n] = baseX[i];
+                dy[n] = baseY[i];
+                n++;
+            }
+        } else {
+            // Sparse base: cluster a few samples around each key center (a brief dwell), spread
+            // SYMMETRICALLY along the local gesture direction so the cluster's centroid stays ON the
+            // key (no neighbour bias) and reads as motion rather than a repeated point. We do NOT
+            // interpolate between centers (that lays phantom points across keys between far-apart
+            // taps). Cap the per-key cluster so a long prefix still fits — every key must keep at
+            // least its center sample, since the front-to-back fill would otherwise drop the last
+            // (swipe-adjacent) keys, which are the most important anchors.
+            int k = Math.max(DENSIFY_MIN_CLUSTER,
+                    Math.min(DENSIFY_MAX_CLUSTER, Math.round(newSize / 8f)));
+            k = Math.min(k, Math.max(1, DENSIFY_MAX_BASE_POINTS / baseSize));
+            for (int i = 0; i < baseSize && n < DENSIFY_MAX_BASE_POINTS; i++) {
+                final int tx = (i + 1 < baseSize) ? baseX[i + 1] : newX[0];
+                final int ty = (i + 1 < baseSize) ? baseY[i + 1] : newY[0];
+                float vx = tx - baseX[i], vy = ty - baseY[i];
+                final float vlen = (float) Math.hypot(vx, vy);
+                if (vlen > 1f) { vx /= vlen; vy /= vlen; } else { vx = 0f; vy = 0f; }
+                for (int c = 0; c < k && n < DENSIFY_MAX_BASE_POINTS; c++) {
+                    final float off = (c - (k - 1) / 2f) * DENSIFY_CLUSTER_STEP_PX; // centered on key
+                    dx[n] = Math.round(baseX[i] + vx * off);
+                    dy[n] = Math.round(baseY[i] + vy * off);
+                    n++;
+                }
+            }
+        }
+
+        // Step timestamps back from the swipe. The dense passthrough keeps the original fixed
+        // cadence (so swipe+swipe is both coordinate- AND timing-equivalent to the pre-densification
+        // behaviour); the sparse clusters use the swipe's own cadence so the prefix reads at the
+        // same speed as the swipe. Shrink only if needed to keep the prefix non-negative.
+        int dt = sparse ? averageStepTime(batchPointers.getTimes(), newSize) : EXTEND_BASE_POINT_INTERVAL_MS;
+        if (dt < 1) dt = EXTEND_BASE_POINT_INTERVAL_MS;
+        if (n > 1 && (long) (n - 1) * dt > lastTime && lastTime > 0) {
+            dt = Math.max(1, lastTime / (n - 1));
+        }
+        final int firstTime = lastTime - (n - 1) * dt;
+        for (int i = 0; i < n; i++) {
+            mInputPointers.addPointer(dx[i], dy[i], 0, firstTime + i * dt);
+        }
+    }
+
+    /** Average Euclidean distance between consecutive points (0 for fewer than 2 points). */
+    private static float averageStepDistance(final int[] xs, final int[] ys, final int size) {
+        if (size < 2) return 0f;
+        double total = 0;
+        for (int i = 1; i < size; i++) {
+            total += Math.hypot(xs[i] - xs[i - 1], ys[i] - ys[i - 1]);
+        }
+        return (float) (total / (size - 1));
+    }
+
+    /** Average time delta between consecutive points (0 for fewer than 2 points). */
+    private static int averageStepTime(final int[] times, final int size) {
+        if (size < 2) return 0;
+        return Math.max(0, (times[size - 1] - times[0]) / (size - 1));
     }
 
     /**
@@ -324,6 +448,11 @@ public final class WordComposer {
         return mExtendBatchInputBaseSet;
     }
 
+    /** Diagnostic: how many points the armed merged-trail base holds (0 when not armed). */
+    public int getExtendBatchInputBaseSize() {
+        return mExtendBatchInputBaseSet ? mExtendBatchInputBase.getPointerSize() : 0;
+    }
+
     public void setBatchInputWord(final String word) {
         reset();
         mIsBatchMode = true;
@@ -334,6 +463,35 @@ public final class WordComposer {
             // (See {@link #add(int,int,int)}).
             final Event processedEvent = processEvent(Event.createEventForCodePointFromUnknownSource(codePoint));
             applyProcessedEvent(processedEvent);
+        }
+    }
+
+    /**
+     * Realign the raw stroke buffer ({@link #mInputPointers}) to a word's key centers.
+     * <p>
+     * Phase 1 of {@code docs/COMPOSING_WORD_SOURCE_OF_TRUTH.md}: after a fragment-pop /
+     * partial delete truncates the composing word, the stored stroke still holds the longer
+     * pre-edit geometry (reset() does not clear it, and addPointerAt overwrites in place
+     * without shrinking the length). A following swipe-extend would then snapshot that stale
+     * buffer as its merged-trail base and build an ever-longer word. Rebuilding the buffer
+     * from the truncated word's key centers keeps the stroke aligned with the text. This is a
+     * local preview of the broader "derive stroke from text" direction.
+     * @param codePoints the code points of the (truncated) word
+     * @param coordinates key-center x/y in CoordinateUtils format (e.g. from
+     *                    {@code getCoordinatesForCurrentKeyboard})
+     */
+    public void seedInputPointersFromKeyCenters(final int[] codePoints, final int[] coordinates) {
+        mInputPointers.reset();
+        final int count = (codePoints == null) ? 0 : codePoints.length;
+        for (int i = 0; i < count; i++) {
+            final int x = CoordinateUtils.xFromArray(coordinates, i);
+            final int y = CoordinateUtils.yFromArray(coordinates, i);
+            // A code point the current layout can't resolve (symbol, or a case mismatch in the
+            // lookup) has no key geometry. NOT_A_COORDINATE fed to the gesture recognizer as a
+            // real point would warp the whole stroke toward (-1,-1), so skip it — a slightly
+            // shorter seed is far better than a corrupted one.
+            if (x == Constants.NOT_A_COORDINATE || y == Constants.NOT_A_COORDINATE) continue;
+            mInputPointers.addPointer(x, y, 0, 0);
         }
     }
 
@@ -429,6 +587,19 @@ public final class WordComposer {
      */
     public void setCapitalizedModeAtStartComposingTime(final int mode) {
         mCapitalizedMode = mode;
+    }
+
+    /**
+     * The capitalization intent captured when this word started composing (one of the
+     * {@code CAPS_MODE_*} constants). It is seeded from auto-cap + shift state at word-start,
+     * survives {@link #reset()} (so it persists across a {@link #setBatchInputWord} rebuild), and
+     * is cleared only in {@link #commitWord}. This makes it the persistent per-word source of
+     * truth for casing — used by the live-converge re-recognition path so that re-replacing the
+     * word never loses (or latches) its case.
+     * @return the capitalized mode for the current word
+     */
+    public int getCapitalizedMode() {
+        return mCapitalizedMode;
     }
 
     /**
