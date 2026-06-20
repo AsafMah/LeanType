@@ -134,7 +134,10 @@ private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> 
     val focusRequester = remember { FocusRequester() }
     var newWord by remember { mutableStateOf(word) }
     var newLocale by remember { mutableStateOf(locale) }
-    val wordValid = (newWord.word == word.word && locale == newLocale) || !doesWordExist(newWord.word, newLocale, ctx)
+    val identityUnchanged = newWord.word == word.word
+        && (newWord.shortcut.isNullOrEmpty() && word.shortcut.isNullOrEmpty() || newWord.shortcut == word.shortcut)
+        && locale == newLocale
+    val wordValid = identityUnchanged || !doesWordExist(newWord.word, newWord.shortcut, newLocale, ctx)
     fun save() {
         if (newWord != word || locale != newLocale) {
             deleteWord(word, locale, ctx.contentResolver)
@@ -257,18 +260,27 @@ private fun deleteWord(wordDetails: Word, locale: Locale?, resolver: ContentReso
     }
 }
 
-private fun doesWordExist(word: String, locale: Locale?, context: Context): Boolean {
+private fun doesWordExist(word: String, shortcut: String?, locale: Locale?, context: Context): Boolean {
     val hasWordProjection = arrayOf(UserDictionary.Words.WORD, UserDictionary.Words.LOCALE)
 
     val select: String
-    val selectArgs: Array<String>?
+    val selectArgs: Array<String>
     if (locale == null) {
-        select = "${UserDictionary.Words.WORD}=? AND ${UserDictionary.Words.LOCALE} is null"
-        selectArgs = arrayOf(word)
+        if (shortcut.isNullOrEmpty()) {
+            select = "${UserDictionary.Words.WORD}=? AND ${UserDictionary.Words.LOCALE} is null AND (${UserDictionary.Words.SHORTCUT} is null OR ${UserDictionary.Words.SHORTCUT}='')"
+            selectArgs = arrayOf(word)
+        } else {
+            select = "${UserDictionary.Words.WORD}=? AND ${UserDictionary.Words.LOCALE} is null AND ${UserDictionary.Words.SHORTCUT}=?"
+            selectArgs = arrayOf(word, shortcut)
+        }
     } else {
-        select = "${UserDictionary.Words.WORD}=? AND ${UserDictionary.Words.LOCALE}=?"
-        // requires use of locale string (as opposed to more useful language tag) for interaction with Android system
-        selectArgs = arrayOf(word, locale.toString())
+        if (shortcut.isNullOrEmpty()) {
+            select = "${UserDictionary.Words.WORD}=? AND ${UserDictionary.Words.LOCALE}=? AND (${UserDictionary.Words.SHORTCUT} is null OR ${UserDictionary.Words.SHORTCUT}='')"
+            selectArgs = arrayOf(word, locale.toString())
+        } else {
+            select = "${UserDictionary.Words.WORD}=? AND ${UserDictionary.Words.LOCALE}=? AND ${UserDictionary.Words.SHORTCUT}=?"
+            selectArgs = arrayOf(word, locale.toString(), shortcut)
+        }
     }
     val cursor = context.contentResolver.query(UserDictionary.Words.CONTENT_URI, hasWordProjection, select, selectArgs, null)
     cursor.use {

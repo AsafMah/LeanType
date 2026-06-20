@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.asafmah.leantypedual"
@@ -28,11 +28,9 @@ android {
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
         ndk {
-            abiFilters.addAll(arrayOf("armeabi-v7a", "arm64-v8a"))
+            abiFilters.addAll(arrayOf("arm64-v8a"))
         }
     }
-
-    // ONNX Runtime is used instead of llama.cpp native build
 
     flavorDimensions += "privacy"
     productFlavors {
@@ -45,6 +43,7 @@ android {
         create("offline") {
             dimension = "privacy"
             applicationIdSuffix = ".offline"
+            minSdk = 26
         }
         create("offlinelite") {
             dimension = "privacy"
@@ -141,7 +140,7 @@ android {
             path = File("src/main/jni/Android.mk")
         }
     }
-//    ndkVersion = "28.0.13004108"
+    ndkVersion = "28.0.13004108"
 
     packaging {
         jniLibs {
@@ -235,8 +234,21 @@ dependencies {
     "standardOptimisedImplementation"("androidx.security:security-crypto:1.1.0-alpha06")
 
     // local llm proofreading (offline)
-    // ONNX Runtime for T5 encoder-decoder grammar models
-    "offlineImplementation"("com.microsoft.onnxruntime:onnxruntime-android:1.17.3")
+    "offlineImplementation"("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
+
+    // Force 16 KB page-aligned version of graphics-path
+    implementation("androidx.graphics:graphics-path:1.1.0")
+
+    // WorkManager — required by ML Kit Digital Ink plugin (loaded via DexClassLoader).
+    // ML Kit internally calls WorkManager.getInstance(context) using the host app context,
+    // so the host app must have WorkManagerInitializer registered in its manifest.
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
+
+    // ML Kit Digital Ink Recognition — required by the handwriting plugin.
+    // ML Kit's internal asset manager and native library loader use the host app context,
+    // so the host app must compile and include the client library resources/libraries.
+    "standardImplementation"("com.google.mlkit:digital-ink-recognition:19.0.0")
+    "standardOptimisedImplementation"("com.google.mlkit:digital-ink-recognition:19.0.0")
 
     // test
     testImplementation(kotlin("test"))

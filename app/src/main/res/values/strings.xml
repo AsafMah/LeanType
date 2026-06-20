@@ -142,6 +142,11 @@
     <string name="auto_cap_summary">Capitalize the first word of each sentence</string>
     <!-- Option to edit personal dictionary.-->
     <string name="edit_personal_dictionary">Personal dictionary</string>
+    <string name="edit_blocked_words">Blocked words</string>
+    <string name="blocked_words_summary">Manage words blocked from suggestions</string>
+    <string name="add_blocked_word">Block a word</string>
+    <string name="blocked_word_already_present">Word is already blocked</string>
+    <string name="clear_all_blocked_words_confirmation">Are you sure you want to unblock all words?</string>
     <!-- Name of the main dictionary, as opposed to auxiliary dictionaries (medical/entertainment/sports...) -->
     <string name="main_dictionary">Main dictionary</string>
     <!-- Option to enable showing suggestions -->
@@ -204,6 +209,12 @@
     <string name="suggest_screenshots">Suggest recent screenshots</string>
     <!-- Description for the "suggest recent screenshots" option. This makes recent screenshots visible in the suggestion strip view. -->
     <string name="suggest_screenshots_summary">Show recently taken screenshots as a suggestion</string>
+    <!-- Option to enable showing one-time passcodes (OTPs) from incoming SMS as a suggestion. -->
+    <string name="auto_read_otp">Auto-read OTP from SMS</string>
+    <!-- Description for the "auto_read_otp" option. Requires SMS permission; only reads messages that arrive while the keyboard is open. -->
+    <string name="auto_read_otp_summary">Show the code from an incoming SMS as a suggestion you can tap to insert</string>
+    <!-- Spoken description for the button that dismisses the OTP suggestion. -->
+    <string name="spoken_otp_suggestion">Dismiss OTP suggestion</string>
     <!-- Option to compress screenshot images when suggesting them. -->
     <string name="compress_screenshots">Compress screenshot suggestions</string>
     <!-- Description for the "compress screenshots" option. -->
@@ -442,6 +453,18 @@
     <string name="load_gesture_library_download_success">Download complete! Restarting…</string>
     <!-- Message shown when download fails -->
     <string name="load_gesture_library_download_failed">Download failed: %s</string>
+    <!-- Preferences item for loading an external handwriting plugin -->
+    <string name="load_handwriting_plugin">Load handwriting plugin</string>
+    <string name="load_handwriting_plugin_summary">Provide an APK plugin to enable handwriting input</string>
+    <string name="load_handwriting_plugin_message">Provide a handwriting plugin APK.\n\nWarning: loading external code can be a security risk. Only use a plugin from a source you trust.</string>
+    <string name="load_handwriting_plugin_button_load">Load plugin APK</string>
+    <string name="load_handwriting_plugin_button_delete">Delete plugin</string>
+    <string name="load_handwriting_plugin_success">Handwriting plugin imported successfully</string>
+    <string name="load_handwriting_plugin_failed">Failed to load handwriting plugin APK</string>
+    <string name="handwriting">Handwriting</string>
+    <string name="handwriting_plugin_required">Handwriting plugin required</string>
+    <string name="handwriting_plugin_summary_text">Please load the handwriting plugin library to enable drawing recognition.</string>
+    <string name="handwriting_plugin_load_button">Load Plugin</string>
     <!-- Preferences item for inserting space after punctuation -->
     <string name="autospace_after_punctuation">Autospace after punctuation</string>
     <!-- Description for "autospace_after_punctuation" setting -->
@@ -611,6 +634,15 @@
     <string name="huggingface_endpoint_title">API Endpoint</string>
     <string name="huggingface_endpoint_summary">API endpoint URL</string>
     <string name="huggingface_endpoint_hint">https://api.groq.com/openai/v1/chat/completions</string>
+    <string name="insecure_connection_blocked">Insecure HTTP connection blocked. Enable \'Allow Insecure Connections\' in AI settings.</string>
+    <string name="ai_allow_insecure_connections_title">Allow insecure connections</string>
+    <string name="ai_allow_insecure_connections_summary">Allow HTTP connections and ignore SSL certificate errors. Warning: exposes input to local network eavesdropping.</string>
+    <string name="backup_category_layouts">Layouts</string>
+    <string name="backup_category_theme">Theme &amp; Custom Backgrounds</string>
+    <string name="backup_category_dictionary">Dictionaries &amp; Typing History</string>
+    <string name="backup_category_clipboard">Clipboard History</string>
+    <string name="backup_category_general">General Settings</string>
+    <string name="backup_select_items">Select items to include:</string>
 
     <string name="config_gemini_models_endpoint" translatable="false">https://generativelanguage.googleapis.com/v1beta/models?key=%1$s</string>
     <string name="config_groq_models_endpoint" translatable="false">https://api.groq.com/openai/v1/models</string>
@@ -1179,6 +1211,7 @@ New dictionary:
     <string name="libraries_hub_gesture_title">Gesture Typing Library</string>
     <string name="libraries_hub_dictionary_title">Main Dictionaries</string>
     <string name="libraries_hub_emoji_title">Emoji Libraries</string>
+    <string name="libraries_hub_handwriting_title">Handwriting Input Plugin</string>
     <string name="libraries_hub_dict_guide_title">Dictionary Loading Guide</string>
     <string name="libraries_hub_dict_guide_text">To add a new dictionary:\n1. Obtain a .dict file for your language.\n2. Tap \"Manage Dictionaries\".\n3. Use the plus (+) button to import the file.</string>
     <string name="libraries_status_active">Active</string>
@@ -1369,6 +1402,16 @@ New dictionary:
     <string name="offline_model_summary">Manage local LLM</string>
     <string name="offline_max_tokens_title">Offline AI Max Tokens</string>
     <string name="offline_max_tokens_summary">Maximum length of the generated correction</string>
+    <string name="offline_temp_title">Temperature</string>
+    <string name="offline_temp_summary">Controls randomness: lower is more focused and deterministic</string>
+    <string name="offline_top_p_title">Top-P (Nucleus Sampling)</string>
+    <string name="offline_top_p_summary">Controls diversity of vocabulary: lower cuts off less likely options</string>
+    <string name="offline_top_k_title">Top-K</string>
+    <string name="offline_top_k_summary">Limits choices to K most probable tokens</string>
+    <string name="offline_min_p_title">Min-P</string>
+    <string name="offline_min_p_summary">Minimum probability threshold relative to most likely token</string>
+    <string name="offline_show_thinking_title">Show Thinking</string>
+    <string name="offline_show_thinking_summary">Display reasoning process and internal thinking tokens if the model generates them</string>
     <!-- Placeholder for token options if using a list, but I'll use a Slider or similar if possible. 
          However the user asked for a "list off options", so I'll create entries and entryValues. -->
     <string-array name="offline_max_tokens_entries">

@@ -244,7 +244,7 @@ fun <T: Any?> SearchScreen(
                         content()
                     }
                 } else {
-                    val items = remember(searchText.text) { filteredItems(searchText.text) }
+                    val items = remember(searchText.text, filteredItems) { filteredItems(searchText.text) }
                     Scaffold(
                         contentWindowInsets = WindowInsets(0)
                     ) { innerPadding ->

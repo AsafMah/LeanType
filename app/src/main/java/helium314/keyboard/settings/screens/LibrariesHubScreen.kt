@@ -27,9 +27,16 @@ import helium314.keyboard.settings.NextScreenIcon
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.preferences.LoadGestureLibPreference
 import helium314.keyboard.settings.preferences.LoadEmojiLibPreference
+import helium314.keyboard.settings.preferences.LoadHandwritingPluginPreference
+import helium314.keyboard.latin.handwriting.HandwritingLoader
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.common.Links
 import helium314.keyboard.settings.preferences.Preference
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 
 @Composable
 fun LibrariesHubScreen(
@@ -87,6 +94,17 @@ fun LibrariesHubScreen(
                                 stringResource(R.string.libraries_status_active) + ": " + emojiDicts.joinToString { it.displayLanguage },
                             icon = R.drawable.ic_emoji_smileys_emotion
                         )
+
+                        // Handwriting Input Plugin
+                        if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardOptimised") {
+                            var handwritingInstalled by remember { mutableStateOf(HandwritingLoader.hasPlugin(context)) }
+                            LoadHandwritingPluginPreference(
+                                title = stringResource(R.string.libraries_hub_handwriting_title),
+                                summary = if (handwritingInstalled) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed),
+                                icon = R.drawable.ic_edit,
+                                onSuccess = { handwritingInstalled = HandwritingLoader.hasPlugin(context) }
+                            )
+                        }
 
                         // Documentation & Features
                         val uriHandler = LocalUriHandler.current

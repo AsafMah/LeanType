@@ -62,6 +62,7 @@ import java.util.concurrent.TimeUnit
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private var mPrefs: SharedPreferences? = null
+    private var mContext: Context? = null
     private var mEnabledDictionariesState: Map<String, Boolean> = emptyMap()
     private var dictionaryGroups = listOf(DictionaryGroup())
 
@@ -78,13 +79,15 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private var changeFrom = ""
     private var changeTo = ""
 
+    private var mLoadedSuggestEmojis: Boolean = false
+    private var mLoadedEmojiDictExists: Boolean = false
+
     private val SPELLING_DICTIONARY_TYPES = arrayOf(
         Dictionary.TYPE_MAIN,
         Dictionary.TYPE_CONTACTS,
         Dictionary.TYPE_APPS,
         Dictionary.TYPE_USER_HISTORY
     )
-
     // Caches for spell checking word validity
     private var mValidSpellingWordReadCache: LruCache<String, Boolean>? = LruCache(500)
     private var mValidSpellingWordWriteCache: LruCache<String, Boolean>? = LruCache(500)
@@ -144,6 +147,12 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 return false
             }
         }
+        val ctx = mContext ?: return false
+        val currentSuggestEmojis = Settings.getValues().mSuggestEmojis
+        val currentEmojiDictExists = locales.any { helium314.keyboard.latin.utils.DictionaryInfoUtils.getCachedDictForLocaleAndType(it, Dictionary.TYPE_EMOJI, ctx) != null }
+        if (currentSuggestEmojis != mLoadedSuggestEmojis || currentEmojiDictExists != mLoadedEmojiDictExists) {
+            return false
+        }
         val dictGroup = dictionaryGroups[0] // settings are the same for all groups
         return contacts == dictGroup.hasDict(Dictionary.TYPE_CONTACTS)
                 && apps == dictGroup.hasDict(Dictionary.TYPE_APPS)
@@ -165,6 +174,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         listener: DictionaryInitializationListener?
     ) {
         Log.i(TAG, "resetDictionaries, force reloading main dictionary: $forceReloadMainDictionary")
+        mContext = context.applicationContext
         val prefs = context.prefs()
         mPrefs = prefs
         mEnabledDictionariesState = prefs.all.filterKeys { it.startsWith("pref_dict_enabled_") }
@@ -237,7 +247,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
             // create new or re-use already loaded main dict
             val mainDict: Dictionary?
-            if (forceReload || oldDictGroupForLocale == null
+            val currentSuggestEmojis = Settings.getValues().mSuggestEmojis
+            val currentEmojiDictExists = helium314.keyboard.latin.utils.DictionaryInfoUtils.getCachedDictForLocaleAndType(locale, Dictionary.TYPE_EMOJI, context) != null
+            val forceReloadMain = forceReload || (currentSuggestEmojis != mLoadedSuggestEmojis) || (currentEmojiDictExists != mLoadedEmojiDictExists)
+
+            if (forceReloadMain || oldDictGroupForLocale == null
                 || !oldDictGroupForLocale.hasDict(Dictionary.TYPE_MAIN)
             ) {
                 mainDict = null // null main dicts will be loaded later in asyncReloadUninitializedMainDictionaries
@@ -276,6 +290,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         scope.launch {
             try {
                 val useEmojiDict = Settings.getValues().mSuggestEmojis
+                mLoadedSuggestEmojis = useEmojiDict
+                mLoadedEmojiDictExists = locales.any { helium314.keyboard.latin.utils.DictionaryInfoUtils.getCachedDictForLocaleAndType(it, Dictionary.TYPE_EMOJI, context) != null }
                 val dictGroupsWithNewMainDict = locales.mapNotNull {
                     val dictionaryGroup = findDictionaryGroupWithLocale(dictionaryGroups, it)
                     if (dictionaryGroup == null) {
@@ -711,6 +727,12 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         }
     }
 
+    override fun reloadBlacklist() {
+        for (dictionaryGroup in dictionaryGroups) {
+            dictionaryGroup.reloadBlacklist()
+        }
+    }
+
     override fun addToUserDictionary(word: String) {
         if (word.isEmpty()) return
         val group = currentlyPreferredDictionaryGroup
@@ -874,6 +896,12 @@ private class DictionaryGroup(
 
     /** Removes a word from all dictionaries in this group. If the word is in a read-only dictionary, it is blacklisted. */
     fun removeWord(word: String) {
+        addToBlacklist(word)
+        val lowercase = word.lowercase(locale)
+        if (word != lowercase) {
+            addToBlacklist(lowercase)
+        }
+
         // remove from user history
         getSubDict(Dictionary.TYPE_USER_HISTORY)?.removeUnigramEntryDynamically(word)
 
@@ -883,27 +911,12 @@ private class DictionaryGroup(
         val contactsDict = getSubDict(Dictionary.TYPE_CONTACTS)
         if (contactsDict != null && contactsDict.isInDictionary(word)) {
             contactsDict.removeUnigramEntryDynamically(word) // will be gone until next reload of dict
-            addToBlacklist(word)
-            return
         }
 
         val appsDict = getSubDict(Dictionary.TYPE_APPS)
         if (appsDict != null && appsDict.isInDictionary(word)) {
             appsDict.removeUnigramEntryDynamically(word) // will be gone until next reload of dict
-            addToBlacklist(word)
-            return
-        }
 
-        val mainDict = mainDict
-        if (mainDict != null && mainDict.isValidWord(word)) {
-            addToBlacklist(word)
-            return
-        }
-
-        val lowercase = word.lowercase(locale)
-        if (mainDict != null && mainDict.isValidWord(lowercase)) {
-            addToBlacklist(lowercase)
-            return
         }
 
         // The word was in no read-only dictionary (main/contacts/apps) — it only lived in the mutable
@@ -978,44 +991,134 @@ private class DictionaryGroup(
         else null
     }
 
+    @Volatile
+    private var compiledBlacklistPatterns: List<Regex> = emptyList()
+
+    private fun rebuildCompiledPatterns() {
+        compiledBlacklistPatterns = blacklist.map { pattern ->
+            try {
+                Regex(pattern, RegexOption.IGNORE_CASE)
+            } catch (e: Exception) {
+                Regex(Regex.escape(pattern), RegexOption.IGNORE_CASE)
+            }
+        }
+    }
+
     private val blacklist = hashSetOf<String>().apply {
-        if (blacklistFile?.isFile != true) return@apply
+        val file = blacklistFile
+        if (file == null) return@apply
         scope.launch {
             synchronized(blacklistLock) {
                 try {
-                    addAll(blacklistFile.readLines())
+                    val loadedWords = mutableSetOf<String>()
+                    if (file.isFile) {
+                        loadedWords.addAll(file.readLines().map { it.lowercase(locale) })
+                    }
+                    val langTag = locale.toLanguageTag()
+                    if (locale.language.isNotEmpty() && locale.language != langTag) {
+                        val baseFile = File(file.parentFile, "${locale.language}.txt")
+                        if (baseFile.isFile) {
+                            loadedWords.addAll(baseFile.readLines().map { it.lowercase(locale) })
+                        }
+                    }
+                    addAll(loadedWords)
+                    rebuildCompiledPatterns()
                 } catch (e: IOException) {
-                    Log.e(TAG, "Exception while trying to read blacklist from ${blacklistFile.name}", e)
+                    Log.e(TAG, "Exception while trying to read blacklist from ${file.name}", e)
                 }
             }
         }
     }
 
-    fun isBlacklisted(word: String) = blacklist.contains(word)
+    fun isBlacklisted(word: String): Boolean {
+        val patterns = compiledBlacklistPatterns
+        return patterns.any { it.matches(word) }
+    }
 
     fun addToBlacklist(word: String) {
-        if (!blacklist.add(word) || blacklistFile == null) return
+        val lowercase = word.lowercase(locale)
+        synchronized(blacklistLock) {
+            if (!blacklist.add(lowercase)) return
+            rebuildCompiledPatterns()
+        }
+        val file = blacklistFile ?: return
         scope.launch {
             synchronized(blacklistLock) {
                 try {
-                    if (blacklistFile.isDirectory) blacklistFile.delete()
-                    blacklistFile.appendText("$word\n")
+                    if (file.isDirectory) file.delete()
+                    file.appendText("$lowercase\n")
+                    val langTag = locale.toLanguageTag()
+                    if (locale.language.isNotEmpty() && locale.language != langTag) {
+                        val baseFile = File(file.parentFile, "${locale.language}.txt")
+                        if (baseFile.isDirectory) baseFile.delete()
+                        baseFile.appendText("$lowercase\n")
+                    }
                 } catch (e: IOException) {
-                    Log.e(TAG, "Exception while trying to add word \"$word\" to blacklist ${blacklistFile.name}", e)
+                    Log.e(TAG, "Exception while trying to add word \"$lowercase\" to blacklist ${file.name}", e)
                 }
             }
         }
     }
 
     fun removeFromBlacklist(word: String) {
-        if (!blacklist.remove(word) || blacklistFile == null) return
+        val lowercase = word.lowercase(locale)
+        synchronized(blacklistLock) {
+            if (!blacklist.remove(lowercase)) return
+            rebuildCompiledPatterns()
+        }
+        val file = blacklistFile ?: return
         scope.launch {
             synchronized(blacklistLock) {
                 try {
-                    val newLines = blacklistFile.readLines().filterNot { it == word }
-                    blacklistFile.writeText(newLines.joinToString("\n"))
+                    val files = mutableListOf(file)
+                    val langTag = locale.toLanguageTag()
+                    if (locale.language.isNotEmpty() && locale.language != langTag) {
+                        files.add(File(file.parentFile, "${locale.language}.txt"))
+                    }
+                    for (f in files) {
+                        if (f.isFile) {
+                            val lines = f.readLines()
+                            val newLines = lines.filterNot { it.lowercase(locale) == lowercase }
+                            if (newLines.size != lines.size) {
+                                f.writeText(newLines.joinToString("\n") + if (newLines.isEmpty()) "" else "\n")
+                            }
+                        }
+                    }
                 } catch (e: IOException) {
-                    Log.e(TAG, "Exception while trying to remove word \"$word\" to blacklist ${blacklistFile.name}", e)
+                    Log.e(TAG, "Exception while trying to remove word \"$word\" from blacklist ${file.name}", e)
+                }
+            }
+        }
+    }
+
+    fun reloadBlacklist() {
+        val file = blacklistFile
+        if (file == null) {
+            synchronized(blacklistLock) {
+                blacklist.clear()
+                rebuildCompiledPatterns()
+            }
+            return
+        }
+        scope.launch {
+            synchronized(blacklistLock) {
+                try {
+                    blacklist.clear()
+                    val loadedWords = mutableSetOf<String>()
+                    if (file.isFile) {
+                        loadedWords.addAll(file.readLines().map { it.lowercase(locale) })
+                    }
+                    val langTag = locale.toLanguageTag()
+                    if (locale.language.isNotEmpty() && locale.language != langTag) {
+                        val baseFile = File(file.parentFile, "${locale.language}.txt")
+                        if (baseFile.isFile) {
+                            loadedWords.addAll(baseFile.readLines().map { it.lowercase(locale) })
+                        }
+                    }
+                    blacklist.addAll(loadedWords)
+                    rebuildCompiledPatterns()
+                } catch (e: IOException) {
+                    Log.e(TAG, "Exception while trying to read blacklist from ${file.name}", e)
                 }
             }
         }

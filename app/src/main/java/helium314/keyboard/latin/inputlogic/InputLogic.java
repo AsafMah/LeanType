@@ -564,6 +564,15 @@ public final class InputLogic {
             }
         }
 
+        if (oldSelStart != newSelStart || oldSelEnd != newSelEnd) {
+            if (newSelStart != mLastExpandedCursorPosition) {
+                mLastExpandedText = null;
+                mLastShortcutText = null;
+                mLastExpandedCursorPosition = -1;
+                mLastExpandedCursorOffset = -1;
+            }
+        }
+
         final boolean selectionChangedOrSafeToReset = oldSelStart != newSelStart || oldSelEnd != newSelEnd // selection
                                                                                                            // changed
                 || !mWordComposer.isComposingWord(); // safe to reset
@@ -2211,6 +2220,32 @@ public final class InputLogic {
             consumeJoinNextActionAndNotifyIfChanged();
             // Combining mode: arm/refresh the grace timer for the next input.
             enterCombiningMode(settingsValues, true /* fromTap, unused — kept for clarity */);
+            if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
+                    && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
+                final String typedWord = mWordComposer.getTypedWord();
+                final String prefix = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getPrefix(mLatinIME);
+                if (prefix.isEmpty()) {
+                    final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(typedWord, mLatinIME);
+                    if (expanded != null) {
+                        commitExpandedText(typedWord, expanded);
+                        resetComposingState(true);
+                    }
+                } else {
+                    final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+                    if (textBefore != null) {
+                        final String textStr = textBefore.toString();
+                        final String targetSuffix = prefix + typedWord;
+                        if (textStr.toLowerCase(java.util.Locale.US).endsWith(targetSuffix.toLowerCase(java.util.Locale.US))) {
+                            final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(targetSuffix, mLatinIME);
+                            if (expanded != null) {
+                                mConnection.deleteTextBeforeCursor(prefix.length());
+                                commitExpandedText(targetSuffix, expanded);
+                                resetComposingState(true);
+                            }
+                        }
+                    }
+                }
+            }
         } else {
             final boolean swapWeakSpace = tryStripSpaceAndReturnWhetherShouldSwapInstead(event, inputTransaction);
 
@@ -2483,6 +2518,28 @@ public final class InputLogic {
                 if (textBefore != null && textBefore.toString().equals(expectedBefore)
                         && textAfter != null && textAfter.toString().equals(expectedAfter)) {
                     mConnection.deleteSurroundingText(beforeLen, afterLen);
+                    mConnection.commitText(mLastShortcutText, 1);
+                    mLastExpandedText = null;
+                    mLastShortcutText = null;
+                    mLastExpandedCursorPosition = -1;
+                    mLastExpandedCursorOffset = -1;
+                    return;
+                }
+            }
+        }
+
+        if (mLastExpandedText != null && !event.isKeyRepeat()) {
+            final int expectedCursor = mConnection.getExpectedSelectionEnd();
+            if (expectedCursor == mLastExpandedCursorPosition) {
+                final int beforeLen = mLastExpandedCursorOffset;
+                final int afterLen = mLastExpandedText.length() - beforeLen;
+                final CharSequence textBefore = mConnection.getTextBeforeCursor(beforeLen, 0);
+                final CharSequence textAfter = mConnection.getTextAfterCursor(afterLen, 0);
+                final String expectedBefore = mLastExpandedText.substring(0, beforeLen);
+                final String expectedAfter = mLastExpandedText.substring(beforeLen);
+                if (textBefore != null && textBefore.toString().equals(expectedBefore)
+                        && textAfter != null && textAfter.toString().equals(expectedAfter)) {
+                    mConnection.setSelection(expectedCursor - beforeLen, expectedCursor + afterLen);
                     mConnection.commitText(mLastShortcutText, 1);
                     mLastExpandedText = null;
                     mLastShortcutText = null;
@@ -2833,6 +2890,33 @@ public final class InputLogic {
         return true;
     }
 
+    private static boolean isSpaceStrippingPunctuation(final int codePoint) {
+        return codePoint == '.'
+                || codePoint == ','
+                || codePoint == ';'
+                || codePoint == ':'
+                || codePoint == '!'
+                || codePoint == '?'
+                || codePoint == ')'
+                || codePoint == ']'
+                || codePoint == '}'
+                || codePoint == '؟' // Arabic question mark
+                || codePoint == '،' // Arabic comma
+                || codePoint == '؛' // Arabic semicolon
+                || codePoint == '।' // Hindi Danda
+                || codePoint == '॥' // Hindi Double Danda
+                || codePoint == '。' // CJK full stop
+                || codePoint == '、' // CJK enumeration comma
+                || codePoint == '，' // CJK fullwidth comma
+                || codePoint == '？' // CJK fullwidth question mark
+                || codePoint == '！' // CJK fullwidth exclamation mark
+                || codePoint == '：' // CJK fullwidth colon
+                || codePoint == '；' // CJK fullwidth semicolon
+                || codePoint == '）' // CJK fullwidth closing parenthesis
+                || codePoint == '】' // CJK fullwidth closing bracket
+                || codePoint == '』'; // CJK fullwidth closing quote
+    }
+
     /*
      * Strip a trailing space if necessary and returns whether it's a swap weak
      * space situation.
@@ -2852,6 +2936,14 @@ public final class InputLogic {
             mConnection.removeTrailingSpace();
             return false;
         }
+
+        if (isSpaceStrippingPunctuation(codePoint)
+                && !inputTransaction.getSettingsValues().isUsuallyPrecededBySpace(codePoint)) {
+            if (mConnection.getCodePointBeforeCursor() == Constants.CODE_SPACE) {
+                mConnection.removeTrailingSpace();
+            }
+        }
+
         if ((SpaceState.WEAK == inputTransaction.getSpaceState()
                 || SpaceState.SWAP_PUNCTUATION == inputTransaction.getSpaceState())
                 && isFromSuggestionStrip) {
@@ -4648,35 +4740,43 @@ public final class InputLogic {
         final android.content.SharedPreferences prefs = helium314.keyboard.latin.utils.DeviceProtectedUtils
                 .getSharedPreferences(mLatinIME);
         String prompt = prefs.getString("pref_custom_ai_prompt_" + index, "");
-        String systemInstruction = "";
+        StringBuilder systemInstructionBuilder = new StringBuilder();
         boolean shouldAppend = false;
 
         // Keyword parsing for system instructions / personas
         if (prompt.contains("#editor")) {
-            systemInstruction = " You are a text editor tool. Output ONLY the edited text. Do not add any conversational filler.";
+            systemInstructionBuilder.append(" You are a text editor tool. Output ONLY the edited text. Do not add any conversational filler.");
             prompt = prompt.replace("#editor", "").trim();
-        } else if (prompt.contains("#outputonly")) {
-            systemInstruction = " Output ONLY the result. Do not add introductions or explanations.";
+        }
+        if (prompt.contains("#outputonly")) {
+            systemInstructionBuilder.append(" Output ONLY the result. Do not add introductions or explanations.");
             prompt = prompt.replace("#outputonly", "").trim();
-        } else if (prompt.contains("#proofread")) {
-            systemInstruction = " You are a proofreader. Fix grammar and spelling errors. Output ONLY the fixed text.";
+        }
+        if (prompt.contains("#proofread")) {
+            systemInstructionBuilder.append(" You are a proofreader. Fix grammar and spelling errors. Output ONLY the fixed text.");
             prompt = prompt.replace("#proofread", "").trim();
-        } else if (prompt.contains("#paraphrase")) {
-            systemInstruction = " You are a paraphrasing tool. Rewrite the text using different words while keeping the meaning. Output ONLY the result.";
+        }
+        if (prompt.contains("#paraphrase")) {
+            systemInstructionBuilder.append(" You are a paraphrasing tool. Rewrite the text using different words while keeping the meaning. Output ONLY the result.");
             prompt = prompt.replace("#paraphrase", "").trim();
-        } else if (prompt.contains("#summarize")) {
-            systemInstruction = " You are a summarizer. Provide a concise summary of the text. Output ONLY the summary.";
+        }
+        if (prompt.contains("#summarize")) {
+            systemInstructionBuilder.append(" You are a summarizer. Provide a concise summary of the text. Output ONLY the summary.");
             prompt = prompt.replace("#summarize", "").trim();
-        } else if (prompt.contains("#expand")) {
-            systemInstruction = " You are a creative writing assistant. Expand on the text with more details. Output ONLY the result.";
+        }
+        if (prompt.contains("#expand")) {
+            systemInstructionBuilder.append(" You are a creative writing assistant. Expand on the text with more details. Output ONLY the result.");
             prompt = prompt.replace("#expand", "").trim();
-        } else if (prompt.contains("#toneshift")) {
-            systemInstruction = " You are a tone modifier. Adjust the tone as requested. Output ONLY the result.";
+        }
+        if (prompt.contains("#toneshift")) {
+            systemInstructionBuilder.append(" You are a tone modifier. Adjust the tone as requested. Output ONLY the result.");
             prompt = prompt.replace("#toneshift", "").trim();
-        } else if (prompt.contains("#generate")) {
-            systemInstruction = " You are a creative content generator. Output ONLY the generated content.";
+        }
+        if (prompt.contains("#generate")) {
+            systemInstructionBuilder.append(" You are a creative content generator. Output ONLY the generated content.");
             prompt = prompt.replace("#generate", "").trim();
         }
+        String systemInstruction = systemInstructionBuilder.toString();
 
         // Input handling keywords
         if (prompt.contains("#append")) {

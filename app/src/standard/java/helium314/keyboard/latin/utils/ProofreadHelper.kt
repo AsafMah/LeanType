@@ -37,6 +37,14 @@ object ProofreadHelper {
         private set
     
     /**
+     * Preload the model in the background to avoid initial latency.
+     */
+    @JvmStatic
+    fun preloadModel(context: Context) {
+        // No-op for standard flavor (runs API based proofreader)
+    }
+
+    /**
      * Cancel the current proofreading/translation operation if one is in progress.
      */
     @JvmStatic

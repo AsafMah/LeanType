@@ -103,6 +103,14 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
 
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         when (primaryCode) {
+            KeyCode.HANDWRITING -> {
+                if (keyboardSwitcher.isHandwritingShowing) {
+                    keyboardSwitcher.setAlphabetKeyboard()
+                } else {
+                    keyboardSwitcher.setHandwritingKeyboard()
+                }
+                return
+            }
             KeyCode.TOGGLE_AUTOCORRECT -> {
                 settings.toggleAutoCorrect()
                 latinIME.onOneShotSpaceActionStateChanged()
@@ -587,15 +595,47 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
                 }
             }
             override fun onSingleTap() {
-                onCodeInput(Constants.CODE_ENTER, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                onCodeInput(Constants.CODE_SPACE, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
             }
             override fun onDoubleTap() {
+                onCodeInput(KeyCode.CLIPBOARD_SELECT_WORD, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+            }
+            override fun onScroll(direction: Int) {
+            onCodeInput(direction, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+        }
+            override fun onTwoFingerDoubleTap() {
                 if (connection.hasSelection()) {
+                    onCodeInput(KeyCode.CLIPBOARD_COPY, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                } else {
+                    onCodeInput(KeyCode.CLIPBOARD_PASTE, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                }
+            }
+            override fun onThreeFingerTap() {
+                onCodeInput(KeyCode.CLIPBOARD_PASTE, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+            }
+            override fun onThreeFingerDoubleTap() {
+                if (connection.hasSelection()) {
+                    onCodeInput(KeyCode.CLIPBOARD_CUT, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                } else {
+                    onCodeInput(KeyCode.CLIPBOARD_SELECT_ALL, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                }
+            }
+            override fun onThreeFingerSwipeLeft() {
+                if (connection.hasSelection()) {
+                    onCodeInput(KeyCode.DELETE, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                } else {
+                    onCodeInput(KeyCode.CLIPBOARD_SELECT_WORD, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
                     onCodeInput(KeyCode.DELETE, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
                 }
             }
-            override fun onScroll(direction: Int) {
-                onCodeInput(direction, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+            override fun onThreeFingerSwipeRight() {
+                // Empty for future use
+            }
+            override fun onThreeFingerSwipeUp() {
+                onCodeInput(KeyCode.UNDO, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+            }
+            override fun onThreeFingerSwipeDown() {
+                onCodeInput(KeyCode.REDO, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
             }
         })
     }

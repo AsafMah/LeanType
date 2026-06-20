@@ -70,7 +70,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 
 
 @Composable
@@ -455,6 +454,9 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
             )
         }
     },
+    Setting(context, SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS, R.string.ai_allow_insecure_connections_title, R.string.ai_allow_insecure_connections_summary) { setting ->
+        SwitchPreference(setting, Defaults.PREF_AI_ALLOW_INSECURE_CONNECTIONS)
+    },
     Setting(context, SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, R.string.translate_target_language_title, R.string.translate_target_language_summary) { setting ->
         val ctx = LocalContext.current
         val service = remember { helium314.keyboard.latin.utils.ProofreadService(ctx) }
@@ -534,7 +536,7 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
             )
         }
     },
-    if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardOptimised") Setting(context, SettingsWithoutKey.CUSTOM_AI_KEYS, R.string.custom_ai_keys_title, R.string.custom_ai_keys_summary) {
+    if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardOptimised" || BuildConfig.FLAVOR == "offline") Setting(context, SettingsWithoutKey.CUSTOM_AI_KEYS, R.string.custom_ai_keys_title, R.string.custom_ai_keys_summary) {
         Preference(
             name = it.title,
             description = it.description,
@@ -547,12 +549,10 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
     if (BuildConfig.FLAVOR == "offline") Setting(context, SettingsWithoutKey.OFFLINE_MODEL_PATH, R.string.offline_model_title, R.string.offline_model_summary) { setting ->
         val context = LocalContext.current
         val service = remember { helium314.keyboard.latin.utils.ProofreadService(context) }
-        var encoderPath by remember { mutableStateOf(service.getModelPath()) }
-        var decoderPath by remember { mutableStateOf(service.getDecoderPath()) }
-        var tokenizerPath by remember { mutableStateOf(service.getTokenizerPath()) }
+        var modelPath by remember { mutableStateOf(service.getModelPath()) }
         
-        // Encoder file picker
-        val encoderLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        // GGUF Model file picker
+        val modelLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
             contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
         ) { uri ->
             uri?.let {
@@ -562,77 +562,26 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                      Log.e("AdvancedScreen", "Failed to take persistable permission", e)
                 }
                 service.setModelPath(it.toString())
-                encoderPath = it.toString()
-                FeedbackManager.message(context, "Encoder selected")
-            }
-        }
-        
-        // Decoder file picker
-        val decoderLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-            contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
-        ) { uri ->
-            uri?.let {
-                try {
-                     context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                } catch (e: Exception) {
-                     Log.e("AdvancedScreen", "Failed to take persistable permission", e)
-                }
-                service.setDecoderPath(it.toString())
-                decoderPath = it.toString()
-                FeedbackManager.message(context, "Decoder selected")
-            }
-        }
-        
-        // Tokenizer file picker
-        val tokenizerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-            contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
-        ) { uri ->
-            uri?.let {
-                try {
-                     context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                } catch (e: Exception) {
-                     Log.e("AdvancedScreen", "Failed to take persistable permission", e)
-                }
-                service.setTokenizerPath(it.toString())
-                tokenizerPath = it.toString()
-                FeedbackManager.message(context, "Tokenizer selected")
+                modelPath = it.toString()
+                FeedbackManager.message(context, "Model selected")
             }
         }
 
         androidx.compose.foundation.layout.Column {
-            // Encoder (required)
             Preference(
-                name = "Encoder Model (.onnx)", 
-                description = if (encoderPath != null) service.getModelName() else "Required - select encoder ONNX file",
-                onClick = { encoderLauncher.launch(arrayOf("application/octet-stream", "*/*")) }
-            )
-            
-            // Decoder (required for generation)
-            Preference(
-                name = "Decoder Model (.onnx)", 
-                description = if (decoderPath != null) "Selected" else "Required - select decoder ONNX file",
-                onClick = { decoderLauncher.launch(arrayOf("application/octet-stream", "*/*")) }
-            )
-            
-            // Tokenizer (required for proper tokenization)
-            Preference(
-                name = "Tokenizer (tokenizer.json)", 
-                description = if (tokenizerPath != null) "Selected" else "Required - select tokenizer.json",
-                onClick = { tokenizerLauncher.launch(arrayOf("application/json", "*/*")) }
+                name = "GGUF Model (.gguf)", 
+                description = if (modelPath != null) service.getModelName() else "Required - select local GGUF model file",
+                onClick = { modelLauncher.launch(arrayOf("application/octet-stream", "*/*")) }
             )
 
-            if (encoderPath != null || decoderPath != null || tokenizerPath != null) {
+            if (modelPath != null) {
                 Preference(
-                    name = "Remove All Models",
-                    description = "Unload models and free memory",
+                    name = "Remove Model",
+                    description = "Unload model and free memory",
                     onClick = { 
                         service.unloadModel()
                         service.setModelPath(null)
-                        service.setDecoderPath(null)
-                        service.setTokenizerPath(null)
-                        encoderPath = null
-                        decoderPath = null
-                        tokenizerPath = null
+                        modelPath = null
                     }
                 )
             }
@@ -657,7 +606,25 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                 onClick = { showSystemPromptDialog = true }
             )
 
+            var showTranslateSystemPromptDialog by remember { mutableStateOf(false) }
+            if (showTranslateSystemPromptDialog) {
+                TextInputDialog(
+                    title = { Text("Translate System Instruction") },
+                    initialText = service.getTranslateSystemPrompt(),
+                    checkTextValid = { true },
+                    onConfirmed = { 
+                        service.setTranslateSystemPrompt(it)
+                        showTranslateSystemPromptDialog = false 
+                    },
+                    onDismissRequest = { showTranslateSystemPromptDialog = false }
+                )
+            }
 
+            Preference(
+                name = "Translate Instruction",
+                description = service.getTranslateSystemPrompt().takeIf { it.isNotBlank() } ?: "Default",
+                onClick = { showTranslateSystemPromptDialog = true }
+            )
 
             // Target Language for Translation
             val languageSetting = Setting(context, Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, R.string.translate_target_language_title, R.string.translate_target_language_summary) { }
@@ -679,7 +646,48 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                 modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
             )
 
+            // Temperature
+            SliderPreference(
+                name = stringResource(R.string.offline_temp_title),
+                key = Settings.PREF_OFFLINE_TEMP,
+                default = Defaults.PREF_OFFLINE_TEMP,
+                range = 0.0f..2.0f,
+                description = { String.format("%.2f", it) }
+            )
 
+            // Top-P
+            SliderPreference(
+                name = stringResource(R.string.offline_top_p_title),
+                key = Settings.PREF_OFFLINE_TOP_P,
+                default = Defaults.PREF_OFFLINE_TOP_P,
+                range = 0.0f..1.0f,
+                description = { String.format("%.2f", it) }
+            )
+
+            // Top-K
+            SliderPreference(
+                name = stringResource(R.string.offline_top_k_title),
+                key = Settings.PREF_OFFLINE_TOP_K,
+                default = Defaults.PREF_OFFLINE_TOP_K,
+                range = 1.0f..100.0f,
+                description = { it.toString() }
+            )
+
+            // Min-P
+            SliderPreference(
+                name = stringResource(R.string.offline_min_p_title),
+                key = Settings.PREF_OFFLINE_MIN_P,
+                default = Defaults.PREF_OFFLINE_MIN_P,
+                range = 0.0f..1.0f,
+                description = { String.format("%.2f", it) }
+            )
+
+            // Show Thinking
+            val showThinkingSetting = Setting(context, Settings.PREF_OFFLINE_SHOW_THINKING, R.string.offline_show_thinking_title, R.string.offline_show_thinking_summary) { }
+            SwitchPreference(
+                setting = showThinkingSetting,
+                default = Defaults.PREF_OFFLINE_SHOW_THINKING
+            )
 
             val tokenEntries = context.resources.getStringArray(R.array.offline_max_tokens_entries)
             val tokenValues = context.resources.getStringArray(R.array.offline_max_tokens_values).map { it.toInt() }

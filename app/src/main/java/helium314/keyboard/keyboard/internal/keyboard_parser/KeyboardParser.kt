@@ -57,6 +57,7 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
                 LayoutType.NUMPAD_LANDSCAPE else LayoutType.NUMPAD
             KeyboardId.ELEMENT_EMOJI_BOTTOM_ROW -> LayoutType.EMOJI_BOTTOM
             KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW -> LayoutType.CLIPBOARD_BOTTOM
+            KeyboardId.ELEMENT_HANDWRITING_BOTTOM_ROW -> LayoutType.HANDWRITING_BOTTOM
             else -> LayoutType.MAIN
         }
         val baseKeys = LayoutParser.parseLayout(layoutType, params, context)

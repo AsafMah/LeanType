@@ -208,6 +208,7 @@ public class SettingsValues {
         public final boolean mSuggestClipboardContent;
         public final boolean mSuggestScreenshots;
         public final boolean mCompressScreenshots;
+        public final boolean mAutoReadOtp;
         public final SettingsValuesForSuggestion mSettingsValuesForSuggestion;
         public final boolean mIncognitoModeEnabled;
         public final boolean mLongPressSymbolsForNumpad;
@@ -311,6 +312,8 @@ public class SettingsValues {
                                 Defaults.PREF_SUGGEST_CLIPBOARD_CONTENT);
                 mSuggestScreenshots = prefs.getBoolean(Settings.PREF_SUGGEST_SCREENSHOTS,
                                 Defaults.PREF_SUGGEST_SCREENSHOTS);
+                mAutoReadOtp = prefs.getBoolean(Settings.PREF_AUTO_READ_OTP,
+                                Defaults.PREF_AUTO_READ_OTP);
                 mCompressScreenshots = prefs.getBoolean(Settings.PREF_COMPRESS_SCREENSHOTS,
                                 Defaults.PREF_COMPRESS_SCREENSHOTS);
                 mDoubleSpacePeriodTimeout = 1100; // ms

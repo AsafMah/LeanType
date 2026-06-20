@@ -68,18 +68,15 @@ import helium314.keyboard.keyboard.internal.KeyVisualAttributes;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager;
 import helium314.keyboard.latin.SingleDictionaryFacilitator;
-import helium314.keyboard.latin.dictionary.Dictionary;
 import helium314.keyboard.latin.dictionary.DictionaryFactory;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.RichInputMethodSubtype;
-import helium314.keyboard.latin.SingleDictionaryFacilitator;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.common.Colors;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
-import helium314.keyboard.latin.utils.DictionaryInfoUtils;
 import helium314.keyboard.latin.utils.ResourceUtils;
 import helium314.keyboard.latin.common.StringUtilsKt;
 
@@ -311,6 +308,7 @@ public final class EmojiPalettesView extends LinearLayout
                 androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false));
         mSearchAdapter = new EmojiSearchAdapter(emoji -> {
             mKeyboardActionListener.onTextInput(emoji);
+            addRecentKey(emoji);
             // Optionally close search or keep it open for multiple inputs?
             // restore standard behavior: stop search
             stopSearchMode();
@@ -721,6 +719,7 @@ public final class EmojiPalettesView extends LinearLayout
 
         KeyboardLayoutSet kls = builder.build();
         bottomRow.setKeyboard(kls.getKeyboard(KeyboardId.ELEMENT_ALPHABET));
+        bottomRow.setKeyPreviewPopupEnabled(Settings.getValues().mKeyPreviewPopupOn);
 
         // Focus
         mSearchBar.requestFocus();
@@ -833,6 +832,7 @@ public final class EmojiPalettesView extends LinearLayout
         if (keyboardView == null || !this.isAttachedToWindow()) {
             return;
         }
+        keyboardView.setKeyPreviewPopupEnabled(Settings.getValues().mKeyPreviewPopupOn);
         EditorInfo ei = editorInfo != null ? editorInfo : mEditorInfo;
         keyboardView.setKeyboardActionListener(keyboardActionListener);
 
