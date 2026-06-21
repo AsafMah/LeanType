@@ -1,0 +1,5 @@
+Handwriting input (Standard) — write on a recognition canvas using a downloadable plugin.
+Offline AI now runs on-device GGUF models via llama.cpp, with adjustable sampling.
+Richer touchpad gestures: word select, word-by-word navigation, clipboard, undo/redo, hold-to-backspace.
+Auto-read one-time codes from an incoming SMS as a tappable suggestion.
+Regex shortcuts in Text Expander.

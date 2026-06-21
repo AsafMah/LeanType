@@ -14,6 +14,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [3.10.0] - 2026-06-20
+
 ### Added
 - **Handwriting input** (Standard builds) — write characters on a recognition canvas using a
   downloadable plugin, with a dedicated bottom-row layout and a toolbar key.
