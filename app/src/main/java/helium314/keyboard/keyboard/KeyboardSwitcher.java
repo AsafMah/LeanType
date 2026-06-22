@@ -362,8 +362,10 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mClipboardHistoryView.setVisibility(View.GONE);
         mClipboardHistoryView.stopClipboardHistory();
         if (mHandwritingView != null) {
+            if (mHandwritingView.isShown()) {
+                mHandwritingView.stopHandwriting();
+            }
             mHandwritingView.setVisibility(View.GONE);
-            mHandwritingView.stopHandwriting();
         }
         
         if (PointerTracker.sPersistentTouchpadModeActive) {
