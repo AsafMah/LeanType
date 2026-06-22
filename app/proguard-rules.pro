@@ -28,9 +28,6 @@
 # Keep java-llama.cpp classes
 -keep class de.kherud.llama.** { *; }
 
-# ONNX Runtime configurations
--dontwarn com.google.protobuf.**
--keep class ai.onnxruntime.** { *; }
 
 # Fix correct service name
 -keep class helium314.keyboard.latin.utils.ProofreadService { *; }

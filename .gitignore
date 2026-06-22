@@ -77,3 +77,8 @@ docs/superpowers/
 .agents
 .kilo/
 .antigravitycli/
+
+.env
+
+# AI agent config (personal, not shared)
+.pi/

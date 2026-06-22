@@ -54,6 +54,8 @@ import helium314.keyboard.latin.utils.ToolbarKey
 import helium314.keyboard.latin.utils.ToolbarMode
 import helium314.keyboard.latin.utils.addPinnedKey
 import helium314.keyboard.latin.utils.createToolbarKey
+import helium314.keyboard.latin.utils.isRepeatableToolbarKey
+import helium314.keyboard.latin.utils.RepeatableKeyTouchListener
 import helium314.keyboard.latin.utils.dpToPx
 import helium314.keyboard.latin.utils.getCodeForToolbarKey
 import helium314.keyboard.latin.utils.getCodeForToolbarKeyLongClick
@@ -920,8 +922,21 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     private fun setupKey(view: ImageButton, colors: Colors) {
-        view.setOnClickListener(this)
-        view.setOnLongClickListener(this)
+        val tag = view.tag
+        if (tag is ToolbarKey && isRepeatableToolbarKey(tag)) {
+            view.setOnTouchListener(RepeatableKeyTouchListener { repeatCount ->
+                if (repeatCount == 0 || repeatCount % 4 == 0) {
+                    AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, view, HapticEvent.KEY_PRESS)
+                }
+                val code = getCodeForToolbarKey(tag)
+                if (code != KeyCode.UNSPECIFIED) {
+                    listener.onCodeInput(code, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, repeatCount > 0)
+                }
+            })
+        } else {
+            view.setOnClickListener(this)
+            view.setOnLongClickListener(this)
+        }
         colors.setColor(view, ColorType.TOOL_BAR_KEY)
         // Set circular background for toolbar keys
         view.setBackgroundResource(R.drawable.toolbar_key_background)

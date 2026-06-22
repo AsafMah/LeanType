@@ -14,6 +14,30 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [3.10.0] - 2026-06-20
+
+### Added
+- **Handwriting input** (Standard builds) — write characters on a recognition canvas using a
+  downloadable plugin, with a dedicated bottom-row layout and a toolbar key.
+- **Auto-read OTP from SMS** — a one-time code from an incoming SMS is offered in the suggestion
+  strip while the keyboard is open; tap to insert. Uses a runtime, opt-in SMS permission.
+- **Regex shortcuts in Text Expander** — expansion triggers can be matched by regular expression.
+
+### Changed
+- **Offline AI backend switched from ONNX Runtime to llama.cpp (GGUF).** The Offline build now
+  loads compact quantized **GGUF** models on-device with configurable sampling
+  (temperature / top-p / top-k / min-p); it now requires Android 8 (API 26).
+- **Touchpad gestures reworked** into a fuller one-/two-finger suite (word select, word-by-word
+  navigation, space, copy/paste, cut/select-all, undo/redo, hold-to-backspace). Single-finger
+  double-tap now **selects the word** (previously deleted the selection).
+- Release builds now target the **arm64-v8a** ABI only.
+
+### Upstream
+- Merged **LeanBitLab/LeanType v3.8.6** (from v3.8.3) — the source of the handwriting,
+  llama.cpp/GGUF, touchpad-gesture, and SMS-OTP changes above. Fork identity (LeanTypeDual, distinct
+  `applicationId`, two-thumb typing, the Gemini standard-AI layer, and the privacy tiers) is
+  preserved.
+
 ## [3.9.1] - 2026-06-11
 
 ### Fixed

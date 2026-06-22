@@ -35,6 +35,9 @@
         <include
             android:id="@+id/clipboard_history_view"
             layout="@layout/clipboard_history_view" />
+        <include
+            android:id="@+id/handwriting_view"
+            layout="@layout/handwriting_view" />
         <helium314.keyboard.keyboard.TouchpadView
             android:id="@+id/touchpad_view"
             android:layout_width="match_parent"

@@ -64,7 +64,9 @@ fun DictionaryScreen(
     val enabledLanguages = SubtypeSettings.getEnabledSubtypes(true).map { it.locale().language }
     val cachedDictFolders = DictionaryInfoUtils.getCacheDirectories(ctx).map { it.name }
     val comparer = compareBy<Locale>({ it.language !in enabledLanguages }, { it.toLanguageTag() !in cachedDictFolders }, { it.displayName })
-    val dictionaryLocales = listOf(Locale(SubtypeLocaleUtils.NO_LANGUAGE)) + getDictionaryLocales(ctx).sortedWith(comparer)
+    val dictionaryLocales = listOf(Locale(SubtypeLocaleUtils.NO_LANGUAGE)) + getDictionaryLocales(ctx)
+        .filter { it.language != SubtypeLocaleUtils.NO_LANGUAGE }
+        .sortedWith(comparer)
     var selectedLocale: Locale? by remember { mutableStateOf(null) }
     var showAddDictDialog by remember { mutableStateOf(false) }
     val dictPicker = dictionaryFilePicker(selectedLocale)
@@ -109,6 +111,23 @@ fun DictionaryScreen(
                 ) {
                     Text(
                         stringResource(R.string.edit_personal_dictionary),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    NextScreenIcon()
+                }
+                androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                // Blocked Words Entry
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .padding(vertical = 4.dp, horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .clickable { SettingsDestination.navigateTo(SettingsDestination.BlockedWords) }
+                ) {
+                    Text(
+                        stringResource(R.string.edit_blocked_words),
                         style = MaterialTheme.typography.titleMedium
                     )
                     NextScreenIcon()

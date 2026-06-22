@@ -12,6 +12,11 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
+import android.view.View
+import android.view.MotionEvent
+import android.os.Handler
+import android.os.Looper
+import android.annotation.SuppressLint
 import androidx.core.view.forEach
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
@@ -263,6 +268,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     CLIPBOARD -> KeyCode.CLIPBOARD
     CLIPBOARD_SEARCH -> KeyCode.CLIPBOARD_SEARCH
     NUMPAD -> KeyCode.NUMPAD
+    HANDWRITING -> KeyCode.HANDWRITING
     UNDO -> KeyCode.UNDO
     REDO -> KeyCode.REDO
     SETTINGS -> KeyCode.SETTINGS
@@ -334,7 +340,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 
 // names need to be aligned with resources strings (using lowercase of key.name)
 enum class ToolbarKey {
-    VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
+    VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, HANDWRITING, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
     INCOGNITO, TOUCHPAD, AUTOCORRECT, AUTOSPACE, AUTO_CAP, FORCE_AUTO_CAP, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
     PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, JOIN_NEXT, FORCE_NEXT_SPACE, UNDO_WORD, PROOFREAD, TRANSLATE,
     CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, CUSTOM_AI_4, CUSTOM_AI_5,
@@ -348,11 +354,13 @@ enum class ToolbarMode {
 val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
 
 private val excludedKeys by lazy {
-    val customAiKeys = if (BuildConfig.FLAVOR != "standard" && BuildConfig.FLAVOR != "standardOptimised")
+    val customAiKeys = if (BuildConfig.FLAVOR != "standard" && BuildConfig.FLAVOR != "standardOptimised" && BuildConfig.FLAVOR != "offline")
         ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") }
     else emptyList()
     val otherKeys = if (BuildConfig.FLAVOR == "offlinelite")
-        listOf(CLOSE_HISTORY, PROOFREAD, TRANSLATE, CLIPBOARD_SEARCH)
+        listOf(CLOSE_HISTORY, PROOFREAD, TRANSLATE, CLIPBOARD_SEARCH, HANDWRITING)
+    else if (BuildConfig.FLAVOR == "offline")
+        listOf(CLOSE_HISTORY, CLIPBOARD_SEARCH, HANDWRITING)
     else
         listOf(CLOSE_HISTORY, CLIPBOARD_SEARCH)
     customAiKeys + otherKeys
@@ -360,9 +368,9 @@ private val excludedKeys by lazy {
 
 val defaultToolbarPref by lazy {
     val default = when (helium314.keyboard.latin.BuildConfig.FLAVOR) {
-        "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE)
+        "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE)
         "offlinelite" -> listOf(SETTINGS, VOICE, CLIPBOARD, UNDO, INCOGNITO, COPY, PASTE)
-        else -> listOf(SETTINGS, VOICE, CLIPBOARD, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL)
+        else -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL)
     }
         
     val others = entries.filterNot { it in default || it in excludedKeys }
@@ -397,12 +405,13 @@ fun upgradeToolbarPrefs(prefs: SharedPreferences) {
 
 private fun upgradeToolbarPref(prefs: SharedPreferences, pref: String, default: String) {
     if (!prefs.contains(pref)) return
-    val list = prefs.getString(pref, default)!!.split(Separators.ENTRY).toMutableList()
+    val originalString = prefs.getString(pref, default)!!
+    val list = originalString.split(Separators.ENTRY).toMutableList()
     val splitDefault = default.split(Separators.ENTRY)
     splitDefault.forEach { entry ->
         val keyWithSeparator = entry.substringBefore(Separators.KV) + Separators.KV
         if (list.none { it.startsWith(keyWithSeparator) })
-            list.add("${keyWithSeparator}false")
+            list.add(entry)
     }
     // likely not needed, but better prepare for possibility of key removal
     list.removeAll {
@@ -413,7 +422,10 @@ private fun upgradeToolbarPref(prefs: SharedPreferences, pref: String, default: 
             true
         }
     }
-    prefs.edit { putString(pref, list.joinToString(Separators.ENTRY)) }
+    val newString = list.joinToString(Separators.ENTRY)
+    if (newString != originalString) {
+        prefs.edit { putString(pref, newString) }
+    }
 }
 
 fun getEnabledToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref)
@@ -449,7 +461,8 @@ private fun getEnabledToolbarKeys(prefs: SharedPreferences, pref: String, defaul
         val split = it.split(Separators.KV)
         if (split.last() == "true") {
             try {
-                ToolbarKey.valueOf(split.first())
+                val key = ToolbarKey.valueOf(split.first())
+                if (key in excludedKeys) null else key
             } catch (_: IllegalArgumentException) {
                 null
             }
@@ -491,3 +504,54 @@ fun clearCustomToolbarKeyCodes() {
 }
 
 private var customToolbarKeyCodes: EnumMap<ToolbarKey, Pair<Int?, Int?>>? = null
+
+fun isRepeatableToolbarKey(key: ToolbarKey): Boolean {
+    return when (key) {
+        LEFT, RIGHT, UP, DOWN,
+        WORD_LEFT, WORD_RIGHT,
+        PAGE_UP, PAGE_DOWN -> true
+        else -> false
+    }
+}
+
+class RepeatableKeyTouchListener(
+    private val onClick: (repeatCount: Int) -> Unit
+) : View.OnTouchListener {
+    private val handler = Handler(Looper.getMainLooper())
+    private var repeatCount = 0
+    private val runnable = object : Runnable {
+        override fun run() {
+            repeatCount++
+            onClick(repeatCount)
+            handler.postDelayed(this, 50L)
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouch(v: View, event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                repeatCount = 0
+                onClick(0)
+                handler.postDelayed(runnable, 400L)
+                v.isPressed = true
+                return true
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                handler.removeCallbacks(runnable)
+                v.isPressed = false
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val x = event.x
+                val y = event.y
+                if (x < 0 || x > v.width || y < 0 || y > v.height) {
+                    handler.removeCallbacks(runnable)
+                    v.isPressed = false
+                }
+                return true
+            }
+        }
+        return false
+    }
+}

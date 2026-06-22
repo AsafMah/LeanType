@@ -2,6 +2,7 @@
 package helium314.keyboard.latin
 
 import android.app.Application
+import androidx.work.Configuration
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
 import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.settings.Defaults
@@ -10,7 +11,14 @@ import helium314.keyboard.latin.utils.LayoutUtilsCustom
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 
-class App : Application() {
+class App : Application(), Configuration.Provider {
+
+    // WorkManager Configuration.Provider — required for ML Kit Digital Ink plugin.
+    // The plugin is loaded via DexClassLoader and calls WorkManager.getInstance(context)
+    // internally. This ensures WorkManager can self-initialize via the Application.
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().build()
+
     override fun onCreate() {
         super.onCreate()
         DebugFlags.init(this)

@@ -20,7 +20,7 @@ class ProofreadService(private val context: Context) {
     val prefs: SharedPreferences get() = context.prefs()
 
     // Always returns GEMINI as default, but methods do nothing
-    fun getProvider(): AIProvider = AIProvider.GEMINI
+fun getProvider(): AIProvider = AIProvider.GEMINI
     fun setProvider(provider: AIProvider) { /* No-op */ }
 
     suspend fun fetchAvailableModels(provider: AIProvider): List<String> = emptyList()
@@ -34,6 +34,8 @@ class ProofreadService(private val context: Context) {
     fun unloadModel() { /* No-op */ }
     fun getSystemPrompt(): String = ""
     fun setSystemPrompt(prompt: String) { /* No-op */ }
+    fun getTranslateSystemPrompt(): String = ""
+    fun setTranslateSystemPrompt(prompt: String) { /* No-op */ }
     fun getDecoderPath(): String? = null
     fun setDecoderPath(path: String?) { /* No-op */ }
     fun getTokenizerPath(): String? = null

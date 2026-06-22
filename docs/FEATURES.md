@@ -16,6 +16,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | 👐 **[Two-thumb Typing (experimental)](#two-thumb-typing-experimental)** | Mix taps and swipes naturally; manual spacing; Nintype-style. |
 | 📝 **[Text Expander](#6-text-expander)** | Custom text shortcut expansion. |
 | 🖱️ **[Touchpad Mode](#7-touchpad-mode)** | Full-screen touchpad gestures and controls. |
+| ✍️ **[Handwriting Input](#8-handwriting-input)** | Use handwriting recognition to draw letters directly on a canvas. |
 
 ## Summary of New Features
 
@@ -23,6 +24,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | :--- | :--- | :--- |
 | **Multi-Provider AI** | Uses Gemini, Groq, or OpenAI to proofread/rewrite text. Fetch latest models dynamically. | `AI Integration > Set AI Provider` |
 | **Offline Proofreading** | Private, on-device AI for grammar (requires downloads). | `AI Integration > Offline Proofreading` |
+| **GGUF Model Support** | Load and run highly quantized, compact GGUF models on-device for offline proofreading/translation. | `Advanced > GGUF Model (.gguf)` |
 | **Custom AI Keys** | 10 toolbar keys with custom prompts, tags (themed capsules), and toggle settings (supports hashtags). | `AI Integration > Custom Keys` |
 | **AI Translation** | Translates selected text via your configured AI provider (includes separate model selector). | Toolbar > Translate Icon |
 | **Floating Keyboard** | Detach the keyboard into a draggable window with a persistent mode option. | Toolbar > Floating Keyboard |
@@ -39,6 +41,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | **Clipboard Undo** | Undo swipe-to-delete on clipboard items with a timed undo bar. | *Automatic (on swipe delete)* |
 | **Two-thumb Typing** | Mix taps and swipes naturally, multi-tap then swipe, manual spacing, recognition tweaks. All experimental and opt-in. | `Two-thumb typing (experimental)` |
 | **Text Expander** | Expand custom shortcuts using dynamic template variables (date, time, clipboard, custom placeholders). | `Text correction > Text Expander` |
+| **Handwriting Input** | Draw letters or words directly on the screen keyboard space to type (standard variant, requires plugin). | `Libraries > Handwriting Input Plugin` |
 
 ---
 
@@ -90,7 +93,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | **Groq** | 🟡 Average | 🟢 Easy | High | **Speed** |
 | **Google Gemini** | 🔴 Low | 🟢 Easy | Generous | General Purpose |
 | **HF/OpenAI-compatible** | ⚙️ *Varies* | 🟡 Medium | *Varies* | **Fully Customizable** |
-| **Offline (ONNX)** | 🟢 **Best** | 🟡 Medium | ∞ Unlimited | **Privacy** |
+| **Offline (Llama)** | 🟢 **Best** | 🟡 Medium | ∞ Unlimited | **Privacy** |
 
 > [!TIP]
 > The **HF/OpenAI-compatible** option is fully customizable—you can change the API endpoint, token, and model to use *any* OpenAI-compatible service (OpenRouter, Mistral, DeepSeek, HuggingFace, etc.).
@@ -316,30 +319,30 @@ Control how the result is inserted.
 
 **Note**: This feature is only available in the "Offline" build flavor of LeanType.
 
-Offline proofreading runs entirely on your device using the ONNX Runtime engine. No data leaves your device.
+Offline proofreading runs entirely on your device using the `llama.cpp` runtime. No data leaves your device.
 
 > [!NOTE]
 > **Status: Beta / Experimental**
-> This feature is in a test phase. The engine is designed to be compatible with various T5-based ONNX models (Basic, Quantized, KV-Cache). We encourage you to experiment with different models to find the best balance of speed and accuracy for your device.
+> Running large language models on device requires a modern smartphone with sufficient RAM (typically 6GB+). We recommend using highly quantized, compact GGUF models (e.g. Q4_K_M or IQ4_NL) for the best balance of speed, accuracy, and memory usage. The overall accuracy of proofreading and translations will depend entirely on the capabilities of the specific model you choose.
 
 ### Setup Instructions
 
-1.  **Download Model Files**: Download the **Encoder**, **Decoder**, and **Tokenizer** for your chosen model from the table below.
+1.  **Download a GGUF Model**: Download a compatible `.gguf` model file (see Recommended Models below).
 2.  **Configure App**:
     *   Go to **Settings > Advanced**.
-    *   **Encoder Model**: Select the downloaded `.onnx` encoder file.
-    *   **Decoder Model**: Select the downloaded `.onnx` decoder file.
-    *   **Tokenizer**: Select the `tokenizer.json` file.
-    *   **System Instruction**: Enter the text specified in the "System Instruction" column for your model (leave empty if specified).
+    *   **GGUF Model**: Select the downloaded `.gguf` model file.
+    *   **System Instruction**: (Optional) Customize the prompt used to guide the model when proofreading text.
+    *   **Translate Instruction**: (Optional) Customize the prompt used for translation.
+    *   **Target Language**: Select the target language for offline translation.
+    *   **Sampling Settings**: Adjust temperature, Top-K, and Top-P to control model creativity.
 
 ### Recommended Models
 
-| Model & Purpose | Performance / Size | System Instruction | Download Links (Direct) |
-| :--- | :--- | :--- | :--- |
-| **Visheratin T5 Tiny**<br>*(Grammar Correction Only)* | ⚡ **Fastest**<br>~35 MB<br>Low RAM usage | **Empty**<br>(Leave blank) | • [Encoder](https://huggingface.co/visheratin/t5-efficient-tiny-grammar-correction/resolve/main/encoder_model_quant.onnx)<br>• [Decoder](https://huggingface.co/visheratin/t5-efficient-tiny-grammar-correction/resolve/main/init_decoder_quant.onnx)<br>• [Tokenizer](https://huggingface.co/visheratin/t5-efficient-tiny-grammar-correction/tree/main) |
-| **Flan-T5 Small**<br>*(Translation & General)* | 🐢 **Slower**<br>~300 MB<br>Higher accuracy | **Required**<br>`fix grammar: `<br>or<br>`translate English to Spanish: ` | • [Encoder](https://huggingface.co/Xenova/flan-t5-small/resolve/main/onnx/encoder_model_quantized.onnx)<br>• [Decoder](https://huggingface.co/Xenova/flan-t5-small/resolve/main/onnx/decoder_model_quantized.onnx)<br>• [Tokenizer](https://huggingface.co/Xenova/flan-t5-small/tree/main) |
+*   **Llama 3.2 1B Instruct (Q4_K_M)**: Excellent general purpose compact model (~900 MB).
+*   **Qwen 2.5 1.5B Instruct (Q4_K_M)**: High accuracy and quality, fast on modern devices (~1.1 GB).
+*   **Qwen 2.5 0.5B Instruct (Q4_K_M)**: Extremely lightweight, very fast with minimal memory footprint (~350 MB).
 
-*Note: For Flan-T5, the quantized models linked above are standard recommendations. Users have also reported success with `bnb4` quantized variants if available.*
+You can find and download these models in GGUF format on HuggingFace (e.g., from users like `bartowski` or `Qwen`).
 
 ---
 
@@ -377,8 +380,46 @@ Touchpad Mode replaces the keyboard with a laptop-style touchpad overlay to cont
 *   **Toolbar shortcut**: Tap the **Touchpad** icon in the toolbar for a persistent touchpad overlay.
 
 ### Touchpad Gestures
-*   **Single-finger drag**: Moves the cursor in 2D space (simulating arrow keys left/right/up/down) to navigate text.
-*   **Two-finger drag**: Performs fast vertical scrolling (simulating arrow keys up/down).
-*   **Two-finger tap**: Simulates a mouse click/Enter.
-*   **Long press (hold finger)**: Activates text selection mode. Dragging while holding will select text. Releasing the finger exits selection mode.
-*   **Double tap by single finger**: Deletes the selected text or words (if a text selection exists).
+
+#### 1 Finger (Navigation & Selection)
+*   **Drag**: Moves the cursor precisely character-by-character.
+*   **Double Tap**: Selects the word under the cursor.
+*   **Long Press & Drag**: Enters text selection mode and selects text as you drag.
+
+#### 2 Fingers (Navigation, Clipboard, History & Deletion)
+*   **Drag Left/Right**: Moves the cursor horizontally word-by-word.
+*   **Swipe Up**: Undo.
+*   **Swipe Down**: Redo.
+*   **Tap**: Inserts a space character.
+*   **Double Tap**: Copies selected text (or Pastes clipboard contents if no selection exists).
+*   **Triple Tap**: Cuts selected text (or Selects All if no selection exists).
+*   **Press & Hold (Long Press)**: Deletes (backspaces) selection / word to the left. Repeats automatically if held.
+
+---
+
+## 8. Handwriting Input
+
+> [!NOTE]
+> **Availability**: This feature is only available in the **Standard** (`-standard-release.apk`) and **Standard Optimised** build flavors. It is excluded from the **Offline** and **Offline Lite** variants.
+
+LeanType integrates a handwriting recognition canvas that allows you to write characters directly on the keyboard using your finger or a stylus.
+
+### Setup Instructions
+
+1. **Install the Plugin**:
+   * Go to **Settings > Libraries**.
+   * Under **Handwriting Input Plugin**, tap **Download** to pull the latest plugin APK from the [Leantype-Handwriting-Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) GitHub repository.
+   * Alternatively, you can tap to load a locally downloaded plugin APK file.
+   * Review the security warning and confirm the installation. The app will verify and register the plugin.
+
+2. **Accessing the Handwriting Key**:
+   * The **Handwriting** icon (represented by a pencil/edit icon) is placed on your keyboard toolbar by default in supported variants.
+   * If it is not showing, you can customize the toolbar under **Settings > Preferences > Keyboard toolbar** to enable it.
+
+### How to Use
+
+1. Tap the **Handwriting** icon in the toolbar.
+2. The keyboard area will switch to a handwriting drawing canvas.
+3. Draw characters, words, or punctuation symbols on the canvas. The keyboard will automatically inputs recognized characters.
+4. Tap the **Clear (X)** button on the bottom row to clear the current drawing canvas.
+5. Tap the **Handwriting** icon again to toggle back to the standard keyboard layout.
