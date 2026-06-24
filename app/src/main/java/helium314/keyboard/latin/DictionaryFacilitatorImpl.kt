@@ -995,7 +995,11 @@ private class DictionaryGroup(
     private var compiledBlacklistPatterns: List<Regex> = emptyList()
 
     private fun rebuildCompiledPatterns() {
-        compiledBlacklistPatterns = blacklist.map { pattern ->
+        rebuildCompiledPatterns(blacklist)
+    }
+
+    private fun rebuildCompiledPatterns(patterns: Collection<String>) {
+        compiledBlacklistPatterns = patterns.map { pattern ->
             try {
                 Regex(pattern, RegexOption.IGNORE_CASE)
             } catch (e: Exception) {
@@ -1003,7 +1007,6 @@ private class DictionaryGroup(
             }
         }
     }
-
     private val blacklist = hashSetOf<String>().apply {
         val file = blacklistFile
         if (file == null) return@apply
@@ -1022,7 +1025,7 @@ private class DictionaryGroup(
                         }
                     }
                     addAll(loadedWords)
-                    rebuildCompiledPatterns()
+                    rebuildCompiledPatterns(this@apply)
                 } catch (e: IOException) {
                     Log.e(TAG, "Exception while trying to read blacklist from ${file.name}", e)
                 }

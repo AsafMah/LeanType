@@ -376,6 +376,8 @@ public class TouchpadView extends LinearLayout {
                     mIsTwoFingerTap = false;
                     removeCallbacks(mTwoFingerLongPressRunnable);
                     mIsTwoFingerLongPress = false;
+                    mTwoFingerTapCount = 0;
+                    removeCallbacks(mTwoFingerTapRunnable);
                     if (mSelectionMode) {
                         mSelectionMode = false;
                         applySurfaceColor();
@@ -385,6 +387,7 @@ public class TouchpadView extends LinearLayout {
                 case MotionEvent.ACTION_CANCEL:
                     android.util.Log.i("TouchpadView", "ACTION_CANCEL");
                     mIsDragging = false;
+                    stopEdgeScrolling();
                     mIsTwoFingerScroll = false;
                     mIsTwoFingerTap = false;
                     removeCallbacks(mTwoFingerLongPressRunnable);

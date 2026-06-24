@@ -63,12 +63,12 @@ class ProofreadService(private val context: Context) {
 
     // Provider selection
 fun getProvider(): AIProvider {
-    val providerStr = context.prefs().getString(KEY_PROVIDER, AIProvider.GEMINI.name)
-    return try {
-        AIProvider.valueOf(providerStr ?: AIProvider.GEMINI.name)
-    } catch (e: IllegalArgumentException) {
-        AIProvider.GEMINI
-    }
+val providerStr = context.prefs().getString(KEY_PROVIDER, AIProvider.GEMINI.name)
+return try {
+    AIProvider.valueOf(providerStr ?: AIProvider.GEMINI.name)
+} catch (e: IllegalArgumentException) {
+    AIProvider.GEMINI
+}
 }
 
     fun setProvider(provider: AIProvider) {

@@ -14,6 +14,31 @@ import helium314.keyboard.settings.previewDark
 /** Slight specialization of an alert dialog: AlertDialog with OK and Cancel button. Both buttons
  *  call [onDismissRequest] and the OK button additionally calls [onConfirmed]. */
 @Composable
+fun ConfirmationDialogContent(
+    onDismissRequest: () -> Unit,
+    onConfirmed: () -> Unit,
+    modifier: Modifier = Modifier,
+    title: @Composable (() -> Unit)? = null,
+    content: @Composable (() -> Unit)? = null,
+    confirmButtonText: String = stringResource(android.R.string.ok),
+    cancelButtonText: String = stringResource(android.R.string.cancel),
+    neutralButtonText: String? = null,
+    onNeutral: () -> Unit = { },
+) {
+    ThreeButtonAlertDialogContent(
+        onDismissRequest = onDismissRequest,
+        onConfirmed = onConfirmed,
+        confirmButtonText = confirmButtonText,
+        cancelButtonText = cancelButtonText,
+        neutralButtonText = neutralButtonText,
+        onNeutral = onNeutral,
+        modifier = modifier,
+        title = title,
+        content = content,
+    )
+}
+
+@Composable
 fun ConfirmationDialog(
     onDismissRequest: () -> Unit,
     onConfirmed: () -> Unit,

@@ -73,6 +73,8 @@ class KeyboardState(private val switchActions: SwitchActions) {
     // For handling double tap.
     private var isInAlphabetUnshiftedFromShifted = false
     private var isInDoubleTapShiftKey = false
+    private var lastShiftPressTime = 0L
+
 
     private val savedKeyboardState = SavedKeyboardState()
 
@@ -515,8 +517,11 @@ class KeyboardState(private val switchActions: SwitchActions) {
             shiftKeyState.onPress()
             return
         }
-        isInDoubleTapShiftKey = switchActions.isInDoubleTapShiftKeyTimeout
+        val now = android.os.SystemClock.uptimeMillis()
+        isInDoubleTapShiftKey = switchActions.isInDoubleTapShiftKeyTimeout && (now - lastShiftPressTime > 100)
+        lastShiftPressTime = now
         if (isInDoubleTapShiftKey) {
+
             if (alphabetShiftState.isManualShifted || isInAlphabetUnshiftedFromShifted) {
                 // Shift key has been double tapped while in manual shifted or automatic shifted state.
                 setShiftLocked(true)

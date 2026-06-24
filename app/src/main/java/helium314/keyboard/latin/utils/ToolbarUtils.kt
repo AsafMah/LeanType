@@ -353,17 +353,24 @@ enum class ToolbarMode {
 
 val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
 
-private val excludedKeys by lazy {
-    val customAiKeys = if (BuildConfig.FLAVOR != "standard" && BuildConfig.FLAVOR != "standardOptimised" && BuildConfig.FLAVOR != "offline")
+// ponytail: Split excluded keys into flavor-specific exclusions and main-toolbar-only exclusions to allow clipboard toolbar to render clipboard search and close history.
+private val flavorExcludedKeys by lazy {
+    val customAiKeys = if (BuildConfig.FLAVOR != "standard" && BuildConfig.FLAVOR != "offline")
         ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") }
     else emptyList()
     val otherKeys = if (BuildConfig.FLAVOR == "offlinelite")
-        listOf(CLOSE_HISTORY, PROOFREAD, TRANSLATE, CLIPBOARD_SEARCH, HANDWRITING)
+        listOf(PROOFREAD, TRANSLATE, CLIPBOARD_SEARCH, HANDWRITING)
     else if (BuildConfig.FLAVOR == "offline")
-        listOf(CLOSE_HISTORY, CLIPBOARD_SEARCH, HANDWRITING)
+        listOf(HANDWRITING)
     else
-        listOf(CLOSE_HISTORY, CLIPBOARD_SEARCH)
+        emptyList()
     customAiKeys + otherKeys
+}
+
+private val mainToolbarExcludedKeys = listOf(CLOSE_HISTORY, CLIPBOARD_SEARCH)
+
+private val excludedKeys by lazy {
+    flavorExcludedKeys + mainToolbarExcludedKeys
 }
 
 val defaultToolbarPref by lazy {
@@ -432,7 +439,7 @@ fun getEnabledToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(pref
 
 fun getPinnedToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_PINNED_TOOLBAR_KEYS, defaultPinnedToolbarPref)
 
-fun getEnabledClipboardToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS, defaultClipboardToolbarPref)
+fun getEnabledClipboardToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS, defaultClipboardToolbarPref, flavorExcludedKeys)
 
 fun addPinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
     // remove the existing version of this key and add the enabled one after the last currently enabled key
@@ -455,14 +462,14 @@ fun removePinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
     prefs.edit { putString(Settings.PREF_PINNED_TOOLBAR_KEYS, result) }
 }
 
-private fun getEnabledToolbarKeys(prefs: SharedPreferences, pref: String, default: String): List<ToolbarKey> {
+private fun getEnabledToolbarKeys(prefs: SharedPreferences, pref: String, default: String, exclusions: Collection<ToolbarKey> = excludedKeys): List<ToolbarKey> {
     val string = prefs.getString(pref, default)!!
     return string.split(Separators.ENTRY).mapNotNull {
         val split = it.split(Separators.KV)
         if (split.last() == "true") {
             try {
                 val key = ToolbarKey.valueOf(split.first())
-                if (key in excludedKeys) null else key
+                if (key in exclusions) null else key
             } catch (_: IllegalArgumentException) {
                 null
             }

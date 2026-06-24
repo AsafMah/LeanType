@@ -134,6 +134,23 @@ fun DictionaryScreen(
                 }
                 androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
 
+                // Blocked Words Entry
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .padding(vertical = 4.dp, horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .clickable { SettingsDestination.navigateTo(SettingsDestination.BlockedWords) }
+                ) {
+                    Text(
+                        stringResource(R.string.edit_blocked_words),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    NextScreenIcon()
+                }
+                androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
+
                 // Blocklist Entry
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

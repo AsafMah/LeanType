@@ -564,15 +564,6 @@ public final class InputLogic {
             }
         }
 
-        if (oldSelStart != newSelStart || oldSelEnd != newSelEnd) {
-            if (newSelStart != mLastExpandedCursorPosition) {
-                mLastExpandedText = null;
-                mLastShortcutText = null;
-                mLastExpandedCursorPosition = -1;
-                mLastExpandedCursorOffset = -1;
-            }
-        }
-
         final boolean selectionChangedOrSafeToReset = oldSelStart != newSelStart || oldSelEnd != newSelEnd // selection
                                                                                                            // changed
                 || !mWordComposer.isComposingWord(); // safe to reset
@@ -2505,28 +2496,6 @@ public final class InputLogic {
         }
         mSpaceState = SpaceState.NONE;
         mDeleteCount++;
-
-        if (mLastExpandedText != null && !event.isKeyRepeat()) {
-            final int expectedCursor = mConnection.getExpectedSelectionEnd();
-            if (expectedCursor == mLastExpandedCursorPosition) {
-                final int beforeLen = mLastExpandedCursorOffset;
-                final int afterLen = mLastExpandedText.length() - beforeLen;
-                final CharSequence textBefore = mConnection.getTextBeforeCursor(beforeLen, 0);
-                final CharSequence textAfter = mConnection.getTextAfterCursor(afterLen, 0);
-                final String expectedBefore = mLastExpandedText.substring(0, beforeLen);
-                final String expectedAfter = mLastExpandedText.substring(beforeLen);
-                if (textBefore != null && textBefore.toString().equals(expectedBefore)
-                        && textAfter != null && textAfter.toString().equals(expectedAfter)) {
-                    mConnection.deleteSurroundingText(beforeLen, afterLen);
-                    mConnection.commitText(mLastShortcutText, 1);
-                    mLastExpandedText = null;
-                    mLastShortcutText = null;
-                    mLastExpandedCursorPosition = -1;
-                    mLastExpandedCursorOffset = -1;
-                    return;
-                }
-            }
-        }
 
         if (mLastExpandedText != null && !event.isKeyRepeat()) {
             final int expectedCursor = mConnection.getExpectedSelectionEnd();

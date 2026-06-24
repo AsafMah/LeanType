@@ -295,6 +295,10 @@ public class LatinIME extends InputMethodService implements
         }
 
         public void postUpdateSuggestionStrip(final int inputStyle) {
+            final LatinIME latinIme = getOwnerInstance(); // ponytail: skip during handwriting
+            if (latinIme != null && latinIme.mKeyboardSwitcher.isHandwritingShowing()) {
+                return;
+            }
             sendMessageDelayed(obtainMessage(MSG_UPDATE_SUGGESTION_STRIP, inputStyle,
                     0 /* ignored */), mDelayInMillisecondsToUpdateSuggestions);
         }
@@ -306,6 +310,9 @@ public class LatinIME extends InputMethodService implements
         public void postResumeSuggestions(final boolean shouldDelay) {
             final LatinIME latinIme = getOwnerInstance();
             if (latinIme == null) {
+                return;
+            }
+            if (latinIme.mKeyboardSwitcher.isHandwritingShowing()) { // ponytail: skip during handwriting
                 return;
             }
             if (!latinIme.mSettings.getCurrent().needsToLookupSuggestions()) {
@@ -1682,8 +1689,11 @@ public class LatinIME extends InputMethodService implements
             // should be fine, as there will be another suggestion in a few ms
             // (but not a great style to avoid this visual glitch, maybe revert this commit
             // and replace with sth better)
-            if (suggestedWords.mInputStyle != SuggestedWords.INPUT_STYLE_UPDATE_BATCH)
+            if (mKeyboardSwitcher.isHandwritingShowing()) { // ponytail: bypass neutral strip/punc lookup
+                setSuggestedWords(suggestedWords);
+            } else if (suggestedWords.mInputStyle != SuggestedWords.INPUT_STYLE_UPDATE_BATCH) {
                 setNeutralSuggestionStrip();
+            }
         } else {
             setSuggestedWords(suggestedWords);
         }
@@ -1768,6 +1778,9 @@ public class LatinIME extends InputMethodService implements
     // and there is a selection of text or it's the start of a line.
     @Override
     public void setNeutralSuggestionStrip() {
+        if (mKeyboardSwitcher.isHandwritingShowing()) { // ponytail: do not override/clear handwriting suggestions
+            return;
+        }
         final SettingsValues currentSettings = mSettings.getCurrent();
         if (tryShowOtpSuggestion() || tryShowClipboardSuggestion()) {
             // an external (OTP or clipboard) suggestion has been set

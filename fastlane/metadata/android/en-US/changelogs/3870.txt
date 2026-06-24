@@ -1,0 +1,3 @@
+- Fixed offline model
+- Fixed handwriting plugin crash
+- Added handwriting model download progress
