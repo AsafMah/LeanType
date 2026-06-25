@@ -462,6 +462,8 @@
     <string name="load_handwriting_plugin_success">Handwriting plugin imported successfully</string>
     <string name="load_handwriting_plugin_failed">Failed to load handwriting plugin APK</string>
     <string name="handwriting">Handwriting</string>
+    <string name="delete_handwriting_model">Delete downloaded model</string>
+    <string name="handwriting_model_deleted">Handwriting model deleted</string>
     <string name="handwriting_plugin_required">Handwriting plugin required</string>
     <string name="handwriting_plugin_summary_text">Please load the handwriting plugin library to enable drawing recognition.</string>
     <string name="handwriting_plugin_load_button">Load Plugin</string>
@@ -565,6 +567,13 @@
     <string name="cut" tools:keep="@string/cut" translatable="false">@android:string/cut</string>
     <string name="clipboard" tools:keep="@string/clipboard">Clipboard</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Clear clipboard</string>
+    <!-- ponytail: add missing string resource for toolbar settings UI -->
+    <string name="clipboard_search" tools:keep="@string/clipboard_search">Clipboard search</string>
+    <!-- ponytail: add missing string resources for dynamic dictionary downloads -->
+    <string name="download">Download</string>
+    <string name="downloading">Downloading…</string>
+    <string name="download_failed">Download failed</string>
+    <string name="installed">Installed</string>
     <string name="voice" tools:keep="@string/voice">Voice input</string>
     <string name="numpad" tools:keep="@string/numpad" translatable="false">@string/layout_numpad</string>
     <string name="settings" tools:keep="@string/settings">Settings</string>

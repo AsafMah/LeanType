@@ -31,6 +31,15 @@
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="14sp" />
 
+            <ProgressBar
+                android:id="@+id/handwriting_download_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_alignParentBottom="true"
+                android:visibility="gone"
+                android:max="100" />
+
             <ImageButton
                 android:id="@+id/handwriting_clear_button"
                 android:layout_width="48dp"

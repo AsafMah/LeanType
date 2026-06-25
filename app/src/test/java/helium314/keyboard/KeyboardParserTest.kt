@@ -287,6 +287,29 @@ f""", // no newline at the end
     }]]""", Expected('.'.code, ".", popups = listOf(">").map { it to it.first().code }))
     }
 
+    @Test fun numberRowKeepsDigitsWhenShifted() {
+        val numberRowKey = """[[{ "label": "1", "popup": {
+        "relevant": [
+          { "label": "!" },
+          { "label": "¹" },
+          { "label": "½" },
+          { "label": "⅓" },
+          { "label": "¼" },
+          { "label": "⅛" }
+        ]
+      } }]]"""
+        val expected = Expected('1'.code, "1", popups = listOf("!", "¹", "½", "⅓", "¼", "⅛").map { it to it.first().code })
+        listOf(
+            KeyboardId.ELEMENT_ALPHABET,
+            KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED,
+            KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED,
+            KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCK_SHIFTED
+        ).forEach { elementId ->
+            params.mId = KeyboardLayoutSet.getFakeKeyboardId(elementId)
+            assertIsExpected(numberRowKey, expected)
+        }
+    }
+
     @Test fun nestedSelectors() {
         assertIsExpected("""[[{ "$": "shift_state_selector",
       "shiftedManual": { "code":   34, "label": "\"", "popup": {

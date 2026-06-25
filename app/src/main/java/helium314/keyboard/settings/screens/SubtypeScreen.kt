@@ -26,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -89,6 +90,10 @@ import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.layoutFilePicker
 import helium314.keyboard.settings.layoutIntent
 import helium314.keyboard.settings.previewDark
+import helium314.keyboard.latin.handwriting.HandwritingLoader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @Composable
@@ -228,6 +233,43 @@ fun SubtypeScreen(
                             )
                             DefaultButton(checked == null) {
                                 setCurrentSubtype(currentSubtype.without(ExtraValue.LOCALIZED_NUMBER_ROW))
+                            }
+                        }
+                    }
+                }
+                val recognizer = remember { HandwritingLoader.getRecognizer(ctx) }
+                val languageTag = currentSubtype.locale.toLanguageTag()
+                var isHandwritingDownloaded by remember { mutableStateOf(false) }
+                val scope = rememberCoroutineScope()
+                LaunchedEffect(languageTag) {
+                    withContext(Dispatchers.IO) {
+                        val ready = recognizer?.isLanguageReady(languageTag) == true
+                        withContext(Dispatchers.Main) {
+                            isHandwritingDownloaded = ready
+                        }
+                    }
+                }
+                if (isHandwritingDownloaded) {
+                    WithSmallTitle(stringResource(R.string.handwriting)) {
+                        ActionRow {
+                            Text(
+                                text = stringResource(R.string.delete_handwriting_model),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 10.dp)
+                            )
+                            DeleteButton {
+                                scope.launch(Dispatchers.IO) {
+                                    val deleted = recognizer?.removeModel(languageTag) == true
+                                    withContext(Dispatchers.Main) {
+                                        if (deleted) {
+                                            isHandwritingDownloaded = false
+                                            android.widget.Toast.makeText(ctx, ctx.getString(R.string.handwriting_model_deleted), android.widget.Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            android.widget.Toast.makeText(ctx, "Failed to delete handwriting model", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

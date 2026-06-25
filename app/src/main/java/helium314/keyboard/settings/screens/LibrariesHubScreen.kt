@@ -96,7 +96,7 @@ fun LibrariesHubScreen(
                         )
 
                         // Handwriting Input Plugin
-                        if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardOptimised") {
+                        if (BuildConfig.FLAVOR == "standard") {
                             var handwritingInstalled by remember { mutableStateOf(HandwritingLoader.hasPlugin(context)) }
                             LoadHandwritingPluginPreference(
                                 title = stringResource(R.string.libraries_hub_handwriting_title),
@@ -105,7 +105,6 @@ fun LibrariesHubScreen(
                                 onSuccess = { handwritingInstalled = HandwritingLoader.hasPlugin(context) }
                             )
                         }
-
                         // Documentation & Features
                         val uriHandler = LocalUriHandler.current
                         Preference(

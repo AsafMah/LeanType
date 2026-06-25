@@ -8,6 +8,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ProgressBar
 import android.graphics.drawable.GradientDrawable
 import helium314.keyboard.keyboard.KeyboardActionListener
 import helium314.keyboard.keyboard.KeyboardId
@@ -41,6 +42,8 @@ class HandwritingView @JvmOverloads constructor(
     private lateinit var clearButton: ImageButton
     private lateinit var canvas: HandwritingCanvas
     private lateinit var bottomRowKeyboard: MainKeyboardView
+    private lateinit var downloadProgress: ProgressBar
+    private var toolbar: View? = null // ponytail: track toolbar
 
     private var keyboardActionListener: KeyboardActionListener? = null
     private var editorInfo: EditorInfo? = null
@@ -54,6 +57,8 @@ class HandwritingView @JvmOverloads constructor(
         clearButton = findViewById(R.id.handwriting_clear_button)
         canvas = findViewById(R.id.handwriting_canvas)
         bottomRowKeyboard = findViewById(R.id.handwriting_bottom_row_keyboard)
+        downloadProgress = findViewById(R.id.handwriting_download_progress)
+        toolbar = findViewById(R.id.handwriting_toolbar)
 
         clearButton.setOnClickListener {
             clearCanvasAndComposition()
@@ -80,9 +85,9 @@ class HandwritingView @JvmOverloads constructor(
         this.currentLanguage = language
 
         val colors = Settings.getValues().mColors
-        val toolbar = findViewById<View>(R.id.handwriting_toolbar)
-        if (toolbar != null) {
-            colors.setBackground(toolbar, ColorType.MAIN_BACKGROUND)
+        toolbar?.let {
+            colors.setBackground(it, ColorType.MAIN_BACKGROUND)
+            it.visibility = View.GONE // ponytail: hide by default to avoid duplicate toolbar/X buttons
         }
         colors.setBackground(canvas, ColorType.MAIN_BACKGROUND)
 
@@ -91,6 +96,7 @@ class HandwritingView @JvmOverloads constructor(
         canvas.setStrokeColor(colors.get(ColorType.KEY_TEXT))
 
         languageLabel.text = language
+        downloadProgress.visibility = View.GONE
 
         // Setup bottom row keyboard
         bottomRowKeyboard.setKeyPreviewPopupEnabled(Settings.getValues().mKeyPreviewPopupOn)
@@ -137,17 +143,25 @@ class HandwritingView @JvmOverloads constructor(
                 button.background = btnBackground
                 button.setTextColor(colors.get(ColorType.KEY_TEXT))
 
-                button.setOnClickListener {
-                    val intent = android.content.Intent()
-                    intent.setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
-                    intent.putExtra("screen", helium314.keyboard.settings.SettingsDestination.Libraries)
-                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    try {
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        Log.e("HandwritingView", "Failed to start settings activity", e)
+                // ponytail: download plugin directly on standard flavor, otherwise go to Settings
+                if ("standard" == helium314.keyboard.latin.BuildConfig.FLAVOR) {
+                    button.text = "Download Plugin"
+                    button.setOnClickListener {
+                        downloadPlugin(button)
                     }
-                    KeyboardSwitcher.getInstance().latinIME?.requestHideSelf(0)
+                } else {
+                    button.setOnClickListener {
+                        val intent = android.content.Intent()
+                        intent.setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
+                        intent.putExtra("screen", helium314.keyboard.settings.SettingsDestination.Libraries)
+                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        try {
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("HandwritingView", "Failed to start settings activity", e)
+                        }
+                        KeyboardSwitcher.getInstance().latinIME?.requestHideSelf(0)
+                    }
                 }
             }
         } else {
@@ -161,19 +175,27 @@ class HandwritingView @JvmOverloads constructor(
                 val isReady = recognizer.isLanguageReady(language)
                 mainHandler.post {
                     if (!isReady) {
+                        toolbar?.visibility = View.VISIBLE // ponytail: show for download progress
                         languageLabel.text = "$language (Downloading...)"
+                        downloadProgress.visibility = View.VISIBLE
+                        downloadProgress.progress = 0
                         recognizer.downloadModel(language, object : ModelDownloadListener {
                             override fun onProgress(progress: Float) {
                                 mainHandler.post {
-                                    languageLabel.text = "$language (Downloading ${"%.0f".format(progress * 100)}%)"
+                                    val percent = (progress * 100).toInt()
+                                    languageLabel.text = "$language (Downloading $percent%)"
+                                    downloadProgress.progress = percent
                                 }
                             }
                             override fun onComplete(success: Boolean) {
                                 mainHandler.post {
+                                    downloadProgress.visibility = View.GONE
                                     if (success) {
+                                        toolbar?.visibility = View.GONE // ponytail: hide when done
                                         languageLabel.text = language
                                         android.widget.Toast.makeText(context, "Handwriting model downloaded", android.widget.Toast.LENGTH_SHORT).show()
                                     } else {
+                                        toolbar?.visibility = View.VISIBLE
                                         languageLabel.text = "$language (Download failed)"
                                         android.widget.Toast.makeText(context, "Failed to download handwriting model", android.widget.Toast.LENGTH_LONG).show()
                                     }
@@ -181,7 +203,9 @@ class HandwritingView @JvmOverloads constructor(
                             }
                         })
                     } else {
+                        toolbar?.visibility = View.GONE // ponytail: hide when already downloaded
                         languageLabel.text = language
+                        downloadProgress.visibility = View.GONE
                     }
                 }
             }
@@ -365,4 +389,76 @@ class HandwritingView @JvmOverloads constructor(
     override fun onMoveDeletePointer(steps: Int) { keyboardActionListener?.onMoveDeletePointer(steps) }
     override fun onUpWithDeletePointerActive() { keyboardActionListener?.onUpWithDeletePointerActive() }
     override fun resetMetaState() { keyboardActionListener?.resetMetaState() }
+
+    // ponytail: downloads the latest handwriting plugin apk, imports it and updates overlay visibility
+    private fun downloadPlugin(button: TextView) {
+        button.text = "Downloading..."
+        button.isEnabled = false
+        android.widget.Toast.makeText(context, "Downloading Handwriting Plugin...", android.widget.Toast.LENGTH_SHORT).show()
+
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute {
+            try {
+                val urlStr = "https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest/download/handwriting_plugin.apk"
+                var url = java.net.URL(urlStr)
+                var conn = url.openConnection() as java.net.HttpURLConnection
+                conn.instanceFollowRedirects = true
+                conn.setRequestProperty("User-Agent", "HeliboardL")
+                conn.connect()
+
+                var redirectConn = conn
+                var status = redirectConn.responseCode
+                var redirectCount = 0
+                while ((status == java.net.HttpURLConnection.HTTP_MOVED_TEMP || status == java.net.HttpURLConnection.HTTP_MOVED_PERM || status == java.net.HttpURLConnection.HTTP_SEE_OTHER) && redirectCount < 5) {
+                    val newUrl = redirectConn.getHeaderField("Location")
+                    redirectConn.disconnect()
+                    val nextUrl = java.net.URL(newUrl)
+                    redirectConn = nextUrl.openConnection() as java.net.HttpURLConnection
+                    redirectConn.setRequestProperty("User-Agent", "HeliboardL")
+                    redirectConn.connect()
+                    status = redirectConn.responseCode
+                    redirectCount++
+                }
+
+                if (status != java.net.HttpURLConnection.HTTP_OK) {
+                    throw java.io.IOException("Server returned HTTP $status")
+                }
+
+                val tempFile = java.io.File(context.cacheDir, "temp_handwriting_plugin.apk")
+                redirectConn.inputStream.use { input ->
+                    java.io.FileOutputStream(tempFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                redirectConn.disconnect()
+
+                val success = HandwritingLoader.importPlugin(context, android.net.Uri.fromFile(tempFile))
+                tempFile.delete()
+
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    button.isEnabled = true
+                    if (success) {
+                        button.text = "Success"
+                        android.widget.Toast.makeText(context, "Handwriting plugin installed!", android.widget.Toast.LENGTH_SHORT).show()
+                        val overlay = findViewById<View>(R.id.handwriting_plugin_overlay)
+                        overlay?.visibility = View.GONE
+                        editorInfo?.let { ei ->
+                            keyboardActionListener?.let { listener ->
+                                startHandwriting(ei, listener, currentLanguage)
+                            }
+                        }
+                    } else {
+                        button.text = "Download Plugin"
+                        android.widget.Toast.makeText(context, "Failed to install plugin", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("HandwritingView", "Failed to download plugin", e)
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    button.isEnabled = true
+                    button.text = "Download Plugin"
+                    android.widget.Toast.makeText(context, "Download failed: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 }

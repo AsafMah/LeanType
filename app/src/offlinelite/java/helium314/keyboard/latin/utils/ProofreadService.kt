@@ -17,6 +17,8 @@ class ProofreadService(private val context: Context) {
         GEMINI, GROQ, OPENAI
     }
 
+
+
     val prefs: SharedPreferences get() = context.prefs()
 
     // Always returns GEMINI as default, but methods do nothing

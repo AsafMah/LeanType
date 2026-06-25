@@ -41,170 +41,170 @@ class ProofreadService(private val context: Context) {
     }
 
     val prefs: SharedPreferences get() = sharedPrefs
-    
+
     // Singleton holder for model state to prevent reloading on every request
-    object ModelHolder {
-        var llamaHelper: LlamaHelper? = null
-        var currentModelPath: String? = null
-        var isModelAvailable: Boolean = true
-        var isModelLoaded: Boolean = false
+object ModelHolder {
+    var llamaHelper: LlamaHelper? = null
+    var currentModelPath: String? = null
+    var isModelAvailable: Boolean = true
+    var isModelLoaded: Boolean = false
 
-        // Smart Unload Logic
-        private var unloadJob: Job? = null
-        private val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
-        private const val UNLOAD_DELAY_MS = 10 * 60 * 1000L // 10 minutes
-        private val loadMutex = Mutex()
+    // Smart Unload Logic
+    private var unloadJob: Job? = null
+    private val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    private const val UNLOAD_DELAY_MS = 10 * 60 * 1000L // 10 minutes
+    private val loadMutex = Mutex()
 
-        // Flow for LLM events
-        val llmFlow = MutableSharedFlow<LlamaHelper.LLMEvent>(
-            extraBufferCapacity = 64,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST
-        )
+    // Flow for LLM events
+    val llmFlow = MutableSharedFlow<LlamaHelper.LLMEvent>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
 
-        @Synchronized
-        fun scheduleUnload(context: Context) {
-            unloadJob?.cancel()
-            
-            val prefs = context.prefs()
-            val keepLoaded = prefs.getBoolean(Settings.PREF_OFFLINE_KEEP_MODEL_LOADED, Defaults.PREF_OFFLINE_KEEP_MODEL_LOADED)
-            
-            if (keepLoaded) {
-                 Log.i(TAG, "Model unload skipped (Keep Model Loaded enabled)")
-                 return
-            }
+    @Synchronized
+    fun scheduleUnload(context: Context) {
+        unloadJob?.cancel()
 
-            unloadJob = scope.launch {
-                delay(UNLOAD_DELAY_MS)
-                unloadModel()
-                Log.i(TAG, "Offline AI model unloaded due to inactivity")
-            }
+        val prefs = context.prefs()
+        val keepLoaded = prefs.getBoolean(Settings.PREF_OFFLINE_KEEP_MODEL_LOADED, Defaults.PREF_OFFLINE_KEEP_MODEL_LOADED)
+
+        if (keepLoaded) {
+             Log.i(TAG, "Model unload skipped (Keep Model Loaded enabled)")
+             return
         }
 
-        @Synchronized
-        fun cancelUnload() {
-            unloadJob?.cancel()
-            unloadJob = null
+        unloadJob = scope.launch {
+            delay(UNLOAD_DELAY_MS)
+            unloadModel()
+            Log.i(TAG, "Offline AI model unloaded due to inactivity")
         }
-
-        @Synchronized
-        fun unloadModel() {
-            try {
-                llamaHelper?.release()
-            } catch (e: Exception) {
-                Log.w(TAG, "Error unloading llama model", e)
-            }
-            llamaHelper = null
-            currentModelPath = null
-            isModelLoaded = false
-            isModelAvailable = true
-        }
-
-        suspend fun loadModel(
-            context: Context,
-            modelPath: String
-        ): Boolean = loadMutex.withLock {
-            cancelUnload()
-
-            // Check if already loaded with same path
-            if (isModelLoaded && currentModelPath == modelPath && llamaHelper != null) {
-                return true
-            }
-
-            unloadModel() // Ensure clean slate if path changed
-
-            return try {
-                val contentResolver = context.contentResolver
-                val helper = LlamaHelper(
-                    contentResolver,
-                    scope,
-                    llmFlow
-                )
-
-                // Get llama via reflection
-                val llamaField = LlamaHelper::class.java.getDeclaredField("llama\$delegate").apply { isAccessible = true }
-                val llamaLazy = llamaField.get(helper) as Lazy<org.nehuatl.llamacpp.LlamaAndroid>
-                val llama = llamaLazy.value
-
-                // Detach model file descriptor
-                val uri = android.net.Uri.parse(modelPath)
-                val pfd = contentResolver.openFileDescriptor(uri, "r")
-                    ?: throw IllegalArgumentException("Failed to open model file descriptor")
-                val modelFd = pfd.detachFd()
-
-                // Calculate optimal threads count (4 threads is the sweet spot for mobile CPUs)
-                val cores = Runtime.getRuntime().availableProcessors()
-                val threads = if (cores <= 4) cores else 4
-                
-                Log.i(TAG, "Loading GGUF model: threads=$threads (cores=$cores), use_mmap=false")
-
-                // Construct parameters map
-                val params = mutableMapOf<String, Any>(
-                    "model" to modelPath,
-                    "model_fd" to modelFd,
-                    "use_mmap" to false,
-                    "use_mlock" to false,
-                    "n_ctx" to 2048,
-                    "embedding" to false,
-                    "n_batch" to 512,
-                    "n_threads" to threads,
-                    "n_gpu_layers" to 0,
-                    "vocab_only" to false,
-                    "lora" to "",
-                    "lora_scaled" to 1.0,
-                    "rope_freq_base" to 0.0,
-                    "rope_freq_scale" to 0.0
-                )
-
-                // JNI callback called by native code for each token
-                val callback: (String) -> Unit = { word ->
-                    try {
-                        val allTextField = LlamaHelper::class.java.getDeclaredField("allText").apply { isAccessible = true }
-                        val currentAllText = allTextField.get(helper) as String
-                        allTextField.set(helper, currentAllText + word)
-
-                        val tokenCountField = LlamaHelper::class.java.getDeclaredField("tokenCount").apply { isAccessible = true }
-                        val currentCount = tokenCountField.get(helper) as Int
-                        tokenCountField.set(helper, currentCount + 1)
-
-                        helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Ongoing(word, currentCount + 1))
-                    } catch (e: Throwable) {
-                        Log.e(TAG, "Error in native token callback", e)
-                    }
-                }
-
-                // Start the engine
-                val result = llama.startEngine(params, callback)
-
-                val contextId = result?.get("contextId") as? Int
-                    ?: throw IllegalStateException("contextId not found in result map")
-
-                // Set currentContext via reflection
-                val currentContextField = LlamaHelper::class.java.getDeclaredField("currentContext").apply { isAccessible = true }
-                currentContextField.set(helper, contextId)
-
-                // Emit Loaded event
-                helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Loaded(modelPath))
-
-                llamaHelper = helper
-                currentModelPath = modelPath
-                isModelLoaded = true
-                isModelAvailable = true
-                true
-            } catch (e: Throwable) {
-                Log.e(TAG, "Failed to load GGUF model", e)
-                isModelAvailable = false
-                false
-            }
-        }
-
-        private const val TAG = "LlamaProofreadService"
     }
+
+    @Synchronized
+    fun cancelUnload() {
+        unloadJob?.cancel()
+        unloadJob = null
+    }
+
+    @Synchronized
+    fun unloadModel() {
+        try {
+            llamaHelper?.release()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error unloading llama model", e)
+        }
+        llamaHelper = null
+        currentModelPath = null
+        isModelLoaded = false
+        isModelAvailable = true
+    }
+
+    suspend fun loadModel(
+        context: Context,
+        modelPath: String
+    ): Boolean = loadMutex.withLock {
+        cancelUnload()
+
+        // Check if already loaded with same path
+        if (isModelLoaded && currentModelPath == modelPath && llamaHelper != null) {
+            return true
+        }
+
+        unloadModel() // Ensure clean slate if path changed
+
+        return try {
+            val contentResolver = context.contentResolver
+            val helper = LlamaHelper(
+                contentResolver,
+                scope,
+                llmFlow
+            )
+
+            // Get llama via reflection
+            val llamaField = LlamaHelper::class.java.getDeclaredField("llama\$delegate").apply { isAccessible = true }
+            val llamaLazy = llamaField.get(helper) as Lazy<org.nehuatl.llamacpp.LlamaAndroid>
+            val llama = llamaLazy.value
+
+            // Detach model file descriptor
+            val uri = android.net.Uri.parse(modelPath)
+            val pfd = contentResolver.openFileDescriptor(uri, "r")
+                ?: throw IllegalArgumentException("Failed to open model file descriptor")
+            val modelFd = pfd.detachFd()
+
+            // Calculate optimal threads count (4 threads is the sweet spot for mobile CPUs)
+            val cores = Runtime.getRuntime().availableProcessors()
+            val threads = if (cores <= 4) cores else 4
+
+            Log.i(TAG, "Loading GGUF model: threads=$threads (cores=$cores), use_mmap=false")
+
+            // Construct parameters map
+            val params = mutableMapOf<String, Any>(
+                "model" to modelPath,
+                "model_fd" to modelFd,
+                "use_mmap" to false,
+                "use_mlock" to false,
+                "n_ctx" to 2048,
+                "embedding" to false,
+                "n_batch" to 512,
+                "n_threads" to threads,
+                "n_gpu_layers" to 0,
+                "vocab_only" to false,
+                "lora" to "",
+                "lora_scaled" to 1.0,
+                "rope_freq_base" to 0.0,
+                "rope_freq_scale" to 0.0
+            )
+
+            // JNI callback called by native code for each token
+            val callback: (String) -> Unit = { word ->
+                try {
+                    val allTextField = LlamaHelper::class.java.getDeclaredField("allText").apply { isAccessible = true }
+                    val currentAllText = allTextField.get(helper) as String
+                    allTextField.set(helper, currentAllText + word)
+
+                    val tokenCountField = LlamaHelper::class.java.getDeclaredField("tokenCount").apply { isAccessible = true }
+                    val currentCount = tokenCountField.get(helper) as Int
+                    tokenCountField.set(helper, currentCount + 1)
+
+                    helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Ongoing(word, currentCount + 1))
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Error in native token callback", e)
+                }
+            }
+
+            // Start the engine
+            val result = llama.startEngine(params, callback)
+
+            val contextId = result?.get("contextId") as? Int
+                ?: throw IllegalStateException("contextId not found in result map")
+
+            // Set currentContext via reflection
+            val currentContextField = LlamaHelper::class.java.getDeclaredField("currentContext").apply { isAccessible = true }
+            currentContextField.set(helper, contextId)
+
+            // Emit Loaded event
+            helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Loaded(modelPath))
+
+            llamaHelper = helper
+            currentModelPath = modelPath
+            isModelLoaded = true
+            isModelAvailable = true
+            true
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to load GGUF model", e)
+            isModelAvailable = false
+            false
+        }
+    }
+
+    private const val TAG = "LlamaProofreadService"
+}
 
     // AI Provider support (API compatibility)
     enum class AIProvider {
         GEMINI, GROQ, OPENAI
     }
-    
+
     fun getProvider(): AIProvider = AIProvider.GROQ
     fun setProvider(provider: AIProvider) { /* No-op */ }
 
@@ -214,7 +214,7 @@ class ProofreadService(private val context: Context) {
     fun getApiKey(): String? = null
     fun setApiKey(apiKey: String?) { /* No-op */ }
     fun hasApiKey(): Boolean = false
-    
+
     // HuggingFace stubs
     fun getHuggingFaceToken(): String? = null
     fun setHuggingFaceToken(token: String?) { /* No-op */ }
@@ -231,7 +231,7 @@ class ProofreadService(private val context: Context) {
 
     // Model management - single model path (no encoder/decoder split)
     fun getModelPath(): String? = sharedPrefs.getString(KEY_MODEL_PATH, null)
-    
+
     fun setModelPath(path: String?) {
         sharedPrefs.edit().apply {
             if (path.isNullOrBlank()) {
@@ -246,7 +246,7 @@ class ProofreadService(private val context: Context) {
 
     // Decoder path (kept for API compatibility, not used with llamacpp)
     fun getDecoderPath(): String? = sharedPrefs.getString(KEY_DECODER_PATH, null)
-    
+
     fun setDecoderPath(path: String?) {
         sharedPrefs.edit().apply {
             if (path.isNullOrBlank()) {
@@ -260,7 +260,7 @@ class ProofreadService(private val context: Context) {
 
     // Tokenizer path (not needed with GGUF - tokenizer is embedded)
     fun getTokenizerPath(): String? = sharedPrefs.getString(KEY_TOKENIZER_PATH, null)
-    
+
     fun setTokenizerPath(path: String?) {
         sharedPrefs.edit().apply {
             if (path.isNullOrBlank()) {
@@ -287,7 +287,7 @@ class ProofreadService(private val context: Context) {
     fun getModelName(): String {
         val path = getModelPath()
         if (path.isNullOrBlank()) return "No Model Selected"
-        
+
         if (path.startsWith("content://")) {
             try {
                 val uri = Uri.parse(path)
@@ -303,12 +303,12 @@ class ProofreadService(private val context: Context) {
                 Log.w(TAG, "Failed to resolve content URI name", e)
             }
         }
-        
+
         return File(path).name.takeIf { it.isNotEmpty() } ?: "Local Model"
     }
 
     fun setModelName(name: String) { /* No-op */ }
-    
+
     fun getTargetLanguage(): String = "English"
     fun setTargetLanguage(language: String) { /* No-op */ }
 
@@ -365,7 +365,7 @@ class ProofreadService(private val context: Context) {
             val topK = sharedPrefs.getInt(Settings.PREF_OFFLINE_TOP_K, Defaults.PREF_OFFLINE_TOP_K)
             val minP = sharedPrefs.getFloat(Settings.PREF_OFFLINE_MIN_P, Defaults.PREF_OFFLINE_MIN_P)
             val showThinkingVal = showThinking ?: sharedPrefs.getBoolean(Settings.PREF_OFFLINE_SHOW_THINKING, Defaults.PREF_OFFLINE_SHOW_THINKING)
-            
+
             // Build the prompt
             val systemPrompt = overridePrompt ?: getSystemPrompt()
             val fullPrompt = if (systemPrompt.contains("{text}")) {
@@ -394,7 +394,7 @@ class ProofreadService(private val context: Context) {
                 "Input: $text\n" +
                 "Output:"
             }
-            
+
             // Collect generated text from the flow
             val generatedText = StringBuilder()
             val helper = ModelHolder.llamaHelper
@@ -411,7 +411,7 @@ class ProofreadService(private val context: Context) {
                 maxTokens = maxTokens,
                 showThinking = showThinkingVal
             )
-            
+
             // Collect events until done
             ModelHolder.llmFlow.takeWhile { event ->
                 when (event) {
@@ -444,7 +444,7 @@ class ProofreadService(private val context: Context) {
                     cleanedOutput = cleanedOutput.substring(text.length).trim()
                 }
             }
-            
+
             // Truncate at the first occurrence of subsequent template markers
             val markers = listOf("\nInput:", "\nInstruction:", "\nOutput:", "\nCorrected:", "Input:", "Instruction:", "Output:", "Corrected:")
             for (marker in markers) {
@@ -455,14 +455,14 @@ class ProofreadService(private val context: Context) {
                     }
                 }
             }
-            
+
             // Also truncate at any newline followed by a potential template header (e.g., "\nDraft email:", "\nCorrection:")
             val headerRegex = Regex("\\n[a-zA-Z0-9 ]+:")
             val match = headerRegex.find(cleanedOutput)
             if (match != null) {
                 cleanedOutput = cleanedOutput.substring(0, match.range.first).trim()
             }
-            
+
             // Also strip common prefixes that the model might generate or echo
             val prefixesToStrip = listOf(
                 "Output:", "Corrected:", "Translation:", "Response:", "Result:",
@@ -474,7 +474,7 @@ class ProofreadService(private val context: Context) {
                     break
                 }
             }
-            
+
             // If the model wrapped the output in quotes, strip them
             if (cleanedOutput.startsWith("\"") && cleanedOutput.endsWith("\"")) {
                 cleanedOutput = cleanedOutput.substring(1, cleanedOutput.length - 1).trim()
@@ -482,7 +482,7 @@ class ProofreadService(private val context: Context) {
             if (cleanedOutput.startsWith("'") && cleanedOutput.endsWith("'")) {
                 cleanedOutput = cleanedOutput.substring(1, cleanedOutput.length - 1).trim()
             }
-            
+
             // Post-process to strip thinking/reasoning tags if showThinkingVal is false
             val finalOutput = if (!showThinkingVal) {
                 stripThinkingTags(cleanedOutput)

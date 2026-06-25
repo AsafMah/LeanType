@@ -22,6 +22,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Auto-read OTP from SMS** — a one-time code from an incoming SMS is offered in the suggestion
   strip while the keyboard is open; tap to insert. Uses a runtime, opt-in SMS permission.
 - **Regex shortcuts in Text Expander** — expansion triggers can be matched by regular expression.
+- **Dynamic dictionary/plugin downloader** — Standard builds can fetch layout dictionaries, emoji dictionaries, and handwriting plugins on demand.
+- **Selective backup and restore** — backup/restore settings, dictionaries, and AI prompt configuration more granularly.
 
 ### Changed
 - **Offline AI backend switched from ONNX Runtime to llama.cpp (GGUF).** The Offline build now
@@ -31,11 +33,19 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   navigation, space, copy/paste, cut/select-all, undo/redo, hold-to-backspace). Single-finger
   double-tap now **selects the word** (previously deleted the selection).
 - Release builds now target the **arm64-v8a** ABI only.
+- Standard builds now exclude non-en-US dictionary assets and download optional dictionaries dynamically.
+
+### Fixed
+- **Sticky Shift from upstream handwriting cleanup** — upstream v3.8.6 stopped the hidden handwriting
+  bottom row on every keyboard-frame switch, which globally cancelled the active Shift pointer before
+  release. We keep the upstream handwriting feature but only stop handwriting when it is actually
+  shown. (Upstream bug LeanBitLab/LeanType#186; upstream PR #194.)
 
 ### Upstream
-- Merged **LeanBitLab/LeanType v3.8.6** (from v3.8.3) — the source of the handwriting,
-  llama.cpp/GGUF, touchpad-gesture, and SMS-OTP changes above. Fork identity (LeanTypeDual, distinct
-  `applicationId`, two-thumb typing, the Gemini standard-AI layer, and the privacy tiers) is
+- Merged **LeanBitLab/LeanType v3.8.8** (from v3.8.3, including v3.8.7 and two post-tag docs/badge
+  commits) — the source of the handwriting, llama.cpp/GGUF, dynamic downloader, touchpad-gesture,
+  SMS-OTP, selective-backup, and dictionary-downloader changes above. Fork identity (LeanTypeDual,
+  distinct `applicationId`, two-thumb typing, the Gemini standard-AI layer, and the privacy tiers) is
   preserved.
 
 ## [3.9.1] - 2026-06-11

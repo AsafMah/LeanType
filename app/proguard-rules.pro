@@ -27,6 +27,8 @@
 
 # Keep java-llama.cpp classes
 -keep class de.kherud.llama.** { *; }
+-keep class org.nehuatl.llamacpp.** { *; }
+
 
 
 # Fix correct service name
@@ -36,3 +38,20 @@
 -dontwarn com.google.api.client.**
 -dontwarn java.lang.management.**
 -dontwarn org.joda.time.**
+
+# Keep handwriting plugin interface and listener to prevent parameter removal/signature optimization
+-keep interface helium314.keyboard.latin.handwriting.HandwritingRecognizer {
+    <methods>;
+}
+-keep interface helium314.keyboard.latin.handwriting.ModelDownloadListener {
+    <methods>;
+}
+
+# Keep ML Kit, GMS Tasks, and Firebase components for handwriting plugin dynamic linkage
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.tasks.** { *; }
+-keep class com.google.firebase.components.** { *; }
+
+# Keep Kotlin standard library for dynamically loaded plugins
+# ponytail: keep kotlin stdlib classes to prevent NoSuchMethodError in plugin loading
+-keep class kotlin.** { *; }

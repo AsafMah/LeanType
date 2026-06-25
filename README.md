@@ -30,6 +30,7 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 - **🧠 Smarter learned words** - *graduated trust* keeps a just-learned word below real-dictionary suggestions until you've used it a few times (no premature autocorrect to half-typed words); flag unknown words to **Add** or **Block** them via a Blocklist screen.
 - **↩️ Undo word** - a toolbar key that reverts the last committed word back to its suggestion alternatives.
 - **🗂️ Per-dictionary control** - enable or disable individual built-in and custom dictionaries.
+- **📥 Dynamic Downloader** - Standard builds can download layout dictionaries, emoji dictionaries, and handwriting plugins on demand, keeping the initial app smaller.
 - **🪟 Floating Keyboard** - Detach the keyboard into a draggable, resizable window (true OS-level overlay), with an optional persistent mode.
 - **⌨️ Dual Toolbar / Split Suggestions** - Split the suggestion strip and toolbar for easier reach.
 - **🖱️ Touchpad Mode** - Swipe the spacebar up for a cursor touchpad with sensitivity controls and edge-scroll acceleration, including a full-screen laptop-style mode.
@@ -37,6 +38,8 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 - **🔄 Google Dictionary Import** - Import your personal dictionary words.
 - **🔍 Clipboard Search & Undo** - Search clipboard history from the toolbar, undo accidental deletions, and fold pinned items by default.
 - **📸 Screenshot Suggestion & Clipboard** - Recently-taken screenshots are offered in the suggestion strip and saved to clipboard history.
+- **✉️ Auto-Read OTP** - Incoming one-time codes can appear in the suggestion strip for quick insertion.
+- **💾 Selective Backup & Restore** - Backup and restore settings, dictionaries, and AI prompt configuration selectively.
 - **🔎 Emoji Search** - Search emojis by name. *Requires loading an Emoji Dictionary.*
 - **⚙️ Enhanced Customization** - Force auto-capitalization, fine-grained haptics, distinct incognito icon, reorganized settings, and more.
 - **🔒 Privacy Choices** - Choose **Standard** (opt-in AI, handwriting), **Offline** (network hard-disabled, offline GGUF model), or **Offline Lite** (no AI, ~20 MB).
