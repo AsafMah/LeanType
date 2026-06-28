@@ -47,7 +47,7 @@ object HandwritingLoader {
             recognizer.init(context)
             activeRecognizer = recognizer
             return recognizer
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e("HandwritingLoader", "Failed to load handwriting plugin", e)
         }
         return null
@@ -100,7 +100,7 @@ object HandwritingLoader {
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
             activeRecognizer = recognizer
             return true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e("HandwritingLoader", "Failed to import plugin APK", e)
             // Cleanup on failure
             try {

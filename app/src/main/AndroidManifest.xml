@@ -139,6 +139,19 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 tools:node="remove" />
         </provider>
 
+        <!-- Disable WorkManager auto-initializer; App implements Configuration.Provider instead.
+             Required for ML Kit Digital Ink plugin loaded via DexClassLoader. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
         <!-- Service for ML Kit component discovery.
              Since the ML Kit libraries are loaded dynamically from the plugin APK,
              we must register these in the host app manifest so ML Kit can find them. -->

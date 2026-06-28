@@ -504,7 +504,7 @@ public final class EmojiPalettesView extends LinearLayout
             downloadBtn.setTextSize(12); // Keep it small to fit
             downloadBtn.setAllCaps(false);
             downloadBtn.setOnClickListener(v -> {
-                if ("standard".equals(BuildConfig.FLAVOR)) {
+                if ("standard".equals(BuildConfig.FLAVOR) || "standardfull".equals(BuildConfig.FLAVOR)) {
                     downloadEmojiDictionary();
                     downloadBtn.setText("Downloading...");
                     downloadBtn.setEnabled(false);
@@ -1039,7 +1039,7 @@ public final class EmojiPalettesView extends LinearLayout
         if (sDictionaryFacilitator == null) {
             // ponytail: show download button on suggestion strip in split mode if dictionary is missing
             stripView.setEmojiDownloadButton(() -> {
-                if ("standard".equals(BuildConfig.FLAVOR)) {
+                if ("standard".equals(BuildConfig.FLAVOR) || "standardfull".equals(BuildConfig.FLAVOR)) {
                     downloadEmojiDictionary();
                     mIsDownloadingEmojiDict = true;
                     updateSplitToolbarEmojiSuggestions();

@@ -26,6 +26,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import kotlin.concurrent.thread
+import helium314.keyboard.latin.utils.prefs
 
 class ClipboardHistoryManager(
         private val latinIME: LatinIME
@@ -160,6 +161,8 @@ class ClipboardHistoryManager(
                         mainHandler.postDelayed({
                             updateLatestScreenshotCache {
                                 dontShowCurrentSuggestion = false
+                                val prefs = latinIME.prefs()
+                                prefs.edit().remove("last_dismissed_screenshot_uri").apply()
                                 latinIME.setNeutralSuggestionStrip()
                             }
                         }, 1000)
@@ -204,6 +207,8 @@ class ClipboardHistoryManager(
         if (latinIME.mSettings.current.mClipboardHistoryEnabled) {
             thread { fetchPrimaryClip() }
             dontShowCurrentSuggestion = false
+            val prefs = latinIME.prefs()
+            prefs.edit().remove("last_dismissed_clipboard_text").apply()
         }
     }
 
@@ -411,6 +416,9 @@ class ClipboardHistoryManager(
         if (System.currentTimeMillis() - timeStamp > RECENT_TIME_MILLIS) return null
         val content = clipItem.coerceToText(latinIME)
         if (TextUtils.isEmpty(content)) return null
+        val prefs = latinIME.prefs()
+        val lastDismissedText = prefs.getString("last_dismissed_clipboard_text", "")
+        if (content.toString() == lastDismissedText) return null
         val inputType = editorInfo?.inputType ?: InputType.TYPE_NULL
         if (InputTypeUtils.isNumberInputType(inputType) && !content.isValidNumber()) return null
 
@@ -430,7 +438,11 @@ class ClipboardHistoryManager(
         }
         val closeButton = binding.clipboardSuggestionClose
         closeButton.setImageDrawable(latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase()))
-        closeButton.setOnClickListener { removeClipboardSuggestion() }
+        closeButton.setOnClickListener {
+            val prefs = latinIME.prefs()
+            prefs.edit().putString("last_dismissed_clipboard_text", content.toString()).apply()
+            removeClipboardSuggestion()
+        }
 
         val colors = latinIME.mSettings.current.mColors
         textView.setTextColor(colors.get(ColorType.KEY_TEXT))
@@ -461,6 +473,10 @@ class ClipboardHistoryManager(
             updateLatestScreenshotCache()
             return null
         }
+
+        val prefs = latinIME.prefs()
+        val lastDismissedScreenshotUri = prefs.getString("last_dismissed_screenshot_uri", "")
+        if (screenshotInfo.uri.toString() == lastDismissedScreenshotUri) return null
 
         val diff = System.currentTimeMillis() - screenshotInfo.dateAdded
         if (diff >= RECENT_SCREENSHOT_TIME_MILLIS) {
@@ -517,6 +533,8 @@ class ClipboardHistoryManager(
         val closeButton = binding.clipboardSuggestionClose
         closeButton.setImageDrawable(latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase()))
         closeButton.setOnClickListener { 
+            val prefs = latinIME.prefs()
+            prefs.edit().putString("last_dismissed_screenshot_uri", contentUri.toString()).apply()
             dontShowCurrentSuggestion = true
             lastSuggestedScreenshotUri = contentUri.toString()
             removeClipboardSuggestion() 
@@ -572,7 +590,7 @@ class ClipboardHistoryManager(
     }
 
     companion object {
-        const val RECENT_TIME_MILLIS = 3 * 60 * 1000L // 3 minutes (for clipboard suggestions)
-        const val RECENT_SCREENSHOT_TIME_MILLIS = 4 * 60 * 1000L // 4 minutes
+        const val RECENT_TIME_MILLIS = 1 * 60 * 1000L // 1 minute (for clipboard suggestions)
+        const val RECENT_SCREENSHOT_TIME_MILLIS = 1 * 60 * 1000L // 1 minute
     }
 }

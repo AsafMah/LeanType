@@ -99,8 +99,8 @@ fun createToolbarSettings(context: Context): List<Setting> {
     val filter = { name: String ->
         val lowerName = name.lowercase()
         when {
-            lowerName.startsWith("custom_ai_") ->  BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "offline"
-            lowerName == "handwriting" -> BuildConfig.FLAVOR == "standard"
+            lowerName.startsWith("custom_ai_") ->  BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull" || BuildConfig.FLAVOR == "offline"
+            lowerName == "handwriting" -> BuildConfig.FLAVOR == "standardfull"
             lowerName in listOf("proofread", "translate", "clipboard_search") -> BuildConfig.FLAVOR != "offlinelite"
             else -> true
         }

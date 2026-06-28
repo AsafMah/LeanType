@@ -27,7 +27,7 @@ fun AIIntegrationScreen(
         return
     }
 
-    if (BuildConfig.FLAVOR == "standard") {
+    if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
         StandardAIIntegrationScreen(onClickBack)
     } else {
         OfflineAIIntegrationScreen(onClickBack)

@@ -149,6 +149,9 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
             KeyCode.TOGGLE_TOUCHPAD_MODE -> {
                 PointerTracker.sPersistentTouchpadModeActive = !PointerTracker.sPersistentTouchpadModeActive
                 if (PointerTracker.sPersistentTouchpadModeActive) {
+                    sPersistentTextEditModeActive = false
+                    keyboardSwitcher.hideTextEditView()
+
                     val touchpadView = keyboardSwitcher.touchpadView
                     if (touchpadView != null) {
                         setupTouchpadListener(touchpadView)
@@ -157,6 +160,29 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
                 } else {
                     keyboardSwitcher.hideTouchpadView()
                 }
+                return
+            }
+            KeyCode.TOGGLE_TEXT_EDIT_MODE -> {
+                sPersistentTextEditModeActive = !sPersistentTextEditModeActive
+                if (sPersistentTextEditModeActive) {
+                    PointerTracker.sPersistentTouchpadModeActive = false
+                    keyboardSwitcher.hideTouchpadView()
+
+                    val textEditView = keyboardSwitcher.textEditView
+                    if (textEditView != null) {
+                        setupTextEditListener(textEditView)
+                        keyboardSwitcher.showTextEditView()
+                    }
+                } else {
+                    keyboardSwitcher.hideTextEditView()
+                }
+                return
+            }
+            KeyCode.FORWARD_DELETE -> {
+                val connection = inputLogic.connection
+                val eventTime = android.os.SystemClock.uptimeMillis()
+                connection.sendKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_FORWARD_DEL, 0, 0))
+                connection.sendKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_FORWARD_DEL, 0, 0))
                 return
             }
         }
@@ -637,10 +663,50 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
             override fun onThreeFingerSwipeDown() {
                 onCodeInput(KeyCode.REDO, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
             }
+            override fun onClose() {
+                PointerTracker.sPersistentTouchpadModeActive = false
+                keyboardSwitcher.hideTouchpadView()
+            }
+        })
+    }
+
+    fun setupTextEditListener(textEditView: TextEditView) {
+        textEditView.setTextEditListener(object : TextEditView.TextEditListener {
+            override fun onCursorMove(keyCode: Int, isSelecting: Boolean) {
+                if (isSelecting) {
+                    val androidKeyCode = when (keyCode) {
+                        KeyCode.ARROW_UP -> KeyEvent.KEYCODE_DPAD_UP
+                        KeyCode.ARROW_DOWN -> KeyEvent.KEYCODE_DPAD_DOWN
+                        KeyCode.ARROW_LEFT -> KeyEvent.KEYCODE_DPAD_LEFT
+                        KeyCode.ARROW_RIGHT -> KeyEvent.KEYCODE_DPAD_RIGHT
+                        else -> 0
+                    }
+                    if (androidKeyCode != 0) {
+                        val eventTime = android.os.SystemClock.uptimeMillis()
+                        connection.sendKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT, 0, 0))
+                        connection.sendKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, androidKeyCode, 0, KeyEvent.META_SHIFT_ON))
+                        connection.sendKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, androidKeyCode, 0, KeyEvent.META_SHIFT_ON))
+                        connection.sendKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SHIFT_LEFT, 0, 0))
+                    }
+                } else {
+                    onCodeInput(keyCode, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                }
+            }
+
+            override fun onCodeInput(keyCode: Int) {
+                onCodeInput(keyCode, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+            }
+
+            override fun onClose() {
+                sPersistentTextEditModeActive = false
+                keyboardSwitcher.hideTextEditView()
+            }
         })
     }
 
     companion object {
+        @JvmField
+        var sPersistentTextEditModeActive = false
         private enum class MetaPressState {
             UNSET, // default state, not active
             SET, // enabled without onPressKey (e.g. in popup)

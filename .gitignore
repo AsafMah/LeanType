@@ -82,3 +82,6 @@ docs/superpowers/
 
 # AI agent config (personal, not shared)
 .pi/
+
+# Temporary generated files
+docs/releasenote/release_notes_temp.md

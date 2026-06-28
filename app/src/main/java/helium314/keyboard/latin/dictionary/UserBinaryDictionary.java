@@ -16,6 +16,7 @@ import android.text.TextUtils;
 
 import com.android.inputmethod.latin.BinaryDictionary;
 
+import helium314.keyboard.latin.NgramContext;
 import helium314.keyboard.latin.utils.Log;
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils;
 
@@ -206,6 +207,28 @@ public class UserBinaryDictionary extends ExpandableBinaryDictionary {
                                 USER_DICT_SHORTCUT_FREQUENCY, true /* isNotAWord */,
                                 false /* isPossiblyOffensive */,
                                 BinaryDictionary.NOT_A_VALID_TIMESTAMP);
+                    }
+                    // ponytail: split phrase into unigrams and n-grams for next-word prediction
+                    final String[] parts = word.split("\\s+");
+                    if (parts.length > 1) {
+                        for (final String part : parts) {
+                            if (part.length() <= MAX_WORD_LENGTH && !part.isEmpty() && !part.equals(word)) {
+                                runGCIfRequiredLocked(true /* mindsBlockByGC */);
+                                addUnigramLocked(part, adjustedFrequency, null, 0, false, false, BinaryDictionary.NOT_A_VALID_TIMESTAMP);
+                            }
+                        }
+                        for (int i = 1; i < parts.length; i++) {
+                            final String targetWord = parts[i];
+                            if (targetWord.length() <= MAX_WORD_LENGTH && !targetWord.isEmpty()) {
+                                final int contextSize = Math.min(i, BinaryDictionary.MAX_PREV_WORD_COUNT_FOR_N_GRAM);
+                                final NgramContext.WordInfo[] prevWords = new NgramContext.WordInfo[contextSize];
+                                for (int j = 0; j < contextSize; j++) {
+                                    prevWords[j] = new NgramContext.WordInfo(parts[i - 1 - j]);
+                                }
+                                runGCIfRequiredLocked(true /* mindsBlockByGC */);
+                                addNgramEntryLocked(new NgramContext(prevWords), targetWord, adjustedFrequency, BinaryDictionary.NOT_A_VALID_TIMESTAMP);
+                            }
+                        }
                     }
                 }
                 cursor.moveToNext();

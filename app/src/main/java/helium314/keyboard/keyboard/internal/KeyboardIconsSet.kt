@@ -161,6 +161,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.ic_incognito_final
                     ToolbarKey.TOUCHPAD -> R.drawable.ic_touchpad
+                    ToolbarKey.TEXT_EDIT -> R.drawable.ic_text_edit
                     ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect
                     ToolbarKey.AUTOSPACE -> R.drawable.ic_autospace
                     ToolbarKey.AUTO_CAP -> R.drawable.ic_auto_cap
@@ -244,6 +245,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.ic_incognito_final
                     ToolbarKey.TOUCHPAD -> R.drawable.ic_touchpad
+                    ToolbarKey.TEXT_EDIT -> R.drawable.ic_text_edit
                     ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect
                     ToolbarKey.AUTOSPACE -> R.drawable.ic_autospace
                     ToolbarKey.AUTO_CAP -> R.drawable.ic_auto_cap
@@ -327,6 +329,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.ic_incognito_final
                     ToolbarKey.TOUCHPAD -> R.drawable.ic_touchpad_rounded
+                    ToolbarKey.TEXT_EDIT -> R.drawable.ic_text_edit
                     ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect_rounded
                     ToolbarKey.AUTOSPACE -> R.drawable.ic_autospace_rounded
                     ToolbarKey.AUTO_CAP -> R.drawable.ic_auto_cap_rounded

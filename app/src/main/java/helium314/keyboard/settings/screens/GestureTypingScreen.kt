@@ -40,7 +40,7 @@ fun GestureTypingScreen(
     val hasGestureLib = JniUtils.sHaveGestureLib
     val gestureFloatingPreviewEnabled = prefs.getBoolean(Settings.PREF_GESTURE_FLOATING_PREVIEW_TEXT, Defaults.PREF_GESTURE_FLOATING_PREVIEW_TEXT)
     val gestureEnabled = hasGestureLib && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
-    
+
     // Always show library loader first when no library
     val items = buildList {
         add(R.string.settings_category_configuration)
@@ -71,14 +71,18 @@ fun GestureTypingScreen(
         add(R.string.settings_category_gestures_advanced)
         add(Settings.PREF_SPACE_HORIZONTAL_SWIPE)
         add(Settings.PREF_SPACE_VERTICAL_SWIPE)
-        add(Settings.PREF_TOUCHPAD_SENSITIVITY)
-        add(Settings.PREF_TOUCHPAD_EDGE_SCROLL)
+
         add(Settings.PREF_DELETE_SWIPE)
         add(Settings.PREF_SHORTCUT_ROWS)
         if (prefs.getBoolean(Settings.PREF_SHORTCUT_ROWS, Defaults.PREF_SHORTCUT_ROWS)) {
             add(Settings.PREF_SHORTCUT_TOP_ROW)
             add(Settings.PREF_SHORTCUT_BOTTOM_ROW)
         }
+
+        add(R.string.settings_category_touchpad)
+        add(Settings.PREF_TOUCHPAD_SENSITIVITY)
+        add(Settings.PREF_TOUCHPAD_EDGE_SCROLL)
+        add(Settings.PREF_TOUCHPAD_FULLSCREEN)
     }
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -169,6 +173,9 @@ fun createGestureTypingSettings(context: Context) = listOf(
             range = 0f..100f,
             description = { value -> value.toInt().toString() }
         )
+    },
+    Setting(context, Settings.PREF_TOUCHPAD_FULLSCREEN, R.string.touchpad_fullscreen, R.string.touchpad_fullscreen_summary) {
+        SwitchPreference(it, Defaults.PREF_TOUCHPAD_FULLSCREEN)
     },
     Setting(context, Settings.PREF_TOUCHPAD_EDGE_SCROLL, R.string.touchpad_edge_scroll, R.string.touchpad_edge_scroll_summary) {
         SwitchPreference(it, Defaults.PREF_TOUCHPAD_EDGE_SCROLL)

@@ -1788,6 +1788,30 @@ public class LatinIME extends InputMethodService implements
                 mSuggestionStripView.setToolbarVisibility(false);
             return;
         }
+        if (currentSettings.mBigramPredictionEnabled) {
+            mInputLogic.getSuggestedWords(SuggestedWords.INPUT_STYLE_PREDICTION, 0, new Suggest.OnGetSuggestedWordsCallback() {
+                @Override
+                public void onGetSuggestedWords(SuggestedWords suggestedWords) {
+                    if (suggestedWords != null && !suggestedWords.isEmpty()) {
+                        setSuggestedWords(suggestedWords);
+                        if (hasSuggestionStripView()) {
+                            if (currentSettings.mAutoShowToolbarOnSelect && mInputLogic.getConnection().hasSelection()) {
+                                mSuggestionStripView.setToolbarVisibility(true);
+                            } else if (currentSettings.mAutoShowToolbarOnSelect) {
+                                mSuggestionStripView.setToolbarVisibility(mSuggestionStripView.isToolbarManuallyOpen());
+                            }
+                        }
+                    } else {
+                        setNeutralPunctuationSuggestionStrip(currentSettings);
+                    }
+                }
+            });
+        } else {
+            setNeutralPunctuationSuggestionStrip(currentSettings);
+        }
+    }
+
+    private void setNeutralPunctuationSuggestionStrip(final SettingsValues currentSettings) {
         final SuggestedWords neutralSuggestions = currentSettings.mSuggestPunctuation
                 ? currentSettings.mSpacingAndPunctuations.mSuggestPuncList
                 : SuggestedWords.getEmptyInstance();

@@ -28,33 +28,54 @@ object TextExpanderUtils {
     }
 
     fun getPrefix(context: Context): String {
-        return context.prefs().getString(PREF_PREFIX, "") ?: ""
+        return ""
     }
 
-    fun getShortcuts(context: Context): Map<String, String> {
+    data class ShortcutEntry(
+        val template: String,
+        val prefix: String = ""
+    )
+
+    data class ExpandedResult(
+        val expandedText: String,
+        val prefixLength: Int,
+        val matchedString: String
+    )
+
+    fun getShortcuts(context: Context): Map<String, ShortcutEntry> {
         val jsonStr = context.prefs().getString(PREF_DATA, "{}") ?: "{}"
-        val map = mutableMapOf<String, String>()
+        val map = mutableMapOf<String, ShortcutEntry>()
         try {
             val json = JSONObject(jsonStr)
             val keys = json.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
-                map[key] = json.getString(key)
+                val valueObj = json.get(key)
+                if (valueObj is JSONObject) {
+                    val template = valueObj.optString("template", "")
+                    val prefix = valueObj.optString("prefix", "")
+                    map[key] = ShortcutEntry(template, prefix)
+                } else {
+                    map[key] = ShortcutEntry(valueObj.toString(), "")
+                }
             }
-        } catch (e: Exception) {
+        } catch (e: java.lang.Exception) {
             // fallback
         }
         return map
     }
 
-    fun saveShortcuts(context: Context, map: Map<String, String>) {
+    fun saveShortcuts(context: Context, map: Map<String, ShortcutEntry>) {
         try {
             val json = JSONObject()
-            for ((key, value) in map) {
-                json.put(key, value)
+            for ((key, entry) in map) {
+                val obj = JSONObject()
+                obj.put("template", entry.template)
+                obj.put("prefix", entry.prefix)
+                json.put(key, obj)
             }
             context.prefs().edit().putString(PREF_DATA, json.toString()).apply()
-        } catch (e: Exception) {
+        } catch (e: java.lang.Exception) {
             // fail silently
         }
     }
@@ -190,38 +211,49 @@ object TextExpanderUtils {
         return result
     }
 
-    fun getExpandedWord(word: String?, context: Context): String? {
-        if (word == null || !isEnabled(context)) return null
-        
-        val prefix = getPrefix(context)
-        if (prefix.isNotEmpty() && !word.startsWith(prefix)) return null
-        
-        val shortcut = if (prefix.isNotEmpty()) word.substring(prefix.length) else word
-        if (shortcut.isEmpty()) return null
-        
+    fun getExpandedWordForTyped(word: String?, textBeforeCursor: String?, context: Context): ExpandedResult? {
+        if (word == null || textBeforeCursor == null || !isEnabled(context)) return null
         val shortcuts = getShortcuts(context)
-        // Check exact match or lowercase match
-        val template = shortcuts[shortcut] ?: shortcuts[shortcut.lowercase(Locale.getDefault())]
-        if (template != null) {
-            return expand(template, context)
-        }
 
-        // Check regex matches
-        for ((key, value) in shortcuts) {
-            if (key.startsWith(REGEX_PREFIX)) {
-                val patternStr = key.substring(REGEX_PREFIX.length)
+        for ((key, entry) in shortcuts) {
+            val isRegex = key.startsWith(REGEX_PREFIX)
+            val cleanKey = if (isRegex) key.substring(REGEX_PREFIX.length) else key
+
+            if (isRegex) {
+                val prefix = entry.prefix
+                val patternStr = cleanKey
                 try {
                     val regex = Regex(patternStr, RegexOption.IGNORE_CASE)
-                    if (regex.matches(shortcut)) {
-                        val replaced = regex.replace(shortcut, value)
-                        return expand(replaced, context)
+                    val expectedSuffix = prefix + word
+                    if (textBeforeCursor.endsWith(expectedSuffix, ignoreCase = true)) {
+                        if (regex.matches(expectedSuffix)) {
+                            val replaced = regex.replace(expectedSuffix, entry.template)
+                            return ExpandedResult(expand(replaced, context), prefix.length, expectedSuffix)
+                        }
                     }
-                } catch (e: Exception) {
-                    // ignore invalid regex
+                } catch (e: java.lang.Exception) {
+                    // ignore
+                }
+            } else {
+                val prefix = entry.prefix
+                val expectedSuffix = cleanKey
+                if (expectedSuffix.equals(prefix + word, ignoreCase = true)) {
+                    if (textBeforeCursor.endsWith(expectedSuffix, ignoreCase = true)) {
+                        return ExpandedResult(expand(entry.template, context), prefix.length, expectedSuffix)
+                    }
                 }
             }
         }
-        
+        return null
+    }
+
+    fun getExpandedWord(word: String?, context: Context): String? {
+        if (word == null || !isEnabled(context)) return null
+        val shortcuts = getShortcuts(context)
+        val entry = shortcuts[word] ?: shortcuts[word.lowercase(Locale.getDefault())]
+        if (entry != null && entry.prefix.isEmpty()) {
+            return expand(entry.template, context)
+        }
         return null
     }
 }

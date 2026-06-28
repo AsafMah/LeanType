@@ -216,6 +216,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_LANGUAGE_SWIPE_DISTANCE = "language_swipe_distance";
     public static final String PREF_TOUCHPAD_SENSITIVITY = "touchpad_sensitivity";
     public static final String PREF_TOUCHPAD_EDGE_SCROLL = "touchpad_edge_scroll";
+    public static final String PREF_TOUCHPAD_FULLSCREEN = "touchpad_fullscreen";
     public static final String PREF_PERSIST_FLOATING_KEYBOARD = "persist_floating_keyboard";
     public static final String PREF_FORCE_AUTO_CAPS = "force_auto_caps";
     public static final String PREF_OFFLINE_TEMP = "offline_temp";
