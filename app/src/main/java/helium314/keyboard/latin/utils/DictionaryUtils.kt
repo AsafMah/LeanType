@@ -53,25 +53,54 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 fun getDictionaryLocales(context: Context): MutableSet<Locale> {
     val locales = HashSet<Locale>()
 
+    // ponytail: migrate legacy incorrectly-named dictionary folders (gb, au, ca) to en-GB, en-AU, en-CA
+    val dictDir = File(DictionaryInfoUtils.getWordListCacheDirectory(context))
+    if (dictDir.exists() && dictDir.isDirectory) {
+        val legacyMap = mapOf("gb" to "en-GB", "au" to "en-AU", "ca" to "en-CA")
+        legacyMap.forEach { (legacy, correct) ->
+            val legacyFolder = File(dictDir, legacy)
+            if (legacyFolder.exists() && legacyFolder.isDirectory) {
+                val correctFolder = File(dictDir, correct)
+                if (!correctFolder.exists()) {
+                    legacyFolder.renameTo(correctFolder)
+                } else {
+                    legacyFolder.deleteRecursively()
+                }
+            }
+        }
+    }
+
+    // ponytail: include enabled locales and multilingual secondary locales
+    val enabled = SubtypeSettings.getEnabledSubtypes(true)
+    val enabledLocales = HashSet<Locale>()
+    enabled.forEach { subtype ->
+        enabledLocales.add(subtype.locale())
+        getSecondaryLocales(subtype.extraValue).forEach { enabledLocales.add(it) }
+    }
+    android.util.Log.i("DictionaryUtils", "getDictionaryLocales: enabledLocales=$enabledLocales")
+
     // ponytail: get cached dictionaries: extracted or user-added/downloaded dictionaries
     DictionaryInfoUtils.getCacheDirectories(context).forEach { directory ->
         if (!hasAnythingOtherThanExtractedMainDictionary(context, directory)) return@forEach
         val locale = DictionaryInfoUtils.getWordListIdFromFileName(directory.name).constructLocale()
+        val isEnabled = enabledLocales.contains(locale)
+        val hasEnabledLanguage = enabledLocales.any { it.language == locale.language }
+        android.util.Log.i("DictionaryUtils", "Cache loop: locale=$locale, isEnabled=$isEnabled, hasEnabledLanguage=$hasEnabledLanguage")
+        if (!isEnabled && hasEnabledLanguage) return@forEach
         locales.add(locale)
     }
     // get assets dictionaries
     val assetsDictionaryList = DictionaryInfoUtils.getAssetsDictionaryList(context)
     if (assetsDictionaryList != null) {
         for (dictionary in assetsDictionaryList) {
-            locales.add(DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(dictionary))
+            val locale = DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(dictionary)
+            val isEnabled = enabledLocales.contains(locale)
+            val hasEnabledLanguage = enabledLocales.any { it.language == locale.language }
+            if (!isEnabled && hasEnabledLanguage) continue
+            locales.add(locale)
         }
     }
-    // ponytail: include enabled locales and multilingual secondary locales
-    val enabled = SubtypeSettings.getEnabledSubtypes()
-    enabled.forEach { subtype ->
-        locales.add(subtype.locale())
-        getSecondaryLocales(subtype.extraValue).forEach { locales.add(it) }
-    }
+    locales.addAll(enabledLocales)
     return locales
 }
 
@@ -91,7 +120,7 @@ fun MissingDictionaryDialog(onDismissRequest: () -> Unit, locale: Locale, inline
     var annotatedString = message.htmlToAnnotated()
     // ponytail: in standard flavor, if there are known dicts we show them as downloadable rows instead of bullet links
     val knownDicts = remember {
-        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard") {
+        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
             getKnownDictionariesForLocale(locale, context)
         } else emptyList()
     }
@@ -237,7 +266,12 @@ fun downloadDictionary(context: Context, locale: Locale, type: String, linkUrl: 
 fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, onRefresh: () -> Unit) {
     val ctx = LocalContext.current
     val type = remember(link) { link.substringAfterLast("/").substringBefore("_") }
-    val cacheDir = remember(locale) { DictionaryInfoUtils.getCacheDirectoryForLocale(locale, ctx) }
+    // ponytail: extract the specific dictionary locale from the download link to avoid directory collision
+    val dictLocale = remember(link) {
+        val fileName = link.substringAfterLast("/")
+        fileName.substringAfter("_").substringBefore(".dict").constructLocale()
+    }
+    val cacheDir = remember(dictLocale) { DictionaryInfoUtils.getCacheDirectoryForLocale(dictLocale, ctx) }
     val file = remember(cacheDir, type) { cacheDir?.let { File(it, "$type.dict") } }
     var downloading by remember { mutableStateOf(false) }
     var exists by remember(file) { mutableStateOf(file?.exists() == true) }
@@ -274,7 +308,7 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, onRefr
         } else {
             androidx.compose.material3.TextButton(onClick = {
                 downloading = true
-                downloadDictionary(ctx, locale, type, link) { success ->
+                downloadDictionary(ctx, dictLocale, type, link) { success ->
                     downloading = false
                     if (success) {
                         exists = true
@@ -301,11 +335,14 @@ fun isMainDictionaryMissing(context: Context, locale: Locale): Boolean {
         if (best != null) return false
     }
     // 2. check if cache directory has a main.dict file
-    val cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { File(it) }
-    if (cacheDir?.exists() == true && cacheDir.isDirectory) {
-        val hasMain = cacheDir.listFiles()?.any { it.name == "main.dict" } == true
-        if (hasMain) return false
+    var cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { File(it) }
+    var hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name == "main.dict" } == true
+    if (!hasMain && (locale.country.isNotEmpty() || locale.variant.isNotEmpty())) {
+        val fallbackLocale = Locale(locale.language)
+        cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
+        hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name == "main.dict" } == true
     }
+    if (hasMain) return false
     // 3. check if there is a known downloadable main dictionary for this locale
     val known = getKnownDictionariesForLocale(locale, context)
     return known.any { (_, link) -> link.substringAfterLast("/").substringBefore("_") == "main" }

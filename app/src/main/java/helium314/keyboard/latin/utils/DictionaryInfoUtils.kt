@@ -112,8 +112,22 @@ object DictionaryInfoUtils {
     fun getCachedDictForLocaleAndType(locale: Locale, type: String, context: Context): File? =
         getCachedDictsForLocale(locale, context).firstOrNull { it.name.substringBefore("_") == type }
 
-    fun getCachedDictsForLocale(locale: Locale, context: Context) =
-        getCacheDirectoryForLocale(locale, context)?.let { File(it).listFiles() }.orEmpty()
+    fun getCachedDictsForLocale(locale: Locale, context: Context): Array<File> {
+        val exactDir = getCacheDirectoryForLocale(locale, context)?.let { File(it) }
+        val exactFiles = exactDir?.listFiles()
+        if (exactFiles?.any { it.name.endsWith(USER_DICTIONARY_SUFFIX) || it.name.startsWith(MAIN_DICT_PREFIX) || it.name == MAIN_DICT_FILE_NAME } == true) {
+            return exactFiles
+        }
+        if (locale.country.isNotEmpty() || locale.variant.isNotEmpty()) {
+            val fallbackLocale = Locale(locale.language)
+            val fallbackDir = getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
+            val fallbackFiles = fallbackDir?.listFiles()
+            if (fallbackFiles?.any { it.name.endsWith(USER_DICTIONARY_SUFFIX) || it.name.startsWith(MAIN_DICT_PREFIX) || it.name == MAIN_DICT_FILE_NAME } == true) {
+                return fallbackFiles
+            }
+        }
+        return exactFiles ?: emptyArray()
+    }
 
     fun getDictionaryFileHeaderOrNull(file: File): DictionaryHeader? {
         return try {

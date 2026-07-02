@@ -71,7 +71,6 @@ import helium314.keyboard.latin.utils.showMissingDictionaryComposeDialog
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.settings.SettingsWithoutKey
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -698,30 +697,21 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 return true
             }
             Settings.getValues().mColors.setColor(icon, ColorType.REMOVE_SUGGESTION_ICON)
-            val w = icon.intrinsicWidth
-            val h = icon.intrinsicHeight
             wordView.setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
             wordView.ellipsize = TextUtils.TruncateAt.END
-            val downOk = AtomicBoolean(false)
-            wordView.setOnTouchListener { _, motionEvent ->
-                if (motionEvent.action == MotionEvent.ACTION_UP && downOk.get()) {
-                    val x = motionEvent.x
-                    val y = motionEvent.y
-                    if (0 < x && x < w && 0 < y && y < h) {
-                        removeSuggestion(wordView)
-                        wordView.cancelLongPress()
-                        wordView.isPressed = false
-                        return@setOnTouchListener true
-                    }
-                } else if (motionEvent.action == MotionEvent.ACTION_DOWN) {
-                    val x = motionEvent.x
-                    val y = motionEvent.y
-                    if (0 < x && x < w && 0 < y && y < h) {
-                        downOk.set(true)
-                    }
-                }
-                false
+            // ponytail: entire word view is now the delete target, not just the tiny icon
+            val savedTag = wordView.tag
+            // Replace click listener to delete on any tap
+            wordView.setOnClickListener {
+                removeSuggestion(wordView)
             }
+            // Auto-dismiss delete mode after 3s, restore normal behavior
+            wordView.postDelayed({
+                wordView.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
+                wordView.setOnTouchListener(null)
+                wordView.tag = savedTag
+                wordView.setOnClickListener(this)
+            }, 3000)
         }
         if (DebugFlags.DEBUG_ENABLED && (isShowingMoreSuggestionPanel || !showMoreSuggestions())) {
             showSourceDict(wordView)
@@ -925,7 +915,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
 
         // ponytail: show/hide dictionary download button if dictionary is missing
-        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard") {
+        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
             val currentLocale = SubtypeSettings.getSelectedSubtype(context.prefs()).locale()
             if (isMainDictionaryMissing(context, currentLocale) && !hideToolbarKeys) {
                 if (dictDownloadButton == null) {
@@ -964,7 +954,6 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         } else {
             dictDownloadButton?.isVisible = false
         }
-
         isExternalSuggestionVisible = false
     }
 
@@ -1045,64 +1034,11 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
         suggestionsStrip.isVisible = true
 
+        // ponytail: no fallback suggestions to keep it clean and minimal
         val PLACEHOLDER_TAG = "PLACEHOLDER_VIEW"
         val placeholder = suggestionsStrip.findViewWithTag<View>(PLACEHOLDER_TAG)
-
-        // Check if there are any visible suggestions with actual text content
-        var hasRealSuggestions = false
-        for (i in 0 until suggestionsStrip.childCount) {
-            val child = suggestionsStrip.getChildAt(i)
-            if (child.tag != PLACEHOLDER_TAG && child is TextView && !child.text.isNullOrEmpty()) {
-                hasRealSuggestions = true
-                break
-            }
-        }
-
-        if (hasRealSuggestions) {
-            // Real suggestions exist, remove placeholder
-            if (placeholder != null) suggestionsStrip.removeView(placeholder)
-        } else {
-            // No suggestions, show random placeholder suggestions
-            if (placeholder == null) {
-                 val placeholderContainer = LinearLayout(context)
-                 placeholderContainer.tag = PLACEHOLDER_TAG
-                 placeholderContainer.orientation = LinearLayout.HORIZONTAL
-                 placeholderContainer.layoutParams = LinearLayout.LayoutParams(
-                     LinearLayout.LayoutParams.MATCH_PARENT,
-                     LinearLayout.LayoutParams.MATCH_PARENT
-                 )
-
-                 // Random suggestion words to display
-                 val randomSuggestions = listOf(
-                     "the", "and", "for", "you", "with",
-                     "have", "this", "from", "will", "can",
-                     "hello", "thanks", "please", "okay", "good"
-                 ).shuffled().take(5)
-
-                 val colors = Settings.getValues().mColors
-                 val customTypeface = Settings.getInstance().customTypeface
-
-                 randomSuggestions.forEach { word ->
-                     val suggestionView = TextView(context, null, R.attr.suggestionWordStyle)
-                     suggestionView.text = word
-                     suggestionView.gravity = android.view.Gravity.CENTER
-                     suggestionView.alpha = 0.4f // More transparent to indicate they're placeholders
-                     if (customTypeface != null)
-                         suggestionView.typeface = customTypeface
-                     colors.setBackground(suggestionView, ColorType.STRIP_BACKGROUND)
-                     suggestionView.setTextColor(colors.get(ColorType.KEY_TEXT))
-
-                     val params = LinearLayout.LayoutParams(
-                         0,
-                         LinearLayout.LayoutParams.MATCH_PARENT,
-                         1f
-                     )
-                     suggestionView.layoutParams = params
-                     placeholderContainer.addView(suggestionView)
-                 }
-
-                 suggestionsStrip.addView(placeholderContainer)
-            }
+        if (placeholder != null) {
+            suggestionsStrip.removeView(placeholder)
         }
     }
 

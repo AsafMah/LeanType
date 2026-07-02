@@ -320,6 +320,9 @@ final class SuggestionStripLayoutHelper {
         final int color;
         if (indexInSuggestedWords == SuggestedWords.INDEX_OF_AUTO_CORRECTION && suggestedWords.mWillAutoCorrect) {
             color = mColorAutoCorrect;
+        } else if (suggestedWords.isPrediction() && indexInSuggestedWords == 0) {
+            // ponytail: first word prediction should be colored active/bright
+            color = mColorAutoCorrect;
         } else if (isTypedWord && suggestedWords.mTypedWordValid) {
             color = mColorValidTypedWord;
         } else if (isTypedWord) {

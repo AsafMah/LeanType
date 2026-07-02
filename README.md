@@ -34,6 +34,7 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 - **🪟 Floating Keyboard** - Detach the keyboard into a draggable, resizable window (true OS-level overlay), with an optional persistent mode.
 - **⌨️ Dual Toolbar / Split Suggestions** - Split the suggestion strip and toolbar for easier reach.
 - **🖱️ Touchpad Mode** - Swipe the spacebar up for a cursor touchpad with sensitivity controls and edge-scroll acceleration, including a full-screen laptop-style mode.
+- **✍️ Text editing mode** - A toolbar key opens a text-editing overlay for selection, cursor movement, and clipboard actions.
 - **🎨 Modern UI** - "Squircle" key backgrounds, refined icons, and polished aesthetics.
 - **🔄 Google Dictionary Import** - Import your personal dictionary words.
 - **🔍 Clipboard Search & Undo** - Search clipboard history from the toolbar, undo accidental deletions, and fold pinned items by default.

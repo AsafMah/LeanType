@@ -564,6 +564,15 @@ public final class InputLogic {
             }
         }
 
+        if (oldSelStart != newSelStart || oldSelEnd != newSelEnd) {
+            if (newSelStart != mLastExpandedCursorPosition) {
+                mLastExpandedText = null;
+                mLastShortcutText = null;
+                mLastExpandedCursorPosition = -1;
+                mLastExpandedCursorOffset = -1;
+            }
+        }
+
         final boolean selectionChangedOrSafeToReset = oldSelStart != newSelStart || oldSelEnd != newSelEnd // selection
                                                                                                            // changed
                 || !mWordComposer.isComposingWord(); // safe to reset
@@ -2214,26 +2223,17 @@ public final class InputLogic {
             if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
                     && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
                 final String typedWord = mWordComposer.getTypedWord();
-                final String prefix = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getPrefix(mLatinIME);
-                if (prefix.isEmpty()) {
-                    final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(typedWord, mLatinIME);
-                    if (expanded != null) {
-                        commitExpandedText(typedWord, expanded);
-                        resetComposingState(true);
-                    }
-                } else {
-                    final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
-                    if (textBefore != null) {
-                        final String textStr = textBefore.toString();
-                        final String targetSuffix = prefix + typedWord;
-                        if (textStr.toLowerCase(java.util.Locale.US).endsWith(targetSuffix.toLowerCase(java.util.Locale.US))) {
-                            final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(targetSuffix, mLatinIME);
-                            if (expanded != null) {
-                                mConnection.deleteTextBeforeCursor(prefix.length());
-                                commitExpandedText(targetSuffix, expanded);
-                                resetComposingState(true);
-                            }
+                final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+                if (textBefore != null) {
+                    final String textStr = textBefore.toString();
+                    final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
+                            helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(typedWord, textStr, mLatinIME);
+                    if (result != null) {
+                        if (result.getPrefixLength() > 0) {
+                            mConnection.deleteTextBeforeCursor(result.getPrefixLength());
                         }
+                        commitExpandedText(result.getMatchedString(), result.getExpandedText());
+                        resetComposingState(true);
                     }
                 }
             }
@@ -2496,6 +2496,28 @@ public final class InputLogic {
         }
         mSpaceState = SpaceState.NONE;
         mDeleteCount++;
+
+        if (mLastExpandedText != null && !event.isKeyRepeat()) {
+            final int expectedCursor = mConnection.getExpectedSelectionEnd();
+            if (expectedCursor == mLastExpandedCursorPosition) {
+                final int beforeLen = mLastExpandedCursorOffset;
+                final int afterLen = mLastExpandedText.length() - beforeLen;
+                final CharSequence textBefore = mConnection.getTextBeforeCursor(beforeLen, 0);
+                final CharSequence textAfter = mConnection.getTextAfterCursor(afterLen, 0);
+                final String expectedBefore = mLastExpandedText.substring(0, beforeLen);
+                final String expectedAfter = mLastExpandedText.substring(beforeLen);
+                if (textBefore != null && textBefore.toString().equals(expectedBefore)
+                        && textAfter != null && textAfter.toString().equals(expectedAfter)) {
+                    mConnection.setSelection(expectedCursor - beforeLen, expectedCursor + afterLen);
+                    mConnection.commitText(mLastShortcutText, 1);
+                    mLastExpandedText = null;
+                    mLastShortcutText = null;
+                    mLastExpandedCursorPosition = -1;
+                    mLastExpandedCursorOffset = -1;
+                    return;
+                }
+            }
+        }
 
         if (mLastExpandedText != null && !event.isKeyRepeat()) {
             final int expectedCursor = mConnection.getExpectedSelectionEnd();
@@ -4265,29 +4287,17 @@ public final class InputLogic {
         // can't find any drawback (performance, neither when setting nor when reading)
         final boolean isEnabled = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME);
         if (isEnabled) {
-            final String prefix = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getPrefix(mLatinIME);
-            if (prefix.isEmpty()) {
-                final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(chosenWord, mLatinIME);
-                if (expanded != null) {
+            final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+            if (textBefore != null) {
+                final String textStr = textBefore.toString();
+                final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
+                        helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(chosenWord, textStr, mLatinIME);
+                if (result != null) {
                     mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
-                    mConnection.deleteTextBeforeCursor(chosenWord.length());
-                    commitExpandedText(chosenWord, expanded);
+                    mConnection.deleteTextBeforeCursor(result.getPrefixLength() + chosenWord.length());
+                    commitExpandedText(result.getMatchedString(), result.getExpandedText());
                     return;
-                }
-            } else {
-                final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
-                if (textBefore != null) {
-                    final String textStr = textBefore.toString();
-                    final String targetSuffix = prefix + chosenWord;
-                    if (textStr.toLowerCase(java.util.Locale.US).endsWith(targetSuffix.toLowerCase(java.util.Locale.US))) {
-                        final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(targetSuffix, mLatinIME);
-                        if (expanded != null) {
-                            mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
-                            mConnection.deleteTextBeforeCursor(prefix.length() + chosenWord.length());
-                            commitExpandedText(targetSuffix, expanded);
-                            return;
-                        }
-                    }
+
                 }
             }
         }
@@ -4409,7 +4419,7 @@ public final class InputLogic {
 
     // we used to provide keyboard, settingsValues and keyboardShiftMode, but every
     // time read it from current instance anyway
-    void getSuggestedWords(final int inputStyle, final int sequenceNumber, final OnGetSuggestedWordsCallback callback) {
+    public void getSuggestedWords(final int inputStyle, final int sequenceNumber, final OnGetSuggestedWordsCallback callback) {
         final Keyboard keyboard = KeyboardSwitcher.getInstance().getKeyboard();
         if (keyboard == null) {
             callback.onGetSuggestedWords(SuggestedWords.getEmptyInstance());

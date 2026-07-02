@@ -96,6 +96,17 @@ fun LibrariesHubScreen(
                         )
 
                         // Handwriting Input Plugin
+                        if (BuildConfig.FLAVOR == "standardfull") {
+                            var handwritingInstalled by remember { mutableStateOf(HandwritingLoader.hasPlugin(context)) }
+                            LoadHandwritingPluginPreference(
+                                title = stringResource(R.string.libraries_hub_handwriting_title),
+                                summary = if (handwritingInstalled) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed),
+                                icon = R.drawable.ic_edit,
+                                onSuccess = { handwritingInstalled = HandwritingLoader.hasPlugin(context) }
+                            )
+                        }
+
+                        // Handwriting Input Plugin
                         if (BuildConfig.FLAVOR == "standard") {
                             var handwritingInstalled by remember { mutableStateOf(HandwritingLoader.hasPlugin(context)) }
                             LoadHandwritingPluginPreference(

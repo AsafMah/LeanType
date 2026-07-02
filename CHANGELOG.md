@@ -42,8 +42,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   shown. (Upstream bug LeanBitLab/LeanType#186; upstream PR #194.)
 
 ### Upstream
-- Merged **LeanBitLab/LeanType v3.8.8** (from v3.8.3, including v3.8.7 and two post-tag docs/badge
-  commits) — the source of the handwriting, llama.cpp/GGUF, dynamic downloader, touchpad-gesture,
+- Merged **LeanBitLab/LeanType v3.8.9** (from v3.8.3, including v3.8.7/v3.8.8 and one post-tag docs/badge
+  commit) — the source of the handwriting, llama.cpp/GGUF, dynamic downloader, text-editing mode, touchpad-gesture,
   SMS-OTP, selective-backup, and dictionary-downloader changes above. Fork identity (LeanTypeDual,
   distinct `applicationId`, two-thumb typing, the Gemini standard-AI layer, and the privacy tiers) is
   preserved.

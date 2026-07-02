@@ -4,6 +4,8 @@ package helium314.keyboard.keyboard;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -11,8 +13,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.os.Handler;
 import android.os.Looper;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 
+import helium314.keyboard.keyboard.internal.KeyboardIconsSet;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.common.ColorType;
@@ -41,10 +45,12 @@ public class TouchpadView extends LinearLayout {
         void onThreeFingerSwipeRight();
         void onThreeFingerSwipeUp();
         void onThreeFingerSwipeDown();
+        void onClose();
     }
 
     private TouchpadListener mListener;
     private View mTouchpadSurface;
+    private ImageView mBtnClose;
     private GestureDetector mGestureDetector;
 
     // State
@@ -164,6 +170,12 @@ public class TouchpadView extends LinearLayout {
 
         LayoutInflater.from(context).inflate(R.layout.touchpad_view, this, true);
         mTouchpadSurface = findViewById(R.id.touchpad_surface);
+        mBtnClose = findViewById(R.id.btn_close_touchpad);
+        mBtnClose.setOnClickListener(v -> {
+            if (mListener != null) {
+                mListener.onClose();
+            }
+        });
 
         mGestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
@@ -205,6 +217,30 @@ public class TouchpadView extends LinearLayout {
         // Root background
         colors.setBackground(this, ColorType.MAIN_BACKGROUND);
         applySurfaceColor();
+
+        // Style the close button
+        if (mBtnClose != null) {
+            KeyboardSwitcher switcher = KeyboardSwitcher.getInstance();
+            KeyboardIconsSet iconsSet = (switcher != null && switcher.getKeyboard() != null) ? switcher.getKeyboard().mIconsSet : null;
+            int keyIconColor = colors.get(ColorType.KEY_ICON);
+
+            // Set rounded background for the close button
+            float density = getContext().getResources().getDisplayMetrics().density;
+            GradientDrawable gd = new GradientDrawable();
+            gd.setShape(GradientDrawable.RECTANGLE);
+            gd.setCornerRadius(6f * density);
+            gd.setColor(colors.get(ColorType.KEY_BACKGROUND));
+            mBtnClose.setBackground(gd);
+
+            if (iconsSet != null) {
+                Drawable icon = iconsSet.getIconDrawable("close_history");
+                if (icon != null) {
+                    Drawable mutated = icon.mutate();
+                    mutated.setColorFilter(keyIconColor, PorterDuff.Mode.SRC_IN);
+                    mBtnClose.setImageDrawable(mutated);
+                }
+            }
+        }
     }
 
     private void applySurfaceColor() {
@@ -401,24 +437,24 @@ public class TouchpadView extends LinearLayout {
                     return true;
 
                 case MotionEvent.ACTION_POINTER_UP:
-                    android.util.Log.i("TouchpadView", "ACTION_POINTER_UP: pointerCount=" + pointerCount);
-                    if (pointerCount == 2) {
-                        removeCallbacks(mTwoFingerLongPressRunnable);
-                        if (mIsTwoFingerLongPress) {
-                            mIsTwoFingerLongPress = false;
-                            mIsTwoFingerScroll = false;
-                            mIsTwoFingerTap = false;
-                            return true;
-                        }
-                        if (mIsTwoFingerTap && (System.currentTimeMillis() - mTwoFingerDownTime) < 300) {
-                            mTwoFingerTapCount++;
-                            removeCallbacks(mTwoFingerTapRunnable);
-                            postDelayed(mTwoFingerTapRunnable, 250);
-                        }
+                android.util.Log.i("TouchpadView", "ACTION_POINTER_UP: pointerCount=" + pointerCount);
+                if (pointerCount == 2) {
+                    removeCallbacks(mTwoFingerLongPressRunnable);
+                    if (mIsTwoFingerLongPress) {
+                        mIsTwoFingerLongPress = false;
                         mIsTwoFingerScroll = false;
                         mIsTwoFingerTap = false;
+                        return true;
                     }
-                    return true;
+                    if (mIsTwoFingerTap && (System.currentTimeMillis() - mTwoFingerDownTime) < 300) {
+                        mTwoFingerTapCount++;
+                        removeCallbacks(mTwoFingerTapRunnable);
+                        postDelayed(mTwoFingerTapRunnable, 250);
+                    }
+                    mIsTwoFingerScroll = false;
+                    mIsTwoFingerTap = false;
+                }
+                return true;
             }
             return true;
         });
