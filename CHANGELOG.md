@@ -36,6 +36,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Standard builds now exclude non-en-US dictionary assets and download optional dictionaries dynamically.
 
 ### Fixed
+- **Text Edit mode no longer opens as a blank panel** when one-handed wrapper layout is active;
+  the wrapper now lays out the visible Text Edit/touchpad overlay instead of the hidden keyboard view.
 - **Sticky Shift from upstream handwriting cleanup** — upstream v3.8.6 stopped the hidden handwriting
   bottom row on every keyboard-frame switch, which globally cancelled the active Shift pointer before
   release. We keep the upstream handwriting feature but only stop handwriting when it is actually
