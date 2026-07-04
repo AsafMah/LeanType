@@ -888,6 +888,10 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             return mClipboardHistoryView;
         } else if (isHandwritingShowing()) {
             return mHandwritingView;
+        } else if (mTouchpadView != null && mTouchpadView.isShown()) {
+            return mTouchpadView;
+        } else if (mTextEditView != null && mTextEditView.isShown()) {
+            return mTextEditView;
         }
         return mKeyboardView;
     }
