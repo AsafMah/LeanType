@@ -216,18 +216,25 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_LANGUAGE_SWIPE_DISTANCE = "language_swipe_distance";
     public static final String PREF_TOUCHPAD_SENSITIVITY = "touchpad_sensitivity";
     public static final String PREF_TOUCHPAD_EDGE_SCROLL = "touchpad_edge_scroll";
+    public static final String PREF_TOUCHPAD_FULLSCREEN = "touchpad_fullscreen";
     public static final String PREF_PERSIST_FLOATING_KEYBOARD = "persist_floating_keyboard";
     public static final String PREF_FORCE_AUTO_CAPS = "force_auto_caps";
     public static final String PREF_OFFLINE_TEMP = "offline_temp";
     public static final String PREF_OFFLINE_TOP_P = "offline_top_p";
+    public static final String PREF_OFFLINE_TOP_K = "offline_top_k";
+    public static final String PREF_OFFLINE_MIN_P = "offline_min_p";
+    public static final String PREF_OFFLINE_SHOW_THINKING = "offline_show_thinking";
     public static final String PREF_OFFLINE_SYSTEM_PROMPT = "offline_system_prompt";
+    public static final String PREF_OFFLINE_TRANSLATE_SYSTEM_PROMPT = "offline_translate_system_prompt";
     public static final String PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE = "offline_translate_target_language";
     public static final String PREF_OFFLINE_MAX_TOKENS = "offline_max_tokens";
     public static final String PREF_OFFLINE_KEEP_MODEL_LOADED = "offline_keep_model_loaded";
+    public static final String PREF_AI_ALLOW_INSECURE_CONNECTIONS = "ai_allow_insecure_connections";
 
     public static final String PREF_ENABLE_CLIPBOARD_HISTORY = "enable_clipboard_history";
     public static final String PREF_SUGGEST_SCREENSHOTS = "suggest_screenshots";
     public static final String PREF_COMPRESS_SCREENSHOTS = "compress_screenshots";
+    public static final String PREF_AUTO_READ_OTP = "auto_read_otp";
     public static final String PREF_CLIPBOARD_HISTORY_RETENTION_TIME = "clipboard_history_retention_time";
     public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
     public static final String PREF_CLIPBOARD_FOLD_PINNED = "clipboard_fold_pinned";

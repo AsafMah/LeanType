@@ -44,6 +44,7 @@ class KeyboardIconsSet private constructor() {
         }
         val baseIds = defaultIds.toMutableMap().apply {
             put(ToolbarKey.CLEAR_CLIPBOARD.name.lowercase(Locale.US), clearClipboardResId)
+            put("clear_handwriting", R.drawable.ic_close)
         }
         val overrideIds = customIconIds(context, prefs)
         val ids = if (overrideIds.isEmpty()) baseIds else baseIds + overrideIds
@@ -160,12 +161,14 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.ic_incognito_final
                     ToolbarKey.TOUCHPAD -> R.drawable.ic_touchpad
+                    ToolbarKey.TEXT_EDIT -> R.drawable.ic_text_edit
                     ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect
                     ToolbarKey.AUTOSPACE -> R.drawable.ic_autospace
                     ToolbarKey.AUTO_CAP -> R.drawable.ic_auto_cap
                     ToolbarKey.FORCE_AUTO_CAP -> R.drawable.ic_force_auto_cap
                     ToolbarKey.CLEAR_CLIPBOARD -> R.drawable.sym_keyboard_clear_clipboard_holo
                     ToolbarKey.CLOSE_HISTORY -> R.drawable.ic_close
+                    ToolbarKey.HANDWRITING -> R.drawable.ic_edit
                     ToolbarKey.EMOJI -> R.drawable.sym_keyboard_smiley_holo
                     ToolbarKey.LEFT -> R.drawable.ic_dpad_left
                     ToolbarKey.RIGHT -> R.drawable.ic_dpad_right
@@ -242,12 +245,14 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.ic_incognito_final
                     ToolbarKey.TOUCHPAD -> R.drawable.ic_touchpad
+                    ToolbarKey.TEXT_EDIT -> R.drawable.ic_text_edit
                     ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect
                     ToolbarKey.AUTOSPACE -> R.drawable.ic_autospace
                     ToolbarKey.AUTO_CAP -> R.drawable.ic_auto_cap
                     ToolbarKey.FORCE_AUTO_CAP -> R.drawable.ic_force_auto_cap
                     ToolbarKey.CLEAR_CLIPBOARD -> R.drawable.sym_keyboard_clear_clipboard_lxx
                     ToolbarKey.CLOSE_HISTORY -> R.drawable.ic_close
+                    ToolbarKey.HANDWRITING -> R.drawable.ic_edit
                     ToolbarKey.EMOJI -> R.drawable.sym_keyboard_smiley_lxx
                     ToolbarKey.LEFT -> R.drawable.ic_dpad_left
                     ToolbarKey.RIGHT -> R.drawable.ic_dpad_right
@@ -324,12 +329,14 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.ic_incognito_final
                     ToolbarKey.TOUCHPAD -> R.drawable.ic_touchpad_rounded
+                    ToolbarKey.TEXT_EDIT -> R.drawable.ic_text_edit
                     ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect_rounded
                     ToolbarKey.AUTOSPACE -> R.drawable.ic_autospace_rounded
                     ToolbarKey.AUTO_CAP -> R.drawable.ic_auto_cap_rounded
                     ToolbarKey.FORCE_AUTO_CAP -> R.drawable.ic_force_auto_cap_rounded
                     ToolbarKey.CLEAR_CLIPBOARD -> R.drawable.sym_keyboard_clear_clipboard_rounded
                     ToolbarKey.CLOSE_HISTORY -> R.drawable.ic_close_rounded
+                    ToolbarKey.HANDWRITING -> R.drawable.ic_edit
                     ToolbarKey.EMOJI -> R.drawable.sym_keyboard_smiley_rounded
                     ToolbarKey.LEFT -> R.drawable.ic_dpad_left_rounded
                     ToolbarKey.RIGHT -> R.drawable.ic_dpad_right_rounded

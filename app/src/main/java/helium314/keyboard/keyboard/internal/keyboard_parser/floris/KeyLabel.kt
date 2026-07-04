@@ -90,6 +90,7 @@ object KeyLabel {
 
     fun keyLabelToActualLabel(label: String, params: KeyboardParams): String {
         val newLabel = when (label) {
+            "clear_handwriting" -> "!icon/clear_handwriting"
             SYMBOL_ALPHA -> if (params.mId.isAlphabetKeyboard) params.mLocaleKeyboardInfos.labelSymbol else params.mLocaleKeyboardInfos.labelAlphabet
             SYMBOL -> params.mLocaleKeyboardInfos.labelSymbol
             ALPHA -> params.mLocaleKeyboardInfos.labelAlphabet
@@ -117,6 +118,7 @@ object KeyLabel {
             else label
         }
         val code = when (label) { // maybe a bit lazy to not assemble the entire string above
+            "clear_handwriting" -> KeyCode.CLEAR_HANDWRITING
             SYMBOL_ALPHA -> KeyCode.SYMBOL_ALPHA
             SYMBOL       -> KeyCode.SYMBOL
             ALPHA        -> KeyCode.ALPHA

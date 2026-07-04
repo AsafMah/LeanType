@@ -95,6 +95,11 @@ public final class InputLogic {
     private int mSpaceState;
     // Never null
     private SuggestedWords mSuggestedWords = SuggestedWords.getEmptyInstance();
+    // #14 spacing-policy signals — recomputed every keystroke from the suggestion results at zero
+    // extra native cost (see computeSpacingSignals / setSuggestedWords). Consumed by the upcoming
+    // signal-driven grace + two-gate Assisted-tier logic.
+    private boolean mSpacingComplete;        // typed word is a real dictionary word
+    private float mSpacingPrefixRichScore;   // fraction of candidates that are completions [0..1]
     private final Suggest mSuggest;
     private final DictionaryFacilitator mDictionaryFacilitator;
     private SingleDictionaryFacilitator mEmojiDictionaryFacilitator;
@@ -549,6 +554,15 @@ public final class InputLogic {
         // We set this to NONE because after a cursor move, we don't want the space
         // state-related special processing to kick in.
         mSpaceState = SpaceState.NONE;
+
+        if (oldSelStart != newSelStart || oldSelEnd != newSelEnd) {
+            if (newSelStart != mLastExpandedCursorPosition) {
+                mLastExpandedText = null;
+                mLastShortcutText = null;
+                mLastExpandedCursorPosition = -1;
+                mLastExpandedCursorOffset = -1;
+            }
+        }
 
         if (oldSelStart != newSelStart || oldSelEnd != newSelEnd) {
             if (newSelStart != mLastExpandedCursorPosition) {
@@ -1399,6 +1413,9 @@ public final class InputLogic {
             mWordComposer.setAutoCorrection(suggestedWordInfo);
         }
         mSuggestedWords = suggestedWords;
+        final SpacingSignals spacingSignals = computeSpacingSignals(suggestedWords);
+        mSpacingComplete = spacingSignals.complete;
+        mSpacingPrefixRichScore = spacingSignals.prefixRichScore;
         final boolean newAutoCorrectionIndicator = suggestedWords.mWillAutoCorrect;
 
         // Put a blue underline to a word in TextView which will be auto-corrected.
@@ -1414,6 +1431,43 @@ public final class InputLogic {
             // the practice.
             setComposingTextInternal(textWithUnderline, 1);
         }
+    }
+
+    /**
+     * #14 spacing-policy signals derived from the current suggestion results, computed every
+     * keystroke at zero extra native cost.
+     * <ul>
+     *   <li>{@code complete} — the typed word is a real dictionary word (valid AND not just
+     *       user-typed). A confident "this is a finished word".</li>
+     *   <li>{@code prefixRichScore} — fraction of candidates that are completions (longer words
+     *       sharing this stem), in [0..1]. High = lots left to extend to (keep the word open);
+     *       low = little left (safe to auto-commit).</li>
+     * </ul>
+     * Static + pure so it can be unit-tested without a live InputLogic.
+     */
+    static final class SpacingSignals {
+        final boolean complete;
+        final float prefixRichScore;
+        SpacingSignals(final boolean complete, final float prefixRichScore) {
+            this.complete = complete;
+            this.prefixRichScore = prefixRichScore;
+        }
+    }
+
+    static SpacingSignals computeSpacingSignals(final SuggestedWords suggestedWords) {
+        final int n = suggestedWords.size();
+        if (n == 0) return new SpacingSignals(false, 0f);
+        final SuggestedWordInfo typed = suggestedWords.mTypedWordInfo;
+        final boolean complete = suggestedWords.mTypedWordValid
+                && typed != null && typed.mSourceDict != null
+                && !Dictionary.TYPE_USER_TYPED.equals(typed.mSourceDict.mDictType);
+        int completions = 0;
+        for (int i = 0; i < n; i++) {
+            if (suggestedWords.getInfo(i).getKind() == SuggestedWordInfo.KIND_COMPLETION) {
+                completions++;
+            }
+        }
+        return new SpacingSignals(complete, (float) completions / n);
     }
 
     /**
@@ -2166,6 +2220,23 @@ public final class InputLogic {
             consumeJoinNextActionAndNotifyIfChanged();
             // Combining mode: arm/refresh the grace timer for the next input.
             enterCombiningMode(settingsValues, true /* fromTap, unused — kept for clarity */);
+            if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
+                    && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
+                final String typedWord = mWordComposer.getTypedWord();
+                final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+                if (textBefore != null) {
+                    final String textStr = textBefore.toString();
+                    final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
+                            helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(typedWord, textStr, mLatinIME);
+                    if (result != null) {
+                        if (result.getPrefixLength() > 0) {
+                            mConnection.deleteTextBeforeCursor(result.getPrefixLength());
+                        }
+                        commitExpandedText(result.getMatchedString(), result.getExpandedText());
+                        resetComposingState(true);
+                    }
+                }
+            }
         } else {
             final boolean swapWeakSpace = tryStripSpaceAndReturnWhetherShouldSwapInstead(event, inputTransaction);
 
@@ -2437,7 +2508,29 @@ public final class InputLogic {
                 final String expectedAfter = mLastExpandedText.substring(beforeLen);
                 if (textBefore != null && textBefore.toString().equals(expectedBefore)
                         && textAfter != null && textAfter.toString().equals(expectedAfter)) {
-                    mConnection.deleteSurroundingText(beforeLen, afterLen);
+                    mConnection.setSelection(expectedCursor - beforeLen, expectedCursor + afterLen);
+                    mConnection.commitText(mLastShortcutText, 1);
+                    mLastExpandedText = null;
+                    mLastShortcutText = null;
+                    mLastExpandedCursorPosition = -1;
+                    mLastExpandedCursorOffset = -1;
+                    return;
+                }
+            }
+        }
+
+        if (mLastExpandedText != null && !event.isKeyRepeat()) {
+            final int expectedCursor = mConnection.getExpectedSelectionEnd();
+            if (expectedCursor == mLastExpandedCursorPosition) {
+                final int beforeLen = mLastExpandedCursorOffset;
+                final int afterLen = mLastExpandedText.length() - beforeLen;
+                final CharSequence textBefore = mConnection.getTextBeforeCursor(beforeLen, 0);
+                final CharSequence textAfter = mConnection.getTextAfterCursor(afterLen, 0);
+                final String expectedBefore = mLastExpandedText.substring(0, beforeLen);
+                final String expectedAfter = mLastExpandedText.substring(beforeLen);
+                if (textBefore != null && textBefore.toString().equals(expectedBefore)
+                        && textAfter != null && textAfter.toString().equals(expectedAfter)) {
+                    mConnection.setSelection(expectedCursor - beforeLen, expectedCursor + afterLen);
                     mConnection.commitText(mLastShortcutText, 1);
                     mLastExpandedText = null;
                     mLastShortcutText = null;
@@ -2788,6 +2881,33 @@ public final class InputLogic {
         return true;
     }
 
+    private static boolean isSpaceStrippingPunctuation(final int codePoint) {
+        return codePoint == '.'
+                || codePoint == ','
+                || codePoint == ';'
+                || codePoint == ':'
+                || codePoint == '!'
+                || codePoint == '?'
+                || codePoint == ')'
+                || codePoint == ']'
+                || codePoint == '}'
+                || codePoint == '؟' // Arabic question mark
+                || codePoint == '،' // Arabic comma
+                || codePoint == '؛' // Arabic semicolon
+                || codePoint == '।' // Hindi Danda
+                || codePoint == '॥' // Hindi Double Danda
+                || codePoint == '。' // CJK full stop
+                || codePoint == '、' // CJK enumeration comma
+                || codePoint == '，' // CJK fullwidth comma
+                || codePoint == '？' // CJK fullwidth question mark
+                || codePoint == '！' // CJK fullwidth exclamation mark
+                || codePoint == '：' // CJK fullwidth colon
+                || codePoint == '；' // CJK fullwidth semicolon
+                || codePoint == '）' // CJK fullwidth closing parenthesis
+                || codePoint == '】' // CJK fullwidth closing bracket
+                || codePoint == '』'; // CJK fullwidth closing quote
+    }
+
     /*
      * Strip a trailing space if necessary and returns whether it's a swap weak
      * space situation.
@@ -2807,6 +2927,14 @@ public final class InputLogic {
             mConnection.removeTrailingSpace();
             return false;
         }
+
+        if (isSpaceStrippingPunctuation(codePoint)
+                && !inputTransaction.getSettingsValues().isUsuallyPrecededBySpace(codePoint)) {
+            if (mConnection.getCodePointBeforeCursor() == Constants.CODE_SPACE) {
+                mConnection.removeTrailingSpace();
+            }
+        }
+
         if ((SpaceState.WEAK == inputTransaction.getSpaceState()
                 || SpaceState.SWAP_PUNCTUATION == inputTransaction.getSpaceState())
                 && isFromSuggestionStrip) {
@@ -4159,29 +4287,17 @@ public final class InputLogic {
         // can't find any drawback (performance, neither when setting nor when reading)
         final boolean isEnabled = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME);
         if (isEnabled) {
-            final String prefix = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getPrefix(mLatinIME);
-            if (prefix.isEmpty()) {
-                final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(chosenWord, mLatinIME);
-                if (expanded != null) {
+            final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+            if (textBefore != null) {
+                final String textStr = textBefore.toString();
+                final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
+                        helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(chosenWord, textStr, mLatinIME);
+                if (result != null) {
                     mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
-                    mConnection.deleteTextBeforeCursor(chosenWord.length());
-                    commitExpandedText(chosenWord, expanded);
+                    mConnection.deleteTextBeforeCursor(result.getPrefixLength() + chosenWord.length());
+                    commitExpandedText(result.getMatchedString(), result.getExpandedText());
                     return;
-                }
-            } else {
-                final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
-                if (textBefore != null) {
-                    final String textStr = textBefore.toString();
-                    final String targetSuffix = prefix + chosenWord;
-                    if (textStr.toLowerCase(java.util.Locale.US).endsWith(targetSuffix.toLowerCase(java.util.Locale.US))) {
-                        final String expanded = helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWord(targetSuffix, mLatinIME);
-                        if (expanded != null) {
-                            mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
-                            mConnection.deleteTextBeforeCursor(prefix.length() + chosenWord.length());
-                            commitExpandedText(targetSuffix, expanded);
-                            return;
-                        }
-                    }
+
                 }
             }
         }
@@ -4303,7 +4419,7 @@ public final class InputLogic {
 
     // we used to provide keyboard, settingsValues and keyboardShiftMode, but every
     // time read it from current instance anyway
-    void getSuggestedWords(final int inputStyle, final int sequenceNumber, final OnGetSuggestedWordsCallback callback) {
+    public void getSuggestedWords(final int inputStyle, final int sequenceNumber, final OnGetSuggestedWordsCallback callback) {
         final Keyboard keyboard = KeyboardSwitcher.getInstance().getKeyboard();
         if (keyboard == null) {
             callback.onGetSuggestedWords(SuggestedWords.getEmptyInstance());
@@ -4603,35 +4719,43 @@ public final class InputLogic {
         final android.content.SharedPreferences prefs = helium314.keyboard.latin.utils.DeviceProtectedUtils
                 .getSharedPreferences(mLatinIME);
         String prompt = prefs.getString("pref_custom_ai_prompt_" + index, "");
-        String systemInstruction = "";
+        StringBuilder systemInstructionBuilder = new StringBuilder();
         boolean shouldAppend = false;
 
         // Keyword parsing for system instructions / personas
         if (prompt.contains("#editor")) {
-            systemInstruction = " You are a text editor tool. Output ONLY the edited text. Do not add any conversational filler.";
+            systemInstructionBuilder.append(" You are a text editor tool. Output ONLY the edited text. Do not add any conversational filler.");
             prompt = prompt.replace("#editor", "").trim();
-        } else if (prompt.contains("#outputonly")) {
-            systemInstruction = " Output ONLY the result. Do not add introductions or explanations.";
+        }
+        if (prompt.contains("#outputonly")) {
+            systemInstructionBuilder.append(" Output ONLY the result. Do not add introductions or explanations.");
             prompt = prompt.replace("#outputonly", "").trim();
-        } else if (prompt.contains("#proofread")) {
-            systemInstruction = " You are a proofreader. Fix grammar and spelling errors. Output ONLY the fixed text.";
+        }
+        if (prompt.contains("#proofread")) {
+            systemInstructionBuilder.append(" You are a proofreader. Fix grammar and spelling errors. Output ONLY the fixed text.");
             prompt = prompt.replace("#proofread", "").trim();
-        } else if (prompt.contains("#paraphrase")) {
-            systemInstruction = " You are a paraphrasing tool. Rewrite the text using different words while keeping the meaning. Output ONLY the result.";
+        }
+        if (prompt.contains("#paraphrase")) {
+            systemInstructionBuilder.append(" You are a paraphrasing tool. Rewrite the text using different words while keeping the meaning. Output ONLY the result.");
             prompt = prompt.replace("#paraphrase", "").trim();
-        } else if (prompt.contains("#summarize")) {
-            systemInstruction = " You are a summarizer. Provide a concise summary of the text. Output ONLY the summary.";
+        }
+        if (prompt.contains("#summarize")) {
+            systemInstructionBuilder.append(" You are a summarizer. Provide a concise summary of the text. Output ONLY the summary.");
             prompt = prompt.replace("#summarize", "").trim();
-        } else if (prompt.contains("#expand")) {
-            systemInstruction = " You are a creative writing assistant. Expand on the text with more details. Output ONLY the result.";
+        }
+        if (prompt.contains("#expand")) {
+            systemInstructionBuilder.append(" You are a creative writing assistant. Expand on the text with more details. Output ONLY the result.");
             prompt = prompt.replace("#expand", "").trim();
-        } else if (prompt.contains("#toneshift")) {
-            systemInstruction = " You are a tone modifier. Adjust the tone as requested. Output ONLY the result.";
+        }
+        if (prompt.contains("#toneshift")) {
+            systemInstructionBuilder.append(" You are a tone modifier. Adjust the tone as requested. Output ONLY the result.");
             prompt = prompt.replace("#toneshift", "").trim();
-        } else if (prompt.contains("#generate")) {
-            systemInstruction = " You are a creative content generator. Output ONLY the generated content.";
+        }
+        if (prompt.contains("#generate")) {
+            systemInstructionBuilder.append(" You are a creative content generator. Output ONLY the generated content.");
             prompt = prompt.replace("#generate", "").trim();
         }
+        String systemInstruction = systemInstructionBuilder.toString();
 
         // Input handling keywords
         if (prompt.contains("#append")) {

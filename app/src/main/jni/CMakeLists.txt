@@ -55,6 +55,10 @@ target_include_directories(latinime_host_unittests PRIVATE ${SRC_DIR} ${TEST_DIR
 target_compile_options(latinime_host_unittests PRIVATE
     -include ${CMAKE_CURRENT_SOURCE_DIR}/host_test_compat.h
     -Wno-unused-parameter -Wno-unused-function)
+# Expose the on-disk fixture directory to the replay tests so they can load
+# JSON fixtures by path (TraceFixtureParserTest.LoadsHelloQwertyFromFile).
+target_compile_definitions(latinime_host_unittests PRIVATE
+    FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/replay/fixtures")
 target_link_libraries(latinime_host_unittests PRIVATE gtest gtest_main)
 
 enable_testing()

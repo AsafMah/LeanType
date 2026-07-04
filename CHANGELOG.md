@@ -14,6 +14,42 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [3.10.0] - 2026-06-20
+
+### Added
+- **Handwriting input** (Standard builds) — write characters on a recognition canvas using a
+  downloadable plugin, with a dedicated bottom-row layout and a toolbar key.
+- **Auto-read OTP from SMS** — a one-time code from an incoming SMS is offered in the suggestion
+  strip while the keyboard is open; tap to insert. Uses a runtime, opt-in SMS permission.
+- **Regex shortcuts in Text Expander** — expansion triggers can be matched by regular expression.
+- **Dynamic dictionary/plugin downloader** — Standard builds can fetch layout dictionaries, emoji dictionaries, and handwriting plugins on demand.
+- **Selective backup and restore** — backup/restore settings, dictionaries, and AI prompt configuration more granularly.
+
+### Changed
+- **Offline AI backend switched from ONNX Runtime to llama.cpp (GGUF).** The Offline build now
+  loads compact quantized **GGUF** models on-device with configurable sampling
+  (temperature / top-p / top-k / min-p); it now requires Android 8 (API 26).
+- **Touchpad gestures reworked** into a fuller one-/two-finger suite (word select, word-by-word
+  navigation, space, copy/paste, cut/select-all, undo/redo, hold-to-backspace). Single-finger
+  double-tap now **selects the word** (previously deleted the selection).
+- Release builds now target the **arm64-v8a** ABI only.
+- Standard builds now exclude non-en-US dictionary assets and download optional dictionaries dynamically.
+
+### Fixed
+- **Text Edit mode no longer opens as a blank panel** when one-handed wrapper layout is active;
+  the wrapper now lays out the visible Text Edit/touchpad overlay instead of the hidden keyboard view.
+- **Sticky Shift from upstream handwriting cleanup** — upstream v3.8.6 stopped the hidden handwriting
+  bottom row on every keyboard-frame switch, which globally cancelled the active Shift pointer before
+  release. We keep the upstream handwriting feature but only stop handwriting when it is actually
+  shown. (Upstream bug LeanBitLab/LeanType#186; upstream PR #194.)
+
+### Upstream
+- Merged **LeanBitLab/LeanType v3.8.9** (from v3.8.3, including v3.8.7/v3.8.8 and one post-tag docs/badge
+  commit) — the source of the handwriting, llama.cpp/GGUF, dynamic downloader, text-editing mode, touchpad-gesture,
+  SMS-OTP, selective-backup, and dictionary-downloader changes above. Fork identity (LeanTypeDual,
+  distinct `applicationId`, two-thumb typing, the Gemini standard-AI layer, and the privacy tiers) is
+  preserved.
+
 ## [3.9.1] - 2026-06-11
 
 ### Fixed

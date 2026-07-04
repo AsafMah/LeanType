@@ -4,6 +4,8 @@ package helium314.keyboard.keyboard;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -11,8 +13,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.os.Handler;
 import android.os.Looper;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 
+import helium314.keyboard.keyboard.internal.KeyboardIconsSet;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.common.ColorType;
@@ -34,10 +38,19 @@ public class TouchpadView extends LinearLayout {
         void onSingleTap();
         void onDoubleTap();
         void onScroll(int direction);
+        void onTwoFingerDoubleTap();
+        void onThreeFingerTap();
+        void onThreeFingerDoubleTap();
+        void onThreeFingerSwipeLeft();
+        void onThreeFingerSwipeRight();
+        void onThreeFingerSwipeUp();
+        void onThreeFingerSwipeDown();
+        void onClose();
     }
 
     private TouchpadListener mListener;
     private View mTouchpadSurface;
+    private ImageView mBtnClose;
     private GestureDetector mGestureDetector;
 
     // State
@@ -52,12 +65,61 @@ public class TouchpadView extends LinearLayout {
 
     // Two-finger scroll tracking
     private boolean mIsTwoFingerScroll;
+    private float mTwoFingerLastX;
     private float mTwoFingerLastY;
+    private float mScrollAccX;
     private float mScrollAccY;
+    private float mTwoFingerStartX;
+    private float mTwoFingerStartY;
+    private boolean mHasScrolledHorizontally;
+    private boolean mIsTwoFingerLongPress;
+    private int mTwoFingerTapCount = 0;
+
+    private final Runnable mTwoFingerLongPressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mIsTwoFingerTap) {
+                mIsTwoFingerLongPress = true;
+                if (mListener != null) {
+                    mListener.onThreeFingerSwipeLeft();
+                }
+                postDelayed(this, 150);
+            }
+        }
+    };
     
     // Two-finger tap tracking
     private boolean mIsTwoFingerTap;
     private long mTwoFingerDownTime;
+    private final Runnable mTwoFingerTapRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mListener != null) {
+                if (mTwoFingerTapCount == 1) {
+                    mListener.onSingleTap();
+                } else if (mTwoFingerTapCount == 2) {
+                    mListener.onTwoFingerDoubleTap();
+                } else if (mTwoFingerTapCount >= 3) {
+                    mListener.onThreeFingerDoubleTap();
+                }
+            }
+            mTwoFingerTapCount = 0;
+        }
+    };
+
+    // Three-finger tap & swipe tracking
+    private boolean mIsThreeFingerTap;
+    private long mThreeFingerDownTime;
+    private long mLastThreeFingerTapTime = 0;
+    private final Runnable mThreeFingerTapRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mListener != null) mListener.onThreeFingerTap();
+        }
+    };
+    private boolean mIsThreeFingerSwipe;
+    private float mThreeFingerStartX;
+    private float mThreeFingerStartY;
 
     private static final int SCROLL_THRESHOLD = 40;
 
@@ -108,6 +170,12 @@ public class TouchpadView extends LinearLayout {
 
         LayoutInflater.from(context).inflate(R.layout.touchpad_view, this, true);
         mTouchpadSurface = findViewById(R.id.touchpad_surface);
+        mBtnClose = findViewById(R.id.btn_close_touchpad);
+        mBtnClose.setOnClickListener(v -> {
+            if (mListener != null) {
+                mListener.onClose();
+            }
+        });
 
         mGestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
@@ -149,6 +217,30 @@ public class TouchpadView extends LinearLayout {
         // Root background
         colors.setBackground(this, ColorType.MAIN_BACKGROUND);
         applySurfaceColor();
+
+        // Style the close button
+        if (mBtnClose != null) {
+            KeyboardSwitcher switcher = KeyboardSwitcher.getInstance();
+            KeyboardIconsSet iconsSet = (switcher != null && switcher.getKeyboard() != null) ? switcher.getKeyboard().mIconsSet : null;
+            int keyIconColor = colors.get(ColorType.KEY_ICON);
+
+            // Set rounded background for the close button
+            float density = getContext().getResources().getDisplayMetrics().density;
+            GradientDrawable gd = new GradientDrawable();
+            gd.setShape(GradientDrawable.RECTANGLE);
+            gd.setCornerRadius(6f * density);
+            gd.setColor(colors.get(ColorType.KEY_BACKGROUND));
+            mBtnClose.setBackground(gd);
+
+            if (iconsSet != null) {
+                Drawable icon = iconsSet.getIconDrawable("close_history");
+                if (icon != null) {
+                    Drawable mutated = icon.mutate();
+                    mutated.setColorFilter(keyIconColor, PorterDuff.Mode.SRC_IN);
+                    mBtnClose.setImageDrawable(mutated);
+                }
+            }
+        }
     }
 
     private void applySurfaceColor() {
@@ -172,9 +264,14 @@ public class TouchpadView extends LinearLayout {
         mTouchpadSurface.setOnTouchListener((v, event) -> {
             mGestureDetector.onTouchEvent(event);
             final int pointerCount = event.getPointerCount();
+            android.util.Log.i("TouchpadViewRaw", "action=" + MotionEvent.actionToString(event.getActionMasked()) + ", pointers=" + pointerCount);
 
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
+                    android.util.Log.i("TouchpadView", "ACTION_DOWN");
+                    if (v.getParent() != null) {
+                        v.getParent().requestDisallowInterceptTouchEvent(true);
+                    }
                     mLastTouchX = event.getX();
                     mLastTouchY = event.getY();
                     mAccX = 0;
@@ -184,32 +281,83 @@ public class TouchpadView extends LinearLayout {
                     return true;
 
                 case MotionEvent.ACTION_POINTER_DOWN:
+                    android.util.Log.i("TouchpadView", "ACTION_POINTER_DOWN: pointerCount=" + pointerCount);
+                    if (v.getParent() != null) {
+                        v.getParent().requestDisallowInterceptTouchEvent(true);
+                    }
                     if (pointerCount == 2) {
                         mIsTwoFingerScroll = true;
                         mIsTwoFingerTap = true;
                         mTwoFingerDownTime = System.currentTimeMillis();
                         mIsDragging = false;
-                        mTwoFingerLastY = (event.getY(0) + event.getY(1)) / 2f;
+                        mTwoFingerStartX = (event.getX(0) + event.getX(1)) / 2f;
+                        mTwoFingerStartY = (event.getY(0) + event.getY(1)) / 2f;
+                        mTwoFingerLastX = mTwoFingerStartX;
+                        mTwoFingerLastY = mTwoFingerStartY;
+                        mScrollAccX = 0;
                         mScrollAccY = 0;
+                        mHasScrolledHorizontally = false;
+                        mIsTwoFingerLongPress = false;
+                        
+                        removeCallbacks(mTwoFingerTapRunnable);
+                        postDelayed(mTwoFingerLongPressRunnable, 400);
                     }
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
                     if (mIsTwoFingerScroll && pointerCount >= 2) {
+                        float midX = (event.getX(0) + event.getX(1)) / 2f;
                         float midY = (event.getY(0) + event.getY(1)) / 2f;
-                        float deltaY = midY - mTwoFingerLastY;
-                        mTwoFingerLastY = midY;
-                        mScrollAccY += deltaY;
+                        float deltaX = midX - mTwoFingerStartX;
+                        float deltaY = midY - mTwoFingerStartY;
 
-                        while (mScrollAccY >= SCROLL_THRESHOLD) {
+                        float density = getContext().getResources().getDisplayMetrics().density;
+                        
+                        if (Math.abs(midX - mTwoFingerStartX) > 5f * density || Math.abs(midY - mTwoFingerStartY) > 5f * density) {
                             mIsTwoFingerTap = false;
-                            if (mListener != null) mListener.onScroll(KeyCode.ARROW_DOWN);
-                            mScrollAccY -= SCROLL_THRESHOLD;
+                            removeCallbacks(mTwoFingerLongPressRunnable);
                         }
-                        while (mScrollAccY <= -SCROLL_THRESHOLD) {
+
+                        float swipeThreshold = 35f * density;
+                        if (!mHasScrolledHorizontally && Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > swipeThreshold) {
+                            mIsTwoFingerScroll = false;
                             mIsTwoFingerTap = false;
-                            if (mListener != null) mListener.onScroll(KeyCode.ARROW_UP);
-                            mScrollAccY += SCROLL_THRESHOLD;
+                            removeCallbacks(mTwoFingerLongPressRunnable);
+                            mTwoFingerTapCount = 0;
+                            removeCallbacks(mTwoFingerTapRunnable);
+                            
+                            if (mListener != null) {
+                                if (deltaY < 0) {
+                                    mListener.onThreeFingerSwipeUp();
+                                } else {
+                                    mListener.onThreeFingerSwipeDown();
+                                }
+                            }
+                        } else {
+                            float lastDeltaX = midX - mTwoFingerLastX;
+                            mTwoFingerLastX = midX;
+                            mTwoFingerLastY = midY;
+
+                            mScrollAccX += lastDeltaX;
+
+                            while (mScrollAccX >= SCROLL_THRESHOLD) {
+                                mIsTwoFingerTap = false;
+                                removeCallbacks(mTwoFingerLongPressRunnable);
+                                mTwoFingerTapCount = 0;
+                                removeCallbacks(mTwoFingerTapRunnable);
+                                mHasScrolledHorizontally = true;
+                                if (mListener != null) mListener.onScroll(KeyCode.WORD_RIGHT);
+                                mScrollAccX -= SCROLL_THRESHOLD;
+                            }
+                            while (mScrollAccX <= -SCROLL_THRESHOLD) {
+                                mIsTwoFingerTap = false;
+                                removeCallbacks(mTwoFingerLongPressRunnable);
+                                mTwoFingerTapCount = 0;
+                                removeCallbacks(mTwoFingerTapRunnable);
+                                mHasScrolledHorizontally = true;
+                                if (mListener != null) mListener.onScroll(KeyCode.WORD_LEFT);
+                                mScrollAccX += SCROLL_THRESHOLD;
+                            }
                         }
                     } else if (mIsDragging && pointerCount == 1) {
                         float x = event.getX();
@@ -257,11 +405,31 @@ public class TouchpadView extends LinearLayout {
                     return true;
 
                 case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
+                    android.util.Log.i("TouchpadView", "ACTION_UP");
                     mIsDragging = false;
                     stopEdgeScrolling();
                     mIsTwoFingerScroll = false;
                     mIsTwoFingerTap = false;
+                    removeCallbacks(mTwoFingerLongPressRunnable);
+                    mIsTwoFingerLongPress = false;
+                    mTwoFingerTapCount = 0;
+                    removeCallbacks(mTwoFingerTapRunnable);
+                    if (mSelectionMode) {
+                        mSelectionMode = false;
+                        applySurfaceColor();
+                    }
+                    return true;
+
+                case MotionEvent.ACTION_CANCEL:
+                    android.util.Log.i("TouchpadView", "ACTION_CANCEL");
+                    mIsDragging = false;
+                    stopEdgeScrolling();
+                    mIsTwoFingerScroll = false;
+                    mIsTwoFingerTap = false;
+                    removeCallbacks(mTwoFingerLongPressRunnable);
+                    mIsTwoFingerLongPress = false;
+                    mTwoFingerTapCount = 0;
+                    removeCallbacks(mTwoFingerTapRunnable);
                     if (mSelectionMode) {
                         mSelectionMode = false;
                         applySurfaceColor();
@@ -269,14 +437,24 @@ public class TouchpadView extends LinearLayout {
                     return true;
 
                 case MotionEvent.ACTION_POINTER_UP:
-                    if (pointerCount == 2) {
-                        if (mIsTwoFingerTap && (System.currentTimeMillis() - mTwoFingerDownTime) < 300) {
-                            if (mListener != null) mListener.onSingleTap();
-                        }
+                android.util.Log.i("TouchpadView", "ACTION_POINTER_UP: pointerCount=" + pointerCount);
+                if (pointerCount == 2) {
+                    removeCallbacks(mTwoFingerLongPressRunnable);
+                    if (mIsTwoFingerLongPress) {
+                        mIsTwoFingerLongPress = false;
                         mIsTwoFingerScroll = false;
                         mIsTwoFingerTap = false;
+                        return true;
                     }
-                    return true;
+                    if (mIsTwoFingerTap && (System.currentTimeMillis() - mTwoFingerDownTime) < 300) {
+                        mTwoFingerTapCount++;
+                        removeCallbacks(mTwoFingerTapRunnable);
+                        postDelayed(mTwoFingerTapRunnable, 250);
+                    }
+                    mIsTwoFingerScroll = false;
+                    mIsTwoFingerTap = false;
+                }
+                return true;
             }
             return true;
         });

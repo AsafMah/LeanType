@@ -68,18 +68,15 @@ import helium314.keyboard.keyboard.internal.KeyVisualAttributes;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager;
 import helium314.keyboard.latin.SingleDictionaryFacilitator;
-import helium314.keyboard.latin.dictionary.Dictionary;
 import helium314.keyboard.latin.dictionary.DictionaryFactory;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.RichInputMethodSubtype;
-import helium314.keyboard.latin.SingleDictionaryFacilitator;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.common.Colors;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
-import helium314.keyboard.latin.utils.DictionaryInfoUtils;
 import helium314.keyboard.latin.utils.ResourceUtils;
 import helium314.keyboard.latin.common.StringUtilsKt;
 
@@ -236,6 +233,7 @@ public final class EmojiPalettesView extends LinearLayout
     private EmojiSearchAdapter mSearchAdapter;
     private EditText mSearchBar;
     private boolean mInSearchMode = false;
+    private boolean mIsDownloadingEmojiDict = false;
     private KeyboardActionListener mOriginalActionListener;
 
     private EditorInfo mEditorInfo;
@@ -311,6 +309,7 @@ public final class EmojiPalettesView extends LinearLayout
                 androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false));
         mSearchAdapter = new EmojiSearchAdapter(emoji -> {
             mKeyboardActionListener.onTextInput(emoji);
+            addRecentKey(emoji);
             // Optionally close search or keep it open for multiple inputs?
             // restore standard behavior: stop search
             stopSearchMode();
@@ -498,13 +497,14 @@ public final class EmojiPalettesView extends LinearLayout
         if (Settings.getValues().mSplitToolbar) {
             // Do not add results to this row, they go to SuggestionStripView
             mSearchAdapter = null;
+            updateSplitToolbarEmojiSuggestions();
         } else if (sDictionaryFacilitator == null) {
             Button downloadBtn = new Button(ctx);
             downloadBtn.setText("Download Dictionary");
             downloadBtn.setTextSize(12); // Keep it small to fit
             downloadBtn.setAllCaps(false);
             downloadBtn.setOnClickListener(v -> {
-                if ("standard".equals(BuildConfig.FLAVOR) || "standardOptimised".equals(BuildConfig.FLAVOR)) {
+                if ("standard".equals(BuildConfig.FLAVOR) || "standardfull".equals(BuildConfig.FLAVOR)) {
                     downloadEmojiDictionary();
                     downloadBtn.setText("Downloading...");
                     downloadBtn.setEnabled(false);
@@ -721,6 +721,7 @@ public final class EmojiPalettesView extends LinearLayout
 
         KeyboardLayoutSet kls = builder.build();
         bottomRow.setKeyboard(kls.getKeyboard(KeyboardId.ELEMENT_ALPHABET));
+        bottomRow.setKeyPreviewPopupEnabled(Settings.getValues().mKeyPreviewPopupOn);
 
         // Focus
         mSearchBar.requestFocus();
@@ -763,7 +764,11 @@ public final class EmojiPalettesView extends LinearLayout
                 mSearchAdapter.submitList(java.util.Collections.emptyList());
             // In split mode, restore recents on suggestion bar when search is empty
             if (Settings.getValues().mSplitToolbar) {
-                populateSuggestionBarWithRecents();
+                if (sDictionaryFacilitator == null) {
+                    updateSplitToolbarEmojiSuggestions();
+                } else {
+                    populateSuggestionBarWithRecents();
+                }
             }
             return;
         }
@@ -833,6 +838,7 @@ public final class EmojiPalettesView extends LinearLayout
         if (keyboardView == null || !this.isAttachedToWindow()) {
             return;
         }
+        keyboardView.setKeyPreviewPopupEnabled(Settings.getValues().mKeyPreviewPopupOn);
         EditorInfo ei = editorInfo != null ? editorInfo : mEditorInfo;
         keyboardView.setKeyboardActionListener(keyboardActionListener);
 
@@ -914,7 +920,8 @@ public final class EmojiPalettesView extends LinearLayout
         if (mPager != null && mPager.getAdapter() != null) {
             mPager.getAdapter().notifyItemChanged(mEmojiCategory.getRecentTabId());
         }
-        if (split) {
+        // ponytail: only update suggestion bar if the emoji view is actually visible
+        if (split && isShown()) {
             populateSuggestionBarWithRecents();
         }
     }
@@ -934,7 +941,8 @@ public final class EmojiPalettesView extends LinearLayout
         if (mPager != null && mPager.getAdapter() != null) {
             mPager.getAdapter().notifyItemChanged(mEmojiCategory.getRecentTabId());
         }
-        if (split) {
+        // ponytail: only update suggestion bar if the emoji view is actually visible
+        if (split && isShown()) {
             populateSuggestionBarWithRecents();
         }
     }
@@ -1021,6 +1029,35 @@ public final class EmojiPalettesView extends LinearLayout
             mKeyboardActionListener.onTextInput(emoji);
             addRecentKey(emoji);
         });
+    }
+
+    private void updateSplitToolbarEmojiSuggestions() {
+        SuggestionStripView stripView = KeyboardSwitcher.getInstance().getSuggestionStripView();
+        if (stripView == null)
+            return;
+
+        if (sDictionaryFacilitator == null) {
+            // ponytail: show download button on suggestion strip in split mode if dictionary is missing
+            stripView.setEmojiDownloadButton(() -> {
+                if ("standard".equals(BuildConfig.FLAVOR) || "standardfull".equals(BuildConfig.FLAVOR)) {
+                    downloadEmojiDictionary();
+                    mIsDownloadingEmojiDict = true;
+                    updateSplitToolbarEmojiSuggestions();
+                } else {
+                    Context ctx = getContext();
+                    Intent intent = new Intent(ctx, SettingsActivity.class);
+                    intent.putExtra("screen", "dictionaries");
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    ctx.startActivity(intent);
+                }
+            }, mIsDownloadingEmojiDict);
+        } else {
+            if (mSearchBar != null && !TextUtils.isEmpty(mSearchBar.getText())) {
+                performSearch(mSearchBar.getText().toString());
+            } else {
+                populateSuggestionBarWithRecents();
+            }
+        }
     }
 
     public void setKeyboardActionListener(final KeyboardActionListener listener) {
@@ -1154,9 +1191,10 @@ public final class EmojiPalettesView extends LinearLayout
                     new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                         Toast.makeText(getContext(), "Emoji dictionary installed!", Toast.LENGTH_SHORT).show();
                         initDictionaryFacilitator();
+                        mIsDownloadingEmojiDict = false;
                         if (mInSearchMode) {
+                            // ponytail: close search mode automatically on successful dictionary download
                             stopSearchMode();
-                            startSearchMode();
                         }
                     });
                 } else {
@@ -1166,6 +1204,7 @@ public final class EmojiPalettesView extends LinearLayout
                 android.util.Log.e("EmojiSearch", "Failed to download dictionary", e);
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                     Toast.makeText(getContext(), "Failed to download dictionary", Toast.LENGTH_SHORT).show();
+                    mIsDownloadingEmojiDict = false;
                     if (mInSearchMode) {
                         stopSearchMode();
                         startSearchMode();

@@ -1,0 +1,7 @@
+- Gboard-style Text Editing panel with cursor & selection controls
+- Dedicated Touchpad settings, Full-screen mode & Close button
+- Persistent clipboard/screenshot dismiss & 1-minute timeout
+- Text expander shortcut prefix fix & layout updates
+- Polished Dictionary settings UI with Material 3 cards
+- Prevent dictionary download path clashes & support fallback locales
+- Unified dictionary toggles & regional cards filtering

@@ -40,6 +40,7 @@ object Defaults {
         LayoutType.CLIPBOARD_BOTTOM -> "clip_bottom_row"
         LayoutType.SHORTCUT_TOP -> "shortcut_top"
         LayoutType.SHORTCUT_BOTTOM -> "shortcut_bottom"
+        LayoutType.HANDWRITING_BOTTOM -> "handwriting_bottom_row"
     }
     
     const val PREF_SPLIT_TOOLBAR = false
@@ -118,6 +119,7 @@ object Defaults {
     const val PREF_SUGGEST_CLIPBOARD_CONTENT = true
     const val PREF_SUGGEST_SCREENSHOTS = false
     const val PREF_COMPRESS_SCREENSHOTS = true
+    const val PREF_AUTO_READ_OTP = false
     const val PREF_GESTURE_INPUT = true
     const val PREF_VIBRATION_DURATION_SETTINGS = -1
     const val PREF_VIBRATION_AMPLITUDE_SETTINGS = -1
@@ -183,13 +185,20 @@ object Defaults {
     const val PREF_LANGUAGE_SWIPE_DISTANCE = 5
     const val PREF_TOUCHPAD_SENSITIVITY = 50
     const val PREF_TOUCHPAD_EDGE_SCROLL = false
+
+    const val PREF_TOUCHPAD_FULLSCREEN = false
     const val PREF_FORCE_AUTO_CAPS = false
     const val PREF_OFFLINE_TEMP = 0.1f  // Lower for faster, more deterministic proofreading
     const val PREF_OFFLINE_TOP_P = 0.5f  // Lower for faster token sampling
+    const val PREF_OFFLINE_TOP_K = 40
+    const val PREF_OFFLINE_MIN_P = 0.05f
+    const val PREF_OFFLINE_SHOW_THINKING = false
     const val PREF_OFFLINE_SYSTEM_PROMPT = "Correct the grammar and spelling. Output only the corrected text."
+    const val PREF_OFFLINE_TRANSLATE_SYSTEM_PROMPT = "Translate the following text to {lang}. Output only the translation, nothing else:\n\n"
     const val PREF_OFFLINE_MAX_TOKENS = 64  // Accurate (64 tokens) default
     const val PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE = "French"
     const val PREF_OFFLINE_KEEP_MODEL_LOADED = false
+    const val PREF_AI_ALLOW_INSECURE_CONNECTIONS = false
     const val PREF_ENABLE_CLIPBOARD_HISTORY = true
     const val PREF_CLIPBOARD_HISTORY_RETENTION_TIME = 15 // minutes
     const val PREF_CLIPBOARD_HISTORY_PINNED_FIRST = true

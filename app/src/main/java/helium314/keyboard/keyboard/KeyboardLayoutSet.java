@@ -227,6 +227,7 @@ public final class KeyboardLayoutSet {
             final int height = ResourceUtils.getKeyboardHeight(context.getResources(), Settings.getValues());
             builder.setKeyboardGeometry(width, height);
             builder.setSubtype(RichInputMethodManager.getInstance().getCurrentSubtype());
+            builder.setSplitLayoutEnabled(Settings.getValues().mIsSplitKeyboardEnabled);
             return builder.build();
         }
 

@@ -35,6 +35,19 @@ object ProofreadHelper {
         private set
     
     /**
+     * Preload the model in the background to avoid initial latency.
+     */
+    @JvmStatic
+    fun preloadModel(context: Context) {
+        val service = ProofreadService(context)
+        val modelPath = service.getModelPath()
+        if (modelPath.isNullOrBlank()) return
+        scope.launch {
+            ProofreadService.ModelHolder.loadModel(context, modelPath)
+        }
+    }
+
+    /**
      * Cancel the current proofreading/translation operation if one is in progress.
      */
     @JvmStatic
@@ -206,7 +219,7 @@ object ProofreadHelper {
             text = text,
             noTextErrorResId = R.string.proofread_no_text,
             errorResId = R.string.proofread_error,
-            apiCall = { service -> service.proofread(text, overridePrompt = prompt) },
+            apiCall = { service -> service.proofread(text, overridePrompt = prompt, showThinking = showThinking) },
             onSuccess = onSuccess,
             onError = onError
         )

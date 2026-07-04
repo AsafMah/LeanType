@@ -3,12 +3,22 @@ package helium314.keyboard.settings.screens
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -20,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
@@ -64,7 +75,9 @@ fun DictionaryScreen(
     val enabledLanguages = SubtypeSettings.getEnabledSubtypes(true).map { it.locale().language }
     val cachedDictFolders = DictionaryInfoUtils.getCacheDirectories(ctx).map { it.name }
     val comparer = compareBy<Locale>({ it.language !in enabledLanguages }, { it.toLanguageTag() !in cachedDictFolders }, { it.displayName })
-    val dictionaryLocales = listOf(Locale(SubtypeLocaleUtils.NO_LANGUAGE)) + getDictionaryLocales(ctx).sortedWith(comparer)
+    val dictionaryLocales = listOf(Locale(SubtypeLocaleUtils.NO_LANGUAGE)) + getDictionaryLocales(ctx)
+        .filter { it.language != SubtypeLocaleUtils.NO_LANGUAGE }
+        .sortedWith(comparer)
     var selectedLocale: Locale? by remember { mutableStateOf(null) }
     var showAddDictDialog by remember { mutableStateOf(false) }
     val dictPicker = dictionaryFilePicker(selectedLocale)
@@ -82,60 +95,102 @@ fun DictionaryScreen(
         },
         itemContent = { locale ->
             if (locale.language == SubtypeLocaleUtils.NO_LANGUAGE) {
-                // Add Dictionary Entry
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                // Card for general actions
+                Card(
                     modifier = Modifier
-                        .padding(vertical = 4.dp, horizontal = 16.dp)
                         .fillMaxWidth()
-                        .clickable { showAddDictDialog = true }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(
-                        stringResource(R.string.add_new_dictionary_title),
-                    )
-                    Icon(painterResource(R.drawable.ic_plus), stringResource(R.string.add_new_dictionary_title))
-                }
-                androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        // Add Dictionary Entry
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showAddDictDialog = true }
+                                .padding(vertical = 14.dp, horizontal = 16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_plus),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(end = 12.dp).size(24.dp)
+                                )
+                                Text(
+                                    stringResource(R.string.add_new_dictionary_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            NextScreenIcon()
+                        }
 
-                // Personal Dictionary Entry
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .padding(vertical = 4.dp, horizontal = 16.dp)
-                        .fillMaxWidth()
-                        .clickable { SettingsDestination.navigateTo(SettingsDestination.PersonalDictionaries) }
-                ) {
-                    Text(
-                        stringResource(R.string.edit_personal_dictionary),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    NextScreenIcon()
-                }
-                androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
 
-                // Blocklist Entry
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .padding(vertical = 4.dp, horizontal = 16.dp)
-                        .fillMaxWidth()
-                        .clickable { SettingsDestination.navigateTo(SettingsDestination.Blocklist) }
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            stringResource(R.string.blocklist),
-                            style = MaterialTheme.typography.titleMedium
+                        // Personal Dictionary Entry
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { SettingsDestination.navigateTo(SettingsDestination.PersonalDictionaries) }
+                                .padding(vertical = 14.dp, horizontal = 16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_dictionary),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(end = 12.dp).size(24.dp)
+                                )
+                                Text(
+                                    stringResource(R.string.edit_personal_dictionary),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            NextScreenIcon()
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
-                        Text(
-                            stringResource(R.string.blocklist_summary),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+
+                        // Blocked Words Entry
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { SettingsDestination.navigateTo(SettingsDestination.BlockedWords) }
+                                .padding(vertical = 14.dp, horizontal = 16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_bin),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(end = 12.dp).size(24.dp)
+                                )
+                                Text(
+                                    stringResource(R.string.edit_blocked_words),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            NextScreenIcon()
+                        }
                     }
-                    NextScreenIcon()
                 }
                 androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
 
@@ -208,58 +263,145 @@ fun DictionaryScreen(
                     )
                 }
                 androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
-                
-                // Personal Dictionary Setting
+
+                // Card for Personal Dictionary Switch Setting
                 val prefs = ctx.prefs()
                 var personalDictEnabled by remember { mutableStateOf(prefs.getBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, Defaults.PREF_ADD_TO_PERSONAL_DICTIONARY)) }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                Card(
                     modifier = Modifier
-                        .padding(vertical = 4.dp, horizontal = 16.dp)
                         .fillMaxWidth()
-                        .clickable {
-                            val newValue = !personalDictEnabled
-                            personalDictEnabled = newValue
-                            ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, newValue) }
-                        }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            stringResource(R.string.add_to_personal_dictionary),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            stringResource(R.string.add_to_personal_dictionary_summary),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .clickable {
+                                val newValue = !personalDictEnabled
+                                personalDictEnabled = newValue
+                                ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, newValue) }
+                            }
+                            .padding(all = 16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                            Text(
+                                stringResource(R.string.add_to_personal_dictionary),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.add_to_personal_dictionary_summary),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = personalDictEnabled,
+                            onCheckedChange = {
+                                personalDictEnabled = it
+                                ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, it) }
+                            }
                         )
                     }
-                    androidx.compose.material3.Switch(
-                        checked = personalDictEnabled,
-                        onCheckedChange = { 
-                            personalDictEnabled = it
-                            ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, it) } 
-                        }
-                    )
                 }
+
+                // Add a "Languages" Section Header
+                Text(
+                    text = stringResource(R.string.language_and_layouts_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp)
+                )
             } else {
-                Column(
-                    Modifier
-                        .clickable { selectedLocale = locale }
-                        .padding(vertical = 6.dp, horizontal = 16.dp)
+                // Premium Language Card
+                Card(
+                    modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .clickable { selectedLocale = locale },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    val (dicts, hasInternal) = getUserAndInternalDictionaries(ctx, locale)
-                    val types = dicts.mapTo(mutableListOf()) { it.name.substringBefore("_${DictionaryInfoUtils.USER_DICTIONARY_SUFFIX}") }
-                    if (hasInternal && !types.contains(Dictionary.TYPE_MAIN))
-                        types.add(0, stringResource(R.string.internal_dictionary_summary))
-                    Text(locale.localizedDisplayName(LocalResources.current))
-                    Text(
-                        types.joinToString(", "),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(all = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = locale.localizedDisplayName(LocalResources.current),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            val (dicts, hasInternal) = getUserAndInternalDictionaries(ctx, locale)
+                            val mainDictLabel = stringResource(R.string.main_dictionary)
+                            val internalDictLabel = stringResource(R.string.internal_dictionary_summary)
+                            val types = dicts.mapTo(mutableListOf()) { file ->
+                                if (file.name == DictionaryInfoUtils.MAIN_DICT_FILE_NAME) {
+                                    mainDictLabel
+                                } else {
+                                    file.name.substringBefore("_${DictionaryInfoUtils.USER_DICTIONARY_SUFFIX}")
+                                }
+                            }
+                            if (hasInternal && !types.contains(Dictionary.TYPE_MAIN) && !types.contains(mainDictLabel))
+                                types.add(0, internalDictLabel)
+
+                            // Render active dictionaries as stylized badges
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (types.isEmpty()) {
+                                    Text(
+                                        text = "No active dictionaries",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                } else {
+                                    types.forEach { type ->
+                                        val badgeColor = when (type.lowercase()) {
+                                            "main", internalDictLabel.lowercase(), mainDictLabel.lowercase() -> MaterialTheme.colorScheme.primaryContainer
+                                            "user" -> MaterialTheme.colorScheme.secondaryContainer
+                                            else -> MaterialTheme.colorScheme.tertiaryContainer
+                                        }
+                                        val badgeTextColor = when (type.lowercase()) {
+                                            "main", internalDictLabel.lowercase(), mainDictLabel.lowercase() -> MaterialTheme.colorScheme.onPrimaryContainer
+                                            "user" -> MaterialTheme.colorScheme.onSecondaryContainer
+                                            else -> MaterialTheme.colorScheme.onTertiaryContainer
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(badgeColor)
+                                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = type,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = badgeTextColor,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        NextScreenIcon()
+                    }
                 }
             }
         }
@@ -289,26 +431,46 @@ fun DictionaryScreen(
     }
 }
 
-/** @return list of user dictionary files and whether an internal dictionary exists */
 fun getUserAndInternalDictionaries(context: Context, locale: Locale): Pair<List<File>, Boolean> {
     val userDicts = mutableListOf<File>()
     var hasInternalDict = false
-    val userLocaleDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { File(it) }
-    if (userLocaleDir?.exists() == true && userLocaleDir.isDirectory) {
-        userLocaleDir.listFiles()?.forEach {
-            if (it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX))
-                userDicts.add(it)
-            else if (it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX))
-                hasInternalDict = true
+
+    var userLocaleDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { File(it) }
+    var hasFiles = userLocaleDir?.exists() == true && userLocaleDir.isDirectory && userLocaleDir.listFiles()?.any {
+        it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX) || it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX) || it.name.endsWith(".dict")
+    } == true
+
+    if (!hasFiles && (locale.country.isNotEmpty() || locale.variant.isNotEmpty())) {
+        val fallbackLocale = Locale(locale.language)
+        val fallbackDir = DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
+        val hasFallbackFiles = fallbackDir?.exists() == true && fallbackDir.isDirectory && fallbackDir.listFiles()?.any {
+            it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX) || it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX) || it.name.endsWith(".dict")
+        } == true
+        if (hasFallbackFiles) {
+            userLocaleDir = fallbackDir
         }
     }
-    if (hasInternalDict)
-        return userDicts to true
-    val internalDicts = DictionaryInfoUtils.getAssetsDictionaryList(context) ?: return userDicts to false
-    val best = LocaleUtils.getBestMatch(locale, internalDicts.toList()) {
-        DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(it)
+
+    if (userLocaleDir?.exists() == true && userLocaleDir.isDirectory) {
+        userLocaleDir.listFiles()?.forEach {
+            if (it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX)) {
+                userDicts.add(it)
+            } else if (it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX)) {
+                hasInternalDict = true
+            } else if (it.name.endsWith(".dict")) {
+                userDicts.add(it)
+            }
+        }
     }
-    return userDicts to (best != null)
+    val internalDicts = DictionaryInfoUtils.getAssetsDictionaryList(context)
+    val best = internalDicts?.let {
+        LocaleUtils.getBestMatch(locale, it.toList()) { dict ->
+            DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(dict)
+        }
+    }
+    val hasAsset = best != null
+
+    return userDicts to (hasInternalDict || hasAsset)
 }
 
 @Preview

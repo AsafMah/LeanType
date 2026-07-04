@@ -113,6 +113,8 @@ public interface DictionaryFacilitator {
     /** permanently blocks the word: removes it from editable dictionaries and adds it to the blacklist */
     void blockWord(String word);
 
+    void reloadBlacklist();
+
     void closeDictionaries();
 
     /** main dictionaries are loaded asynchronously after resetDictionaries */

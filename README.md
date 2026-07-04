@@ -22,23 +22,28 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 ### On top of that — LeanType's AI layer and quality-of-life features
 
 - **[🤖 Multi-Provider AI](docs/FEATURES.md#supported-ai-providers)** - Proofread using **Gemini**, **Groq** (Llama 3, Mixtral), or **OpenAI-compatible** providers, with dynamic fetching of the latest models.
-- **[🛡️ Offline AI](docs/FEATURES.md#5-offline-proofreading-privacy-focused)** - Private, on-device proofreading and translation using ONNX models (Offline build only).
+- **[🛡️ Offline AI (GGUF)](docs/FEATURES.md#5-offline-proofreading-privacy-focused)** - Private, on-device proofreading and translation using local **GGUF models** powered by `llama.cpp` (Offline build only).
 - **🌐 AI Translation** - Translate selected text using your chosen provider, with a separate model selector.
+- **[✍️ Handwriting Input](docs/FEATURES.md#8-handwriting-input)** - Draw characters directly on a handwriting recognition canvas (Standard version, requires [Leantype-Handwriting-Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin)).
 - **[🧠 Custom AI Keys](docs/FEATURES.md#4-custom-ai-keys--keywords)** - Assign custom prompts, personas (#editor, #proofread), and labels/tags (themed capsules) to 10 customizable toolbar keys.
-- **📝 Text Expander** - Shortcut → expansion with dynamic placeholders (`%clipboard%`, `%day%`, `%time12%`, `%cursor%`, lists), backspace-to-revert, and a guide.
+- **📝 Text Expander** - Shortcut → expansion with dynamic placeholders (`%clipboard%`, `%day%`, `%time12%`, `%cursor%`, lists), regex shortcuts, backspace-to-revert, and a guide.
 - **🧠 Smarter learned words** - *graduated trust* keeps a just-learned word below real-dictionary suggestions until you've used it a few times (no premature autocorrect to half-typed words); flag unknown words to **Add** or **Block** them via a Blocklist screen.
 - **↩️ Undo word** - a toolbar key that reverts the last committed word back to its suggestion alternatives.
 - **🗂️ Per-dictionary control** - enable or disable individual built-in and custom dictionaries.
+- **📥 Dynamic Downloader** - Standard builds can download layout dictionaries, emoji dictionaries, and handwriting plugins on demand, keeping the initial app smaller.
 - **🪟 Floating Keyboard** - Detach the keyboard into a draggable, resizable window (true OS-level overlay), with an optional persistent mode.
 - **⌨️ Dual Toolbar / Split Suggestions** - Split the suggestion strip and toolbar for easier reach.
 - **🖱️ Touchpad Mode** - Swipe the spacebar up for a cursor touchpad with sensitivity controls and edge-scroll acceleration, including a full-screen laptop-style mode.
+- **✍️ Text editing mode** - A toolbar key opens a text-editing overlay for selection, cursor movement, and clipboard actions.
 - **🎨 Modern UI** - "Squircle" key backgrounds, refined icons, and polished aesthetics.
 - **🔄 Google Dictionary Import** - Import your personal dictionary words.
 - **🔍 Clipboard Search & Undo** - Search clipboard history from the toolbar, undo accidental deletions, and fold pinned items by default.
 - **📸 Screenshot Suggestion & Clipboard** - Recently-taken screenshots are offered in the suggestion strip and saved to clipboard history.
+- **✉️ Auto-Read OTP** - Incoming one-time codes can appear in the suggestion strip for quick insertion.
+- **💾 Selective Backup & Restore** - Backup and restore settings, dictionaries, and AI prompt configuration selectively.
 - **🔎 Emoji Search** - Search emojis by name. *Requires loading an Emoji Dictionary.*
 - **⚙️ Enhanced Customization** - Force auto-capitalization, fine-grained haptics, distinct incognito icon, reorganized settings, and more.
-- **🔒 Privacy Choices** - Choose **Standard** (opt-in AI), **Offline** (network hard-disabled, offline model), or **Offline Lite** (no AI, ~20 MB).
+- **🔒 Privacy Choices** - Choose **Standard** (opt-in AI, handwriting), **Offline** (network hard-disabled, offline GGUF model), or **Offline Lite** (no AI, ~20 MB).
 
 
 
@@ -73,20 +78,22 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
   </tr>
 </table>
 
+> **⚠️ Note:** F-Droid releases might be delayed or stuck again due to reproducibility verification issues. For the latest version, use GitHub Releases or Obtainium.
+
 ### 📦 Choose Your Version
 
 #### 1. Standard Version (`-standard-release.apk`)
-*   **Features:** Full suite including **AI Proofreading**, **AI Translation**, and **Gesture Library Downloader**.
-*   **Permissions:** Request `INTERNET` permission (used *only* when you explicitly use AI features).
-*   **Setup:** Use the built-in downloader for Gesture Typing. Configure AI keys in Settings.
+*   **Features:** Full suite including **AI Proofreading**, **AI Translation**, **Handwriting Input**, and **Gesture Library Downloader**.
+*   **Permissions:** Request `INTERNET` permission (used *only* when you explicitly use AI features, download plugins, or update libraries).
+*   **Setup:** Use the built-in downloader for Gesture Typing and Handwriting Input. Configure AI keys in Settings.
 
 #### 2. Offline Version (`-offline-release.apk`)
-*   **Features:** All UI/UX enhancements and **Offline Neural Proofreading** (ONNX).
+*   **Features:** All UI/UX enhancements and **Offline Neural Proofreading** (via `llama.cpp` using local **GGUF models**).
 *   **Permissions:** **NO INTERNET PERMISSION**. Guaranteed at OS level.
 *   **Best For:** Privacy purists.
 *   **Manual Setup Required:**
     *   **Gesture Typing:** [Download library manually](https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs) and load via *Settings > Gesture typing*.
-    *   **Offline AI:** Download ONNX models and load via *Settings > AI Integration*. 👉 **[See Offline Setup Instructions](docs/FEATURES.md#3-offline-proofreading-privacy-focused)**
+    *   **Offline AI:** Download GGUF models and load via *Settings > Advanced > GGUF Model (.gguf)*. 👉 **[See Offline Setup Instructions](docs/FEATURES.md#5-offline-proofreading-privacy-focused)**
 
 #### 3. Offline Lite Version (`-offlinelite-release.apk`)
 *   **Features:** All UI/UX enhancements but **NO AI FEATURES**.

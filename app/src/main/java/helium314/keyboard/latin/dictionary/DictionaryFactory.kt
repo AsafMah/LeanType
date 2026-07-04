@@ -69,7 +69,8 @@ object DictionaryFactory {
         val header = DictionaryInfoUtils.getDictionaryFileHeaderOrNull(file)
         if (header != null) {
             val prefs = context.prefs()
-            if (!prefs.getBoolean("pref_dict_enabled_${header.mIdString}", true)) {
+            val mainPrefKey = "pref_dict_enabled_main:${header.mIdString.substringAfter(":")}"
+            if (!prefs.getBoolean(mainPrefKey, true) || !prefs.getBoolean("pref_dict_enabled_${header.mIdString}", true)) {
                 Log.i("DictionaryFactory", "skipping disabled dictionary ${header.mIdString}")
                 return
             }

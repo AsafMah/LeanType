@@ -27,7 +27,7 @@ fun AIIntegrationScreen(
         return
     }
 
-    if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardOptimised") {
+    if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
         StandardAIIntegrationScreen(onClickBack)
     } else {
         OfflineAIIntegrationScreen(onClickBack)
@@ -79,6 +79,7 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
                 add(SettingsWithoutKey.HUGGINGFACE_TOKEN)
                 add(SettingsWithoutKey.HUGGINGFACE_MODEL)
                 add(SettingsWithoutKey.HUGGINGFACE_ENDPOINT)
+                add(SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS)
                 add(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE)
                 add(SettingsWithoutKey.TRANSLATE_HUGGINGFACE_MODEL)
             }
@@ -95,6 +96,7 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
 @Composable
 private fun OfflineAIIntegrationScreen(onClickBack: () -> Unit) {
     val items = listOf(
+        SettingsWithoutKey.CUSTOM_AI_KEYS,
         SettingsWithoutKey.OFFLINE_MODEL_PATH,
         SettingsWithoutKey.OFFLINE_KEEP_MODEL_LOADED
     )

@@ -24,6 +24,11 @@ object ProofreadHelper {
         private set
     
     @JvmStatic
+    fun preloadModel(context: Context) {
+        // No-op for offlinelite flavor (no AI support)
+    }
+
+    @JvmStatic
     fun cancelCurrentOperation() { /* No-op */ }
     
     // Callback interface

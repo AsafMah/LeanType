@@ -16,14 +16,14 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.asafmah.leantypedual"
         minSdk = 21
         targetSdk = 35
-        versionCode = 3910
-        versionName = "3.9.1"
+        versionCode = 4000
+        versionName = "3.10.0"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
@@ -32,19 +32,20 @@ android {
         }
     }
 
-    // ONNX Runtime is used instead of llama.cpp native build
-
     flavorDimensions += "privacy"
     productFlavors {
         create("standard") {
             dimension = "privacy"
+            minSdk = 23
         }
-        create("standardOptimised") {
+        create("standardfull") {
             dimension = "privacy"
+            minSdk = 23
         }
         create("offline") {
             dimension = "privacy"
             applicationIdSuffix = ".offline"
+            minSdk = 26
         }
         create("offlinelite") {
             dimension = "privacy"
@@ -105,9 +106,9 @@ android {
             val flavor = productFlavors.firstOrNull()?.name ?: ""
             val number = when(flavor) {
                 "standard" -> "1"
+                "standardfull" -> "1"
                 "offline" -> "2"
                 "offlinelite" -> "3"
-                "standardOptimised" -> "4"
                 else -> ""
             }
             if (number.isNotEmpty()) {
@@ -120,12 +121,27 @@ android {
         }
         // got a little too big for GitHub after some dependency upgrades, so we remove the largest dictionary
         androidComponents.onVariants { variant: ApplicationVariant ->
+            val patterns = mutableListOf<String>()
             if (variant.buildType == "debug") {
-                variant.androidResources.ignoreAssetsPatterns = listOf("main_ro.dict")
+                patterns.add("main_ro.dict")
                 variant.proguardFiles = emptyList()
                 //noinspection ProguardAndroidTxtUsage we intentionally use the "normal" file here
                 variant.proguardFiles.add(project.layout.buildDirectory.file(getDefaultProguardFile("proguard-android.txt").absolutePath))
                 variant.proguardFiles.add(project.layout.buildDirectory.file(project.buildFile.parent + "/proguard-rules.pro"))
+            }
+            if (variant.flavorName == "standard" || variant.flavorName == "standardfull") {
+                // ponytail: dynamically find all dict files to ignore in standard flavor except main_en-US.dict
+                val dictsDir = project.file("src/main/assets/dicts")
+                if (dictsDir.exists() && dictsDir.isDirectory) {
+                    dictsDir.listFiles()?.forEach { file ->
+                        if (file.name.endsWith(".dict") && file.name != "main_en-US.dict") {
+                            patterns.add(file.name)
+                        }
+                    }
+                }
+            }
+            if (patterns.isNotEmpty()) {
+                variant.androidResources.ignoreAssetsPatterns = patterns
             }
         }
     }
@@ -141,7 +157,7 @@ android {
             path = File("src/main/jni/Android.mk")
         }
     }
-//    ndkVersion = "28.0.13004108"
+    ndkVersion = "28.0.13004108"
 
     packaging {
         jniLibs {
@@ -197,10 +213,8 @@ android {
     }
 
     sourceSets {
-        getByName("standardOptimised") {
+        getByName("standardfull") {
             java.srcDirs("src/standard/java")
-            res.srcDirs("src/standard/res")
-            manifest.srcFile("src/standard/AndroidManifest.xml")
         }
     }
 }
@@ -231,12 +245,24 @@ dependencies {
     // gemini ai proofreading
     "standardImplementation"("com.google.ai.client.generativeai:generativeai:0.9.0")
     "standardImplementation"("androidx.security:security-crypto:1.1.0-alpha06") // for encrypted API key storage
-    "standardOptimisedImplementation"("com.google.ai.client.generativeai:generativeai:0.9.0")
-    "standardOptimisedImplementation"("androidx.security:security-crypto:1.1.0-alpha06")
+    "standardfullImplementation"("com.google.ai.client.generativeai:generativeai:0.9.0")
+    "standardfullImplementation"("androidx.security:security-crypto:1.1.0-alpha06")
 
     // local llm proofreading (offline)
-    // ONNX Runtime for T5 encoder-decoder grammar models
-    "offlineImplementation"("com.microsoft.onnxruntime:onnxruntime-android:1.17.3")
+    "offlineImplementation"("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
+
+    // Force 16 KB page-aligned version of graphics-path
+    implementation("androidx.graphics:graphics-path:1.1.0")
+
+    // WorkManager — required by ML Kit Digital Ink plugin (loaded via DexClassLoader).
+    // ML Kit internally calls WorkManager.getInstance(context) using the host app context,
+    // so the host app must have WorkManagerInitializer registered in its manifest.
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
+
+    // ML Kit Digital Ink Recognition — required by the handwriting plugin.
+    // ML Kit's internal asset manager and native library loader use the host app context,
+    // so the host app must compile and include the client library resources/libraries.
+    "standardfullImplementation"("com.google.mlkit:digital-ink-recognition:19.0.0")
 
     // test
     testImplementation(kotlin("test"))
@@ -255,11 +281,9 @@ dependencies {
     "runTestsImplementation"("androidx.compose.ui:ui-test-manifest")
 }
 
-// Disable baseline/ART profile tasks to guarantee deterministic reproducible builds (except for standardOptimised)
+// Disable baseline/ART profile tasks to guarantee deterministic reproducible builds
 tasks.configureEach {
     if (name.contains("ArtProfile", ignoreCase = true)) {
-        if (!name.contains("StandardOptimised", ignoreCase = true)) {
-            enabled = false
-        }
+        enabled = false
     }
 }

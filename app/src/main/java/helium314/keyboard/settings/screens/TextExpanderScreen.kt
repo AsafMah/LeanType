@@ -71,12 +71,12 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = context.prefs()
 
-    var prefixText by remember {
-        mutableStateOf(TextExpanderUtils.getPrefix(context))
-    }
-    
     var isExpanderEnabled by remember {
         mutableStateOf(TextExpanderUtils.isEnabled(context))
+    }
+
+    var isImmediateEnabled by remember {
+        mutableStateOf(TextExpanderUtils.isImmediateEnabled(context))
     }
 
     var shortcutsMap by remember {
@@ -86,9 +86,11 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
     var isGuideExpanded by remember { mutableStateOf(false) }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingPrefix by remember { mutableStateOf("") }
     var editingShortcut by remember { mutableStateOf("") }
     var editingTemplate by remember { mutableStateOf(TextFieldValue("")) }
     var originalShortcutToEdit by remember { mutableStateOf<String?>(null) }
+    var editingIsRegex by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         SearchScreen(
@@ -103,22 +105,29 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
             },
             filteredItems = { term ->
                 shortcutsMap.entries
-                    .filter { (shortcut, template) ->
-                        shortcut.contains(term, ignoreCase = true) ||
-                        template.contains(term, ignoreCase = true)
+                    .filter { (shortcut, entry) ->
+                        val isRegex = shortcut.startsWith(TextExpanderUtils.REGEX_PREFIX)
+                        val cleanKey = if (isRegex) shortcut.substring(TextExpanderUtils.REGEX_PREFIX.length) else shortcut
+                        val rawShortcut = cleanKey.substring(entry.prefix.length)
+                        val displayShortcut = entry.prefix + rawShortcut
+                        displayShortcut.contains(term, ignoreCase = true) ||
+                        entry.template.contains(term, ignoreCase = true)
                     }
                     .map { Pair(it.key, it.value) }
             },
-            itemContent = { (shortcut, template) ->
+            itemContent = { (shortcut, entry) ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                     ShortcutItem(
                         shortcut = shortcut,
-                        template = template,
-                        prefix = prefixText,
+                        entry = entry,
                         onEdit = {
-                            editingShortcut = shortcut
-                            editingTemplate = TextFieldValue(template)
+                            val isRegex = shortcut.startsWith(TextExpanderUtils.REGEX_PREFIX)
+                            val cleanKey = if (isRegex) shortcut.substring(TextExpanderUtils.REGEX_PREFIX.length) else shortcut
+                            editingPrefix = entry.prefix
+                            editingShortcut = cleanKey.substring(entry.prefix.length)
+                            editingTemplate = TextFieldValue(entry.template)
                             originalShortcutToEdit = shortcut
+                            editingIsRegex = isRegex
                             showAddDialog = true
                         },
                         onDelete = {
@@ -202,13 +211,13 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                                         StepBadge(num = "1")
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "Set a Shortcut Prefix",
+                                                text = "Specify Shortcut Prefix",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
-                                                text = "Choose a prefix like '.' or ';' under prefix configuration to prevent accidental expansions.",
+                                                text = "Configure an optional prefix like '.' or ';' per shortcut on the edit screen to prevent accidental expansions.",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -305,19 +314,25 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                         onCheckedChange = { isExpanderEnabled = it }
                     )
 
-                    // 2. Custom Prefix Configuration
-                    OutlinedTextField(
-                        value = prefixText,
-                        onValueChange = {
-                            prefixText = it
-                            prefs.edit { putString(TextExpanderUtils.PREF_PREFIX, it) }
-                        },
-                        label = { Text("Shortcut Prefix (e.g. '..', '.', ';', or blank)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        enabled = isExpanderEnabled
+                    SwitchPreference(
+                        name = "Expand immediately",
+                        key = TextExpanderUtils.PREF_IMMEDIATE,
+                        default = false,
+                        description = "Expand shortcuts immediately without pressing space.",
+                        enabled = isExpanderEnabled,
+                        onCheckedChange = { isImmediateEnabled = it }
                     )
+
+                    SwitchPreference(
+                        name = "Expand immediately",
+                        key = TextExpanderUtils.PREF_IMMEDIATE,
+                        default = false,
+                        description = "Expand shortcuts immediately without pressing space.",
+                        enabled = isExpanderEnabled,
+                        onCheckedChange = { isImmediateEnabled = it }
+                    )
+
+                    // global prefix config removed
 
                     // 3. Section Title / Header for shortcuts
                     Text(
@@ -376,15 +391,18 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                             }
                         }
                     } else {
-                        shortcutsMap.forEach { (shortcut, template) ->
+                        shortcutsMap.forEach { (shortcut, entry) ->
                             ShortcutItem(
                                 shortcut = shortcut,
-                                template = template,
-                                prefix = prefixText,
+                                entry = entry,
                                 onEdit = {
-                                    editingShortcut = shortcut
-                                    editingTemplate = TextFieldValue(template)
+                                    val isRegex = shortcut.startsWith(TextExpanderUtils.REGEX_PREFIX)
+                                    val cleanKey = if (isRegex) shortcut.substring(TextExpanderUtils.REGEX_PREFIX.length) else shortcut
+                                    editingPrefix = entry.prefix
+                                    editingShortcut = cleanKey.substring(entry.prefix.length)
+                                    editingTemplate = TextFieldValue(entry.template)
                                     originalShortcutToEdit = shortcut
+                                    editingIsRegex = isRegex
                                     showAddDialog = true
                                 },
                                 onDelete = {
@@ -409,6 +427,7 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                     editingShortcut = ""
                     editingTemplate = TextFieldValue("")
                     originalShortcutToEdit = null
+                    editingIsRegex = false
                     showAddDialog = true
                 },
                 text = { Text("Add Shortcut") },
@@ -425,20 +444,28 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
     if (showAddDialog) {
         val focusRequester = remember { FocusRequester() }
         val isEditMode = originalShortcutToEdit != null
+        val isRegexValid = remember(editingShortcut, editingIsRegex) {
+            !editingIsRegex || runCatching { Regex(editingShortcut.trim()) }.isSuccess
+        }
         
         ThreeButtonAlertDialog(
             onDismissRequest = { showAddDialog = false },
             onConfirmed = {
                 val updated = shortcutsMap.toMutableMap()
-                if (isEditMode && originalShortcutToEdit != editingShortcut) {
+                if (isEditMode) {
                     updated.remove(originalShortcutToEdit)
                 }
-                updated[editingShortcut.trim()] = editingTemplate.text
+                val key = if (editingIsRegex) {
+                    TextExpanderUtils.REGEX_PREFIX + editingPrefix.trim() + editingShortcut.trim()
+                } else {
+                    editingPrefix.trim() + editingShortcut.trim()
+                }
+                updated[key] = TextExpanderUtils.ShortcutEntry(editingTemplate.text, editingPrefix.trim())
                 shortcutsMap = updated
                 TextExpanderUtils.saveShortcuts(context, updated)
                 showAddDialog = false
             },
-            checkOk = { editingShortcut.trim().isNotEmpty() && editingTemplate.text.isNotEmpty() },
+            checkOk = { editingShortcut.trim().isNotEmpty() && editingTemplate.text.isNotEmpty() && isRegexValid },
             confirmButtonText = if (isEditMode) "Save" else "Add",
             neutralButtonText = if (isEditMode) "Delete" else null,
             onNeutral = {
@@ -458,15 +485,53 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                     focusRequester.requestFocus()
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextField(
-                        value = editingShortcut,
-                        onValueChange = { editingShortcut = it.replace(" ", "") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester),
-                        singleLine = true,
-                        label = { Text("Shortcut (e.g. 'brb', 'em')") }
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextField(
+                            value = editingPrefix,
+                            onValueChange = { editingPrefix = it.replace(" ", "") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Prefix (optional)") }
+                        )
+                        TextField(
+                            value = editingShortcut,
+                            onValueChange = { editingShortcut = if (editingIsRegex) it else it.replace(" ", "") },
+                            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                            singleLine = true,
+                            label = { Text(if (editingIsRegex) "Regex Pattern" else "Shortcut (e.g. 'brb')") }
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Regular Expression",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        androidx.compose.material3.Switch(
+                            checked = editingIsRegex,
+                            onCheckedChange = { checked ->
+                                editingIsRegex = checked
+                                if (!checked) {
+                                    editingShortcut = editingShortcut.replace(" ", "")
+                                }
+                            }
+                        )
+                    }
+
+                    if (editingIsRegex && !isRegexValid) {
+                        Text(
+                            text = "⚠️ Invalid regular expression pattern",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     
                     OutlinedTextField(
                         value = editingTemplate,
@@ -533,11 +598,14 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
 @Composable
 private fun ShortcutItem(
     shortcut: String,
-    template: String,
-    prefix: String,
+    entry: TextExpanderUtils.ShortcutEntry,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val isRegex = shortcut.startsWith(TextExpanderUtils.REGEX_PREFIX)
+    val cleanKey = if (isRegex) shortcut.substring(TextExpanderUtils.REGEX_PREFIX.length) else shortcut
+    val rawShortcut = cleanKey.substring(entry.prefix.length)
+    val displayShortcut = entry.prefix + rawShortcut
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -556,7 +624,10 @@ private fun ShortcutItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
@@ -564,21 +635,36 @@ private fun ShortcutItem(
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "$prefix$shortcut",
+                            text = displayShortcut,
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                         )
                     }
+                    if (isRegex) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.tertiaryContainer)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Regex",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = template,
+                    text = entry.template,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
-                    fontFamily = if (template.contains("%")) androidx.compose.ui.text.font.FontFamily.Monospace else null
+                    fontFamily = if (entry.template.contains("%")) androidx.compose.ui.text.font.FontFamily.Monospace else null
                 )
             }
             

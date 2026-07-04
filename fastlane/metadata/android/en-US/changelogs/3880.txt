@@ -1,0 +1,13 @@
+- Exclude non-en-US dictionaries from standard flavor assets to reduce app size
+- Add dynamic dictionary downloader and uninstaller for standard flavor
+- Add download button on keyboard toolbar when layout dictionary is missing
+- Allow deleting downloaded handwriting models in settings
+- Tune double-tap shift timing and improve stability of handwriting gestures
+- Restore close/search icons on clipboard toolbar
+- Fix settings displaying disabled additional subtypes in dictionaries list
+- Keep number row digits when keyboard is shifted to uppercase
+- Fix WindowManager$BadTokenException crash on IME overlay dialogs
+- Fix recently used emojis getting stuck on split toolbar
+- Close emoji search automatically when dictionary download completes
+- Show emoji dictionary download button on split toolbar when missing
+- Show handwriting plugin download button on canvas when missing

@@ -163,9 +163,9 @@ public final class TimerHandler extends LeakGuardHandlerWrapper<DrawingProxy>
 
     @Override
     public void startDoubleTapShiftKeyTimer() {
-        sendMessageDelayed(obtainMessage(MSG_DOUBLE_TAP_SHIFT_KEY),
-                ViewConfiguration.getDoubleTapTimeout());
+        sendMessageDelayed(obtainMessage(MSG_DOUBLE_TAP_SHIFT_KEY), 300);
     }
+
 
     @Override
     public void cancelDoubleTapShiftKeyTimer() {
@@ -218,6 +218,7 @@ public final class TimerHandler extends LeakGuardHandlerWrapper<DrawingProxy>
 
     public void cancelAllMessages() {
         cancelAllKeyTimers();
+        cancelDoubleTapShiftKeyTimer();
         cancelAllUpdateBatchInputTimers();
         removeMessages(MSG_DISMISS_KEY_PREVIEW);
         removeMessages(MSG_DISMISS_GESTURE_FLOATING_PREVIEW_TEXT);

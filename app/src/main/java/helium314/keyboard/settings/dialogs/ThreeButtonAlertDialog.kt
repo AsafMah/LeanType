@@ -32,6 +32,90 @@ import helium314.keyboard.settings.Theme
 import helium314.keyboard.settings.previewDark
 
 @Composable
+fun ThreeButtonAlertDialogContent(
+    onDismissRequest: () -> Unit,
+    onConfirmed: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: @Composable (() -> Unit)? = null,
+    title: @Composable (() -> Unit)? = null,
+    content: @Composable (() -> Unit)? = null,
+    scrollContent: Boolean = false,
+    onNeutral: () -> Unit = { },
+    checkOk: () -> Boolean = { true },
+    confirmButtonText: String? = stringResource(android.R.string.ok),
+    cancelButtonText: String = stringResource(android.R.string.cancel),
+    neutralButtonText: String? = null,
+) {
+    Box(
+        modifier = modifier.widthIn(min = 280.dp, max = 560.dp),
+        propagateMinConstraints = true
+    ) {
+        Surface(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            contentColor = contentColorFor(MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                icon?.let {
+                    Box(
+                        Modifier
+                            .padding(bottom = 16.dp)
+                            .align(androidx.compose.ui.Alignment.CenterHorizontally)
+                    ) {
+                        CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.primary) {
+                            icon()
+                        }
+                    }
+                }
+                title?.let {
+                    CompositionLocalProvider(
+                        LocalTextStyle provides MaterialTheme.typography.headlineSmall,
+                        androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.primary
+                    ) {
+                        Box(Modifier.padding(bottom = 16.dp)) {
+                            title()
+                        }
+                    }
+                }
+                content?.let {
+                    CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.bodyMedium) {
+                        if (scrollContent) {
+                            val scrollState = rememberScrollState()
+                            Box(Modifier
+                                .weight(weight = 1f, fill = false)
+                                .padding(bottom = 24.dp)
+                                .verticalScroll(scrollState)
+                            ) {
+                                content()
+                            }
+                        } else {
+                            Box(Modifier.weight(weight = 1f, fill = false).padding(bottom = 24.dp)) {
+                                content()
+                            }
+                        }
+                    }
+                }
+                Row {
+                    if (neutralButtonText != null)
+                        TextButton(
+                            onClick = onNeutral
+                        ) { Text(neutralButtonText) }
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onDismissRequest) { Text(cancelButtonText) }
+                    if (confirmButtonText != null)
+                        TextButton(
+                            enabled = checkOk(),
+                            onClick = { onConfirmed(); onDismissRequest() },
+                        ) { Text(confirmButtonText) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun ThreeButtonAlertDialog(
     onDismissRequest: () -> Unit,
     onConfirmed: () -> Unit,
@@ -52,73 +136,20 @@ fun ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,
         properties = properties
     ) {
-        Box(
-            modifier = modifier.widthIn(min = 280.dp, max = 560.dp),
-            propagateMinConstraints = true
-        ) {
-            Surface(
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
-                contentColor = contentColorFor(MaterialTheme.colorScheme.surface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    icon?.let {
-                        Box(
-                            Modifier
-                                .padding(bottom = 16.dp)
-                                .align(androidx.compose.ui.Alignment.CenterHorizontally)
-                        ) {
-                            CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.primary) {
-                                icon()
-                            }
-                        }
-                    }
-                    title?.let {
-                        CompositionLocalProvider(
-                            LocalTextStyle provides MaterialTheme.typography.headlineSmall,
-                            androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.primary
-                        ) {
-                            Box(Modifier.padding(bottom = 16.dp)) {
-                                title()
-                            }
-                        }
-                    }
-                    content?.let {
-                        CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.bodyMedium) {
-                            if (scrollContent) {
-                                val scrollState = rememberScrollState()
-                                Box(Modifier
-                                    .weight(weight = 1f, fill = false)
-                                    .padding(bottom = 24.dp)
-                                    .verticalScroll(scrollState)
-                                ) {
-                                    content()
-                                }
-                            } else {
-                                Box(Modifier.weight(weight = 1f, fill = false).padding(bottom = 24.dp)) {
-                                    content()
-                                }
-                            }
-                        }
-                    }
-                    Row {
-                        if (neutralButtonText != null)
-                            TextButton(
-                                onClick = onNeutral
-                            ) { Text(neutralButtonText) }
-                        Spacer(Modifier.weight(1f))
-                        TextButton(onClick = onDismissRequest) { Text(cancelButtonText) }
-                        if (confirmButtonText != null)
-                            TextButton(
-                                enabled = checkOk(),
-                                onClick = { onConfirmed(); onDismissRequest() },
-                            ) { Text(confirmButtonText) }
-                    }
-                }
-            }
-        }
+        ThreeButtonAlertDialogContent(
+            onDismissRequest = onDismissRequest,
+            onConfirmed = onConfirmed,
+            modifier = modifier,
+            icon = icon,
+            title = title,
+            content = content,
+            scrollContent = scrollContent,
+            onNeutral = onNeutral,
+            checkOk = checkOk,
+            confirmButtonText = confirmButtonText,
+            cancelButtonText = cancelButtonText,
+            neutralButtonText = neutralButtonText
+        )
     }
 }
 

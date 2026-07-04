@@ -62,14 +62,14 @@ class ProofreadService(private val context: Context) {
     val prefs: SharedPreferences get() = context.prefs()
 
     // Provider selection
-    fun getProvider(): AIProvider {
-        val providerStr = context.prefs().getString(KEY_PROVIDER, AIProvider.GEMINI.name)
-        return try {
-            AIProvider.valueOf(providerStr ?: AIProvider.GEMINI.name)
-        } catch (e: IllegalArgumentException) {
-            AIProvider.GEMINI
-        }
-    }
+fun getProvider(): AIProvider {
+val providerStr = context.prefs().getString(KEY_PROVIDER, AIProvider.GEMINI.name)
+return try {
+AIProvider.valueOf(providerStr ?: AIProvider.GEMINI.name)
+} catch (e: IllegalArgumentException) {
+AIProvider.GEMINI
+}
+}
 
     fun setProvider(provider: AIProvider) {
         context.prefs().edit().putString(KEY_PROVIDER, provider.name).apply()
@@ -171,6 +171,8 @@ class ProofreadService(private val context: Context) {
     fun unloadModel() { /* No-op */ }
     fun getSystemPrompt(): String = "Fix grammar and spelling"
     fun setSystemPrompt(prompt: String) { /* No-op */ }
+    fun getTranslateSystemPrompt(): String = ""
+    fun setTranslateSystemPrompt(prompt: String) { /* No-op */ }
     fun getDecoderPath(): String? = null
     fun setDecoderPath(path: String?) { /* No-op */ }
     fun getTokenizerPath(): String? = null
@@ -237,6 +239,13 @@ class ProofreadService(private val context: Context) {
     fun setHuggingFaceEndpoint(endpoint: String) {
         securePrefs.edit().putString(KEY_HF_ENDPOINT, endpoint.trim()).apply()
     }
+
+    fun isAllowInsecureConnections(): Boolean =
+        context.prefs().getBoolean(
+            helium314.keyboard.latin.settings.Settings.PREF_AI_ALLOW_INSECURE_CONNECTIONS,
+            helium314.keyboard.latin.settings.Defaults.PREF_AI_ALLOW_INSECURE_CONNECTIONS
+        )
+
 
     /**
      * Tests the API key by making a simple request.
@@ -463,9 +472,22 @@ class ProofreadService(private val context: Context) {
             )
         }
 
-        val url = URL(getHuggingFaceEndpoint())
+        val endpoint = getHuggingFaceEndpoint()
+        val isHttp = endpoint.startsWith("http://", ignoreCase = true)
+        val allowInsecure = isAllowInsecureConnections()
+
+        if (isHttp && !allowInsecure) {
+            return Result.failure(
+                ProofreadException(context.getString(R.string.insecure_connection_blocked))
+            )
+        }
+
+        val url = URL(endpoint)
         val connection = url.openConnection() as HttpURLConnection
-        
+        if (allowInsecure && connection is javax.net.ssl.HttpsURLConnection) {
+            bypassSSLVerification(connection)
+        }
+
         return try {
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
@@ -511,6 +533,22 @@ class ProofreadService(private val context: Context) {
         }
     }
 
+    private fun bypassSSLVerification(connection: javax.net.ssl.HttpsURLConnection) {
+        try {
+            val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
+                override fun checkClientTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) {}
+                override fun checkServerTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) {}
+                override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+            })
+            val sslContext = javax.net.ssl.SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+            connection.sslSocketFactory = sslContext.socketFactory
+            connection.hostnameVerifier = javax.net.ssl.HostnameVerifier { _, _ -> true }
+        } catch (e: Exception) {
+            Log.e("ProofreadService", "Failed to bypass SSL verification", e)
+        }
+    }
+
     private fun parseOpenAIResponse(response: String, showThinking: Boolean): Result<String> {
         return try {
             // OpenAI-compatible format: {"choices": [{"message": {"content": "..."}}]}
@@ -520,6 +558,39 @@ class ProofreadService(private val context: Context) {
                 val firstChoice = choices.getJSONObject(0)
                 val message = firstChoice.optJSONObject("message")
                 var content = message?.optString("content", "") ?: ""
+
+                if (message != null) {
+                    val contentArray = message.optJSONArray("content")
+                    if (contentArray != null) {
+                        val parts = mutableListOf<String>()
+                        for (i in 0 until contentArray.length()) {
+                            when (val part = contentArray.opt(i)) {
+                                is String -> if (part.isNotBlank()) parts.add(part)
+                                is JSONObject -> {
+                                    val type = part.optString("type", "")
+                                    val text = part.optString("text", "").ifBlank {
+                                        part.optString("content", "")
+                                    }
+                                    if (text.isNotBlank() && (showThinking || type != "reasoning")) {
+                                        parts.add(text)
+                                    }
+                                }
+                            }
+                        }
+                        content = parts.joinToString("\n")
+                    }
+
+                    content = content.trim()
+                    if (content.isBlank() && showThinking) {
+                        content = message.optString("reasoning_content", "").trim().ifBlank {
+                            message.optString("reasoning", "").trim()
+                        }
+                    }
+                }
+
+                if (content.isBlank()) {
+                    content = firstChoice.optString("text", "").trim()
+                }
                 
                 if (!showThinking && content.isNotBlank()) {
                     // Filter out <think>...</think> blocks
