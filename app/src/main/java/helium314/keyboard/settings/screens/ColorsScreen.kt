@@ -104,8 +104,15 @@ fun ColorsScreen(
         userColors, ctx, isNight, null
         )
         val allColors = KeyboardTheme.readUserAllColors(prefs, newThemeName.text, fallbackColors)
-        ColorType.entries.map {
-            ColorSetting(it.name, null, allColors[it] ?: it.default())
+        ColorType.entries.map { ct ->
+            val cs = ColorSetting(ct.name, null, allColors[ct] ?: ct.default())
+            val resId = colorPrefsAndResIds.firstOrNull { it.first == ct.name }?.second
+            if (resId != null) {
+                cs.displayName = ctx.getString(resId)
+            } else {
+                cs.displayName = ct.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+            }
+            cs
         }
     } else {
         val toDisplay = colorPrefsAndResIds.map { (colorName, resId) ->

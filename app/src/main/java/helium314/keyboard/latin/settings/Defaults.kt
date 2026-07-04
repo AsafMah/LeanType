@@ -41,6 +41,7 @@ object Defaults {
         LayoutType.SHORTCUT_TOP -> "shortcut_top"
         LayoutType.SHORTCUT_BOTTOM -> "shortcut_bottom"
         LayoutType.HANDWRITING_BOTTOM -> "handwriting_bottom_row"
+        LayoutType.EDITING -> "editing"
     }
     
     const val PREF_SPLIT_TOOLBAR = false
@@ -89,6 +90,8 @@ object Defaults {
     const val PREF_ENABLE_SPLIT_KEYBOARD = false
     const val PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE = false
     const val PREF_PERSIST_FLOATING_KEYBOARD = false
+    // ponytail: persist text edit mode default
+    const val PREF_PERSIST_TEXT_EDIT_MODE = false
     @JvmField
     val PREF_SPLIT_SPACER_SCALE = Array(2) { DEFAULT_SIZE_SCALE }
     @JvmField
@@ -109,6 +112,7 @@ object Defaults {
     const val PREF_SHORTCUT_BOTTOM_ROW = false
     const val PREF_AUTOSPACE_ENABLED = true
     const val PREF_AUTOSPACE_AFTER_PUNCTUATION = false
+    const val PREF_AUTOSPACE_AFTER_EMOJI = false
     const val PREF_AUTOSPACE_AFTER_SUGGESTION = true
     const val PREF_AUTOSPACE_AFTER_GESTURE_TYPING = true
     const val PREF_AUTOSPACE_BEFORE_GESTURE_TYPING = true
@@ -121,6 +125,8 @@ object Defaults {
     const val PREF_COMPRESS_SCREENSHOTS = true
     const val PREF_AUTO_READ_OTP = false
     const val PREF_GESTURE_INPUT = true
+    // ponytail: gesture method default value
+    const val PREF_GESTURE_METHOD = "fallback"
     const val PREF_VIBRATION_DURATION_SETTINGS = -1
     const val PREF_VIBRATION_AMPLITUDE_SETTINGS = -1
     const val PREF_KEYPRESS_SOUND_VOLUME = -0.01f
@@ -219,6 +225,7 @@ object Defaults {
     const val PREF_TOOLBAR_MODE = "EXPANDABLE"
     const val PREF_TOOLBAR_HIDING_GLOBAL = true
     const val PREF_QUICK_PIN_TOOLBAR_KEYS = true
+    const val PREF_TOOLBAR_LONG_PRESS_HINT = true
     val PREF_PINNED_TOOLBAR_KEYS = defaultPinnedToolbarPref
     val PREF_TOOLBAR_KEYS = defaultToolbarPref
     const val PREF_AUTO_SHOW_TOOLBAR = false

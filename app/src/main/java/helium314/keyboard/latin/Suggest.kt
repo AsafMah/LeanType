@@ -18,11 +18,13 @@ import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_AUTO_CORRECT_USING_NON_WHITE_LISTED_SUGGESTION
 import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_REMOVE_PREVIOUSLY_REJECTED_SUGGESTION
 import helium314.keyboard.latin.dictionary.Dictionary
+import helium314.keyboard.latin.gesture.SwipeGestureEngine
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.suggestions.SuggestionStripView
 import helium314.keyboard.latin.utils.AutoCorrectionUtils
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.SuggestionResults
 import java.util.Locale
 import kotlin.math.min
@@ -41,6 +43,12 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             // Optionally log evicted entries for debugging
         }
     }
+    // Precomputed gesture word index, keyed by a fingerprint of the key positions.
+    // Rebuilt only when key centres actually change (language/layout switch), not on shift-state
+    // or action-button changes, and not on text-field focus changes.
+    @Volatile private var gestureIndex: SwipeGestureEngine.GestureIndex? = null
+    @Volatile private var gestureIndexFingerprint: Int = 0
+
     // Cached scoreLimit to avoid repeated Settings lookups in hot path
     // The read-then-write of (mLastScoreLimitUpdateTime, mCachedScoreLimitForAutocorrect)
     // is guarded by `synchronized(this)` in shouldBeAutoCorrected() to make the update atomic
@@ -250,11 +258,15 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 // Score is too low for autocorrect — but for long words, the normalized score
                 // formula penalizes proportionally (weight = 1 - editDist/len), so a single typo
                 // in a 12-char word gets unfairly suppressed. Use a relaxed threshold for long words.
-                if (consideredWord.length > 6 && firstSuggestion.mScore > scoreLimit / 2) {
+                // ponytail: relax limits for misspelled words (not in dictionary) to match Gboard-like behaviour
+                val isTypedWordInDict = typedWordInfo != null
+                val minScore = if (isTypedWordInDict) (scoreLimit / 2) else (scoreLimit / 4)
+                val minLength = if (isTypedWordInDict) 6 else 3
+                if (consideredWord.length > minLength && firstSuggestion.mScore > minScore) {
                     val normalizedScore = BinaryDictionaryUtils.calcNormalizedScore(
                         consideredWord, firstSuggestion.mWord, firstSuggestion.mScore)
                     val adjustedThreshold = mAutoCorrectionThreshold *
-                        (6f / consideredWord.length.coerceAtMost(15))
+                        (minLength.toFloat() / consideredWord.length.coerceAtMost(15))
                     if (normalizedScore < adjustedThreshold) {
                         return true to false
                     }
@@ -326,10 +338,34 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         settingsValuesForSuggestion: SettingsValuesForSuggestion,
         inputStyle: Int, sequenceNumber: Int
     ): SuggestedWords {
-        val suggestionResults = mDictionaryFacilitator.getSuggestionResults(
-            wordComposer.composedDataSnapshot, ngramContext, keyboard,
-            settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
-        )
+        val pointers = wordComposer.composedDataSnapshot.mInputPointers
+        val useFallback = "fallback" == settingsValuesForSuggestion.mGestureMethod || !JniUtils.sHaveNativeGestureLib
+        val suggestionResults = if (useFallback) {
+            val fingerprint = SwipeGestureEngine.layoutFingerprint(keyboard)
+            var index = gestureIndex
+            if (index == null || index.byFirst.isEmpty() || gestureIndexFingerprint != fingerprint) {
+                val words = mDictionaryFacilitator.getAllMainDictionaryWordsWithFrequency()
+                index = SwipeGestureEngine.buildIndex(words, keyboard)
+                if (index.byFirst.isNotEmpty()) {
+                    gestureIndex = index
+                    gestureIndexFingerprint = fingerprint
+                }
+            }
+            val predictionSet = if (ngramContext.isValid) {
+                mDictionaryFacilitator.getSuggestionResults(
+                    ComposedData(InputPointers(32), false, ""), ngramContext, keyboard,
+                    settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
+                ).map { it.mWord.lowercase(Locale.ROOT) }.toSet()
+            } else {
+                emptySet()
+            }
+            SwipeGestureEngine.rankByIndex(index, pointers, keyboard, SuggestedWords.MAX_SUGGESTIONS, predictionSet)
+        } else {
+            mDictionaryFacilitator.getSuggestionResults(
+                wordComposer.composedDataSnapshot, ngramContext, keyboard,
+                settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
+            )
+        }
         replaceSingleLetterFirstSuggestion(suggestionResults)
 
         // For transforming words that don't come from a dictionary, because it's our best bet
@@ -343,8 +379,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             || keyboardShiftMode == WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED
         if (shouldMakeSuggestionsOnlyFirstCharCapitalized || shouldMakeSuggestionsAllUpperCase) {
             for (i in 0 until suggestionsCount) {
-                val wordInfo = suggestionsContainer[i]
-                val wordLocale = wordInfo!!.mSourceDict.mLocale
+                val wordInfo = suggestionsContainer[i] ?: continue
+                val wordLocale = wordInfo.mSourceDict.mLocale
                 val transformedWordInfo = getTransformedSuggestedWordInfo(
                     wordInfo, wordLocale ?: locale, shouldMakeSuggestionsAllUpperCase,
                     shouldMakeSuggestionsOnlyFirstCharCapitalized, 0
@@ -353,8 +389,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             }
         }
         val rejected: SuggestedWordInfo?
-        if (SHOULD_REMOVE_PREVIOUSLY_REJECTED_SUGGESTION && suggestionsContainer.size > 1 && TextUtils.equals(
-                suggestionsContainer[0]!!.mWord,
+        val firstSuggestion = suggestionsContainer.firstOrNull()
+        if (SHOULD_REMOVE_PREVIOUSLY_REJECTED_SUGGESTION && suggestionsContainer.size > 1 && firstSuggestion != null && TextUtils.equals(
+                firstSuggestion.mWord,
                 wordComposer.rejectedBatchModeSuggestion
             )
         ) {

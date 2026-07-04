@@ -364,6 +364,11 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     override fun onLongPressKey(primaryCode: Int) {
+        if (primaryCode == KeyCode.CLEAR_HANDWRITING) {
+            PointerTracker.cancelAllPointerTrackers()
+            KeyboardSwitcher.getInstance().setAlphabetKeyboard()
+            return
+        }
         keyboardActionListener?.onLongPressKey(primaryCode)
     }
 

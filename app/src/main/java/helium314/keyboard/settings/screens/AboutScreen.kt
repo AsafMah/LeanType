@@ -176,6 +176,7 @@ fun createAboutSettings(context: Context) = listOf(
             icon = R.drawable.ic_settings_about_github
         )
     },
+
     Setting(context, SettingsWithoutKey.SAVE_LOG, R.string.save_log) { setting ->
         val ctx = LocalContext.current
         val scope = rememberCoroutineScope()

@@ -123,7 +123,10 @@ fun BlockedWordsScreen(
     Box(Modifier.fillMaxSize()) {
         SearchScreen(
             onClickBack = onClickBack,
-            title = { Text(stringResource(R.string.edit_blocked_words)) },
+            title = {
+                // ponytail: show total count of blocked words in title
+                Text("${stringResource(R.string.edit_blocked_words)} (${blockedWords.size})")
+            },
             menu = listOf(
                 stringResource(R.string.clear_all) to { showClearAllDialog = true }
             ),

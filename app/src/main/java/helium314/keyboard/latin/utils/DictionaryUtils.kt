@@ -94,8 +94,10 @@ fun getDictionaryLocales(context: Context): MutableSet<Locale> {
     if (assetsDictionaryList != null) {
         for (dictionary in assetsDictionaryList) {
             val locale = DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(dictionary)
-            val isEnabled = enabledLocales.contains(locale)
             val hasEnabledLanguage = enabledLocales.any { it.language == locale.language }
+            // ponytail: only show assets for enabled languages to avoid showing preloaded en-US when not used
+            if (!hasEnabledLanguage) continue
+            val isEnabled = enabledLocales.contains(locale)
             if (!isEnabled && hasEnabledLanguage) continue
             locales.add(locale)
         }
@@ -240,19 +242,49 @@ private fun hasAnythingOtherThanExtractedMainDictionary(context: Context, dir: F
     return false
 }
 
-// ponytail: Dynamic dictionary downloader using HTTP URL connection.
+// ponytail: Dynamic dictionary downloader using HTTP URL connection with User-Agent, redirects, and timeouts.
 fun downloadDictionary(context: Context, locale: Locale, type: String, linkUrl: String, onComplete: (Boolean) -> Unit) {
     val cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context) ?: return onComplete(false)
     val targetFile = File(cacheDir, "${type}.dict")
     CoroutineScope(Dispatchers.IO).launch {
         var success = false
         try {
-            java.net.URL(linkUrl).openStream().use { input ->
-                targetFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
+            var url = java.net.URL(linkUrl)
+            var connection = url.openConnection() as java.net.HttpURLConnection
+            connection.setRequestProperty("User-Agent", "HeliboardL/3.8.9 (Android)")
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
+            connection.instanceFollowRedirects = true
+
+            var status = connection.responseCode
+            var conn = connection
+            var redirectCount = 0
+            while ((status == java.net.HttpURLConnection.HTTP_MOVED_TEMP ||
+                    status == java.net.HttpURLConnection.HTTP_MOVED_PERM ||
+                    status == 307 || status == 308) && redirectCount < 5) {
+                val newUrl = conn.getHeaderField("Location") ?: break
+                conn.disconnect()
+                val nextUrl = java.net.URL(newUrl)
+                conn = nextUrl.openConnection() as java.net.HttpURLConnection
+                conn.setRequestProperty("User-Agent", "HeliboardL/3.8.9 (Android)")
+                conn.connectTimeout = 15000
+                conn.readTimeout = 15000
+                conn.instanceFollowRedirects = true
+                status = conn.responseCode
+                redirectCount++
             }
-            success = true
+
+            if (status == java.net.HttpURLConnection.HTTP_OK) {
+                conn.inputStream.use { input ->
+                    targetFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                success = true
+            } else {
+                Log.e("DictionaryUtils", "HTTP error downloading dictionary: $status")
+            }
+            conn.disconnect()
         } catch (e: Exception) {
             Log.e("DictionaryUtils", "Failed to download dictionary", e)
         }

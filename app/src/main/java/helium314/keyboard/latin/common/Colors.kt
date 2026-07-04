@@ -49,6 +49,9 @@ interface Colors {
     /** get the colorInt */
     @ColorInt fun get(color: ColorType): Int
 
+    /** get the pressed state colorInt */
+    @ColorInt fun getPressedColor(color: ColorType): Int
+
     /** apply a color to the [drawable], may be through color filter or tint (with or without state list) */
     fun setColor(drawable: Drawable, color: ColorType)
 
@@ -293,6 +296,11 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
         NAVIGATION_BAR -> navBar
         MORE_SUGGESTIONS_HINT, SUGGESTED_WORD, SUGGESTION_TYPED_WORD, SUGGESTION_VALID_WORD -> adjustedKeyText
         ACTION_KEY_ICON, TOOL_BAR_EXPAND_KEY -> Color.WHITE
+        EDIT_MODE_DELETE_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(accent, functionalKey, 0.4f)
+        EDIT_MODE_FUNC_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(accent, functionalKey, 0.2f)
+        EDIT_MODE_ALPHA_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(accent, functionalKey, 0.6f)
+        EDIT_MODE_NAV_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(keyBackground, functionalKey, 0.3f)
+        EDIT_MODE_JUMP_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(keyBackground, functionalKey, 0.7f)
     }
 
     override fun setColor(drawable: Drawable, color: ColorType) {
@@ -319,6 +327,7 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
 
     override fun setColor(view: ImageView, color: ColorType) {
         if (color == TOOL_BAR_KEY) {
+            view.clearColorFilter()
             setColor(view.drawable, color)
             return
         }
@@ -356,6 +365,20 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 } ?: run { view.background.colorFilter = backgroundFilter }
             }
             else -> view.background.colorFilter = backgroundFilter
+        }
+     }
+
+    override fun getPressedColor(color: ColorType): Int {
+        if (color == ColorType.ACTION_KEY_POPUP_KEYS_BACKGROUND) {
+            return if (themeStyle == STYLE_HOLO) adjustedBackground else accent
+        }
+        return if (themeStyle == STYLE_HOLO) {
+            accent
+        } else if (isNight) {
+            if (hasKeyBorders) doubleAdjustedAccent
+            else adjustedAccent
+        } else {
+            accent
         }
     }
 }
@@ -488,6 +511,11 @@ class DefaultColors (
         SUGGESTION_AUTO_CORRECT, EMOJI_CATEGORY, TOOL_BAR_KEY, TOOL_BAR_EXPAND_KEY, ONE_HANDED_MODE_BUTTON -> suggestionText
         MORE_SUGGESTIONS_HINT, SUGGESTED_WORD, SUGGESTION_TYPED_WORD, SUGGESTION_VALID_WORD -> adjustedSuggestionText
         ACTION_KEY_ICON -> Color.WHITE
+        EDIT_MODE_DELETE_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(accent, functionalKey, 0.4f)
+        EDIT_MODE_FUNC_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(accent, functionalKey, 0.2f)
+        EDIT_MODE_ALPHA_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(accent, functionalKey, 0.6f)
+        EDIT_MODE_NAV_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(keyBackground, functionalKey, 0.3f)
+        EDIT_MODE_JUMP_BACKGROUND -> androidx.core.graphics.ColorUtils.blendARGB(keyBackground, functionalKey, 0.7f)
     }
 
     override fun setColor(drawable: Drawable, color: ColorType) {
@@ -514,6 +542,7 @@ class DefaultColors (
 
     override fun setColor(view: ImageView, color: ColorType) {
         if (color == TOOL_BAR_KEY) {
+            view.clearColorFilter()
             setColor(view.drawable, color)
             return
         }
@@ -549,6 +578,13 @@ class DefaultColors (
         ACTION_KEY_ICON -> actionKeyIconColorFilter
         else -> colorFilter(get(color)) // create color filter (not great for performance, so the frequently used filters should be stored)
     }
+
+    override fun getPressedColor(color: ColorType): Int {
+        if (color == ColorType.POPUP_KEYS_BACKGROUND || color == ColorType.ACTION_KEY_POPUP_KEYS_BACKGROUND) {
+            return doubleAdjustedBackground
+        }
+        return brightenOrDarken(get(color), true)
+    }
 }
 
 class AllColors(private val colorMap: EnumMap<ColorType, Int>, override val themeStyle: String, override val hasKeyBorders: Boolean, backgroundImage: Drawable?) : Colors {
@@ -566,6 +602,7 @@ class AllColors(private val colorMap: EnumMap<ColorType, Int>, override val them
 
     override fun setColor(view: ImageView, color: ColorType) {
         if (color == TOOL_BAR_KEY) {
+            view.clearColorFilter()
             setColor(view.drawable, color)
             return
         }
@@ -591,6 +628,10 @@ class AllColors(private val colorMap: EnumMap<ColorType, Int>, override val them
     }
 
     private fun getColorFilter(color: ColorType) = colorFilters.getOrPut(color) { colorFilter(get(color)) }
+
+    override fun getPressedColor(color: ColorType): Int {
+        return brightenOrDarken(get(color), true)
+    }
 }
 
 private fun colorFilter(color: Int, mode: BlendModeCompat = BlendModeCompat.MODULATE): ColorFilter {
@@ -650,6 +691,11 @@ enum class ColorType {
     TOOL_BAR_EXPAND_KEY_BACKGROUND,
     TOOL_BAR_KEY,
     TOOL_BAR_KEY_ENABLED_BACKGROUND,
+    EDIT_MODE_DELETE_BACKGROUND,
+    EDIT_MODE_FUNC_BACKGROUND,
+    EDIT_MODE_ALPHA_BACKGROUND,
+    EDIT_MODE_NAV_BACKGROUND,
+    EDIT_MODE_JUMP_BACKGROUND,
     MAIN_BACKGROUND,
 }
 

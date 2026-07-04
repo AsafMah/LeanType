@@ -7,7 +7,6 @@ import helium314.keyboard.latin.common.StringUtils.mightBeEmoji
 import helium314.keyboard.latin.common.StringUtils.newSingleCodePointString
 import helium314.keyboard.latin.settings.SpacingAndPunctuations
 import helium314.keyboard.latin.utils.ScriptUtils
-import helium314.keyboard.latin.utils.SpacedTokens
 import helium314.keyboard.latin.utils.SpannableStringUtils
 import helium314.keyboard.latin.utils.TextRange
 import java.math.BigInteger
@@ -272,7 +271,7 @@ fun isEmoji(c: Int): Boolean = mightBeEmoji(c) && isEmoji(newSingleCodePointStri
 /** returns whether the text is a single emoji */
 fun isEmoji(text: CharSequence): Boolean = mightBeEmoji(text) && text.matches(emoRegex)
 
-fun String.splitOnWhitespace() = SpacedTokens(this).toList()
+fun String.splitOnWhitespace() = split(Regex("\\s+")).filter { it.isNotEmpty() }
 
 // from https://github.com/mathiasbynens/emoji-test-regex-pattern, MIT license
 // matches single emojis only

@@ -67,6 +67,8 @@ fun AppearanceScreen(
         SettingsWithoutKey.BACKGROUND_IMAGE_LANDSCAPE,
         R.string.settings_category_miscellaneous,
         Settings.PREF_PERSIST_FLOATING_KEYBOARD,
+        // ponytail: persist text edit mode settings item
+        Settings.PREF_PERSIST_TEXT_EDIT_MODE,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE,
         if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE)
@@ -204,6 +206,10 @@ fun createAppearanceSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_PERSIST_FLOATING_KEYBOARD, R.string.persist_floating_keyboard_title, R.string.persist_floating_keyboard_summary) {
         SwitchPreference(it, Defaults.PREF_PERSIST_FLOATING_KEYBOARD)
+    },
+    // ponytail: persist text edit mode preference widget
+    Setting(context, Settings.PREF_PERSIST_TEXT_EDIT_MODE, R.string.persist_text_edit_mode_title, R.string.persist_text_edit_mode_summary) {
+        SwitchPreference(it, Defaults.PREF_PERSIST_TEXT_EDIT_MODE)
     },
     Setting(context, Settings.PREF_SPLIT_SPACER_SCALE_PREFIX, R.string.split_spacer_scale) { setting ->
         MultiSliderPreference(

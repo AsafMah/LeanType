@@ -93,6 +93,7 @@ public class SettingsValues {
         // in shouldInsertSpacesAutomatically() so this works alongside the input-type guard.
         public final boolean mAutospaceEnabled;
         public final boolean mAutospaceAfterPunctuation;
+        public final boolean mAutospaceAfterEmoji;
         public final boolean mAutospaceAfterSuggestion;
         public final boolean mAutospaceAfterGestureTyping;
         public final boolean mAutospaceBeforeGestureTyping;
@@ -115,6 +116,7 @@ public class SettingsValues {
                                                       // yet
         public final boolean mSuggestPunctuation;
         public final boolean mCenterSuggestionTextToEnter;
+        public final String mGestureMethod;
         public final boolean mGestureInputEnabled;
         public final boolean mGestureTrailEnabled;
         public final boolean mGestureFloatingPreviewTextEnabled;
@@ -202,6 +204,8 @@ public class SettingsValues {
         public final float mAutoCorrectionThreshold;
         public final boolean mAutoCorrectShortcuts;
         public final boolean mPersistFloatingKeyboard;
+        // ponytail: persist text edit mode field
+        public final boolean mPersistTextEditMode;
         public final boolean mBackspaceRevertsAutocorrect;
         public final int mScoreLimitForAutocorrect;
         private final boolean mSuggestionsEnabledPerUserSettings;
@@ -303,6 +307,9 @@ public class SettingsValues {
                                 Defaults.PREF_AUTOCORRECT_SHORTCUTS);
                 mPersistFloatingKeyboard = prefs.getBoolean(Settings.PREF_PERSIST_FLOATING_KEYBOARD,
                                 Defaults.PREF_PERSIST_FLOATING_KEYBOARD);
+                // ponytail: load persist text edit mode value
+                mPersistTextEditMode = prefs.getBoolean(Settings.PREF_PERSIST_TEXT_EDIT_MODE,
+                                Defaults.PREF_PERSIST_TEXT_EDIT_MODE);
                 mBackspaceRevertsAutocorrect = prefs.getBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT,
                                 Defaults.PREF_BACKSPACE_REVERTS_AUTOCORRECT);
                 mBigramPredictionEnabled = prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS,
@@ -344,8 +351,11 @@ public class SettingsValues {
                                 Defaults.PREF_KEYPRESS_SOUND_VOLUME);
                 mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
                                 Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY);
+                mGestureMethod = prefs.getString(Settings.PREF_GESTURE_METHOD,
+                                JniUtils.sHaveNativeGestureLib ? "native" : "fallback");
                 mGestureInputEnabled = JniUtils.sHaveGestureLib
-                                && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT);
+                                && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
+                                && (!"native".equals(mGestureMethod) || JniUtils.sHaveNativeGestureLib);
                 mGestureTrailEnabled = prefs.getBoolean(Settings.PREF_GESTURE_PREVIEW_TRAIL,
                                 Defaults.PREF_GESTURE_PREVIEW_TRAIL);
                 mGestureFloatingPreviewTextEnabled = !mInputAttributes.mDisableGestureFloatingPreviewText
@@ -456,6 +466,8 @@ public class SettingsValues {
                                 Defaults.PREF_AUTOSPACE_ENABLED);
                 mAutospaceAfterPunctuation = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION,
                                 Defaults.PREF_AUTOSPACE_AFTER_PUNCTUATION);
+                mAutospaceAfterEmoji = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_EMOJI,
+                                Defaults.PREF_AUTOSPACE_AFTER_EMOJI);
                 mAutospaceAfterSuggestion = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_SUGGESTION,
                                 Defaults.PREF_AUTOSPACE_AFTER_SUGGESTION);
                 mAutospaceAfterGestureTyping = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING,
@@ -503,7 +515,8 @@ public class SettingsValues {
                 mNarrowKeyGapsLevel = prefs.getInt(Settings.PREF_NARROW_KEY_GAPS_LEVEL, Defaults.PREF_NARROW_KEY_GAPS_LEVEL);
                 mSettingsValuesForSuggestion = new SettingsValuesForSuggestion(
                                 mBlockPotentiallyOffensive,
-                                prefs.getBoolean(Settings.PREF_GESTURE_SPACE_AWARE, Defaults.PREF_GESTURE_SPACE_AWARE));
+                                prefs.getBoolean(Settings.PREF_GESTURE_SPACE_AWARE, Defaults.PREF_GESTURE_SPACE_AWARE),
+                                mGestureMethod);
                 mSpacingAndPunctuations = new SpacingAndPunctuations(res, mUrlDetectionEnabled);
                 mBottomPaddingScale = Settings.readBottomPaddingScale(prefs, isLandscape);
                 mSidePaddingScale = Settings.readSidePaddingScale(prefs, isLandscape, mIsSplitKeyboardEnabled);

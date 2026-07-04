@@ -11,7 +11,6 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.splitOnFirstSpacesOnly
 import helium314.keyboard.latin.common.splitOnWhitespace
 import helium314.keyboard.latin.settings.Settings
-import helium314.keyboard.latin.utils.SpacedTokens
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils
 import java.io.InputStream
 import java.util.Locale
@@ -84,7 +83,7 @@ class LocaleKeyboardInfos(dataStream: InputStream?, locale: Locale) {
                     READER_MODE_EXTRA_KEYS -> if (!onlyPopupKeys) addExtraKey(line.split(colonSpaceRegex, 2))
                     READER_MODE_LABELS -> if (!onlyPopupKeys) addLabel(line.split(colonSpaceRegex, 2))
                     READER_MODE_NUMBER_ROW -> localizedNumberKeys = line.splitOnWhitespace()
-                    READER_MODE_TLD -> tlds.addAll(SpacedTokens(line).map { ".$it" })
+                    READER_MODE_TLD -> tlds.addAll(line.splitOnWhitespace().map { ".$it" })
                 }
             }
         }
@@ -160,11 +159,11 @@ class LocaleKeyboardInfos(dataStream: InputStream?, locale: Locale) {
         tlds.add(0, comTld)
         val ccLower = locale.country.lowercase()
         if (ccLower.isNotEmpty() && locale.language != SubtypeLocaleUtils.NO_LANGUAGE) {
-            specialCountryTlds[ccLower]?.let { tlds.addAll(SpacedTokens(it)) } ?: tlds.add(".$ccLower")
+            specialCountryTlds[ccLower]?.let { tlds.addAll(it.splitOnWhitespace()) } ?: tlds.add(".$ccLower")
         }
         if ((locale.language != "en" && euroLocales.matches(locale.language)) || euroCountries.matches(locale.country))
             tlds.add(".eu")
-        tlds.addAll(SpacedTokens(otherDefaultTlds))
+        tlds.addAll(otherDefaultTlds.splitOnWhitespace())
     }
 }
 

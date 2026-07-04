@@ -426,6 +426,40 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
     }
 
     @Override
+    public Map<String, Integer> getAllWordsWithFrequency() {
+        Map<String, Integer> words = new java.util.HashMap<>();
+        boolean lockAcquired = false;
+        try {
+            lockAcquired = mLock.readLock().tryLock(
+                    TIMEOUT_FOR_READ_OPS_IN_MILLISECONDS, TimeUnit.MILLISECONDS);
+            if (lockAcquired) {
+                if (mBinaryDictionary == null || !mBinaryDictionary.isValidDictionary()) {
+                    return words;
+                }
+                int token = 0;
+                do {
+                    BinaryDictionary.GetNextWordAndFrequencyResult result =
+                            mBinaryDictionary.getNextWordAndFrequency(token);
+                    if (result.mWordAndFrequency == null) break;
+                    String word = result.mWordAndFrequency.mWord;
+                    int freq = result.mWordAndFrequency.mFrequency;
+                    if (word != null && !word.isEmpty() && freq >= 0) {
+                        words.put(word, freq);
+                    }
+                    token = result.mNextToken;
+                } while (token != 0);
+            }
+        } catch (final InterruptedException e) {
+            Log.e(TAG, "Interrupted tryLock() in getAllWordsWithFrequency().", e);
+        } finally {
+            if (lockAcquired) {
+                mLock.readLock().unlock();
+            }
+        }
+        return words;
+    }
+
+    @Override
     public int getMaxFrequencyOfExactMatches(final String word) {
         reloadDictionaryIfRequired();
         boolean lockAcquired = false;

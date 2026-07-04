@@ -76,6 +76,7 @@ fun TextCorrectionScreen(
         R.string.settings_category_space,
         Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD,
         Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION,
+        Settings.PREF_AUTOSPACE_AFTER_EMOJI,
         Settings.PREF_AUTOSPACE_AFTER_SUGGESTION,
         if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING else null,
         if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING else null,
@@ -157,6 +158,11 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.autospace_after_punctuation, R.string.autospace_after_punctuation_summary
     ) {
         SwitchPreference(it, Defaults.PREF_AUTOSPACE_AFTER_PUNCTUATION)
+    },
+    Setting(context, Settings.PREF_AUTOSPACE_AFTER_EMOJI,
+        R.string.autospace_after_emoji, R.string.autospace_after_emoji_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_AUTOSPACE_AFTER_EMOJI)
     },
     Setting(context, Settings.PREF_AUTOSPACE_AFTER_SUGGESTION, R.string.autospace_after_suggestion) {
         SwitchPreference(it, Defaults.PREF_AUTOSPACE_AFTER_SUGGESTION)

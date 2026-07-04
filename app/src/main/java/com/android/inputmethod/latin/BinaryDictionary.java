@@ -429,6 +429,37 @@ public final class BinaryDictionary extends Dictionary {
                 getWordProperty(word, isBeginningOfSentence[0]), nextToken);
     }
 
+    // ponytail: allocation-free container for fast dict iteration
+    public static class WordAndFrequency {
+        public final String mWord;
+        public final int mFrequency;
+        public WordAndFrequency(String word, int frequency) {
+            mWord = word;
+            mFrequency = frequency;
+        }
+    }
+
+    // ponytail: allocation-free result container for fast dict iteration
+    public static class GetNextWordAndFrequencyResult {
+        public final WordAndFrequency mWordAndFrequency;
+        public final int mNextToken;
+        public GetNextWordAndFrequencyResult(WordAndFrequency wordAndFrequency, int nextToken) {
+            mWordAndFrequency = wordAndFrequency;
+            mNextToken = nextToken;
+        }
+    }
+
+    // ponytail: fast word iteration that avoids fetching heavy shortcut/ngram metadata
+    public GetNextWordAndFrequencyResult getNextWordAndFrequency(final int token) {
+        final int[] codePoints = new int[DICTIONARY_MAX_WORD_LENGTH];
+        final boolean[] isBeginningOfSentence = new boolean[1];
+        final int nextToken = getNextWordNative(mNativeDict, token, codePoints,
+                isBeginningOfSentence);
+        final String word = StringUtils.getStringFromNullTerminatedCodePointArray(codePoints);
+        final int probability = getFrequency(word);
+        return new GetNextWordAndFrequencyResult(new WordAndFrequency(word, probability), nextToken);
+    }
+
     // Add a unigram entry to binary dictionary with unigram attributes in native code.
     public boolean addUnigramEntry(final String word, final int probability,
             final String shortcutTarget, final int shortcutProbability,

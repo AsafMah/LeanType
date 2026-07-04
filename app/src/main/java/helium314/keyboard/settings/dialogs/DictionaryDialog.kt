@@ -80,8 +80,9 @@ fun DictionaryDialog(
                         DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(dict)
                     }
                 }
-                val internalId = best?.let { "main:" + it.substringAfter("_").substringBefore(".") }
-                val mainPrefKey = "pref_dict_enabled_" + (internalId ?: "main:${locale.language}")
+                // ponytail: normalize key to match format used by DictionaryFactory (lowercase, replace - with _)
+                val internalId = best?.let { "main:" + it.substringAfter("_").substringBefore(".").lowercase().replace("-", "_") }
+                val mainPrefKey = "pref_dict_enabled_" + (internalId ?: "main:${locale.toLanguageTag().lowercase().replace("-", "_")}")
 
                 val prefs = ctx.prefs()
                 var enabled by remember { mutableStateOf(prefs.getBoolean(mainPrefKey, true)) }
@@ -185,6 +186,10 @@ private fun DictionaryDetails(dict: File, onDelete: () -> Unit) {
             modifier = Modifier.padding(end = 8.dp)
         )
         Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        DeleteButton {
+            dict.delete()
+            onDelete()
+        }
         ExpandButton { showDetails = !showDetails }
     }
     AnimatedVisibility(showDetails, enter = fadeIn(), exit = fadeOut()) {

@@ -1169,6 +1169,10 @@ public final class EmojiPalettesView extends LinearLayout
             try {
                 java.net.URL url = new java.net.URL(urlStr);
                 java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                conn.setRequestProperty("User-Agent", "HeliboardL/3.8.9 (Android)");
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.setInstanceFollowRedirects(true);
                 conn.connect();
 
                 if (conn.getResponseCode() != java.net.HttpURLConnection.HTTP_OK) {
@@ -1188,7 +1192,7 @@ public final class EmojiPalettesView extends LinearLayout
                     }
 
                     // Success! Switch back to UI thread
-                    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                    EmojiPalettesView.this.post(() -> {
                         Toast.makeText(getContext(), "Emoji dictionary installed!", Toast.LENGTH_SHORT).show();
                         initDictionaryFacilitator();
                         mIsDownloadingEmojiDict = false;
@@ -1202,7 +1206,7 @@ public final class EmojiPalettesView extends LinearLayout
                 }
             } catch (Exception e) {
                 android.util.Log.e("EmojiSearch", "Failed to download dictionary", e);
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                EmojiPalettesView.this.post(() -> {
                     Toast.makeText(getContext(), "Failed to download dictionary", Toast.LENGTH_SHORT).show();
                     mIsDownloadingEmojiDict = false;
                     if (mInSearchMode) {

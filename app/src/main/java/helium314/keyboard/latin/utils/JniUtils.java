@@ -40,18 +40,11 @@ public final class JniUtils {
     }
 
     public static boolean sHaveGestureLib = false;
+    public static boolean sHaveNativeGestureLib = false;
     static {
         // hardcoded default path, may not work on all phones
         @SuppressLint("SdCardPath") String filesDir = "/data/data/" + BuildConfig.APPLICATION_ID + "/files";
         Application app = App.Companion.getApp();
-        if (app == null) {
-            try {
-                // try using reflection to get (app)context: https://stackoverflow.com/a/38967293
-                // this may not be necessary any more, now that we get the app somewhere else?
-                app = (Application) Class.forName("android.app.ActivityThread")
-                        .getMethod("currentApplication").invoke(null, (Object[]) null);
-            } catch (Exception ignored) { }
-        }
         if (app != null && app.getFilesDir() != null) // use the actual path if possible
             filesDir = app.getFilesDir().getAbsolutePath();
 
@@ -108,6 +101,9 @@ public final class JniUtils {
                 Log.w(TAG, "Could not load native library " + JNI_LIB_NAME, ul);
             }
         }
+        sHaveNativeGestureLib = sHaveGestureLib;
+        // We have a Java-side gesture engine (SwipeGestureEngine) that doesn't need the native lib.
+        sHaveGestureLib = true;
     }
 
     private JniUtils() {
