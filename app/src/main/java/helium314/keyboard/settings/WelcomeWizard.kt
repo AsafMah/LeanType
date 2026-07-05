@@ -56,6 +56,12 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.utils.JniUtils
+import helium314.keyboard.latin.utils.SubtypeSettings
+import helium314.keyboard.settings.dialogs.MultiListPickerDialog
+import helium314.keyboard.settings.WithSmallTitle
+import helium314.keyboard.settings.DropDownField
+import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
+import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.UncachedInputMethodManagerUtils
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.prefs
@@ -84,7 +90,7 @@ fun WelcomeWizard(
     var requiresRestart by rememberSaveable { mutableStateOf(false) }
     var refreshTrigger by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
-    
+
     LaunchedEffect(step) {
         if (step == 2)
             scope.launch {
@@ -96,7 +102,7 @@ fun WelcomeWizard(
     }
     val useWideLayout = isWideScreen()
     val appName = stringResource(ctx.applicationInfo.labelRes)
-    
+
     @Composable fun bigText() {
         val resource = if (step == 0) R.string.setup_welcome_title else R.string.setup_steps_title
         Column(Modifier.padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -120,32 +126,32 @@ fun WelcomeWizard(
 
     @Composable
     fun ColumnScope.Step(
-        currentStep: Int, 
-        title: String, 
-        instruction: String, 
-        actionText: String, 
-        icon: Painter, 
-        action: () -> Unit, 
-        onBack: (() -> Unit)? = null, 
+        currentStep: Int,
+        title: String,
+        instruction: String,
+        actionText: String,
+        icon: Painter,
+        action: () -> Unit,
+        onBack: (() -> Unit)? = null,
         content: @Composable () -> Unit = {}
     ) {
         // Progress indicator
         Row(Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            for (i in 1..8) {
+            for (i in 1..9) {
                 Box(
                     modifier = Modifier
                         .height(6.dp)
                         .weight(1f)
                         .padding(horizontal = 4.dp)
                         .background(
-                            if (i <= currentStep) MaterialTheme.colorScheme.primary 
+                            if (i <= currentStep) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.surfaceVariant,
                             androidx.compose.foundation.shape.CircleShape
                         )
                 )
             }
         }
-        
+
         androidx.compose.material3.ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -153,12 +159,12 @@ fun WelcomeWizard(
                 Text(title, style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(8.dp))
                 Text(instruction, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                
+
                 Spacer(Modifier.height(16.dp))
                 content()
-                
+
                 Spacer(Modifier.height(24.dp))
-                
+
                 // Action Buttons
                 Row(
                     Modifier.fillMaxWidth(),
@@ -172,9 +178,9 @@ fun WelcomeWizard(
                     } else {
                         Spacer(Modifier.weight(0.1f)) // Placeholder to maintain spacing
                     }
-                    
+
                     Spacer(Modifier.weight(1f))
-                    
+
                     androidx.compose.material3.FilledTonalButton(onClick = action) {
                         Icon(icon, null, Modifier.padding(end = 8.dp).size(20.dp))
                         Text(actionText)
@@ -218,19 +224,144 @@ fun WelcomeWizard(
                         null
                     )
                 } else if (step == 3) {
+                    var showDialog by remember { mutableStateOf(false) }
+                    val allSubtypes = remember { SubtypeSettings.getAllAvailableSubtypes() }
+                    var enabledSubtypes by remember { mutableStateOf(SubtypeSettings.getEnabledSubtypes(true)) }
+
+                    val gestureMethods = listOf(
+                        stringResource(R.string.gesture_method_native) to "native",
+                        stringResource(R.string.gesture_method_fallback) to "fallback"
+                    )
+                    var selectedMethod by remember {
+                        mutableStateOf(
+                            ctx.prefs().getString(
+                                Settings.PREF_GESTURE_METHOD,
+                                if (JniUtils.sHaveNativeGestureLib) "native" else "fallback"
+                            )!!
+                        )
+                    }
+
                     Step(
                         3,
+                        "Language & Input Selection",
+                        "Configure your typing languages and choose the gesture typing engine type.",
+                        "Next",
+                        painterResource(R.drawable.sym_keyboard_language_switch),
+                        { step++ },
+                        { step-- }
+                    ) {
+                        WithSmallTitle("Typing Languages") {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    "Enabled Languages:",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                enabledSubtypes.forEach { subtype ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_setup_check),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp).padding(end = 8.dp)
+                                        )
+                                        Text(
+                                            text = subtype.displayName(),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(12.dp))
+                                androidx.compose.material3.Button(
+                                    onClick = { showDialog = true },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Choose Languages")
+                                }
+                            }
+                        }
+
+                        if (showDialog) {
+                            MultiListPickerDialog(
+                                onDismissRequest = { showDialog = false },
+                                items = allSubtypes,
+                                initialSelection = enabledSubtypes,
+                                onConfirmed = { selected ->
+                                    selected.forEach { subtype ->
+                                        if (subtype !in enabledSubtypes) {
+                                            SubtypeSettings.addEnabledSubtype(ctx.prefs(), subtype)
+                                        }
+                                    }
+                                    enabledSubtypes.forEach { subtype ->
+                                        if (subtype !in selected && selected.isNotEmpty()) {
+                                            SubtypeSettings.removeEnabledSubtype(ctx, subtype)
+                                        }
+                                    }
+                                    enabledSubtypes = SubtypeSettings.getEnabledSubtypes(true)
+                                    showDialog = false
+                                },
+                                getItemName = { it.displayName() }
+                            )
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        WithSmallTitle("Gesture Typing Engine") {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
+                                    .padding(16.dp)
+                            ) {
+                                DropDownField(
+                                    items = gestureMethods,
+                                    selectedItem = gestureMethods.first { it.second == selectedMethod },
+                                    onSelected = { pair ->
+                                        selectedMethod = pair.second
+                                        ctx.prefs().edit { putString(Settings.PREF_GESTURE_METHOD, pair.second) }
+                                        refreshTrigger++
+                                    }
+                                ) { pair ->
+                                    Text(pair.first, style = MaterialTheme.typography.bodyLarge)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = if (selectedMethod == "native") {
+                                        "Note: Native engine provides high performance but requires swypelib to be downloaded in the next step."
+                                    } else {
+                                        "Note: Pure-Java engine works out of the box (Experimental)."
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                } else if (step == 4) {
+                    Step(
+                        4,
                         "Libraries",
                         "Download emoji and gesture libraries to improve typing and suggestions.",
                         "Next",
                         painterResource(R.drawable.sym_keyboard_language_switch),
                         { step++ },
-                        null
+                        { step-- }
                     ) {
                         val trigger = refreshTrigger // Force recomposition
                         val locale = helium314.keyboard.latin.RichInputMethodManager.getInstance().currentSubtype.locale
                         val emojiLibInstalled = java.io.File(helium314.keyboard.latin.utils.DictionaryInfoUtils.getCacheDirectoryForLocale(locale, ctx), "emoji_${locale.language}.dict").exists()
                         val gestureLibInstalled = java.io.File(ctx.filesDir, "libjni_latinime.so").exists() || JniUtils.sHaveGestureLib
+                        val showGestureDownload = ctx.prefs().getString(Settings.PREF_GESTURE_METHOD, "fallback") == "native"
 
                         Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)) {
                             LoadEmojiLibPreference(
@@ -241,24 +372,26 @@ fun WelcomeWizard(
                                 Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.align(Alignment.CenterEnd).padding(end = 16.dp), tint = MaterialTheme.colorScheme.primary)
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)) {
-                            LoadGestureLibPreference(
-                                title = "Gesture Typing Library",
-                                restartOnSuccess = false,
-                                onSuccess = { 
-                                    requiresRestart = true
-                                    refreshTrigger++ 
+                        if (showGestureDownload) {
+                            Spacer(Modifier.height(8.dp))
+                            Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)) {
+                                LoadGestureLibPreference(
+                                    title = "Gesture Typing Library",
+                                    restartOnSuccess = false,
+                                    onSuccess = {
+                                        requiresRestart = true
+                                        refreshTrigger++
+                                    }
+                                )
+                                if (gestureLibInstalled) {
+                                    Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.align(Alignment.CenterEnd).padding(end = 16.dp), tint = MaterialTheme.colorScheme.primary)
                                 }
-                            )
-                            if (gestureLibInstalled) {
-                                Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.align(Alignment.CenterEnd).padding(end = 16.dp), tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
-                } else if (step == 4) {
+                } else if (step == 5) {
                     Step(
-                        4,
+                        5,
                         "AI Integration",
                         "Select an AI service and provide your API key for advanced proofreading features.",
                         "Next",
@@ -289,7 +422,7 @@ fun WelcomeWizard(
                                             refreshTrigger++
                                         })
                                     }.Preference()
-                                    
+
                                     when (currentProvider) {
                                         helium314.keyboard.latin.utils.ProofreadService.AIProvider.GEMINI -> {
                                             helium314.keyboard.settings.Setting(ctx, helium314.keyboard.settings.SettingsWithoutKey.GEMINI_API_KEY, R.string.gemini_api_key_title, R.string.gemini_api_key_summary) { setting ->
@@ -325,9 +458,9 @@ fun WelcomeWizard(
                             Text("AI features are not available in this build flavor.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                } else if (step == 5) {
+                } else if (step == 6) {
                     Step(
-                        5,
+                        6,
                         "Floating Keyboard",
                         "Enable floating keyboard by granting the 'Display over other apps' permission.",
                         "Next",
@@ -354,9 +487,9 @@ fun WelcomeWizard(
                             }
                         }
                     }
-                } else if (step == 6) {
+                } else if (step == 7) {
                     Step(
-                        6,
+                        7,
                         "Screenshot Suggestions",
                         "Suggest recently taken screenshots in the suggestion strip. Note: This permission also allows saving screenshots to the clipboard.",
                         "Next",
@@ -392,9 +525,9 @@ fun WelcomeWizard(
                             }.Preference()
                         }
                     }
-                } else if (step == 7) {
+                } else if (step == 8) {
                     Step(
-                        7,
+                        8,
                         "Keyboard Height",
                         "Adjust the height of the keyboard. Recommended: 77% for more square keys, 100% for taller keys.",
                         "Next",
@@ -415,15 +548,15 @@ fun WelcomeWizard(
                                     description = { "${(100 * it).toInt()}%" }
                                 ) {}
                             }.Preference()
-                            
+
                             if (heightSet) {
                                 Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 16.dp), tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
-                } else { // step 8
+                } else { // step 9
                     Step(
-                        8,
+                        9,
                         stringResource(R.string.setup_step3_title),
                         stringResource(R.string.setup_step3_instruction, appName),
                         stringResource(R.string.setup_finish_action),
@@ -469,14 +602,14 @@ fun Step0(onClick: () -> Unit) {
         modifier = Modifier.fillMaxSize()
     ) {
         Image(
-            painterResource(R.drawable.setup_welcome_image), 
+            painterResource(R.drawable.setup_welcome_image),
             contentDescription = null,
             contentScale = ContentScale.Fit,
             modifier = Modifier.padding(bottom = 32.dp).fillMaxWidth().weight(1f)
         )
-        
+
         Spacer(Modifier.height(16.dp))
-        
+
         androidx.compose.material3.Button(
             onClick = onClick,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 16.dp)

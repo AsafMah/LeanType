@@ -43,6 +43,7 @@ import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.ColorFilter
@@ -62,11 +63,11 @@ private val toolbarPrefScope = CoroutineScope(SupervisorJob() + Dispatchers.Defa
 fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     val button = ImageButton(context, null, R.attr.suggestionWordStyle)
     button.scaleType = ImageView.ScaleType.CENTER_INSIDE
-    val padding = 6.dpToPx(context.resources)
+    val padding = 9.dpToPx(context.resources)
     button.setPadding(padding, padding, padding, padding)
     button.tag = key
     button.contentDescription = key.name.lowercase().getStringResourceOrName("", context)
-    setToolbarButtonActivatedState(button)
+    button.setBackgroundResource(R.drawable.toolbar_key_background)
     
     val index = if (key.name.startsWith("CUSTOM_AI_")) {
         key.name.removePrefix("CUSTOM_AI_").toIntOrNull()
@@ -77,11 +78,23 @@ fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
         context.prefs().getString("pref_custom_ai_tag_$index", "") ?: ""
     } else ""
     
-    if (showTags && tag.isNotBlank()) {
-        button.setImageDrawable(TagDrawable(tag.take(3).uppercase(Locale.US)))
+    val rawDrawable = if (showTags && tag.isNotBlank()) {
+        TagDrawable(tag.take(3).uppercase(Locale.US))
     } else {
-        button.setImageDrawable(KeyboardIconsSet.instance.getNewDrawable(key.name, context))
+        KeyboardIconsSet.instance.getNewDrawable(key.name, context)
     }
+
+    val showLongPressHint = context.prefs()
+        .getBoolean(Settings.PREF_TOOLBAR_LONG_PRESS_HINT, Defaults.PREF_TOOLBAR_LONG_PRESS_HINT)
+    val finalDrawable = if (rawDrawable != null && showLongPressHint
+        && getCodeForToolbarKeyLongClick(key) != KeyCode.UNSPECIFIED
+    ) {
+        LongPressHintDrawable(rawDrawable)
+    } else {
+        rawDrawable
+    }
+    button.setImageDrawable(finalDrawable)
+    setToolbarButtonActivatedState(button)
     return button
 }
 
@@ -165,7 +178,7 @@ class TagDrawable(private val text: String) : Drawable() {
 
 private val toolbarStateKeys = EnumSet.of(
     INCOGNITO, ONE_HANDED, SPLIT, AUTOCORRECT, AUTO_CAP, FORCE_AUTO_CAP,
-    AUTOSPACE, JOIN_NEXT, FORCE_NEXT_SPACE
+    AUTOSPACE, JOIN_NEXT, FORCE_NEXT_SPACE, SELECT_MODE
 )
 
 fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: String?) {
@@ -197,7 +210,7 @@ fun setToolbarButtonsActivatedState(buttonsGroup: ViewGroup) {
     buttonsGroup.forEach { if (it is ImageButton) setToolbarButtonActivatedState(it) }
 }
 
-private fun setToolbarButtonActivatedState(button: ImageButton) {
+fun setToolbarButtonActivatedState(button: ImageButton) {
     val activated = when (button.tag) {
         INCOGNITO -> button.context.prefs().getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE)
         ONE_HANDED -> Settings.getValues().mOneHandedModeEnabled
@@ -212,6 +225,7 @@ private fun setToolbarButtonActivatedState(button: ImageButton) {
         FORCE_AUTO_CAP -> Settings.getValues().mForceAutoCaps
         JOIN_NEXT -> OneShotSpaceAction.isJoinNextArmed()
         FORCE_NEXT_SPACE -> OneShotSpaceAction.isForceNextSpaceArmed()
+        SELECT_MODE -> helium314.keyboard.keyboard.KeyboardActionListenerImpl.sPersistentSelectionModeActive
         else -> true
     }
     button.isActivated = activated
@@ -307,6 +321,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     SPLIT -> KeyCode.SPLIT_LAYOUT
     PROOFREAD -> KeyCode.PROOFREAD
     TRANSLATE -> KeyCode.TRANSLATE
+    SELECT_MODE -> KeyCode.TOGGLE_SELECTION_MODE
     CUSTOM_AI_1 -> KeyCode.CUSTOM_AI_1
     CUSTOM_AI_2 -> KeyCode.CUSTOM_AI_2
     CUSTOM_AI_3 -> KeyCode.CUSTOM_AI_3
@@ -343,7 +358,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 enum class ToolbarKey {
     VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, HANDWRITING, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
     INCOGNITO, TOUCHPAD, TEXT_EDIT, AUTOCORRECT, AUTOSPACE, AUTO_CAP, FORCE_AUTO_CAP, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
-    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, JOIN_NEXT, FORCE_NEXT_SPACE, UNDO_WORD, PROOFREAD, TRANSLATE,
+    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, JOIN_NEXT, FORCE_NEXT_SPACE, UNDO_WORD, PROOFREAD, TRANSLATE, SELECT_MODE,
     CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, CUSTOM_AI_4, CUSTOM_AI_5,
     CUSTOM_AI_6, CUSTOM_AI_7, CUSTOM_AI_8, CUSTOM_AI_9, CUSTOM_AI_10
 }
@@ -378,7 +393,7 @@ val defaultToolbarPref by lazy {
     val default = when (helium314.keyboard.latin.BuildConfig.FLAVOR) {
         "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE, TEXT_EDIT)
         "offlinelite" -> listOf(SETTINGS, VOICE, CLIPBOARD, UNDO, INCOGNITO, COPY, PASTE)
-        else -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, TEXT_EDIT, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL)
+        else -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, TEXT_EDIT, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL, SELECT_MODE)
     }
         
     val others = entries.filterNot { it in default || it in excludedKeys }
@@ -562,4 +577,66 @@ class RepeatableKeyTouchListener(
         }
         return false
     }
+}
+
+class LongPressHintDrawable(private val base: Drawable) : Drawable() {
+    private val hintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.WHITE
+    }
+
+    init {
+        bounds = base.bounds
+    }
+
+    override fun draw(canvas: Canvas) {
+        base.draw(canvas)
+        val bounds = bounds
+        val radius = bounds.height() * 0.05f
+        val cx = bounds.right.toFloat() - radius * 3f
+        val cy = bounds.bottom.toFloat() - radius * 3f
+        hintPaint.color = Settings.getValues().mColors.get(ColorType.CLIPBOARD_PIN)
+        canvas.drawCircle(cx, cy, radius, hintPaint)
+    }
+
+    override fun onBoundsChange(bounds: Rect) {
+        base.bounds = bounds
+        super.onBoundsChange(bounds)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        base.alpha = alpha
+        hintPaint.alpha = (alpha * 0.5f).toInt()
+    }
+
+    override fun setColorFilter(colorFilter: ColorFilter?) {
+        base.colorFilter = colorFilter
+    }
+
+    override fun setTint(tintColor: Int) {
+        base.setTint(tintColor)
+    }
+
+    override fun setTintList(tint: ColorStateList?) {
+        base.setTintList(tint)
+    }
+
+    override fun setTintMode(tintMode: PorterDuff.Mode?) {
+        base.setTintMode(tintMode)
+    }
+
+    @Deprecated("Deprecated in Java", ReplaceWith("PixelFormat.UNKNOWN", "android.graphics.PixelFormat"))
+    @Suppress("DEPRECATION")
+    override fun getOpacity(): Int = base.opacity
+
+    override fun isStateful(): Boolean = base.isStateful
+
+    override fun onStateChange(state: IntArray): Boolean {
+        return base.setState(state)
+    }
+
+    override fun getIntrinsicWidth(): Int = base.intrinsicWidth
+    override fun getIntrinsicHeight(): Int = base.intrinsicHeight
+    override fun getMinimumWidth(): Int = base.minimumWidth
+    override fun getMinimumHeight(): Int = base.minimumHeight
 }

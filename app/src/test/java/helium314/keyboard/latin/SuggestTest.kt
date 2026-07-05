@@ -276,6 +276,25 @@ class SuggestTest {
         assertEquals("word'", result.mWord)
     }
 
+    @Test fun `misspelled word is corrected using relaxed threshold even with low score`() {
+        val locale = Locale.ENGLISH
+        // typed word: "recpa" (length 5) -> not in dictionary
+        // suggestion: "recep" (score 300,000)
+        // edit distance is 2, normalizedScore is 0.3 * (1 - 2/5) = 0.18
+        // 0.18 < 0.185 (threshold), but adjustedThreshold is 0.185 * (3/5) = 0.111
+        // Since score 300,000 > scoreLimit / 4 (237,500) and length > 3, it should correct!
+        val result = shouldBeAutoCorrected(
+            "recpa",
+            listOf(suggestion("recep", 300000, locale)),
+            null,
+            null,
+            locale,
+            thresholdModest
+        )
+        assert(result.last()) // should be corrected
+    }
+
+
     private fun shouldBeAutoCorrected(word: String, // typed word
                               suggestions: List<SuggestedWordInfo>, // suggestions ordered by score, including suggestion for typed word if in dictionary
                               firstSuggestionForEmpty: SuggestedWordInfo?, // first suggestion if typed word would be empty (null if none)

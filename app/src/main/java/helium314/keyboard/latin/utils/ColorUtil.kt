@@ -39,12 +39,10 @@ private fun getBrightnessSquared(@ColorInt color: Int): Int {
 
 @ColorInt
 fun adjustLuminosityAndKeepAlpha(@ColorInt color: Int, amount: Float): Int {
-    val alpha = Color.alpha(color)
     val hsl = FloatArray(3)
     ColorUtils.colorToHSL(color, hsl)
-    hsl[2] += amount
-    val newColor = ColorUtils.HSLToColor(hsl)
-    return Color.argb(alpha, Color.red(newColor), Color.green(newColor), Color.blue(newColor))
+    hsl[2] = (hsl[2] + amount).coerceIn(0f, 1f)
+    return ColorUtils.setAlphaComponent(ColorUtils.HSLToColor(hsl), Color.alpha(color))
 }
 
 @ColorInt

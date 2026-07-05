@@ -76,6 +76,10 @@ fun LoadEmojiLibPreference(
                 val urlStr = "${Links.DICTIONARY_URL}${Links.DICTIONARY_DOWNLOAD_SUFFIX}${Links.DICTIONARY_EMOJI_CLDR_SUFFIX}$dictName"
                 val url = URL(urlStr)
                 val conn = url.openConnection() as HttpURLConnection
+                conn.setRequestProperty("User-Agent", "HeliboardL/3.8.9 (Android)")
+                conn.connectTimeout = 15000
+                conn.readTimeout = 15000
+                conn.instanceFollowRedirects = true
                 conn.connect()
 
                 if (conn.responseCode != HttpURLConnection.HTTP_OK) {

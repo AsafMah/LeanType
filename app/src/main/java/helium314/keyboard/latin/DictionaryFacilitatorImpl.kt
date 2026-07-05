@@ -383,14 +383,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             )
             ngramContextForCurrentWord = ngramContextForCurrentWord.getNextNgramContext(WordInfo(currentWord))
 
-            // Un-blacklist a word the user deliberately committed — but ONLY if it is a word they
-            // genuinely know: present in a non-history dictionary (main/contacts/apps or their personal
-            // dictionary). A junk word (e.g. a gesture misfire that is in no dictionary) must STAY
-            // blacklisted, otherwise the user's "remove" never sticks: it would be un-blacklisted here
-            // and then re-learned, resurrecting it (e.g. "לא" → "לר").
-            dictionaryGroups.filter { it.confidence == preferredGroup.confidence }.forEach {
-                if (it.isInNonHistoryDictionary(currentWord)) it.removeFromBlacklist(currentWord)
-            }
+            // Upstream v3.9.1: do not automatically remove blacklisted words from the blacklist on type.
+            // Explicit Add/Blocklist actions remain the safe path for restoring blocked words.
         }
     }
 
@@ -540,6 +534,24 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // Update the spelling cache after unlearning. Words that are removed from user history
         // and appear in no other language model are not considered valid.
         putWordIntoValidSpellingWordCache("unlearnFromUserHistory", word.lowercase(Locale.getDefault()))
+    }
+
+    override fun getAllMainDictionaryWordsWithFrequency(): Map<String, Int> {
+        val result = mutableMapOf<String, Int>()
+        val dictGroup = dictionaryGroups.firstOrNull() ?: return emptyMap()
+        val mainDict = dictGroup.getDict(Dictionary.TYPE_MAIN)
+        if (mainDict != null) {
+            result.putAll(mainDict.getAllWordsWithFrequency())
+        }
+        val userHistoryDict = dictGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)
+        if (userHistoryDict != null) {
+            result.putAll(userHistoryDict.getAllWordsWithFrequency())
+        }
+        val userDict = dictGroup.getSubDict(Dictionary.TYPE_USER)
+        if (userDict != null) {
+            result.putAll(userDict.getAllWordsWithFrequency())
+        }
+        return result
     }
 
     // TODO: Revise the way to fusion suggestion results.

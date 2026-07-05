@@ -154,6 +154,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.SETTINGS -> R.drawable.sym_keyboard_settings_holo
                     ToolbarKey.SELECT_ALL -> R.drawable.ic_select_all
                     ToolbarKey.SELECT_WORD -> R.drawable.ic_select
+                    ToolbarKey.SELECT_MODE -> R.drawable.ic_select
                     ToolbarKey.COPY -> R.drawable.sym_keyboard_copy
                     ToolbarKey.CUT -> R.drawable.sym_keyboard_cut
                     ToolbarKey.PASTE -> R.drawable.sym_keyboard_paste
@@ -238,6 +239,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.SETTINGS -> R.drawable.sym_keyboard_settings_lxx
                     ToolbarKey.SELECT_ALL -> R.drawable.ic_select_all
                     ToolbarKey.SELECT_WORD -> R.drawable.ic_select
+                    ToolbarKey.SELECT_MODE -> R.drawable.ic_select
                     ToolbarKey.COPY -> R.drawable.sym_keyboard_copy
                     ToolbarKey.CUT -> R.drawable.sym_keyboard_cut
                     ToolbarKey.PASTE -> R.drawable.sym_keyboard_paste
@@ -322,6 +324,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.SETTINGS -> R.drawable.sym_keyboard_settings_rounded
                     ToolbarKey.SELECT_ALL -> R.drawable.ic_select_all_rounded
                     ToolbarKey.SELECT_WORD -> R.drawable.ic_select_rounded
+                    ToolbarKey.SELECT_MODE -> R.drawable.ic_select_rounded
                     ToolbarKey.COPY -> R.drawable.sym_keyboard_copy_rounded
                     ToolbarKey.CUT -> R.drawable.sym_keyboard_cut_rounded
                     ToolbarKey.PASTE -> R.drawable.sym_keyboard_paste_rounded

@@ -94,6 +94,12 @@ class SettingsContainerTest {
     }
 
     @Test
+    fun autospaceAfterEmojiSettingIsRegistered() {
+        assertEquals(Settings.PREF_AUTOSPACE_AFTER_EMOJI,
+            container[Settings.PREF_AUTOSPACE_AFTER_EMOJI]?.key)
+    }
+
+    @Test
     fun touchpadEdgeScrollSettingIsRegistered() {
         assertEquals(Settings.PREF_TOUCHPAD_EDGE_SCROLL,
             container[Settings.PREF_TOUCHPAD_EDGE_SCROLL]?.key)

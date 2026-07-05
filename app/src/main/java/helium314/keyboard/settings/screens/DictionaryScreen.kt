@@ -458,7 +458,12 @@ fun getUserAndInternalDictionaries(context: Context, locale: Locale): Pair<List<
             } else if (it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX)) {
                 hasInternalDict = true
             } else if (it.name.endsWith(".dict")) {
-                userDicts.add(it)
+                // ponytail: main.dict and emoji.dict are extracted internal dicts, not user dicts
+                if (it.name != DictionaryInfoUtils.MAIN_DICT_FILE_NAME && it.name != "emoji.dict") {
+                    userDicts.add(it)
+                } else {
+                    hasInternalDict = true
+                }
             }
         }
     }

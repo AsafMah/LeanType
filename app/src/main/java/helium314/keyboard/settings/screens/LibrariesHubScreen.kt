@@ -44,7 +44,7 @@ fun LibrariesHubScreen(
     onClickDictionaries: () -> Unit,
 ) {
     val context = LocalContext.current
-    val gestureInstalled = JniUtils.sHaveGestureLib
+    val gestureInstalled = JniUtils.sHaveNativeGestureLib
     
     SearchSettingsScreen(
         onClickBack = onClickBack,

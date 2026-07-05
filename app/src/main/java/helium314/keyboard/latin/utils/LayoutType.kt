@@ -9,7 +9,7 @@ import java.util.EnumMap
 enum class LayoutType {
     MAIN, SYMBOLS, MORE_SYMBOLS, FUNCTIONAL, NUMBER, NUMBER_ROW, NUMPAD,
     NUMPAD_LANDSCAPE, PHONE, PHONE_SYMBOLS, EMOJI_BOTTOM, CLIPBOARD_BOTTOM,
-    SHORTCUT_TOP, SHORTCUT_BOTTOM, HANDWRITING_BOTTOM;
+    SHORTCUT_TOP, SHORTCUT_BOTTOM, HANDWRITING_BOTTOM, EDITING;
 
     companion object {
         fun EnumMap<LayoutType, String>.toExtraValue() = map { it.key.name + Separators.KV + it.value }.joinToString(Separators.ENTRY)
@@ -41,6 +41,7 @@ enum class LayoutType {
             SHORTCUT_TOP -> R.string.layout_shortcut_top
             SHORTCUT_BOTTOM -> R.string.layout_shortcut_bottom
             HANDWRITING_BOTTOM -> R.string.layout_emoji_bottom_row
+            EDITING -> R.string.text_edit
         }
 
         fun getMainLayoutFromExtraValue(extraValue: String): String? {

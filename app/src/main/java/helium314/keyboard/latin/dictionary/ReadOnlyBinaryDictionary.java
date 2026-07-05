@@ -15,7 +15,9 @@ import helium314.keyboard.latin.makedict.WordProperty;
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -107,6 +109,55 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
             }
         }
         return NOT_A_PROBABILITY;
+    }
+
+    @Override
+    @androidx.annotation.NonNull
+    public Map<String, Integer> getAllWordsWithFrequency() {
+        Map<String, Integer> words = new HashMap<>();
+        int token = 0;
+        int count = 0;
+        do {
+            if (!mLock.readLock().tryLock()) {
+                try {
+                    Thread.sleep(5);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                continue;
+            }
+            try {
+                if (!mBinaryDictionary.isValidDictionary()) {
+                    break;
+                }
+                BinaryDictionary.GetNextWordAndFrequencyResult result =
+                        mBinaryDictionary.getNextWordAndFrequency(token);
+                if (result.mWordAndFrequency == null) break;
+                String word = result.mWordAndFrequency.mWord;
+                int freq = result.mWordAndFrequency.mFrequency;
+                if (word != null && !word.isEmpty() && freq >= 0) {
+                    words.put(word, freq);
+                }
+                token = result.mNextToken;
+            } finally {
+                mLock.readLock().unlock();
+            }
+
+            count++;
+            if (count % 200 == 0) {
+                Thread.yield();
+            }
+            if (count % 2000 == 0) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        } while (token != 0);
+        return words;
     }
 
     @Override

@@ -27,9 +27,7 @@ object TextExpanderUtils {
         return context.prefs().getBoolean(PREF_IMMEDIATE, false)
     }
 
-    fun getPrefix(context: Context): String {
-        return ""
-    }
+
 
     data class ShortcutEntry(
         val template: String,

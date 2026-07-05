@@ -68,6 +68,7 @@ public final class KeyboardId {
     public static final int ELEMENT_EMOJI_BOTTOM_ROW = 29;
     public static final int ELEMENT_CLIPBOARD_BOTTOM_ROW = 30;
     public static final int ELEMENT_HANDWRITING_BOTTOM_ROW = 31;
+    public static final int ELEMENT_TEXT_EDIT = 32;
 
     public final RichInputMethodSubtype mSubtype;
     public final int mWidth;
@@ -294,6 +295,7 @@ public final class KeyboardId {
             case ELEMENT_EMOJI_BOTTOM_ROW -> "emojiBottomRow";
             case ELEMENT_CLIPBOARD_BOTTOM_ROW -> "clipboardBottomRow";
             case ELEMENT_HANDWRITING_BOTTOM_ROW -> "handwritingBottomRow";
+            case ELEMENT_TEXT_EDIT -> "editing";
             default -> null;
         };
     }

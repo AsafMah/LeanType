@@ -115,6 +115,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // autospace regardless of this pref). Exposed via the AUTOSPACE toolbar toggle.
     public static final String PREF_AUTOSPACE_ENABLED = "autospace_enabled";
     public static final String PREF_AUTOSPACE_AFTER_PUNCTUATION = "autospace_after_punctuation";
+    public static final String PREF_AUTOSPACE_AFTER_EMOJI = "autospace_after_emoji";
     public static final String PREF_AUTOSPACE_AFTER_SUGGESTION = "autospace_after_suggestion";
     public static final String PREF_AUTOSPACE_AFTER_GESTURE_TYPING = "autospace_after_gesture_typing";
     public static final String PREF_AUTOSPACE_BEFORE_GESTURE_TYPING = "autospace_before_gesture_typing";
@@ -124,6 +125,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SUGGEST_PUNCTUATION = "suggest_punctuation";
     public static final String PREF_SUGGEST_CLIPBOARD_CONTENT = "suggest_clipboard_content";
     public static final String PREF_GESTURE_INPUT = "gesture_input";
+    // ponytail: gesture method preference key
+    public static final String PREF_GESTURE_METHOD = "gesture_method";
     public static final String PREF_VIBRATION_DURATION_SETTINGS = "vibration_duration_settings";
     public static final String PREF_VIBRATION_AMPLITUDE_SETTINGS = "vibration_amplitude_settings";
     public static final String PREF_KEYPRESS_SOUND_VOLUME = "keypress_sound_volume";
@@ -218,6 +221,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_TOUCHPAD_EDGE_SCROLL = "touchpad_edge_scroll";
     public static final String PREF_TOUCHPAD_FULLSCREEN = "touchpad_fullscreen";
     public static final String PREF_PERSIST_FLOATING_KEYBOARD = "persist_floating_keyboard";
+    public static final String PREF_PERSIST_TEXT_EDIT_MODE = "persist_text_edit_mode";
     public static final String PREF_FORCE_AUTO_CAPS = "force_auto_caps";
     public static final String PREF_OFFLINE_TEMP = "offline_temp";
     public static final String PREF_OFFLINE_TOP_P = "offline_top_p";
@@ -251,6 +255,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_URL_DETECTION = "url_detection";
     public static final String PREF_DONT_SHOW_MISSING_DICTIONARY_DIALOG = "dont_show_missing_dict_dialog";
     public static final String PREF_QUICK_PIN_TOOLBAR_KEYS = "quick_pin_toolbar_keys";
+    public static final String PREF_TOOLBAR_LONG_PRESS_HINT = "toolbar_long_press_hint";
     public static final String PREF_DISABLE_NETWORK = "disable_network";
     public static final String PREF_PINNED_TOOLBAR_KEYS = "pinned_toolbar_keys";
     public static final String PREF_TOOLBAR_KEYS = "toolbar_keys";

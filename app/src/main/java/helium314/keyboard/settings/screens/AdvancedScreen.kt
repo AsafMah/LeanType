@@ -53,6 +53,7 @@ import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.SettingsDestination
 import helium314.keyboard.settings.dialogs.TextInputDialog
+import helium314.keyboard.settings.dialogs.ListPickerDialog
 import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.Theme
@@ -689,16 +690,66 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                 default = Defaults.PREF_OFFLINE_SHOW_THINKING
             )
 
+            // ponytail: custom max tokens option
+            val prefs = context.prefs()
+            var maxTokens by remember { mutableStateOf(prefs.getInt(Settings.PREF_OFFLINE_MAX_TOKENS, Defaults.PREF_OFFLINE_MAX_TOKENS)) }
+            var showListDialog by rememberSaveable { mutableStateOf(false) }
+            var showCustomDialog by rememberSaveable { mutableStateOf(false) }
+
             val tokenEntries = context.resources.getStringArray(R.array.offline_max_tokens_entries)
             val tokenValues = context.resources.getStringArray(R.array.offline_max_tokens_values).map { it.toInt() }
             val tokenItems = tokenEntries.zip(tokenValues)
-            val maxTokenSetting = Setting(context, Settings.PREF_OFFLINE_MAX_TOKENS, R.string.offline_max_tokens_title, R.string.offline_max_tokens_summary) { }
 
-            ListPreference(
-                setting = maxTokenSetting,
-                items = tokenItems,
-                default = Defaults.PREF_OFFLINE_MAX_TOKENS
+            val currentItem = tokenItems.firstOrNull { it.second == maxTokens }
+            val description = currentItem?.first ?: context.getString(R.string.offline_max_tokens_custom_desc, maxTokens)
+
+            Preference(
+                name = context.getString(R.string.offline_max_tokens_title),
+                description = description,
+                onClick = { showListDialog = true }
             )
+
+            val dialogItems = tokenItems + (context.getString(R.string.offline_max_tokens_custom_option) to -1)
+
+            if (showListDialog) {
+                ListPickerDialog(
+                    onDismissRequest = { showListDialog = false },
+                    items = dialogItems,
+                    onItemSelected = {
+                        showListDialog = false
+                        if (it.second == -1) {
+                            showCustomDialog = true
+                        } else {
+                            maxTokens = it.second
+                            prefs.edit().putInt(Settings.PREF_OFFLINE_MAX_TOKENS, it.second).apply()
+                        }
+                    },
+                    selectedItem = currentItem ?: dialogItems.last(),
+                    title = { Text(context.getString(R.string.offline_max_tokens_title)) },
+                    getItemName = { it.first }
+                )
+            }
+
+            if (showCustomDialog) {
+                TextInputDialog(
+                    onDismissRequest = { showCustomDialog = false },
+                    onConfirmed = { text ->
+                        showCustomDialog = false
+                        val value = text.toIntOrNull()
+                        if (value != null && value > 0) {
+                            maxTokens = value
+                            prefs.edit().putInt(Settings.PREF_OFFLINE_MAX_TOKENS, value).apply()
+                        }
+                    },
+                    title = { Text(context.getString(R.string.offline_max_tokens_title)) },
+                    initialText = if (maxTokens !in tokenValues) maxTokens.toString() else "",
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                    checkTextValid = { text ->
+                        val value = text.toIntOrNull()
+                        value != null && value > 0
+                    }
+                )
+            }
         }
     } else null
 ) // Close listOfNotNull

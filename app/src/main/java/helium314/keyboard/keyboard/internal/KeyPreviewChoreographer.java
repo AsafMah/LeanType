@@ -144,4 +144,12 @@ public final class KeyPreviewChoreographer {
         mShowingKeyPreviewViews.put(key, keyPreviewView);
     }
 
+    public void clear() {
+        for (KeyPreviewView view : mShowingKeyPreviewViews.values()) {
+            view.setVisibility(View.INVISIBLE);
+        }
+        mShowingKeyPreviewViews.clear();
+        mFreeKeyPreviewViews.clear();
+    }
+
 }

@@ -865,6 +865,15 @@ public class LatinIME extends InputMethodService implements
                 mFloatingKeyboardManager.hide(false);
             }
         }
+        // ponytail: reset text edit mode when input finishes if persist is false
+        if (KeyboardActionListenerImpl.sPersistentTextEditModeActive) {
+            if (!Settings.getInstance().getCurrent().mPersistTextEditMode) {
+                KeyboardActionListenerImpl.sPersistentTextEditModeActive = false;
+                if (mKeyboardSwitcher != null) {
+                    mKeyboardSwitcher.hideTextEditView();
+                }
+            }
+        }
     }
 
     @Override
@@ -1731,6 +1740,13 @@ public class LatinIME extends InputMethodService implements
             if (emojiView != null) {
                 emojiView.addRecentKey(suggestionInfo.mWord);
             }
+        }
+
+        // ponytail: self-learning — bump gesture rank for words the user picks from fallback engine
+        if (suggestionInfo.isKindOf(helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo.KIND_CORRECTION)
+                && helium314.keyboard.latin.dictionary.Dictionary.DICTIONARY_USER_TYPED.equals(
+                        suggestionInfo.mSourceDict != null ? suggestionInfo.mSourceDict.mDictType : "")) {
+            helium314.keyboard.latin.gesture.SwipeGestureEngine.recordAccepted(suggestionInfo.mWord);
         }
     }
 
