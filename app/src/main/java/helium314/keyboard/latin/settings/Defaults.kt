@@ -38,6 +38,8 @@ object Defaults {
         LayoutType.PHONE_SYMBOLS -> "phone_symbols"
         LayoutType.EMOJI_BOTTOM -> "emoji_bottom_row"
         LayoutType.CLIPBOARD_BOTTOM -> "clip_bottom_row"
+        LayoutType.SHORTCUT_TOP -> "shortcut_top"
+        LayoutType.SHORTCUT_BOTTOM -> "shortcut_bottom"
         LayoutType.HANDWRITING_BOTTOM -> "handwriting_bottom_row"
         LayoutType.EDITING -> "editing"
     }
@@ -106,6 +108,8 @@ object Defaults {
     const val PREF_SPACE_HORIZONTAL_SWIPE = "move_cursor"
     const val PREF_SPACE_VERTICAL_SWIPE = "touchpad_mode"
     const val PREF_DELETE_SWIPE = true
+    const val PREF_SHORTCUT_TOP_ROW = false
+    const val PREF_SHORTCUT_BOTTOM_ROW = false
     const val PREF_AUTOSPACE_AFTER_PUNCTUATION = false
     const val PREF_AUTOSPACE_AFTER_EMOJI = false
     const val PREF_AUTOSPACE_AFTER_SUGGESTION = true

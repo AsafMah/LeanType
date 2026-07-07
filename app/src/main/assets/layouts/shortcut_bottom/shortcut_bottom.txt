@@ -1,0 +1,7 @@
+←|!code/key_arrow_left
+↓|!code/key_arrow_down
+↑|!code/key_arrow_up
+→|!code/key_arrow_right
+W←|!code/key_word_left
+W→|!code/key_word_right
+Ins|!code/key_insert

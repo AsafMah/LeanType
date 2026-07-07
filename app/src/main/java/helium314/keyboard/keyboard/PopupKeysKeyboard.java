@@ -262,6 +262,13 @@ public final class PopupKeysKeyboard extends Keyboard {
         public Builder(final Context context, final Key key, final Keyboard keyboard,
                 final boolean isSinglePopupKeyWithPreview, final int keyPreviewVisibleWidth,
                 final int keyPreviewVisibleHeight, final Paint paintToMeasure) {
+            this(context, key, keyboard, isSinglePopupKeyWithPreview, keyPreviewVisibleWidth,
+                    keyPreviewVisibleHeight, paintToMeasure, 0);
+        }
+
+        public Builder(final Context context, final Key key, final Keyboard keyboard,
+                final boolean isSinglePopupKeyWithPreview, final int keyPreviewVisibleWidth,
+                final int keyPreviewVisibleHeight, final Paint paintToMeasure, final int fixedKeyWidth) {
             super(context, new PopupKeysKeyboardParams());
             mParams.mId = keyboard.mId;
             readAttributes(keyboard.mPopupKeysTemplate);
@@ -283,6 +290,9 @@ public final class PopupKeysKeyboard extends Keyboard {
                 // adjusted with their bottom paddings deducted.
                 keyWidth = keyPreviewVisibleWidth;
                 rowHeight = keyPreviewVisibleHeight + mParams.mVerticalGap;
+            } else if (fixedKeyWidth > 0) {
+                keyWidth = fixedKeyWidth;
+                rowHeight = keyboard.mMostCommonKeyHeight;
             } else {
                 final float padding = context.getResources().getDimension(
                         R.dimen.config_popup_keys_keyboard_key_horizontal_padding)

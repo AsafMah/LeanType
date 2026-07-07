@@ -71,6 +71,8 @@ fun GestureTypingScreen(
         add(Settings.PREF_SPACE_HORIZONTAL_SWIPE)
         add(Settings.PREF_SPACE_VERTICAL_SWIPE)
         add(Settings.PREF_DELETE_SWIPE)
+        add(Settings.PREF_SHORTCUT_TOP_ROW)
+        add(Settings.PREF_SHORTCUT_BOTTOM_ROW)
 
         add(R.string.settings_category_touchpad)
         add(Settings.PREF_TOUCHPAD_SENSITIVITY)
@@ -178,6 +180,12 @@ fun createGestureTypingSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_DELETE_SWIPE, R.string.delete_swipe, R.string.delete_swipe_summary) {
         SwitchPreference(it, Defaults.PREF_DELETE_SWIPE)
+    },
+    Setting(context, Settings.PREF_SHORTCUT_TOP_ROW, R.string.shortcut_top_row, R.string.shortcut_top_row_summary) {
+        SwitchPreference(it, Defaults.PREF_SHORTCUT_TOP_ROW)
+    },
+    Setting(context, Settings.PREF_SHORTCUT_BOTTOM_ROW, R.string.shortcut_bottom_row, R.string.shortcut_bottom_row_summary) {
+        SwitchPreference(it, Defaults.PREF_SHORTCUT_BOTTOM_ROW)
     },
 )
 

@@ -522,6 +522,37 @@ f""", // no newline at the end
         }
     }
 
+
+    @Test fun shortcutRowsParseToPopupKeySpecs() {
+        fun parseShortcutRow(path: String) = LayoutParser.parseSimpleString(File(path).readText()).first()
+            .mapNotNull { it.compute(params)?.getPopupLabel(params) }
+            .map { helium314.keyboard.keyboard.internal.PopupKeySpec(it, false, Locale.US).mCode }
+
+        assertEquals(
+            listOf(
+                KeyCode.MOVE_START_OF_LINE,
+                KeyCode.MOVE_END_OF_LINE,
+                KeyCode.PAGE_UP,
+                KeyCode.PAGE_DOWN,
+                KeyCode.TAB,
+                KeyCode.ESCAPE,
+            ),
+            parseShortcutRow("src/main/assets/layouts/shortcut_top/shortcut_top.txt"),
+        )
+        assertEquals(
+            listOf(
+                KeyCode.ARROW_LEFT,
+                KeyCode.ARROW_DOWN,
+                KeyCode.ARROW_UP,
+                KeyCode.ARROW_RIGHT,
+                KeyCode.WORD_LEFT,
+                KeyCode.WORD_RIGHT,
+                KeyCode.INSERT,
+            ),
+            parseShortcutRow("src/main/assets/layouts/shortcut_bottom/shortcut_bottom.txt"),
+        )
+    }
+
     @Test fun simpleWithLabelPopupHasCode() {
         val keys = LayoutParser.parseSimpleString("""
             a symbol

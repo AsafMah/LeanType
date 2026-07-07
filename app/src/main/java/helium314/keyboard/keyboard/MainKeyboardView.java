@@ -61,6 +61,7 @@ import helium314.keyboard.latin.settings.Defaults;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LanguageOnSpacebarUtils;
+import helium314.keyboard.latin.utils.LayoutType;
 import helium314.keyboard.latin.utils.Log;
 import helium314.keyboard.latin.utils.ToolbarKey;
 import helium314.keyboard.latin.utils.TypefaceUtils;
@@ -509,27 +510,27 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     @Nullable
     public PopupKeysPanel showPopupKeysKeyboard(@NonNull final Key key,
             @NonNull final PointerTracker tracker) {
+        return showPopupKeysKeyboard(key, tracker, false,
+                PopupKeysKeyboardView.NO_ROW_ALIGN, 0);
+    }
+
+    @Nullable
+    private PopupKeysPanel showPopupKeysKeyboard(@NonNull final Key key,
+            @NonNull final PointerTracker tracker, final boolean belowSourceKey,
+            final int rowAlignedLeftX, final int fixedKeyWidth) {
         final PopupKeySpec[] popupKeys = key.getPopupKeys();
         if (popupKeys == null) {
             return null;
         }
         Keyboard popupKeysKeyboard = mPopupKeysKeyboardCache.get(key);
         if (popupKeysKeyboard == null) {
-            // {@link KeyPreviewDrawParams#mPreviewVisibleWidth} should have been set at
-            // {@link
-            // KeyPreviewChoreographer#placeKeyPreview(Key,TextView,KeyboardIconsSet,KeyDrawParams,int,int[]},
-            // though there may be some chances that the value is zero. <code>width ==
-            // 0</code>
-            // will cause zero-division error at
-            // {@link
-            // PopupKeysKeyboardParams#setParameters(int,int,int,int,int,int,boolean,int)}.
             final boolean isSinglePopupKeyWithPreview = mKeyPreviewDrawParams.isPopupEnabled()
                     && key.hasPreview() && popupKeys.length == 1
                     && mKeyPreviewDrawParams.getVisibleWidth() > 0;
             final PopupKeysKeyboard.Builder builder = new PopupKeysKeyboard.Builder(
                     getContext(), key, getKeyboard(), isSinglePopupKeyWithPreview,
                     mKeyPreviewDrawParams.getVisibleWidth(),
-                    mKeyPreviewDrawParams.getVisibleHeight(), newLabelPaint(key));
+                    mKeyPreviewDrawParams.getVisibleHeight(), newLabelPaint(key), fixedKeyWidth);
             popupKeysKeyboard = builder.build();
             mPopupKeysKeyboardCache.put(key, popupKeysKeyboard);
         }
@@ -543,24 +544,48 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         final int[] lastCoords = CoordinateUtils.newInstance();
         tracker.getLastCoordinates(lastCoords);
         final boolean keyPreviewEnabled = mKeyPreviewDrawParams.isPopupEnabled() && key.hasPreview();
-        // The popup keys keyboard is usually horizontally aligned with the center of
-        // the parent key.
-        // If showPopupKeysKeyboardAtTouchedPoint is true and the key preview is
-        // disabled, the more
-        // keys keyboard is placed at the touch point of the parent key.
         final int pointX = (mConfigShowPopupKeysKeyboardAtTouchedPoint && !keyPreviewEnabled)
                 ? CoordinateUtils.x(lastCoords)
                 : key.getX() + key.getWidth() / 2;
-        // The popup keys keyboard is usually vertically aligned with the top edge of
-        // the parent key
-        // (plus vertical gap). If the key preview is enabled, the popup keys keyboard
-        // is vertically
-        // aligned with the bottom edge of the visible part of the key preview.
-        // {@code mPreviewVisibleOffset} has been set appropriately in
-        // {@link KeyboardView#showKeyPreview(PointerTracker)}.
-        final int pointY = key.getY() + mKeyPreviewDrawParams.getVisibleOffset();
+        final int pointY = belowSourceKey
+                ? key.getY() + key.getHeight()
+                : key.getY() + mKeyPreviewDrawParams.getVisibleOffset();
+        popupKeysKeyboardView.setShowBelowAnchor(belowSourceKey);
+        popupKeysKeyboardView.setRowAlignedLeftX(rowAlignedLeftX);
         popupKeysKeyboardView.showPopupKeysPanel(this, this, pointX, pointY, mKeyboardActionListener);
         return popupKeysKeyboardView;
+    }
+
+    @Override
+    @Nullable
+    public PopupKeysPanel showShortcutRowKeyboard(@NonNull final Key key,
+            @NonNull final PointerTracker tracker, @NonNull final LayoutType layoutType,
+            final boolean belowSourceKey) {
+        final Keyboard keyboard = getKeyboard();
+        if (keyboard == null) {
+            return null;
+        }
+        final Key popupParentKey = ShortcutRowKeys.createPopupParentKey(
+                getContext(), key, keyboard, layoutType);
+        if (popupParentKey == null) {
+            return null;
+        }
+        int rowLeftX = Integer.MAX_VALUE;
+        int rowRightX = Integer.MIN_VALUE;
+        for (final Key rowKey : keyboard.getSortedKeys()) {
+            if (rowKey.getY() == key.getY() && rowKey.getBackgroundType() == Key.BACKGROUND_TYPE_NORMAL
+                    && !rowKey.isModifier() && !rowKey.isSpacer()) {
+                rowLeftX = Math.min(rowLeftX, rowKey.getX());
+                rowRightX = Math.max(rowRightX, rowKey.getX() + rowKey.getWidth());
+            }
+        }
+        if (rowLeftX == Integer.MAX_VALUE) {
+            rowLeftX = key.getX();
+            rowRightX = key.getX() + key.getWidth();
+        }
+        final int iconCount = popupParentKey.getPopupKeys().length;
+        final int proportionalKeyWidth = iconCount > 0 ? (rowRightX - rowLeftX) / iconCount : 0;
+        return showPopupKeysKeyboard(popupParentKey, tracker, belowSourceKey, rowLeftX, proportionalKeyWidth);
     }
 
     public boolean isInDraggingFinger() {

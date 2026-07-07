@@ -55,7 +55,20 @@ public final class KeyboardCodesSet {
         "key_toggle_onehanded",
         "key_start_onehanded", // keep name to avoid breaking custom layouts
         "key_stop_onehanded", // keep name to avoid breaking custom layouts
-        "key_switch_onehanded"
+        "key_switch_onehanded",
+        "key_arrow_left",
+        "key_arrow_down",
+        "key_arrow_up",
+        "key_arrow_right",
+        "key_home",
+        "key_end",
+        "key_page_up",
+        "key_page_down",
+        "key_word_left",
+        "key_word_right",
+        "key_escape",
+        "key_insert",
+        "key_event_tab"
     };
 
     private static final int[] DEFAULT = {
@@ -81,7 +94,20 @@ public final class KeyboardCodesSet {
         KeyCode.TOGGLE_ONE_HANDED_MODE,
         KeyCode.TOGGLE_ONE_HANDED_MODE,
         KeyCode.TOGGLE_ONE_HANDED_MODE,
-        KeyCode.SWITCH_ONE_HANDED_MODE
+        KeyCode.SWITCH_ONE_HANDED_MODE,
+        KeyCode.ARROW_LEFT,
+        KeyCode.ARROW_DOWN,
+        KeyCode.ARROW_UP,
+        KeyCode.ARROW_RIGHT,
+        KeyCode.MOVE_START_OF_LINE,
+        KeyCode.MOVE_END_OF_LINE,
+        KeyCode.PAGE_UP,
+        KeyCode.PAGE_DOWN,
+        KeyCode.WORD_LEFT,
+        KeyCode.WORD_RIGHT,
+        KeyCode.ESCAPE,
+        KeyCode.INSERT,
+        KeyCode.TAB
     };
 
     static {

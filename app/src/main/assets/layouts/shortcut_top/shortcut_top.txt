@@ -1,0 +1,6 @@
+Home|!code/key_home
+End|!code/key_end
+PgUp|!code/key_page_up
+PgDn|!code/key_page_down
+Tab|!code/key_event_tab
+Esc|!code/key_escape

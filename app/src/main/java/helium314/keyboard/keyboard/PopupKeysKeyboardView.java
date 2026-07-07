@@ -44,6 +44,9 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
     private int mOriginX;
     private int mOriginY;
     private Key mCurrentKey;
+    private boolean mShowBelowAnchor;
+    public static final int NO_ROW_ALIGN = Integer.MIN_VALUE;
+    private int mRowAlignedLeftX = NO_ROW_ALIGN;
 
     private int mActivePointerId;
 
@@ -138,6 +141,14 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         showPopupKeysPanelInternal(parentView, controller, pointX, pointY);
     }
 
+    public void setShowBelowAnchor(final boolean below) {
+        mShowBelowAnchor = below;
+    }
+
+    public void setRowAlignedLeftX(final int rowLeftX) {
+        mRowAlignedLeftX = rowLeftX;
+    }
+
     @SuppressLint("RtlHardcoded") // a key on the left is on the left, independent of layout direction
     private void showPopupKeysPanelInternal(final View parentView, final Controller controller,
             final int pointX, final int pointY) {
@@ -145,9 +156,13 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         final View container = getContainerView();
         // The coordinates of panel's left-top corner in parentView's coordinate system.
         // We need to consider background drawable paddings.
-        final int x = pointX - getDefaultCoordX() - container.getPaddingLeft() - getPaddingLeft();
-        final int y = pointY - container.getMeasuredHeight() + container.getPaddingBottom()
-                + getPaddingBottom();
+        final int x = (mRowAlignedLeftX != NO_ROW_ALIGN)
+                ? mRowAlignedLeftX - container.getPaddingLeft() - getPaddingLeft()
+                : pointX - getDefaultCoordX() - container.getPaddingLeft() - getPaddingLeft();
+        final int y = mShowBelowAnchor
+                ? pointY - container.getPaddingTop() - getPaddingTop()
+                : pointY - container.getMeasuredHeight() + container.getPaddingBottom()
+                        + getPaddingBottom();
 
         parentView.getLocationInWindow(mCoordinates);
         final int containerY = y + CoordinateUtils.y(mCoordinates);

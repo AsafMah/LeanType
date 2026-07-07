@@ -107,6 +107,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SPACE_HORIZONTAL_SWIPE = "horizontal_space_swipe";
     public static final String PREF_SPACE_VERTICAL_SWIPE = "vertical_space_swipe";
     public static final String PREF_DELETE_SWIPE = "delete_swipe";
+    public static final String PREF_SHORTCUT_TOP_ROW = "shortcut_top_row";
+    public static final String PREF_SHORTCUT_BOTTOM_ROW = "shortcut_bottom_row";
     public static final String PREF_AUTOSPACE_AFTER_PUNCTUATION = "autospace_after_punctuation";
     public static final String PREF_AUTOSPACE_AFTER_EMOJI = "autospace_after_emoji";
     public static final String PREF_AUTOSPACE_AFTER_SUGGESTION = "autospace_after_suggestion";

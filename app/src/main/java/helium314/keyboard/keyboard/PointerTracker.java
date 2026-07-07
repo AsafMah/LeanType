@@ -37,6 +37,7 @@ import helium314.keyboard.latin.define.DebugFlags;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.utils.KtxKt;
+import helium314.keyboard.latin.utils.LayoutType;
 import helium314.keyboard.latin.utils.Log;
 
 import java.util.ArrayList;
@@ -177,6 +178,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     // true if a keyswipe gesture is enabled and warranted.
     private boolean mKeySwipeAllowed = false;
     private static boolean sInKeySwipe = false;
+    private boolean mShortcutTopRowSwipeAllowed = false;
+    private boolean mShortcutBottomRowSwipeAllowed = false;
+    private boolean mInShortcutRowSwipe = false;
+    private static boolean sInShortcutRowSwipe = false;
 
     // Touchpad mode for cursor control
     public static boolean sPersistentTouchpadModeActive = false;
@@ -741,6 +746,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             mPopupKeysPanel.dismissPopupKeysPanel();
             mPopupKeysPanel = null;
         }
+        if (mInShortcutRowSwipe) {
+            mInShortcutRowSwipe = false;
+            sInShortcutRowSwipe = false;
+        }
     }
 
     private void onDownEventInternal(final int x, final int y, final long eventTime) {
@@ -759,6 +768,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             mKeySwipeAllowed = true;
             sInKeySwipe = true;
         }
+        mShortcutTopRowSwipeAllowed = isShortcutRowSource(key, true);
+        mShortcutBottomRowSwipeAllowed = isShortcutRowSource(key, false);
+        mInShortcutRowSwipe = false;
         mKeyboardLayoutHasBeenChanged = false;
         mIsTrackingForActionDisabled = false;
         resetKeySelectionByDraggingFinger();
@@ -1106,8 +1118,73 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
     }
 
+
+    private boolean isShortcutRowSource(final Key key, final boolean topRow) {
+        final SettingsValues sv = Settings.getValues();
+        if ((topRow && !sv.mShortcutTopRowEnabled)
+                || (!topRow && !sv.mShortcutBottomRowEnabled)
+                || key == null || mKeyboard == null || key.isSpacer() || !key.isEnabled()
+                || key.isModifier() || isSwiper(key.getCode())
+                || !mKeyboard.mId.isAlphabetKeyboard()) {
+            return false;
+        }
+        final int sourceY = key.getY();
+        boolean foundEligibleRow = false;
+        int targetY = topRow ? Integer.MAX_VALUE : Integer.MIN_VALUE;
+        for (final Key candidate : mKeyboard.getSortedKeys()) {
+            if (candidate.isSpacer() || !candidate.isEnabled() || candidate.isModifier()
+                    || isSwiper(candidate.getCode())
+                    || candidate.getBackgroundType() != Key.BACKGROUND_TYPE_NORMAL) {
+                continue;
+            }
+            foundEligibleRow = true;
+            targetY = topRow ? Math.min(targetY, candidate.getY()) : Math.max(targetY, candidate.getY());
+        }
+        return foundEligibleRow && sourceY == targetY;
+    }
+
+    private boolean tryStartShortcutRowSwipe(final int x, final int y, final long eventTime) {
+        if (mInShortcutRowSwipe || isShowingPopupKeysPanel() || sInGesture || sInKeySwipe
+                || sInShortcutRowSwipe || mCurrentKey == null) {
+            return mInShortcutRowSwipe;
+        }
+        final int dX = x - mStartX;
+        final int dY = y - mStartY;
+        final LayoutType layoutType;
+        final boolean belowSourceKey;
+        if (mShortcutTopRowSwipeAllowed && dY <= -sPointerStep && abs(dY) > abs(dX)) {
+            layoutType = LayoutType.SHORTCUT_TOP;
+            belowSourceKey = false;
+        } else if (mShortcutBottomRowSwipeAllowed && dY >= sPointerStep && abs(dY) > abs(dX)) {
+            layoutType = LayoutType.SHORTCUT_BOTTOM;
+            belowSourceKey = true;
+        } else {
+            return false;
+        }
+
+        final PopupKeysPanel popupKeysPanel = sDrawingProxy.showShortcutRowKeyboard(
+                mCurrentKey, this, layoutType, belowSourceKey);
+        if (popupKeysPanel == null) {
+            return false;
+        }
+        sTimerProxy.cancelKeyTimersOf(this);
+        mIsDetectingGesture = false;
+        setReleasedKeyGraphics(mCurrentKey, true);
+        final int translatedX = popupKeysPanel.translateX(x);
+        final int translatedY = popupKeysPanel.translateY(y);
+        popupKeysPanel.onDownEvent(translatedX, translatedY, mPointerId, eventTime);
+        mPopupKeysPanel = popupKeysPanel;
+        mInShortcutRowSwipe = true;
+        sInShortcutRowSwipe = true;
+        return true;
+    }
+
     private void onMoveEventInternal(final int x, final int y, final long eventTime) {
         final Key oldKey = mCurrentKey;
+
+        if (tryStartShortcutRowSwipe(x, y, eventTime)) {
+            return;
+        }
 
         // todo (later): move key swipe stuff to KeyboardActionListener (and finally
         // extend it)
@@ -1178,6 +1255,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     public void onPhantomUpEvent(final long eventTime) {
         if (DEBUG_EVENT) {
             printTouchEvent("onPhntEvent:", mLastX, mLastY, eventTime);
+        }
+        if (mInShortcutRowSwipe) {
+            mIsTrackingForActionDisabled = true;
         }
         onUpEventInternal(mLastX, mLastY, eventTime);
         cancelTrackingForAction();

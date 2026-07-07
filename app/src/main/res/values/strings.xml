@@ -252,6 +252,11 @@
     <string name="delete_swipe">Delete swipe</string>
     <!-- Description for "delete_swipe" option. -->
     <string name="delete_swipe_summary">Perform a swipe from the delete key to select and remove bigger portions of text at once</string>
+    <string name="shortcut_top_row">Top shortcut row</string>
+    <string name="shortcut_top_row_summary">Enable upward swipes from the top letter row</string>
+    <string name="shortcut_bottom_row">Bottom shortcut row</string>
+    <string name="shortcut_bottom_row_summary">Enable downward swipes from the bottom letter row</string>
+
     <!-- Preferences item and dialog title for backup and restore -->
     <string name="backup_restore_title">Backup and restore</string>
     <!-- Message for backup and restore dialog -->
@@ -812,6 +817,9 @@ language, hence "No language". -->
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Emoji bottom row</string>
     <!-- Name for bottom row layout with action key in emoji view -->
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Emoji bottom row with action key</string>
+    <string name="layout_shortcut_top" tools:keep="@string/layout_shortcut_top">Top shortcut row</string>
+    <string name="layout_shortcut_bottom" tools:keep="@string/layout_shortcut_bottom">Bottom shortcut row</string>
+
     <!-- Name for bottom row layout in clipboard view -->
     <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Clipboard bottom row</string>
     <!-- Name for bottom row layout with action key in clipboard view -->
