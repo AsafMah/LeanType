@@ -94,6 +94,8 @@ fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
         rawDrawable
     }
     button.setImageDrawable(finalDrawable)
+    Settings.getValues().mColors.setColor(button, ColorType.TOOL_BAR_KEY)
+    button.background?.let { Settings.getValues().mColors.setColor(it, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND) }
     setToolbarButtonActivatedState(button)
     return button
 }
