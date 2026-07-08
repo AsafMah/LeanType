@@ -3,8 +3,8 @@
     SPDX-License-Identifier: GPL-3.0-only
 -->
 <resources>
-    <string name="english_ime_name" translatable="false">LeanType debug</string>
-    <string name="spell_checker_service_name" translatable="false">LeanType debug Spell Checker</string>
-    <string name="ime_settings" translatable="false">LeanType debug Settings</string>
+    <string name="english_ime_name" translatable="false">LeanType Two Thumb Step1</string>
+    <string name="spell_checker_service_name" translatable="false">LeanType Two Thumb Step1 Spell Checker</string>
+    <string name="ime_settings" translatable="false">LeanType Two Thumb Step1 Settings</string>
 
 </resources>

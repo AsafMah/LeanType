@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="english_ime_name" translatable="false">LeanType Two Thumb Offline</string>
+    <string name="spell_checker_service_name" translatable="false">LeanType Two Thumb Offline Spell Checker</string>
+    <string name="ime_settings" translatable="false">LeanType Two Thumb Offline Settings</string>
+    <string name="ime_name">LeanType Two Thumb Offline</string>
+    <string name="android_spell_checker_settings">LeanType Two Thumb Offline Spell Checker Settings</string>
+</resources>
