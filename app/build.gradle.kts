@@ -19,12 +19,12 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.leanbitlab.leantype"
+        applicationId = "com.leanbitlab.leantype.shortcutrows"
         minSdk = 21
         targetSdk = 35
         // ponytail: bump version to 3.9.3
         versionCode = 3930
-        versionName = "3.9.3"
+        versionName = "3.9.3-shortcutrows-test"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
