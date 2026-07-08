@@ -547,6 +547,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onCreate() {
+        helium314.keyboard.latin.gesture.SwipeGestureEngine.initialize(this);
         mSettings.startListener();
         KeyboardIconsSet.Companion.getInstance().loadIcons(this);
         mRichImm = RichInputMethodManager.getInstance();
@@ -1742,11 +1743,15 @@ public class LatinIME extends InputMethodService implements
             }
         }
 
-        // ponytail: self-learning — bump gesture rank for words the user picks from fallback engine
         if (suggestionInfo.isKindOf(helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo.KIND_CORRECTION)
                 && helium314.keyboard.latin.dictionary.Dictionary.DICTIONARY_USER_TYPED.equals(
                         suggestionInfo.mSourceDict != null ? suggestionInfo.mSourceDict.mDictType : "")) {
-            helium314.keyboard.latin.gesture.SwipeGestureEngine.recordAccepted(suggestionInfo.mWord);
+            helium314.keyboard.latin.gesture.SwipeGestureEngine.recordAccepted(
+                    suggestionInfo.mWord,
+                    mInputLogic.getWordComposer().getComposedDataSnapshot().mInputPointers,
+                    mKeyboardSwitcher.getKeyboard(),
+                    mInputLogic.getSuggest().getGestureIndex()
+            );
         }
     }
 

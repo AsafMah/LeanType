@@ -372,6 +372,7 @@ final class SuggestionStripLayoutHelper {
                 suggestedWords, mSuggestionsCountInStrip);
         final TextView centerWordView = mWordViews.get(mCenterPositionInStrip);
         final int stripWidth = stripView.getWidth();
+
         final int centerWidth = getSuggestionWidth(mCenterPositionInStrip, stripWidth);
         if (wordCountToShow == 1 || getTextScaleX(centerWordView.getText(), centerWidth,
                 centerWordView.getPaint()) < MIN_TEXT_XSCALE) {

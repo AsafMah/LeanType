@@ -32,8 +32,18 @@ fun EditButton(enabled: Boolean = true, onClick: () -> Unit) {
 }
 
 @Composable
-fun DeleteButton(onClick: () -> Unit) {
-    IconButton(onClick)  { Icon(painterResource(R.drawable.ic_bin), stringResource(R.string.delete)) }
+fun DeleteButton(
+    modifier: Modifier = Modifier,
+    tint: androidx.compose.ui.graphics.Color = androidx.compose.material3.LocalContentColor.current,
+    onClick: () -> Unit
+) {
+    IconButton(onClick, modifier = modifier) {
+        Icon(
+            painterResource(R.drawable.ic_bin),
+            stringResource(R.string.delete),
+            tint = tint
+        )
+    }
 }
 
 @Composable

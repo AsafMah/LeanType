@@ -448,8 +448,21 @@ fun getUserAndInternalDictionaries(context: Context, locale: Locale): Pair<List<
         } == true
         if (hasFallbackFiles) {
             userLocaleDir = fallbackDir
+        } else {
+            val variantDir = DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)
+            if (variantDir != null) {
+                userLocaleDir = variantDir
+            }
         }
     }
+
+    val internalDicts = DictionaryInfoUtils.getAssetsDictionaryList(context)
+    val best = internalDicts?.let {
+        LocaleUtils.getBestMatch(locale, it.toList()) { dict ->
+            DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(dict)
+        }
+    }
+    val hasAsset = best != null
 
     if (userLocaleDir?.exists() == true && userLocaleDir.isDirectory) {
         userLocaleDir.listFiles()?.forEach {
@@ -458,22 +471,25 @@ fun getUserAndInternalDictionaries(context: Context, locale: Locale): Pair<List<
             } else if (it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX)) {
                 hasInternalDict = true
             } else if (it.name.endsWith(".dict")) {
-                // ponytail: main.dict and emoji.dict are extracted internal dicts, not user dicts
-                if (it.name != DictionaryInfoUtils.MAIN_DICT_FILE_NAME && it.name != "emoji.dict") {
-                    userDicts.add(it)
+                if (it.name == DictionaryInfoUtils.MAIN_DICT_FILE_NAME) {
+                    if (!hasAsset) {
+                        userDicts.add(it)
+                    } else {
+                        hasInternalDict = true
+                    }
+                } else if (it.name == "emoji.dict") {
+                    val hasEmojiAsset = internalDicts?.any { asset -> asset.startsWith("emoji") } == true
+                    if (!hasEmojiAsset) {
+                        userDicts.add(it)
+                    } else {
+                        hasInternalDict = true
+                    }
                 } else {
-                    hasInternalDict = true
+                    userDicts.add(it)
                 }
             }
         }
     }
-    val internalDicts = DictionaryInfoUtils.getAssetsDictionaryList(context)
-    val best = internalDicts?.let {
-        LocaleUtils.getBestMatch(locale, it.toList()) { dict ->
-            DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(dict)
-        }
-    }
-    val hasAsset = best != null
 
     return userDicts to (hasInternalDict || hasAsset)
 }

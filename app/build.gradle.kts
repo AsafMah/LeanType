@@ -130,11 +130,11 @@ android {
                 variant.proguardFiles.add(project.layout.buildDirectory.file(project.buildFile.parent + "/proguard-rules.pro"))
             }
             if (variant.flavorName == "standard" || variant.flavorName == "standardfull") {
-                // ponytail: dynamically find all dict files to ignore in standard flavor except main_en-US.dict
+                // Ignore all dictionary assets in standard/standardfull flavors
                 val dictsDir = project.file("src/main/assets/dicts")
                 if (dictsDir.exists() && dictsDir.isDirectory) {
                     dictsDir.listFiles()?.forEach { file ->
-                        if (file.name.endsWith(".dict") && file.name != "main_en-US.dict") {
+                        if (file.name.endsWith(".dict")) {
                             patterns.add(file.name)
                         }
                     }

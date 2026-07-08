@@ -2930,7 +2930,8 @@ public final class InputLogic {
         }
 
         // ponytail: only strip auto-inserted spaces (WEAK/PHANTOM/SWAP), never manual (NONE)
-        if (isSpaceStrippingPunctuation(codePoint)
+        if (!inputTransaction.getSettingsValues().mPreserveSpaceBeforePunctuation
+                && isSpaceStrippingPunctuation(codePoint)
                 && !inputTransaction.getSettingsValues().isUsuallyPrecededBySpace(codePoint)
                 && inputTransaction.getSpaceState() != SpaceState.NONE) {
             if (mConnection.getCodePointBeforeCursor() == Constants.CODE_SPACE) {
@@ -2938,7 +2939,8 @@ public final class InputLogic {
             }
         }
 
-        if ((SpaceState.WEAK == inputTransaction.getSpaceState()
+        if (!inputTransaction.getSettingsValues().mPreserveSpaceBeforePunctuation
+                && (SpaceState.WEAK == inputTransaction.getSpaceState()
                 || SpaceState.SWAP_PUNCTUATION == inputTransaction.getSpaceState())
                 && isFromSuggestionStrip) {
             if (inputTransaction.getSettingsValues().isUsuallyPrecededBySpace(codePoint)) {

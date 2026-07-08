@@ -81,6 +81,7 @@ fun TextCorrectionScreen(
         if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING else null,
         if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING else null,
         Settings.PREF_SHIFT_REMOVES_AUTOSPACE,
+        Settings.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION,
         R.string.settings_category_suggestions,
         if (suggestionsVisible) Settings.PREF_SHOW_SUGGESTIONS else null,
         if (suggestionsEnabled) Settings.PREF_ALWAYS_SHOW_SUGGESTIONS else null,
@@ -175,6 +176,9 @@ fun createCorrectionSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_SHIFT_REMOVES_AUTOSPACE, R.string.shift_removes_autospace, R.string.shift_removes_autospace_summary) {
         SwitchPreference(it, Defaults.PREF_SHIFT_REMOVES_AUTOSPACE)
+    },
+    Setting(context, Settings.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION, R.string.preserve_space_before_punctuation, R.string.preserve_space_before_punctuation_summary) {
+        SwitchPreference(it, Defaults.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION)
     },
     Setting(context, Settings.PREF_SHOW_SUGGESTIONS,
         R.string.prefs_show_suggestions, R.string.prefs_show_suggestions_summary

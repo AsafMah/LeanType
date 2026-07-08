@@ -98,6 +98,7 @@ public class SettingsValues {
         public final boolean mAutospaceAfterGestureTyping;
         public final boolean mAutospaceBeforeGestureTyping;
         public final boolean mShiftRemovesAutospace;
+        public final boolean mPreserveSpaceBeforePunctuation;
         public final boolean mClipboardHistoryEnabled;
         public final long mClipboardHistoryRetentionTime;
         public final boolean mClipboardHistoryPinnedFirst;
@@ -172,6 +173,7 @@ public class SettingsValues {
         public final ToolbarMode mToolbarMode;
         public final boolean mToolbarHidingGlobal;
         public final boolean mSplitToolbar;
+        public final boolean mShowDownloadButtonInToolbar;
         public final boolean mAutoShowToolbar;
         public final boolean mAutoShowToolbarOnSelect;
         public final boolean mAutoHideToolbar;
@@ -238,6 +240,8 @@ public class SettingsValues {
                 mToolbarHidingGlobal = prefs.getBoolean(Settings.PREF_TOOLBAR_HIDING_GLOBAL,
                                 Defaults.PREF_TOOLBAR_HIDING_GLOBAL);
                 mSplitToolbar = prefs.getBoolean(Settings.PREF_SPLIT_TOOLBAR, Defaults.PREF_SPLIT_TOOLBAR);
+                mShowDownloadButtonInToolbar = prefs.getBoolean(Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR,
+                                Defaults.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR);
                 mAutoCap = prefs.getBoolean(Settings.PREF_AUTO_CAP, Defaults.PREF_AUTO_CAP)
                                 && ScriptUtils.scriptSupportsUppercase(mLocale);
                 mVibrateOn = Settings.readVibrationEnabled(prefs);
@@ -476,6 +480,8 @@ public class SettingsValues {
                                 Defaults.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING);
                 mShiftRemovesAutospace = prefs.getBoolean(Settings.PREF_SHIFT_REMOVES_AUTOSPACE,
                                 Defaults.PREF_SHIFT_REMOVES_AUTOSPACE);
+                mPreserveSpaceBeforePunctuation = prefs.getBoolean(Settings.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION,
+                                Defaults.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION);
                 mClipboardHistoryEnabled = prefs.getBoolean(Settings.PREF_ENABLE_CLIPBOARD_HISTORY,
                                 Defaults.PREF_ENABLE_CLIPBOARD_HISTORY);
                 mClipboardHistoryRetentionTime = prefs.getInt(Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME,

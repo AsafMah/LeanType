@@ -17,6 +17,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | 📝 **[Text Expander](#6-text-expander)** | Custom text shortcut expansion. |
 | 🖱️ **[Touchpad Mode](#7-touchpad-mode)** | Full-screen touchpad gestures and controls. |
 | ✍️ **[Handwriting Input](#8-handwriting-input)** | Use handwriting recognition to draw letters directly on a canvas. |
+| 👆 **[Built-in Gesture Typing](#9-built-in-gesture-typing)** | Use gesture typing without downloading native libraries. |
 
 ## Summary of New Features
 
@@ -42,6 +43,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | **Two-thumb Typing** | Mix taps and swipes naturally, multi-tap then swipe, manual spacing, recognition tweaks. All experimental and opt-in. | `Two-thumb typing (experimental)` |
 | **Text Expander** | Expand custom shortcuts using dynamic template variables (date, time, clipboard, custom placeholders). | `Text correction > Text Expander` |
 | **Handwriting Input** | Draw letters or words directly on the screen keyboard space to type (standard variant, requires plugin). | `Libraries > Handwriting Input Plugin` |
+| **Built-in Gesture Typing** | Gesture typing works out of the box using our new built-in pure-Java fallback engine, removing the strict dependency on native Google libraries. | `Gesture typing` |
 
 ---
 
@@ -423,3 +425,15 @@ LeanType integrates a handwriting recognition canvas that allows you to write ch
 3. Draw characters, words, or punctuation symbols on the canvas. The keyboard will automatically inputs recognized characters.
 4. Tap the **Clear (X)** button on the bottom row to clear the current drawing canvas.
 5. Tap the **Handwriting** icon again to toggle back to the standard keyboard layout.
+---
+
+## 9. Built-in Gesture Typing
+
+*   **Functionality**: Gesture typing (swipe/glide typing) works out of the box without requiring any external or native libraries.
+*   **Engine**: Powered by a pure-Java fallback gesture engine (`SwipeGestureEngine`) ported from HeliBoard.
+*   **Accuracy & Ranking**: Includes end-point-weighted L2 path scoring, shape length mismatch penalty, sequence matching penalty, next-word bigram prediction boost, and forgiving start/end matching.
+*   **Optional Native Engine**: Users can still choose to toggle to the native swipe library. If using the Standard flavor, the library can be downloaded automatically via the built-in downloader.
+*   **Settings Configuration**:
+    1. Go to **Settings > Gesture typing**.
+    2. Toggle **Use fallback gesture engine** to select between the pure-Java engine and the native library.
+    3. Self-learning can be toggled via **Enable gesture self-learning**.

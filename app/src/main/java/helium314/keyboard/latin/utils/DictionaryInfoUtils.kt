@@ -112,6 +112,31 @@ object DictionaryInfoUtils {
     fun getCachedDictForLocaleAndType(locale: Locale, type: String, context: Context): File? =
         getCachedDictsForLocale(locale, context).firstOrNull { it.name.substringBefore("_") == type }
 
+    fun getFallbackVariantDirectory(locale: Locale, context: Context): File? {
+        if (locale.country.isEmpty() && locale.variant.isEmpty()) return null
+        val cacheDir = File(getWordListCacheDirectory(context))
+        if (!cacheDir.exists() || !cacheDir.isDirectory) return null
+        val subDirs = cacheDir.listFiles { file -> file.isDirectory } ?: return null
+        val matchedDirs = subDirs.filter {
+            val dirLocale = it.name.constructLocale()
+            dirLocale.language == locale.language
+        }.sortedWith { d1, d2 ->
+            val n1 = d1.name.lowercase()
+            val n2 = d2.name.lowercase()
+            val lang = locale.language.lowercase()
+            val p1 = if (n1 == "${lang}-gb") 0 else if (n1 == "${lang}-us") 1 else 2
+            val p2 = if (n2 == "${lang}-gb") 0 else if (n2 == "${lang}-us") 1 else 2
+            p1.compareTo(p2)
+        }
+        for (dir in matchedDirs) {
+            val files = dir.listFiles()
+            if (files?.any { it.name.endsWith(USER_DICTIONARY_SUFFIX) || it.name.startsWith(MAIN_DICT_PREFIX) || it.name == MAIN_DICT_FILE_NAME || it.name.endsWith(".dict") } == true) {
+                return dir
+            }
+        }
+        return null
+    }
+
     fun getCachedDictsForLocale(locale: Locale, context: Context): Array<File> {
         val exactDir = getCacheDirectoryForLocale(locale, context)?.let { File(it) }
         val exactFiles = exactDir?.listFiles()
@@ -124,6 +149,10 @@ object DictionaryInfoUtils {
             val fallbackFiles = fallbackDir?.listFiles()
             if (fallbackFiles?.any { it.name.endsWith(USER_DICTIONARY_SUFFIX) || it.name.startsWith(MAIN_DICT_PREFIX) || it.name == MAIN_DICT_FILE_NAME } == true) {
                 return fallbackFiles
+            }
+            val variantDir = getFallbackVariantDirectory(locale, context)
+            if (variantDir != null) {
+                return variantDir.listFiles() ?: emptyArray()
             }
         }
         return exactFiles ?: emptyArray()

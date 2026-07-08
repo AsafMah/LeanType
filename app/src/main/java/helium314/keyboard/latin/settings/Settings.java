@@ -120,6 +120,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_AUTOSPACE_AFTER_GESTURE_TYPING = "autospace_after_gesture_typing";
     public static final String PREF_AUTOSPACE_BEFORE_GESTURE_TYPING = "autospace_before_gesture_typing";
     public static final String PREF_SHIFT_REMOVES_AUTOSPACE = "shift_removes_autospace";
+    public static final String PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION = "preserve_space_before_punctuation";
     public static final String PREF_ALWAYS_INCOGNITO_MODE = "always_incognito_mode";
     public static final String PREF_BIGRAM_PREDICTIONS = "next_word_prediction";
     public static final String PREF_SUGGEST_PUNCTUATION = "suggest_punctuation";
@@ -278,6 +279,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SPLIT_TOOLBAR = "split_toolbar";
     public static final String PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE = "toolbar_swipe_down_to_hide";
     public static final String PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD = "only_toolbar_with_hw_keyboard";
+    public static final String PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR = "show_download_button_in_toolbar";
 
     // Emoji
     public static final String PREF_EMOJI_MAX_SDK = "emoji_max_sdk";

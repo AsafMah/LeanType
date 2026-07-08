@@ -1,0 +1,8 @@
+- Use key hitbox centers to fix gesture mapping offsets
+- Performance: L2 early exit bounds on poor gesture candidates
+- Prevent grouping of non-emoji symbols on delete
+- Exclude prepackaged English dictionary assets from standard builds
+- Allow direct deletion of downloaded dictionaries and separate experimental status checks
+- Redirect missing dictionary button directly to settings
+- Reset word prediction context to sentence start on new lines
+- Support custom translation target languages

@@ -64,6 +64,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private var mPrefs: SharedPreferences? = null
     private var mContext: Context? = null
     private var mEnabledDictionariesState: Map<String, Boolean> = emptyMap()
+    private var mLoadedDownloadPrefs: Map<String, Any?> = emptyMap()
     private var dictionaryGroups = listOf(DictionaryGroup())
 
     @Volatile
@@ -143,7 +144,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         if (prefs != null) {
             val currentPrefs = prefs.all.filterKeys { it.startsWith("pref_dict_enabled_") }
                 .mapValues { it.value as? Boolean ?: true }
-            if (currentPrefs != mEnabledDictionariesState) {
+            val currentDownloadPrefs = prefs.all.filterKeys { it.startsWith("pref_dict_download_link_") }
+            if (currentPrefs != mEnabledDictionariesState || currentDownloadPrefs != mLoadedDownloadPrefs) {
                 return false
             }
         }
@@ -179,6 +181,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         mPrefs = prefs
         mEnabledDictionariesState = prefs.all.filterKeys { it.startsWith("pref_dict_enabled_") }
             .mapValues { it.value as? Boolean ?: true }
+        mLoadedDownloadPrefs = prefs.all.filterKeys { it.startsWith("pref_dict_download_link_") }
 
         // Initialize session word boost with context if not yet done
         if (sessionWordBoost == null) {
@@ -609,9 +612,39 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val weightForLocale = dictGroup.getWeightForLocale(dictionaryGroups, composedData.mIsBatchMode)
         for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
             val dictionary = dictGroup.getDict(dictType) ?: continue
-            val dictionarySuggestions = dictionary.getSuggestions(composedData, ngramContext, proximityInfoHandle,
+            var dictionarySuggestions = dictionary.getSuggestions(composedData, ngramContext, proximityInfoHandle,
                 settingsValuesForSuggestion, sessionId, weightForLocale, weightOfLangModelVsSpatialModel
-            ) ?: continue
+            )
+            if (composedData.mTypedWord.isEmpty() && (dictionarySuggestions == null || dictionarySuggestions.isEmpty())
+                && (dictType == Dictionary.TYPE_USER || dictType == Dictionary.TYPE_USER_HISTORY)
+            ) {
+                val allWords = try {
+                    dictionary.allWordsWithFrequency
+                } catch (e: Exception) {
+                    null
+                }
+                if (allWords != null && allWords.isNotEmpty()) {
+                    val topWords = allWords.entries
+                        .sortedByDescending { it.value }
+                        .take(15)
+                    val unigramSuggestions = ArrayList<SuggestedWordInfo>()
+                    for (entry in topWords) {
+                        unigramSuggestions.add(
+                            SuggestedWordInfo(
+                                entry.key,
+                                "",
+                                entry.value,
+                                SuggestedWordInfo.KIND_PREDICTION,
+                                dictionary,
+                                SuggestedWordInfo.NOT_AN_INDEX,
+                                SuggestedWordInfo.NOT_A_CONFIDENCE
+                            )
+                        )
+                    }
+                    dictionarySuggestions = unigramSuggestions
+                }
+            }
+            if (dictionarySuggestions == null) continue
 
             // For some reason "garbage" words are produced when glide typing. For user history
             // and main dictionaries we can filter them out by checking whether the dictionary
@@ -637,7 +670,16 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 if (word.length == 1 && info.mSourceDict.mDictType == Dictionary.TYPE_EMOJI && !StringUtils.mightBeEmoji(word[0].code))
                     continue
 
-                suggestions.add(info)
+                if (composedData.mTypedWord.isEmpty() && (dictType == Dictionary.TYPE_USER_HISTORY || dictType == Dictionary.TYPE_USER)) {
+                    val boostedScore = info.mScore + 1000
+                    val boostedInfo = SuggestedWordInfo(
+                        info.mWord, info.mPrevWordsContext, boostedScore, info.mKindAndFlags,
+                        info.mSourceDict, info.mIndexOfTouchPointOfSecondWord, info.mAutoCommitFirstWordConfidence
+                    )
+                    suggestions.add(boostedInfo)
+                } else {
+                    suggestions.add(info)
+                }
             }
         }
         return suggestions

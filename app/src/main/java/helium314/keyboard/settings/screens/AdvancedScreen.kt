@@ -463,17 +463,54 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
         val service = remember { helium314.keyboard.latin.utils.ProofreadService(ctx) }
         val languageNames = ctx.resources.getStringArray(helium314.keyboard.latin.R.array.translate_language_names)
         val languageCodes = ctx.resources.getStringArray(helium314.keyboard.latin.R.array.translate_language_codes)
-        val items = languageNames.zip(languageCodes)
         var selectedLanguage by remember { mutableStateOf(service.getTargetLanguage()) }
+        var showCustomDialog by remember { mutableStateOf(false) }
+
+        val items = remember(selectedLanguage) {
+            val zipped = languageNames.zip(languageCodes).toMutableList()
+            if (!languageCodes.contains(selectedLanguage) && selectedLanguage.isNotEmpty()) {
+                zipped.add(0, "Custom ($selectedLanguage)" to selectedLanguage)
+            }
+            zipped.add("Custom..." to "custom")
+            zipped
+        }
+
         ListPreference(
             setting = setting,
             items = items,
             default = selectedLanguage,
             onChanged = { newLanguage ->
-                service.setTargetLanguage(newLanguage)
-                selectedLanguage = newLanguage
+                if (newLanguage == "custom") {
+                    showCustomDialog = true
+                } else {
+                    service.setTargetLanguage(newLanguage)
+                    selectedLanguage = newLanguage
+                }
             }
         )
+
+        if (showCustomDialog) {
+            TextInputDialog(
+                onDismissRequest = {
+                    ctx.prefs().edit().putString(setting.key, selectedLanguage).apply()
+                    showCustomDialog = false
+                },
+                textInputLabel = { Text("Language name or code (e.g. Esperanto, de)") },
+                initialText = if (selectedLanguage == "custom") "" else selectedLanguage,
+                onConfirmed = { customLang ->
+                    val trimmed = customLang.trim()
+                    if (trimmed.isNotEmpty()) {
+                        service.setTargetLanguage(trimmed)
+                        ctx.prefs().edit().putString(setting.key, trimmed).apply()
+                        selectedLanguage = trimmed
+                    } else {
+                        ctx.prefs().edit().putString(setting.key, selectedLanguage).apply()
+                    }
+                    showCustomDialog = false
+                },
+                title = { Text("Custom Target Language") }
+            )
+        }
     },
     Setting(context, SettingsWithoutKey.TRANSLATE_GEMINI_MODEL, R.string.translate_model_title, R.string.translate_model_summary) { setting ->
         val ctx = LocalContext.current

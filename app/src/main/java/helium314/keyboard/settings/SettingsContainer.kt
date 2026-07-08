@@ -88,7 +88,7 @@ object SettingsWithoutKey {
     const val HIDDEN_FEATURES = "hidden_features"
     const val GITHUB = "github"
     const val SPONSOR = "sponsor"
-    const val GITHUB_WIKI = "github_wiki"
+    const val GITHUB_FEATURES = "github_features"
     const val SAVE_LOG = "save_log"
     const val BACKUP_RESTORE = "backup_restore"
     const val PERSIST_FLOATING_KEYBOARD = "persist_floating_keyboard"

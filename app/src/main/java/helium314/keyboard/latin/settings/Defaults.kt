@@ -45,6 +45,7 @@ object Defaults {
     }
     
     const val PREF_SPLIT_TOOLBAR = false
+    const val PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR = true
 
 
     private const val DEFAULT_SIZE_SCALE = 1.0f // 100%
@@ -117,6 +118,7 @@ object Defaults {
     const val PREF_AUTOSPACE_AFTER_GESTURE_TYPING = true
     const val PREF_AUTOSPACE_BEFORE_GESTURE_TYPING = true
     const val PREF_SHIFT_REMOVES_AUTOSPACE = false
+    const val PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION = false
     const val PREF_ALWAYS_INCOGNITO_MODE = false
     const val PREF_BIGRAM_PREDICTIONS = true
     const val PREF_SUGGEST_PUNCTUATION = false
@@ -199,7 +201,7 @@ object Defaults {
     const val PREF_OFFLINE_TOP_K = 40
     const val PREF_OFFLINE_MIN_P = 0.05f
     const val PREF_OFFLINE_SHOW_THINKING = false
-    const val PREF_OFFLINE_SYSTEM_PROMPT = "Correct the grammar and spelling. Output only the corrected text."
+    const val PREF_OFFLINE_SYSTEM_PROMPT = "Correct the grammar and spelling. Keep the same language as the input. Do not translate. Output only the corrected text."
     const val PREF_OFFLINE_TRANSLATE_SYSTEM_PROMPT = "Translate the following text to {lang}. Output only the translation, nothing else:\n\n"
     const val PREF_OFFLINE_MAX_TOKENS = 64  // Accurate (64 tokens) default
     const val PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE = "French"

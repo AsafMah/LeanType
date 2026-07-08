@@ -7,6 +7,7 @@ package helium314.keyboard.latin.dictionary
 
 import android.content.Context
 import helium314.keyboard.latin.common.LocaleUtils
+import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.utils.DictionaryInfoUtils
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.Log
@@ -69,10 +70,19 @@ object DictionaryFactory {
         val header = DictionaryInfoUtils.getDictionaryFileHeaderOrNull(file)
         if (header != null) {
             val prefs = context.prefs()
-            val mainPrefKey = "pref_dict_enabled_main:${header.mIdString.substringAfter(":")}"
-            if (!prefs.getBoolean(mainPrefKey, true) || !prefs.getBoolean("pref_dict_enabled_${header.mIdString}", true)) {
-                Log.i("DictionaryFactory", "skipping disabled dictionary ${header.mIdString}")
-                return
+            val dictType = header.mIdString.split(":").first()
+            if (dictType == Dictionary.TYPE_MAIN) {
+                val localeTag = locale.toLanguageTag().lowercase().replace("-", "_")
+                val mainPrefKey = "pref_dict_enabled_main:$localeTag"
+                if (!prefs.getBoolean(mainPrefKey, true)) {
+                    Log.i("DictionaryFactory", "skipping disabled main dictionary for locale $locale")
+                    return
+                }
+            } else {
+                if (!prefs.getBoolean("pref_dict_enabled_${header.mIdString}", true)) {
+                    Log.i("DictionaryFactory", "skipping disabled addon dictionary ${header.mIdString}")
+                    return
+                }
             }
         }
         val dictionary = getDictionary(file, locale) ?: return
@@ -95,8 +105,9 @@ object DictionaryFactory {
             return null
         }
         val dictType = header.mIdString.split(":").first()
+        val dictLocale = header.mLocaleString.constructLocale()
         val readOnlyBinaryDictionary = ReadOnlyBinaryDictionary(
-            file.absolutePath, 0, file.length(), false, locale, dictType
+            file.absolutePath, 0, file.length(), false, dictLocale, dictType
         )
 
         if (readOnlyBinaryDictionary.isValidDictionary) {

@@ -27,6 +27,7 @@ import helium314.keyboard.latin.makedict.DictionaryHeader
 import helium314.keyboard.latin.utils.DictionaryInfoUtils
 import helium314.keyboard.latin.utils.ScriptUtils.script
 import helium314.keyboard.latin.utils.SubtypeSettings
+import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.settings.DropDownField
 import helium314.keyboard.settings.WithSmallTitle
@@ -82,6 +83,13 @@ fun NewDictionaryDialog(
                     val internalMainDictFile = File(cacheDir, DictionaryInfoUtils.MAIN_DICT_FILE_NAME)
                     internalMainDictFile.delete()
                 }
+                val prefs = ctx.prefs()
+                val localeTag = locale.toLanguageTag().lowercase().replace("-", "_")
+                prefs.edit()
+                    .putBoolean("pref_dict_enabled_main:$localeTag", true)
+                    .putBoolean("pref_dict_enabled_${header.mIdString}", true)
+                    .putBoolean("pref_dict_enabled_main:${header.mIdString.substringAfter(":")}", true)
+                    .apply()
                 val newDictBroadcast = Intent(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION)
                 ctx.sendBroadcast(newDictBroadcast)
             },
