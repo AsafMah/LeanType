@@ -1,0 +1,7 @@
+- Fixed swipe gesture OOM crashes via packed coordinates & sequential word streaming.
+- Blocked blacklisted words from history, suggestion cache, and gesture index.
+- Fixed automatic shift text selection bug.
+- Added text expander sequential placeholders & settings backup integration.
+- Added dynamic secondary layouts (custom1-5) with deletion option.
+- Added long-press deletion of suggestions with window crash fixes.
+- Added auto-correction triggers configuration (space/punctuation/both).

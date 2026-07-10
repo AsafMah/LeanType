@@ -202,6 +202,7 @@ public class SettingsValues {
         public final int mKeypressVibrationAmplitude;
         public final float mKeypressSoundVolume;
         public final boolean mAutoCorrectionEnabledPerUserSettings;
+        public final String mAutoCorrectTrigger;
         public final boolean mAutoCorrectEnabled;
         public final float mAutoCorrectionThreshold;
         public final boolean mAutoCorrectShortcuts;
@@ -293,6 +294,8 @@ public class SettingsValues {
                 mUrlDetectionEnabled = prefs.getBoolean(Settings.PREF_URL_DETECTION, Defaults.PREF_URL_DETECTION);
                 mAutoCorrectionEnabledPerUserSettings = prefs.getBoolean(Settings.PREF_AUTO_CORRECTION,
                                 Defaults.PREF_AUTO_CORRECTION);
+                mAutoCorrectTrigger = prefs.getString(Settings.PREF_AUTO_CORRECT_TRIGGER,
+                                Defaults.PREF_AUTO_CORRECT_TRIGGER);
                 mAutoCorrectEnabled = mAutoCorrectionEnabledPerUserSettings
                                 && (mInputAttributes.mInputTypeShouldAutoCorrect
                                                 || prefs.getBoolean(Settings.PREF_MORE_AUTO_CORRECTION,

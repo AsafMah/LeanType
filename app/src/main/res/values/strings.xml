@@ -171,6 +171,10 @@
     <string name="autocorrect">Auto-correction</string>
     <!-- Description for auto correction -->
     <string name="auto_correction_summary">Spacebar and punctuation automatically correct mistyped words</string>
+    <string name="auto_correction_trigger">Auto-correct on</string>
+    <string name="auto_correction_trigger_both">Spacebar and punctuation</string>
+    <string name="auto_correction_trigger_space">Spacebar only</string>
+    <string name="auto_correction_trigger_punctuation">Punctuation only</string>
     <!-- Option to enable auto correction for many fields that do not request auto correction -->
     <string name="more_autocorrect">More auto-correction</string>
     <!-- Description for more_autocorrect -->
@@ -939,12 +943,18 @@ language, hence "No language". -->
     <string name="delete_layout">Really delete custom layout %s?</string>
     <!-- Message when layout to be deleted is in use -->
     <string name="layout_in_use">Warning: layout is in currently use</string>
+    <string name="add_custom_layout">Add custom layout</string>
     <!-- Message on layout error -->
     <string name="layout_error">Layout error: %s</string>
     <!-- Text hint for editing layout -->
     <string name="edit_layout">Tap to edit raw layout</string>
     <!-- Settings screen title for secondary layouts (functional keys, symbols, numpad, ...) -->
     <string name="settings_screen_secondary_layouts">Secondary layouts</string>
+    <string name="layout_custom1">Custom layout 1</string>
+    <string name="layout_custom2">Custom layout 2</string>
+    <string name="layout_custom3">Custom layout 3</string>
+    <string name="layout_custom4">Custom layout 4</string>
+    <string name="layout_custom5">Custom layout 5</string>
     <!-- Name for functional keys layout -->
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Functional keys</string>
     <!-- Name for functional keys layout for tablets -->

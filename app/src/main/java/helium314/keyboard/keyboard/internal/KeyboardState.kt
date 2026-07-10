@@ -39,6 +39,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         fun toggleNumpad(withSliding: Boolean, autoCapsFlags: Int, recapitalizeMode: RecapitalizeMode?, forceReturnToAlpha: Boolean)
         fun setSymbolsKeyboard()
         fun setSymbolsShiftedKeyboard()
+        fun setCustomKeyboard(customIndex: Int)
 
         /** Request to call back [KeyboardState.onUpdateShiftState]. */
         fun requestUpdatingShiftState(autoCapsFlags: Int, recapitalizeMode: RecapitalizeMode?)
@@ -670,6 +671,11 @@ class KeyboardState(private val switchActions: SwitchActions) {
             KeyCode.CLIPBOARD -> if (Settings.getValues().mClipboardHistoryEnabled) setClipboardKeyboard()
             KeyCode.NUMPAD -> toggleNumpad(false, autoCapsFlags, recapitalizeMode, false, true)
             KeyCode.SYMBOL -> setSymbolsKeyboard()
+            KeyCode.CUSTOM1 -> switchActions.setCustomKeyboard(1)
+            KeyCode.CUSTOM2 -> switchActions.setCustomKeyboard(2)
+            KeyCode.CUSTOM3 -> switchActions.setCustomKeyboard(3)
+            KeyCode.CUSTOM4 -> switchActions.setCustomKeyboard(4)
+            KeyCode.CUSTOM5 -> switchActions.setCustomKeyboard(5)
             KeyCode.TOGGLE_ONE_HANDED_MODE -> setOneHandedModeEnabled(!Settings.getValues().mOneHandedModeEnabled)
             KeyCode.SWITCH_ONE_HANDED_MODE -> switchOneHandedMode()
             KeyCode.TOGGLE_FLOATING_KEYBOARD -> switchActions.toggleFloatingKeyboard()

@@ -190,7 +190,7 @@ public final class InputLogic {
 
     /**
      * Create a new instance of the input logic.
-     * 
+     *
      * @param latinIME                    the instance of the parent LatinIME. We
      *                                    should remove this when we can.
      * @param suggestionStripViewAccessor an object to access the suggestion strip
@@ -307,7 +307,7 @@ public final class InputLogic {
 
     /**
      * Call this when the subtype changes.
-     * 
+     *
      * @param combiningSpec  the spec string for the combining rules
      * @param settingsValues the current settings values
      */
@@ -318,7 +318,7 @@ public final class InputLogic {
 
     /**
      * Call this when the orientation changes.
-     * 
+     *
      * @param settingsValues the current values of the settings.
      */
     public void onOrientationChange(final SettingsValues settingsValues) {
@@ -402,7 +402,7 @@ public final class InputLogic {
 
     /**
      * A suggestion was picked from the suggestion strip.
-     * 
+     *
      * @param settingsValues     the current values of the settings.
      * @param suggestionInfo     the suggestion info.
      * @param keyboardShiftState the shift state of the keyboard, as returned by
@@ -532,7 +532,7 @@ public final class InputLogic {
      * part of normal typing or whether it was an explicit cursor move by the user.
      * In any case,
      * do the necessary adjustments.
-     * 
+     *
      * @param oldSelStart    old selection start
      * @param oldSelEnd      old selection end
      * @param newSelStart    new selection start
@@ -1972,6 +1972,9 @@ public final class InputLogic {
             final LatinIME.UIHandler handler) {
         inputTransaction.setDidAffectContents();
         if (event.getCodePoint() == Constants.CODE_ENTER) {
+            if (tryJumpToNextPlaceholder()) {
+                return;
+            }
             final EditorInfo editorInfo = getCurrentInputEditorInfo();
             final int imeOptionsActionId = InputTypeUtils.getImeOptionsActionIdFromEditorInfo(editorInfo);
             if (InputTypeUtils.IME_ACTION_CUSTOM_LABEL == imeOptionsActionId) {
@@ -2086,7 +2089,7 @@ public final class InputLogic {
 
     /**
      * Handle a non-separator.
-     * 
+     *
      * @param event            The event to handle.
      * @param settingsValues   The current settings values.
      * @param inputTransaction The transaction in progress.
@@ -2231,6 +2234,7 @@ public final class InputLogic {
                             helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(typedWord, textStr, mLatinIME);
                     if (result != null) {
                         if (result.getPrefixLength() > 0) {
+                            mConnection.commitText("", 1);
                             mConnection.deleteTextBeforeCursor(result.getPrefixLength());
                         }
                         commitExpandedText(result.getMatchedString(), result.getExpandedText());
@@ -2267,7 +2271,7 @@ public final class InputLogic {
 
     /**
      * Handle input of a separator code point.
-     * 
+     *
      * @param event            The event to handle.
      * @param inputTransaction The transaction in progress.
      */
@@ -2341,7 +2345,15 @@ public final class InputLogic {
         }
         // isComposingWord() may have changed since we stored wasComposing
         if (mWordComposer.isComposingWord()) {
-            if (settingsValues.mAutoCorrectEnabled && !isInlineEmojiSearchAction()) {
+            boolean shouldTriggerAutoCorrect = settingsValues.mAutoCorrectEnabled;
+            if (shouldTriggerAutoCorrect) {
+                if ("space".equals(settingsValues.mAutoCorrectTrigger)) {
+                    shouldTriggerAutoCorrect = Character.isWhitespace(codePoint);
+                } else if ("punctuation".equals(settingsValues.mAutoCorrectTrigger)) {
+                    shouldTriggerAutoCorrect = !Character.isWhitespace(codePoint);
+                }
+            }
+            if (shouldTriggerAutoCorrect && !isInlineEmojiSearchAction()) {
                 final String separator = shouldAvoidSendingCode ? LastComposedWord.NOT_A_SEPARATOR
                         : StringUtils.newSingleCodePointString(codePoint);
                 commitCurrentAutoCorrection(settingsValues, separator, handler);
@@ -2448,7 +2460,7 @@ public final class InputLogic {
 
     /**
      * Handle a press on the backspace key.
-     * 
+     *
      * @param event            The event to handle.
      * @param inputTransaction The transaction in progress.
      */
@@ -2863,7 +2875,7 @@ public final class InputLogic {
      * This method will check that there are two characters before the cursor and
      * that the first
      * one is a space before it does the actual swapping.
-     * 
+     *
      * @param event            The event to handle.
      * @param inputTransaction The transaction in progress.
      * @return true if the swap has been performed, false if it was prevented by
@@ -2912,11 +2924,11 @@ public final class InputLogic {
     /*
      * Strip a trailing space if necessary and returns whether it's a swap weak
      * space situation.
-     * 
+     *
      * @param event The event to handle.
-     * 
+     *
      * @param inputTransaction The transaction in progress.
-     * 
+     *
      * @return whether we should swap the space instead of removing it.
      */
     private boolean tryStripSpaceAndReturnWhetherShouldSwapInstead(final Event event,
@@ -3065,7 +3077,7 @@ public final class InputLogic {
 
     /**
      * Performs a recapitalization event.
-     * 
+     *
      * @param settingsValues The current settings values.
      */
     private void performRecapitalization(final SettingsValues settingsValues) {
@@ -3511,7 +3523,7 @@ public final class InputLogic {
 
     /**
      * Factor in auto-caps and manual caps and compute the current caps mode.
-     * 
+     *
      * @param settingsValues    the current settings values.
      * @param keyboardShiftMode the current shift mode of the keyboard. See
      *                          KeyboardSwitcher#getKeyboardShiftMode() for possible
@@ -3592,7 +3604,7 @@ public final class InputLogic {
     /**
      * Get n-gram context from the nth previous word before the cursor as context
      * for the suggestion process.
-     * 
+     *
      * @param spacingAndPunctuations the current spacing and punctuations settings.
      * @param nthPreviousWord        reverse index of the word to get (1-indexed)
      * @return the information of previous words
@@ -3742,7 +3754,7 @@ public final class InputLogic {
      * See
      * {@link helium314.keyboard.latin.SuggestedWords#getTypedWordAndPreviousSuggestions(
      * SuggestedWordInfo, helium314.keyboard.latin.SuggestedWords)}.
-     * 
+     *
      * @param typedWordInfo          The typed word as a SuggestedWordInfo.
      * @param previousSuggestedWords The previously suggested words.
      * @return Obsolete suggestions with the newly typed word.
@@ -3934,7 +3946,7 @@ public final class InputLogic {
     /**
      * Do the final processing after a batch input has ended. This commits the word
      * to the editor.
-     * 
+     *
      * @param settingsValues the current values of the settings.
      * @param suggestedWords suggestedWords to use.
      */
@@ -4301,6 +4313,7 @@ public final class InputLogic {
                     mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
                     mConnection.deleteTextBeforeCursor(result.getPrefixLength() + chosenWord.length());
                     commitExpandedText(result.getMatchedString(), result.getExpandedText());
+                    resetComposingState(true);
                     return;
 
                 }
@@ -4527,7 +4540,7 @@ public final class InputLogic {
     /**
      * Gets an object allowing private IME commands to be sent to the
      * underlying editor.
-     * 
+     *
      * @return An object for sending private commands to the underlying editor.
      */
     public PrivateCommandPerformer getPrivateCommandPerformer() {
@@ -4560,7 +4573,7 @@ public final class InputLogic {
     /**
      * Gets the expected length in Java chars of the composing span.
      * May be 0 if there is no valid composing span.
-     * 
+     *
      * @see #getComposingStart()
      * @return The expected length of the composing span.
      */
@@ -4881,24 +4894,112 @@ public final class InputLogic {
                 });
     }
 
+    private boolean tryJumpToNextPlaceholder() {
+        final CharSequence before = mConnection.getTextBeforeCursor(1000, 0);
+        final CharSequence after = mConnection.getTextAfterCursor(1000, 0);
+        final String beforeStr = before != null ? before.toString() : "";
+        final String afterStr = after != null ? after.toString() : "";
+
+        final String fullText = beforeStr + afterStr;
+
+        Log.d(TAG, "tryJumpToNextPlaceholder: beforeStr=[" + beforeStr + "] afterStr=[" + afterStr + "]");
+
+        final java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("%cursor(\\d+)%");
+        final java.util.regex.Matcher matcher = pattern.matcher(fullText);
+
+        int bestStart = -1;
+        int bestEnd = -1;
+        int lowestNum = Integer.MAX_VALUE;
+
+        while (matcher.find()) {
+            try {
+                final int num = Integer.parseInt(matcher.group(1));
+                Log.d(TAG, "tryJumpToNextPlaceholder: found %cursor" + num + "% at [" + matcher.start() + "," + matcher.end() + ")");
+                if (num < lowestNum) {
+                    lowestNum = num;
+                    bestStart = matcher.start();
+                    bestEnd = matcher.end();
+                }
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+        }
+
+        if (bestStart != -1) {
+            mConnection.finishComposingText();
+            mConnection.tryFixIncorrectCursorPosition();
+            resetComposingState(true);
+
+            final CharSequence before2 = mConnection.getTextBeforeCursor(1000, 0);
+            final String beforeStr2 = before2 != null ? before2.toString() : "";
+            final int cursorPositionInFull = beforeStr2.length();
+
+            final int currentSelectionEnd = mConnection.getExpectedSelectionEnd();
+            final int targetStart = currentSelectionEnd - cursorPositionInFull + bestStart;
+            final int targetEnd = currentSelectionEnd - cursorPositionInFull + bestEnd;
+            Log.d(TAG, "tryJumpToNextPlaceholder: jumping to [" + targetStart + "," + targetEnd + ") currentSelEnd=" + currentSelectionEnd);
+            mConnection.beginBatchEdit();
+            mConnection.setSelection(targetStart, targetEnd);
+            mConnection.commitText("", 1);
+            mConnection.endBatchEdit();
+            return true;
+        }
+        Log.d(TAG, "tryJumpToNextPlaceholder: no placeholder found");
+        return false;
+    }
+
     private void commitExpandedText(final String shortcut, final String expanded) {
         final int cursorOffset = expanded.indexOf("%cursor%");
-        final String finalExpandedText = cursorOffset != -1 ? expanded.replace("%cursor%", "") : expanded;
-        
-        mConnection.commitText(finalExpandedText, 1);
-        
-        mLastExpandedText = finalExpandedText;
-        mLastShortcutText = shortcut;
-        mLastExpandedCursorOffset = cursorOffset != -1 ? cursorOffset : finalExpandedText.length();
-        
         if (cursorOffset != -1) {
+            final String finalExpandedText = expanded.replace("%cursor%", "");
+            mConnection.commitText(finalExpandedText, 1);
+            mLastExpandedText = finalExpandedText;
+            mLastShortcutText = shortcut;
+            mLastExpandedCursorOffset = cursorOffset;
             final int moveBackAmount = finalExpandedText.length() - cursorOffset;
             if (moveBackAmount > 0) {
                 final int newCursorPos = mConnection.getExpectedSelectionEnd() - moveBackAmount;
                 mConnection.setSelection(newCursorPos, newCursorPos);
             }
+            mLastExpandedCursorPosition = mConnection.getExpectedSelectionEnd();
+            return;
         }
-        
+
+        final java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("%cursor(\\d+)%");
+        final java.util.regex.Matcher matcher = pattern.matcher(expanded);
+        int bestStart = -1;
+        int bestEnd = -1;
+        int lowestNum = Integer.MAX_VALUE;
+        while (matcher.find()) {
+            try {
+                final int num = Integer.parseInt(matcher.group(1));
+                if (num < lowestNum) {
+                    lowestNum = num;
+                    bestStart = matcher.start();
+                    bestEnd = matcher.end();
+                }
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+        }
+
+        if (bestStart != -1) {
+            final String finalExpandedText = expanded.substring(0, bestStart) + expanded.substring(bestEnd);
+            mConnection.commitText(finalExpandedText, 1);
+            mLastExpandedText = finalExpandedText;
+            mLastShortcutText = shortcut;
+            mLastExpandedCursorOffset = bestStart;
+            final int moveBackAmount = finalExpandedText.length() - bestStart;
+            if (moveBackAmount > 0) {
+                final int newCursorPos = mConnection.getExpectedSelectionEnd() - moveBackAmount;
+                mConnection.setSelection(newCursorPos, newCursorPos);
+            }
+        } else {
+            mConnection.commitText(expanded, 1);
+            mLastExpandedText = expanded;
+            mLastShortcutText = shortcut;
+            mLastExpandedCursorOffset = expanded.length();
+        }
         mLastExpandedCursorPosition = mConnection.getExpectedSelectionEnd();
     }
 }

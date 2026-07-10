@@ -161,6 +161,52 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
     }
 
     @Override
+    public void forEachWord(java.util.function.BiConsumer<String, Integer> consumer) {
+        int token = 0;
+        int count = 0;
+        do {
+            if (!mLock.readLock().tryLock()) {
+                try {
+                    Thread.sleep(5);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                continue;
+            }
+            try {
+                if (!mBinaryDictionary.isValidDictionary()) {
+                    break;
+                }
+                BinaryDictionary.GetNextWordAndFrequencyResult result =
+                        mBinaryDictionary.getNextWordAndFrequency(token);
+                if (result.mWordAndFrequency == null) break;
+                String word = result.mWordAndFrequency.mWord;
+                int freq = result.mWordAndFrequency.mFrequency;
+                if (word != null && !word.isEmpty() && freq >= 0) {
+                    consumer.accept(word, freq);
+                }
+                token = result.mNextToken;
+            } finally {
+                mLock.readLock().unlock();
+            }
+
+            count++;
+            if (count % 200 == 0) {
+                Thread.yield();
+            }
+            if (count % 2000 == 0) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        } while (token != 0);
+    }
+
+    @Override
     public WordProperty getWordProperty(String word, boolean isBeginningOfSentence) {
         if (mLock.readLock().tryLock()) {
             try {

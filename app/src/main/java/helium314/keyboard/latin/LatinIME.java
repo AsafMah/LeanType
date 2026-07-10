@@ -1868,6 +1868,11 @@ public class LatinIME extends InputMethodService implements
         mInputLogic.getSuggest().clearNextWordSuggestionsCache();
     }
 
+    public void reloadBlacklist() {
+        mDictionaryFacilitator.reloadBlacklist();
+        mInputLogic.getSuggest().clearNextWordSuggestionsCache();
+    }
+
     public DictionaryFacilitator getDictionaryFacilitator() {
         return mDictionaryFacilitator;
     }
@@ -2038,6 +2043,7 @@ public class LatinIME extends InputMethodService implements
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra("from_ime", true);
         startActivity(intent);
     }
 

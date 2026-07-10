@@ -14,6 +14,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Upstream
+- Merged **LeanBitLab/LeanType v3.9.4** (pinned at `56034a695`, including v3.9.3) — adds custom secondary layouts, auto-correct trigger settings, text-expander placeholder fixes, gesture-engine memory/performance improvements, and dictionary/blacklist hardening. Fork identity (`LeanTypeDual`, distinct `applicationId`, privacy tiers, and fork-specific features) is preserved.
+
 ## [3.10.0] - 2026-06-20
 
 ### Added

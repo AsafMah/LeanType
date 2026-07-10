@@ -61,6 +61,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     // cache cleared whenever LatinIME.loadSettings is called, notably on changing layout and switching input fields
     fun clearNextWordSuggestionsCache() {
         nextWordSuggestionsCache.evictAll()
+        gestureIndex = null
         // Also reset scoreLimit cache to force refresh on next use
         synchronized(this) {
             mLastScoreLimitUpdateTime = 0
@@ -346,8 +347,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             val fingerprint = SwipeGestureEngine.layoutFingerprint(keyboard)
             var index = gestureIndex
             if (index == null || index.byFirst.isEmpty() || gestureIndexFingerprint != fingerprint) {
-                val words = mDictionaryFacilitator.getAllMainDictionaryWordsWithFrequency()
-                index = SwipeGestureEngine.buildIndex(words, keyboard)
+                index = SwipeGestureEngine.buildIndex(mDictionaryFacilitator, keyboard)
                 if (index.byFirst.isNotEmpty()) {
                     gestureIndex = index
                     gestureIndexFingerprint = fingerprint

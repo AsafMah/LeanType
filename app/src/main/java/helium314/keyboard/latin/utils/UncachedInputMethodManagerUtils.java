@@ -48,9 +48,14 @@ public final class UncachedInputMethodManagerUtils {
     public static boolean isThisImeCurrent(final Context context,
             final InputMethodManager imm) {
         final InputMethodInfo imi = getInputMethodInfoOf(context.getPackageName(), imm);
+        if (imi == null) return false;
         final String currentImeId = Settings.Secure.getString(
                 context.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
-        return imi != null && imi.getId().equals(currentImeId);
+        if (android.text.TextUtils.isEmpty(currentImeId)) {
+            final java.util.List<InputMethodInfo> enabled = imm.getEnabledInputMethodList();
+            return enabled != null && enabled.size() == 1 && enabled.get(0).getPackageName().equals(context.getPackageName());
+        }
+        return imi.getId().equals(currentImeId);
     }
 
     /**

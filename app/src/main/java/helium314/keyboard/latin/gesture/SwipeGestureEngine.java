@@ -77,10 +77,13 @@ public class SwipeGestureEngine {
                 List<IndexEntry> list = activeIndex.byFirst.get(first);
                 if (list != null) {
                     for (IndexEntry entry : list) {
-                        if (entry.lowerWord.equals(key)) {
+                        if (getLowerCase(entry.word).equals(key)) {
+                            float[] path = new float[N_PTS * 2];
+                            entry.unpackPath(path);
                             for (int i = 0; i < N_PTS * 2; i++) {
-                                entry.path[i] = entry.path[i] * 0.3f + inputVec[i] * 0.7f;
+                                path[i] = path[i] * 0.3f + inputVec[i] * 0.7f;
                             }
+                            entry.updatePath(path);
                             break;
                         }
                     }
@@ -160,31 +163,77 @@ public class SwipeGestureEngine {
 
     // ── Precomputed index ─────────────────────────────────────────────────────
 
+    private static String getLowerCase(String s) {
+        int len = s.length();
+        for (int i = 0; i < len; i++) {
+            char c = s.charAt(i);
+            if (c >= 'A' && c <= 'Z') {
+                return s.toLowerCase(Locale.ROOT);
+            }
+        }
+        return s;
+    }
+
+    private static long pack8Bytes(float[] pts, int startIndex) {
+        long value = 0;
+        for (int i = 0; i < 8; i++) {
+            float f = pts[startIndex + i];
+            if (f < 0f) f = 0f;
+            else if (f > 1f) f = 1f;
+            int b = Math.round(f * 255f) & 0xFF;
+            value |= ((long) b) << (i * 8);
+        }
+        return value;
+    }
+
+    private static void unpack8Bytes(long value, float[] out, int startIndex) {
+        for (int i = 0; i < 8; i++) {
+            int b = (int) ((value >>> (i * 8)) & 0xFF);
+            out[startIndex + i] = b / 255f;
+        }
+    }
+
     public static class IndexEntry {
         public final String word;
-        public final String lowerWord;
-        public final float[] path;  // length N_PTS*2
         public final int frequency;
         // ponytail: cache path length and freq bonus to avoid recomputing every ranking call
-        public final float pathLen;
+        public float pathLen;
         public final float freqBonus;
+        private long path0;
+        private long path1;
+        private long path2;
+        private long path3;
+
         IndexEntry(String word, float[] path, int frequency) {
             this.word = word;
-            this.lowerWord = word.toLowerCase(Locale.ROOT);
             this.frequency = frequency;
             this.freqBonus = (frequency > 0) ? (float)(Math.log(frequency + 1) * FREQ_WEIGHT) : 0f;
 
-            float[] userPath = sUserPaths.get(this.lowerWord);
+            String lk = getLowerCase(word);
+            float[] blended = path;
+            float[] userPath = sUserPaths.get(lk);
             if (userPath != null && userPath.length == N_PTS * 2) {
-                float[] blended = new float[N_PTS * 2];
+                blended = new float[N_PTS * 2];
                 for (int i = 0; i < N_PTS * 2; i++) {
                     blended[i] = path[i] * 0.3f + userPath[i] * 0.7f;
                 }
-                this.path = blended;
-            } else {
-                this.path = path;
             }
-            this.pathLen = pathLength(this.path);
+            updatePath(blended);
+        }
+
+        public void updatePath(float[] newPath) {
+            this.path0 = pack8Bytes(newPath, 0);
+            this.path1 = pack8Bytes(newPath, 8);
+            this.path2 = pack8Bytes(newPath, 16);
+            this.path3 = pack8Bytes(newPath, 24);
+            this.pathLen = pathLength(newPath);
+        }
+
+        public void unpackPath(float[] out) {
+            unpack8Bytes(path0, out, 0);
+            unpack8Bytes(path1, out, 8);
+            unpack8Bytes(path2, out, 16);
+            unpack8Bytes(path3, out, 24);
         }
     }
 
@@ -198,25 +247,26 @@ public class SwipeGestureEngine {
         }
     }
 
-    public static GestureIndex buildIndex(Map<String, Integer> wordsWithFreq, Keyboard keyboard) {
+    public static GestureIndex buildIndex(helium314.keyboard.latin.DictionaryFacilitator facilitator, Keyboard keyboard) {
         float[][] charToPos = buildCharToPos(keyboard);
         Map<Character, List<IndexEntry>> byFirst = new HashMap<>();
-        for (Map.Entry<String, Integer> entry : wordsWithFreq.entrySet()) {
-            String raw = entry.getKey();
-            int freq = entry.getValue() != null ? entry.getValue() : 0;
+        facilitator.forEachMainDictionaryWord((raw, freqVal) -> {
+            if (raw == null) return;
+            if (facilitator.isBlacklisted(raw)) return;
+            int freq = freqVal != null ? freqVal : 0;
             // ponytail: apply user boost to freq so self-learned words rank higher immediately
-            String lk = raw.toLowerCase(Locale.ROOT);
+            String lk = getLowerCase(raw);
             Integer boost = sUserBoost.get(lk);
             if (boost != null) freq = Math.min(freq + boost * 5, 255);
-            if (freq < 3) continue;
+            if (freq < 3) return;
             String word = lk;
-            if (word.isEmpty()) continue;
+            if (word.isEmpty()) return;
             char first = word.charAt(0);
-            if (first < 'a' || first > 'z') continue;
+            if (first < 'a' || first > 'z') return;
             float[] path = wordPath(word, charToPos);
             byFirst.computeIfAbsent(first, k -> new ArrayList<>())
                     .add(new IndexEntry(raw, path, freq));
-        }
+        });
         for (List<IndexEntry> list : byFirst.values()) {
             list.sort((a, b) -> Integer.compare(b.frequency, a.frequency));
         }
@@ -349,7 +399,8 @@ public class SwipeGestureEngine {
         // Filter by last letter first; relax if empty
         List<IndexEntry> filtered = new ArrayList<>(candidates.size());
         for (IndexEntry e : candidates) {
-            if (!e.lowerWord.isEmpty() && endLetters.contains(e.lowerWord.charAt(e.lowerWord.length() - 1)))
+            String lower = getLowerCase(e.word);
+            if (!lower.isEmpty() && endLetters.contains(lower.charAt(lower.length() - 1)))
                 filtered.add(e);
         }
         if (filtered.isEmpty()) filtered = candidates;
@@ -363,14 +414,17 @@ public class SwipeGestureEngine {
         Arrays.fill(topScores, -Float.MAX_VALUE);
         float threshold = -Float.MAX_VALUE;
 
+        float[] candidatePath = new float[N_PTS * 2];
         for (int i = 0; i < m; i++) {
             IndexEntry e = filtered.get(i);
-            boolean seqMatch = isSequenceMatch(e.lowerWord, inputVec, charToPos);
+            String lower = getLowerCase(e.word);
+            e.unpackPath(candidatePath);
+            boolean seqMatch = isSequenceMatch(lower, inputVec, charToPos);
             float seqPenalty = seqMatch ? 0f : -0.4f;
-            boolean isPredicted = predictionSet != null && predictionSet.contains(e.lowerWord);
+            boolean isPredicted = predictionSet != null && predictionSet.contains(lower);
             float predBonus = isPredicted ? 0.15f : 0f;
             float lenPenalty = -Math.abs(inputLength - e.pathLen) * 0.4f;
-            Integer ub = sUserBoost.get(e.lowerWord);
+            Integer ub = sUserBoost.get(lower);
             float userBonus = ub != null ? sUserBoostCache[ub] : 0f;
 
             float bonuses = e.freqBonus + seqPenalty + predBonus + lenPenalty + userBonus;
@@ -379,7 +433,7 @@ public class SwipeGestureEngine {
             if (maxL2 <= 0f) {
                 distance = Float.MAX_VALUE;
             } else {
-                distance = l2(inputVec, e.path, maxL2);
+                distance = l2(inputVec, candidatePath, maxL2);
             }
             float score = -distance + bonuses;
             scores[i] = score;

@@ -69,6 +69,11 @@ public final class KeyboardId {
     public static final int ELEMENT_CLIPBOARD_BOTTOM_ROW = 30;
     public static final int ELEMENT_HANDWRITING_BOTTOM_ROW = 31;
     public static final int ELEMENT_TEXT_EDIT = 32;
+    public static final int ELEMENT_CUSTOM1 = 33;
+    public static final int ELEMENT_CUSTOM2 = 34;
+    public static final int ELEMENT_CUSTOM3 = 35;
+    public static final int ELEMENT_CUSTOM4 = 36;
+    public static final int ELEMENT_CUSTOM5 = 37;
 
     public final RichInputMethodSubtype mSubtype;
     public final int mWidth;
@@ -296,6 +301,11 @@ public final class KeyboardId {
             case ELEMENT_CLIPBOARD_BOTTOM_ROW -> "clipboardBottomRow";
             case ELEMENT_HANDWRITING_BOTTOM_ROW -> "handwritingBottomRow";
             case ELEMENT_TEXT_EDIT -> "editing";
+            case ELEMENT_CUSTOM1 -> "custom1";
+            case ELEMENT_CUSTOM2 -> "custom2";
+            case ELEMENT_CUSTOM3 -> "custom3";
+            case ELEMENT_CUSTOM4 -> "custom4";
+            case ELEMENT_CUSTOM5 -> "custom5";
             default -> null;
         };
     }

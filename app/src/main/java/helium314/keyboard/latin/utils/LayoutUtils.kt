@@ -13,8 +13,10 @@ import java.util.Locale
 // for layouts provided by the app
 object LayoutUtils {
     fun getAvailableLayouts(layoutType: LayoutType, context: Context, locale: Locale? = null): Collection<String> {
-        if (layoutType != LayoutType.MAIN)
+        if (layoutType != LayoutType.MAIN) {
+            if (layoutType.name.startsWith("CUSTOM")) return emptyList()
             return context.assets.list(layoutType.folder)?.map { it.substringBefore(".") }.orEmpty()
+        }
         if (locale == null)
             return SubtypeSettings.getAllAvailableSubtypes()
                 .mapTo(HashSet()) { it.mainLayoutNameOrQwerty().substringBefore("+") }
@@ -30,6 +32,9 @@ object LayoutUtils {
 
     /** gets content for built-in (non-custom) layout [layoutName], with fallback to qwerty */
     fun getContent(layoutType: LayoutType, layoutName: String, context: Context): String {
+        if (layoutType.name.startsWith("CUSTOM")) {
+            return getContent(LayoutType.SYMBOLS, "symbols", context)
+        }
         val layouts = context.assets.list(layoutType.folder)!!
         layouts.firstOrNull { it.startsWith("$layoutName.") }
             ?.let { return context.assets.open(layoutType.folder + File.separator + it).reader().readText() }

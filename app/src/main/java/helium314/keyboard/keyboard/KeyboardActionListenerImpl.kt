@@ -104,7 +104,7 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         val isArrow = primaryCode == KeyCode.ARROW_LEFT || primaryCode == KeyCode.ARROW_RIGHT || primaryCode == KeyCode.ARROW_UP || primaryCode == KeyCode.ARROW_DOWN
         if (isArrow) {
-            val isSelecting = keyboardSwitcher.keyboard?.mId?.isAlphabetShifted == true || sPersistentSelectionModeActive
+            val isSelecting = keyboardSwitcher.keyboard?.mId?.isAlphabetShiftedManually == true || sPersistentSelectionModeActive
             if (isSelecting) {
                 val androidKeyCode = when (primaryCode) {
                     KeyCode.ARROW_LEFT -> KeyEvent.KEYCODE_DPAD_LEFT
@@ -219,7 +219,7 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
                 || primaryCode == KeyCode.MOVE_START_OF_PAGE || primaryCode == KeyCode.MOVE_END_OF_PAGE
                 || primaryCode == KeyCode.MOVE_START_OF_LINE || primaryCode == KeyCode.MOVE_END_OF_LINE
                 || primaryCode == KeyCode.PAGE_UP || primaryCode == KeyCode.PAGE_DOWN
-        val eventMetaState = if (isEditingNav && (keyboardSwitcher.keyboard?.mId?.isAlphabetShifted == true || sPersistentSelectionModeActive)) {
+        val eventMetaState = if (isEditingNav && (keyboardSwitcher.keyboard?.mId?.isAlphabetShiftedManually == true || sPersistentSelectionModeActive)) {
             metaState or KeyEvent.META_SHIFT_ON
         } else {
             metaState
@@ -391,7 +391,7 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
         val rtl = RichInputMethodManager.getInstance().currentSubtype.isRtlSubtype
         val steps = if (rtl) -rawSteps else rawSteps
 
-        val isSelecting = keyboardSwitcher.keyboard?.mId?.isAlphabetShifted == true || sPersistentSelectionModeActive
+        val isSelecting = keyboardSwitcher.keyboard?.mId?.isAlphabetShiftedManually == true || sPersistentSelectionModeActive
         if (isSelecting) {
             val code = if (steps < 0) {
                 gestureMoveBackHaptics()

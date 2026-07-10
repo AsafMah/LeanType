@@ -67,6 +67,7 @@ fun TextCorrectionScreen(
         R.string.settings_category_correction,
         Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE,
         Settings.PREF_AUTO_CORRECTION,
+        if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_TRIGGER else null,
         if (autocorrectEnabled) Settings.PREF_MORE_AUTO_CORRECTION else null,
         if (autocorrectEnabled) Settings.PREF_AUTOCORRECT_SHORTCUTS else null,
         if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_THRESHOLD else null,
@@ -119,6 +120,14 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.autocorrect, R.string.auto_correction_summary
     ) {
         SwitchPreference(it, Defaults.PREF_AUTO_CORRECTION)
+    },
+    Setting(context, Settings.PREF_AUTO_CORRECT_TRIGGER, R.string.auto_correction_trigger) {
+        val items = listOf(
+            stringResource(R.string.auto_correction_trigger_both) to "both",
+            stringResource(R.string.auto_correction_trigger_space) to "space",
+            stringResource(R.string.auto_correction_trigger_punctuation) to "punctuation",
+        )
+        ListPreference(it, items, Defaults.PREF_AUTO_CORRECT_TRIGGER)
     },
     Setting(context, Settings.PREF_MORE_AUTO_CORRECTION,
         R.string.more_autocorrect, R.string.more_autocorrect_summary

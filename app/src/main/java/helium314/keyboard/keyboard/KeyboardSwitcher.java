@@ -338,6 +338,22 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         setKeyboard(KeyboardId.ELEMENT_SYMBOLS_SHIFTED, KeyboardSwitchState.SYMBOLS_SHIFTED);
     }
 
+    @Override
+    public void setCustomKeyboard(int customIndex) {
+        if (DEBUG_ACTION) {
+            Log.d(TAG, "setCustomKeyboard: " + customIndex);
+        }
+        final int elementId = switch (customIndex) {
+            case 1 -> KeyboardId.ELEMENT_CUSTOM1;
+            case 2 -> KeyboardId.ELEMENT_CUSTOM2;
+            case 3 -> KeyboardId.ELEMENT_CUSTOM3;
+            case 4 -> KeyboardId.ELEMENT_CUSTOM4;
+            case 5 -> KeyboardId.ELEMENT_CUSTOM5;
+            default -> KeyboardId.ELEMENT_ALPHABET;
+        };
+        setKeyboard(elementId, KeyboardSwitchState.OTHER);
+    }
+
     public boolean isImeSuppressedByHardwareKeyboard(
             @NonNull final SettingsValues settingsValues,
             @NonNull final KeyboardSwitchState toggleState) {

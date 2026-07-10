@@ -982,6 +982,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                             val intent = android.content.Intent().apply {
                                 setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
                                 putExtra("screen", "dictionaries")
+                                putExtra("from_ime", true)
                                 setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                                         or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                                         or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)

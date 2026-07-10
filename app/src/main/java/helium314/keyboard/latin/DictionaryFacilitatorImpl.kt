@@ -39,6 +39,7 @@ import helium314.keyboard.latin.utils.SuggestionResults
 import helium314.keyboard.latin.utils.getSecondaryLocales
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -395,6 +396,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         dictionaryGroup: DictionaryGroup, ngramContext: NgramContext, word: String, wasAutoCapitalized: Boolean,
         timeStampInSeconds: Int, blockPotentiallyOffensive: Boolean
     ) {
+        if (dictionaryGroup.isBlacklisted(word)) return
         val userHistoryDictionary = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
 
         // Never re-learn a word the user has blacklisted (e.g. a deleted gesture-misfire junk word).
@@ -554,7 +556,17 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         if (userDict != null) {
             result.putAll(userDict.getAllWordsWithFrequency())
         }
-        return result
+        return result;
+    }
+
+    override fun forEachMainDictionaryWord(consumer: java.util.function.BiConsumer<String, Int>) {
+        val dictGroup = dictionaryGroups.firstOrNull() ?: return
+        val mainDict = dictGroup.getDict(Dictionary.TYPE_MAIN)
+        mainDict?.forEachWord(consumer)
+        val userHistoryDict = dictGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)
+        userHistoryDict?.forEachWord(consumer)
+        val userDict = dictGroup.getSubDict(Dictionary.TYPE_USER)
+        userDict?.forEachWord(consumer)
     }
 
     // TODO: Revise the way to fusion suggestion results.
@@ -773,7 +785,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         return dictionariesToCheck.any { dictionaryGroup.getDict(it)?.isValidWord(word) == true }
     }
 
-    private fun isBlacklisted(word: String): Boolean = dictionaryGroups.any { it.isBlacklisted(word) }
+    override fun isBlacklisted(word: String): Boolean = dictionaryGroups.any { it.isBlacklisted(word) }
 
     override fun removeWord(word: String) {
         for (dictionaryGroup in dictionaryGroups) {
@@ -1037,9 +1049,9 @@ private class DictionaryGroup(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(2))
 
     // words cannot be (permanently) removed from some dictionaries, so we use a blacklist for "removing" words
-    private val blacklistFile = if (context?.filesDir == null) null
+    private val blacklistFile = if (context == null) null
     else {
-        val file = File(context.filesDir.absolutePath + File.separator + "blacklists" + File.separator + locale.toLanguageTag() + ".txt")
+        val file = File(DeviceProtectedUtils.getFilesDir(context).absolutePath + File.separator + "blacklists" + File.separator + locale.toLanguageTag() + ".txt")
         if (file.isDirectory) file.delete() // this apparently was an issue in some versions
         if (file.parentFile?.exists() == true || file.parentFile?.mkdirs() == true) file
         else null

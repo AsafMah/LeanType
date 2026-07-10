@@ -42,6 +42,11 @@ object Defaults {
         LayoutType.SHORTCUT_BOTTOM -> "shortcut_bottom"
         LayoutType.HANDWRITING_BOTTOM -> "handwriting_bottom_row"
         LayoutType.EDITING -> "editing"
+        LayoutType.CUSTOM1 -> "symbols"
+        LayoutType.CUSTOM2 -> "symbols"
+        LayoutType.CUSTOM3 -> "symbols"
+        LayoutType.CUSTOM4 -> "symbols"
+        LayoutType.CUSTOM5 -> "symbols"
     }
     
     const val PREF_SPLIT_TOOLBAR = false
@@ -70,6 +75,7 @@ object Defaults {
     @JvmField
     var PREF_POPUP_ON = true
     const val PREF_AUTO_CORRECTION = false
+    const val PREF_AUTO_CORRECT_TRIGGER = "both"
     const val PREF_MORE_AUTO_CORRECTION = false
     const val PREF_AUTO_CORRECT_THRESHOLD = 0.185f
     const val PREF_AUTOCORRECT_SHORTCUTS = true

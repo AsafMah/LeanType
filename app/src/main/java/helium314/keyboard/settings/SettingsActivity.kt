@@ -86,9 +86,12 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     val dictUri by dictUriFlow.collectAsState()
                     val crashReports by crashReportFiles.collectAsState()
                     val crashFilePicker = filePicker { saveCrashReports(it) }
+                    val launchedFromIme = intent?.getBooleanExtra("from_ime", false) ?: false
                     var showWelcomeWizard by rememberSaveable { mutableStateOf(
-                        !UncachedInputMethodManagerUtils.isThisImeCurrent(this, imm)
-                                || !UncachedInputMethodManagerUtils.isThisImeEnabled(this, imm)
+                        !launchedFromIme && (
+                            !UncachedInputMethodManagerUtils.isThisImeCurrent(this, imm)
+                                    || !UncachedInputMethodManagerUtils.isThisImeEnabled(this, imm)
+                        )
                     ) }
                     val snackbarHostState = androidx.compose.runtime.remember { androidx.compose.material3.SnackbarHostState() }
                     androidx.compose.runtime.LaunchedEffect(Unit) {
