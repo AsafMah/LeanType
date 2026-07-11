@@ -1273,6 +1273,9 @@ New dictionary:
     <string name="text_tap_languages">Tap the language to open settings</string>
     <!-- Title of internal InputMethodPicker, strings should be same as the ones from Android system -->
     <string name="select_input_method">Choose input method</string>
+    <string name="direct_ime_switch_title">Direct Switch Target IME</string>
+    <string name="direct_ime_switch_summary">Input Method to switch to directly when using the custom keycode option</string>
+    <string name="direct_ime_switch_none">None</string>
     <!-- Settings screen title for appearance preferences -->
     <string name="settings_screen_appearance">Appearance</string>
     <!-- Settings screen title for toolbar preferences -->
@@ -1486,4 +1489,6 @@ New dictionary:
     <!-- ponytail: persist text edit mode strings -->
     <string name="persist_text_edit_mode_title">Persist text editing mode</string>
     <string name="persist_text_edit_mode_summary">Do not exit text editing mode when input finishes</string>
+    <string name="disable_multi_word_suggestions_title">Disable multi-word suggestions</string>
+    <string name="disable_multi_word_suggestions_summary">Prevent suggestions that consist of multiple combined words (recommended for Turkish)</string>
 </resources>

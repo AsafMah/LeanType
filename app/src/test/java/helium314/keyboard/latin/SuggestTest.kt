@@ -270,6 +270,22 @@ class SuggestTest {
         assert(!result.last()) // should not be corrected
     }
 
+    @Test fun `multi-word filter removes phrases only when enabled`() {
+        fun results() = SuggestionResults(3, false, false).apply {
+            add(suggestion("single", 100, Locale.ENGLISH))
+            add(suggestion("two words", 90, Locale.ENGLISH))
+            add(suggestion("another", 80, Locale.ENGLISH))
+        }
+
+        val disabled = results()
+        filterMultiWordSuggestions(disabled, false)
+        assertEquals(listOf("single", "two words", "another"), disabled.map { it.mWord })
+
+        val enabled = results()
+        filterMultiWordSuggestions(enabled, true)
+        assertEquals(listOf("single", "another"), enabled.map { it.mWord })
+    }
+
     @Test fun `quotes are added to suggestions when needed`() {
         val result = Suggest.getTransformedSuggestedWordInfo(suggestion("word", 1, Locale.ENGLISH, true),
             Locale.ENGLISH, false, false, 1)

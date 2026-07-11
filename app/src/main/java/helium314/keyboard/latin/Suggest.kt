@@ -104,6 +104,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 getNextWordSuggestions(ngramContext, keyboard, inputStyleIfNotPrediction, settingsValuesForSuggestion)
             else mDictionaryFacilitator.getSuggestionResults(wordComposer.composedDataSnapshot, ngramContext, keyboard,
                 settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyleIfNotPrediction)
+        filterMultiWordSuggestions(suggestionResults, Settings.getValues().mDisableMultiWordSuggestions)
         val trailingSingleQuotesCount = StringUtils.getTrailingSingleQuotesCount(typedWordString)
         val suggestionsContainer = getTransformedSuggestedWordInfoList(wordComposer, suggestionResults,
             trailingSingleQuotesCount, mDictionaryFacilitator.mainLocale, keyboard)
@@ -368,6 +369,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
             )
         }
+        filterMultiWordSuggestions(suggestionResults, Settings.getValues().mDisableMultiWordSuggestions)
         replaceSingleLetterFirstSuggestion(suggestionResults)
         adjustToTooSuggestions(suggestionResults, pointers, keyboard)
 
@@ -447,6 +449,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         if (cachedResults != null) return cachedResults
         val newResults = mDictionaryFacilitator.getSuggestionResults(ComposedData(InputPointers(1),
             false, ""), ngramContext, keyboard, settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyle)
+        filterMultiWordSuggestions(newResults, Settings.getValues().mDisableMultiWordSuggestions)
         nextWordSuggestionsCache.put(ngramContext, newResults)
         return newResults
     }
@@ -676,4 +679,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             return pseudoTypedWordInfo
         }
     }
+}
+
+
+internal fun filterMultiWordSuggestions(results: SuggestionResults, enabled: Boolean) {
+    if (enabled) results.removeAll { it.mWord.contains(' ') }
 }

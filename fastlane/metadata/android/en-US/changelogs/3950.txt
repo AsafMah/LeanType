@@ -1,0 +1,4 @@
+- Added direct Switch Target IME feature to switch directly to another input method/subtype.
+- Added custom keycode (-10076) that can be assigned to toolbar keys (including long-press).
+- Track active custom layout index to properly restore custom layouts on alphabet/orientation changes.
+- Improved shift key behavior and action handling on custom layouts.

@@ -210,6 +210,7 @@ public class SettingsValues {
         // ponytail: persist text edit mode field
         public final boolean mPersistTextEditMode;
         public final boolean mBackspaceRevertsAutocorrect;
+        public final boolean mDisableMultiWordSuggestions;
         public final int mScoreLimitForAutocorrect;
         private final boolean mSuggestionsEnabledPerUserSettings;
         private final boolean mOverrideShowingSuggestions;
@@ -319,6 +320,8 @@ public class SettingsValues {
                                 Defaults.PREF_PERSIST_TEXT_EDIT_MODE);
                 mBackspaceRevertsAutocorrect = prefs.getBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT,
                                 Defaults.PREF_BACKSPACE_REVERTS_AUTOCORRECT);
+                mDisableMultiWordSuggestions = prefs.getBoolean(Settings.PREF_DISABLE_MULTI_WORD_SUGGESTIONS,
+                                Defaults.PREF_DISABLE_MULTI_WORD_SUGGESTIONS);
                 mBigramPredictionEnabled = prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS,
                                 Defaults.PREF_BIGRAM_PREDICTIONS);
                 mSuggestPunctuation = prefs.getBoolean(Settings.PREF_SUGGEST_PUNCTUATION,

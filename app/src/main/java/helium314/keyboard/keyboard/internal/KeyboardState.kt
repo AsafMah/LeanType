@@ -66,6 +66,8 @@ class KeyboardState(private val switchActions: SwitchActions) {
 
     private var mode = Mode.ALPHABET
     private var modeBeforeNumpad = Mode.ALPHABET
+    // ponytail: track active custom layout index, 0 means default
+    private var lastCustomIndex = 0
     private var isSymbolShifted = false
     private var prevMainKeyboardWasShiftLocked = false
     private var prevSymbolsKeyboardWasShifted = false
@@ -110,6 +112,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             savedKeyboardState.isValid = false
         } else {
             // Reset keyboard to alphabet mode.
+            lastCustomIndex = 0
             setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
         }
         switchActions.setOneHandedModeEnabled(onHandedModeEnabled)
@@ -152,6 +155,11 @@ class KeyboardState(private val switchActions: SwitchActions) {
             Mode.CLIPBOARD -> setClipboardKeyboard()
             // don't overwrite toggle state if reloading from orientation change, etc.
             Mode.NUMPAD -> setNumpadKeyboard(false, false, false)
+            Mode.CUSTOM1 -> setCustomKeyboard(1)
+            Mode.CUSTOM2 -> setCustomKeyboard(2)
+            Mode.CUSTOM3 -> setCustomKeyboard(3)
+            Mode.CUSTOM4 -> setCustomKeyboard(4)
+            Mode.CUSTOM5 -> setCustomKeyboard(5)
         }
     }
 
@@ -206,7 +214,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         if (DebugFlags.DEBUG_ENABLED) {
             Log.d(TAG, "toggleAlphabetAndSymbols: ${stateToString(autoCapsFlags, recapitalizeMode)}")
         }
-        if (mode == Mode.ALPHABET) {
+        if (mode == Mode.ALPHABET || mode.isCustom) {
             prevMainKeyboardWasShiftLocked = alphabetShiftState.isShiftLocked
             if (prevSymbolsKeyboardWasShifted) setSymbolsShiftedKeyboard() else setSymbolsKeyboard()
             prevSymbolsKeyboardWasShifted = false
@@ -224,7 +232,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         if (DebugFlags.DEBUG_ENABLED) {
             Log.d(TAG, "resetKeyboardStateToAlphabet: ${stateToString(autoCapsFlags, recapitalizeMode)}")
         }
-        if (mode == Mode.ALPHABET) return
+        if (mode == Mode.ALPHABET || mode.isCustom) return
 
         prevSymbolsKeyboardWasShifted = isSymbolShifted
         setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
@@ -247,12 +255,35 @@ class KeyboardState(private val switchActions: SwitchActions) {
             Log.d(TAG, "setAlphabetKeyboard: ${stateToString(autoCapsFlags, recapitalizeMode)}")
         }
 
+        // ponytail: restore custom layout if active
+        if (lastCustomIndex != 0) {
+            setCustomKeyboard(lastCustomIndex)
+            return
+        }
+
         switchActions.setAlphabetKeyboard()
         mode = Mode.ALPHABET
         isSymbolShifted = false
         this.recapitalizeMode = null
         switchState = SwitchState.ALPHA
         switchActions.requestUpdatingShiftState(autoCapsFlags, recapitalizeMode)
+    }
+
+    private fun setCustomKeyboard(customIndex: Int) {
+        if (DebugFlags.DEBUG_ENABLED) {
+            Log.d(TAG, "setCustomKeyboard: $customIndex")
+        }
+        mode = when (customIndex) {
+            1 -> Mode.CUSTOM1
+            2 -> Mode.CUSTOM2
+            3 -> Mode.CUSTOM3
+            4 -> Mode.CUSTOM4
+            5 -> Mode.CUSTOM5
+            else -> Mode.ALPHABET
+        }
+        lastCustomIndex = customIndex
+        recapitalizeMode = null
+        switchActions.setCustomKeyboard(customIndex)
     }
 
     private fun setSymbolsKeyboard() {
@@ -341,7 +372,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             setNumpadKeyboard(withSliding, forceReturnToAlpha, rememberState)
             return
         }
-        if (modeBeforeNumpad == Mode.ALPHABET || forceReturnToAlpha) {
+        if (modeBeforeNumpad == Mode.ALPHABET || modeBeforeNumpad.isCustom || forceReturnToAlpha) {
             setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
             if (prevMainKeyboardWasShiftLocked) {
                 setShiftLocked(true)
@@ -356,6 +387,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             Mode.EMOJI -> setEmojiKeyboard()
             Mode.CLIPBOARD -> setClipboardKeyboard()
             Mode.NUMPAD -> {}
+            else -> {}
         }
         if (withSliding) switchState = SwitchState.MOMENTARY_FROM_NUMPAD
     }
@@ -511,6 +543,10 @@ class KeyboardState(private val switchActions: SwitchActions) {
         if (recapitalizeMode != null) {
             return
         }
+        if (mode.isCustom) {
+            shiftKeyState.onPress()
+            return
+        }
         if (mode != Mode.ALPHABET) {
             // In symbol mode, just toggle symbol and symbol popup keyboard.
             toggleShiftInSymbols()
@@ -556,6 +592,8 @@ class KeyboardState(private val switchActions: SwitchActions) {
         if (this.recapitalizeMode != null) {
             // We are recapitalizing. We should match the keyboard state to the recapitalize state in priority.
             updateShiftStateForRecapitalize(this.recapitalizeMode)
+        } else if (mode.isCustom) {
+            shiftKeyState.onRelease()
         } else if (mode != Mode.ALPHABET) {
             // In symbol mode, switch back to the previous keyboard mode if the user chords the
             // shift key and another key, then releases the shift key.
@@ -666,16 +704,19 @@ class KeyboardState(private val switchActions: SwitchActions) {
             updateAlphabetShiftState(autoCapsFlags, recapitalizeMode)
         } else when (code) {
             KeyCode.EMOJI -> setEmojiKeyboard()
-            KeyCode.ALPHA -> setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
+            KeyCode.ALPHA -> {
+                lastCustomIndex = 0
+                setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
+            }
             // Note: Printing clipboard content is handled in InputLogic.handleFunctionalEvent
             KeyCode.CLIPBOARD -> if (Settings.getValues().mClipboardHistoryEnabled) setClipboardKeyboard()
             KeyCode.NUMPAD -> toggleNumpad(false, autoCapsFlags, recapitalizeMode, false, true)
             KeyCode.SYMBOL -> setSymbolsKeyboard()
-            KeyCode.CUSTOM1 -> switchActions.setCustomKeyboard(1)
-            KeyCode.CUSTOM2 -> switchActions.setCustomKeyboard(2)
-            KeyCode.CUSTOM3 -> switchActions.setCustomKeyboard(3)
-            KeyCode.CUSTOM4 -> switchActions.setCustomKeyboard(4)
-            KeyCode.CUSTOM5 -> switchActions.setCustomKeyboard(5)
+            KeyCode.CUSTOM1 -> setCustomKeyboard(1)
+            KeyCode.CUSTOM2 -> setCustomKeyboard(2)
+            KeyCode.CUSTOM3 -> setCustomKeyboard(3)
+            KeyCode.CUSTOM4 -> setCustomKeyboard(4)
+            KeyCode.CUSTOM5 -> setCustomKeyboard(5)
             KeyCode.TOGGLE_ONE_HANDED_MODE -> setOneHandedModeEnabled(!Settings.getValues().mOneHandedModeEnabled)
             KeyCode.SWITCH_ONE_HANDED_MODE -> switchOneHandedMode()
             KeyCode.TOGGLE_FLOATING_KEYBOARD -> switchActions.toggleFloatingKeyboard()
@@ -685,6 +726,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
     override fun toString(): String {
         val keyboard = when {
             mode == Mode.ALPHABET -> alphabetShiftState.toString()
+            mode.isCustom -> mode.toString()
             isSymbolShifted -> "SYMBOLS_SHIFTED"
             else -> "SYMBOLS"
         }
@@ -713,6 +755,13 @@ class KeyboardState(private val switchActions: SwitchActions) {
         EMOJI,
         CLIPBOARD,
         NUMPAD,
+        CUSTOM1,
+        CUSTOM2,
+        CUSTOM3,
+        CUSTOM4,
+        CUSTOM5;
+
+        val isCustom: Boolean get() = this == CUSTOM1 || this == CUSTOM2 || this == CUSTOM3 || this == CUSTOM4 || this == CUSTOM5
     }
 
     private enum class ShiftMode {

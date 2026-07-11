@@ -492,6 +492,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private void dismissKeyPreview(@NonNull final Key key) {
         if (isHardwareAccelerated()) {
             mKeyPreviewChoreographer.dismissKeyPreview(key);
+        } else {
+            // ponytail: fallback if hardware acceleration is disabled
+            dismissKeyPreviewWithoutDelay(key);
         }
     }
 

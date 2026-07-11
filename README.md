@@ -35,6 +35,8 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 - **🪟 Floating Keyboard** - Detach the keyboard into a draggable, resizable window (true OS-level overlay), with an optional persistent mode.
 - **⌨️ Dual Toolbar / Split Suggestions** - Split the suggestion strip and toolbar for easier reach.
 - **🖱️ Touchpad Mode** - Swipe the spacebar up for a cursor touchpad with sensitivity controls and edge-scroll acceleration, including a full-screen laptop-style mode.
+- **[⌨️ Direct Switch IME](docs/FEATURES.md#10-direct-switch-target-ime)** - Map custom keycode (`-10076`) to any toolbar key to switch directly to another input method.
+- **[🎨 Custom Layouts](docs/FEATURES.md#11-custom-layouts-customization)** - Save up to five custom layout profiles with persistent slot index tracking.
 - **✍️ Text editing mode** - A toolbar key opens a text-editing overlay for selection, cursor movement, and clipboard actions.
 - **🎨 Modern UI** - "Squircle" key backgrounds, refined icons, and polished aesthetics.
 - **🔄 Google Dictionary Import** - Import your personal dictionary words.

@@ -92,6 +92,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_BLOCK_POTENTIALLY_OFFENSIVE = "block_potentially_offensive";
     public static final String PREF_SHOW_LANGUAGE_SWITCH_KEY = "show_language_switch_key";
     public static final String PREF_LANGUAGE_SWITCH_KEY = "language_switch_key";
+    public static final String PREF_DIRECT_IME_SWITCH_TARGET = "direct_ime_switch_target";
     public static final String PREF_SHOW_EMOJI_KEY = "show_emoji_key";
     public static final String PREF_VARIABLE_TOOLBAR_DIRECTION = "var_toolbar_direction";
     public static final String PREF_ADDITIONAL_SUBTYPES = "additional_subtypes";
@@ -198,6 +199,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_USE_CONTACTS = "use_contacts";
     public static final String PREF_USE_APPS = "use_apps";
     public static final String PREFS_LONG_PRESS_SYMBOLS_FOR_NUMPAD = "long_press_symbols_for_numpad";
+    // ponytail: preference key to disable multi-word suggestions
+    public static final String PREF_DISABLE_MULTI_WORD_SUGGESTIONS = "disable_multi_word_suggestions";
 
     public static final String PREF_ONE_HANDED_MODE_PREFIX = "one_handed_mode_enabled";
     public static final String PREF_ONE_HANDED_GRAVITY_PREFIX = "one_handed_mode_gravity";

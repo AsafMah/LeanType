@@ -234,6 +234,7 @@ public final class Constants {
         case KeyCode.TOGGLE_FLOATING_KEYBOARD: return "toggleFloatingKeyboard";
         case KeyCode.SPLIT_LAYOUT: return "splitLayout";
         case KeyCode.NUMPAD: return "numpad";
+        case KeyCode.SWITCH_TO_USER_IME: return "switchToUserIme";
         default:
             if (code < CODE_SPACE) return String.format("\\u%02X", code);
             if (code < 0x100) return String.format("%c", code);
