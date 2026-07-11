@@ -276,6 +276,17 @@ class SuggestTest {
         assertEquals("word'", result.mWord)
     }
 
+    @Test fun `fallback lowercase candidate uses Suggest presentation casing`() {
+        val candidate = suggestion("hello", 1, Locale.ENGLISH, true)
+
+        assertEquals("hello", Suggest.getTransformedSuggestedWordInfo(
+            candidate, Locale.ENGLISH, false, false, 0).mWord)
+        assertEquals("Hello", Suggest.getTransformedSuggestedWordInfo(
+            candidate, Locale.ENGLISH, false, true, 0).mWord)
+        assertEquals("HELLO", Suggest.getTransformedSuggestedWordInfo(
+            candidate, Locale.ENGLISH, true, false, 0).mWord)
+    }
+
     @Test fun `misspelled word is corrected using relaxed threshold even with low score`() {
         val locale = Locale.ENGLISH
         // typed word: "recpa" (length 5) -> not in dictionary

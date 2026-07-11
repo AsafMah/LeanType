@@ -265,7 +265,7 @@ public class SwipeGestureEngine {
             if (first < 'a' || first > 'z') return;
             float[] path = wordPath(word, charToPos);
             byFirst.computeIfAbsent(first, k -> new ArrayList<>())
-                    .add(new IndexEntry(raw, path, freq));
+                    .add(new IndexEntry(word, path, freq));
         });
         for (List<IndexEntry> list : byFirst.values()) {
             list.sort((a, b) -> Integer.compare(b.frequency, a.frequency));
