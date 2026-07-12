@@ -2,10 +2,11 @@ package helium314.keyboard.latin
 
 import android.inputmethodservice.InputMethodService
 import android.view.inputmethod.InputMethodInfo
-import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.InputMethodSubtype
+import helium314.keyboard.ShadowInputMethodManager2
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.prefs
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,18 +17,23 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
-import org.robolectric.shadows.ShadowInputMethodManager
 
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [DirectImeInputMethodManagerShadow::class, DirectImeServiceShadow::class])
+@Config(shadows = [ShadowInputMethodManager2::class, DirectImeServiceShadow::class])
 class DirectImeSwitchTest {
     private lateinit var latinIME: LatinIME
 
     @BeforeTest
     fun setUp() {
-        DirectImeInputMethodManagerShadow.reset()
+        ShadowInputMethodManager2.reset()
         DirectImeServiceShadow.reset()
         latinIME = Robolectric.setupService(LatinIME::class.java)
+    }
+
+    @AfterTest
+    fun tearDown() {
+        ShadowInputMethodManager2.reset()
+        DirectImeServiceShadow.reset()
     }
 
     @Test
@@ -43,8 +49,8 @@ class DirectImeSwitchTest {
 
     @Test
     fun enabledExternalImeWithoutOrWithInvalidSubtypeUsesImeFallback() {
-        val external = DirectImeInputMethodManagerShadow.externalIme
-        DirectImeInputMethodManagerShadow.enabledImes = listOf(DirectImeInputMethodManagerShadow.thisIme, external)
+        val external = externalIme
+        ShadowInputMethodManager2.inputMethods = listOf(ShadowInputMethodManager2.inputMethods.first(), external)
 
         latinIME.prefs().edit().putString(Settings.PREF_DIRECT_IME_SWITCH_TARGET, external.id).commit()
         latinIME.switchToUserIme()
@@ -60,10 +66,10 @@ class DirectImeSwitchTest {
 
     @Test
     fun enabledExternalImeWithValidSubtypeSwitchesImeAndSubtype() {
-        val external = DirectImeInputMethodManagerShadow.externalIme
-        val subtype = DirectImeInputMethodManagerShadow.externalSubtype
-        DirectImeInputMethodManagerShadow.enabledImes = listOf(DirectImeInputMethodManagerShadow.thisIme, external)
-        DirectImeInputMethodManagerShadow.subtypes[external.id] = listOf(subtype)
+        val external = externalIme
+        val subtype = externalSubtype
+        ShadowInputMethodManager2.inputMethods = listOf(ShadowInputMethodManager2.inputMethods.first(), external)
+        ShadowInputMethodManager2.enabledSubtypes[external.id] = listOf(subtype)
 
         latinIME.prefs().edit().putString(
             Settings.PREF_DIRECT_IME_SWITCH_TARGET,
@@ -80,7 +86,7 @@ class DirectImeSwitchTest {
         val richImm = RichInputMethodManager.getInstance()
         val thisIme = richImm.inputMethodInfoOfThisIme
         val subtype = helium314.keyboard.latin.utils.SubtypeSettings.getEnabledSubtypes(true).first()
-        DirectImeInputMethodManagerShadow.enabledImes = listOf(thisIme)
+        ShadowInputMethodManager2.inputMethods = listOf(thisIme)
 
         latinIME.prefs().edit().putString(
             Settings.PREF_DIRECT_IME_SWITCH_TARGET,
@@ -91,40 +97,12 @@ class DirectImeSwitchTest {
         assertEquals(subtype, richImm.currentSubtype.rawSubtype)
         assertNull(DirectImeServiceShadow.switchedImeId)
     }
-}
-
-@Implements(InputMethodManager::class)
-class DirectImeInputMethodManagerShadow : ShadowInputMethodManager() {
-    @Implementation
-    override fun getInputMethodList(): List<InputMethodInfo> = enabledImes
-
-    @Implementation
-    override fun getEnabledInputMethodList(): List<InputMethodInfo> = enabledImes
-
-    @Implementation
-    fun getEnabledInputMethodSubtypeList(
-        imi: InputMethodInfo?,
-        allowsImplicitlySelectedSubtypes: Boolean,
-    ): List<InputMethodSubtype> = imi?.let { subtypes[it.id] }.orEmpty()
-
     companion object {
-        val thisIme = InputMethodInfo(BuildConfig.APPLICATION_ID, "helium314.keyboard.latin.LatinIME", "LeanTypeDual", null)
         val externalIme = InputMethodInfo("example.ime", "example.ime.Service", "Example IME", null)
-        val thisImeSubtype: InputMethodSubtype = subtype(101, "en-US")
-        val externalSubtype: InputMethodSubtype = subtype(202, "fr-FR")
-        var enabledImes: List<InputMethodInfo> = listOf(thisIme)
-        val subtypes = mutableMapOf<String, List<InputMethodSubtype>>()
-
-        fun reset() {
-            enabledImes = listOf(thisIme)
-            subtypes.clear()
-            subtypes[thisIme.id] = listOf(thisImeSubtype)
-        }
-
-        private fun subtype(id: Int, languageTag: String) = InputMethodSubtype.InputMethodSubtypeBuilder()
-            .setSubtypeId(id)
-            .setLanguageTag(languageTag)
-            .setSubtypeLocale(languageTag.replace('-', '_'))
+        val externalSubtype: InputMethodSubtype = InputMethodSubtype.InputMethodSubtypeBuilder()
+            .setSubtypeId(202)
+            .setLanguageTag("fr-FR")
+            .setSubtypeLocale("fr_FR")
             .setSubtypeMode("keyboard")
             .build()
     }
