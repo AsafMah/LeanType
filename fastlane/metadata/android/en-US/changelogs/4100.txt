@@ -1,4 +1,4 @@
-- Switch directly to a configured keyboard and subtype.
+- Switch directly to a configured keyboard and subtype, including on Android 6–8.
 - Save and restore up to five custom layout slots.
 - Configure auto-correct triggers and hide multi-word suggestions.
 - Faster, lower-memory built-in gesture typing with corrected suggestion casing.

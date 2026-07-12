@@ -27,6 +27,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Dictionary download catalog** is refreshed to the current repository inventory, removing stale unavailable entries and adding newly published dictionaries. (#119)
 
 ### Fixed
+- **Direct IME switching on Android 6–8** now uses the legacy input-method manager API instead of calling an Android 9+ framework method. (#119)
 - **Fallback gesture suggestions no longer leak dictionary capitalization** when Shift is off; the Java gesture engine now emits canonical lowercase candidates before the existing suggestion presentation-casing layer. (#118)
 - **Dictionary and blacklist handling** prevents blocked words from leaking back into gesture and normal suggestions. (#118)
 

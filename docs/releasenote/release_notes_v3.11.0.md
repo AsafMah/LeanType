@@ -2,7 +2,7 @@
 
 ## Highlights
 
-- Configure a target input method and switch directly to it using toolbar keycode `-10076`.
+- Configure a target input method and switch directly to it using toolbar keycode `-10076`, including on Android 6–8.
 - Create and persist up to five custom layout slots across symbol mode, rotation, and keyboard reloads.
 - Configure auto-correct trigger characters and optionally suppress multi-word suggestions.
 - Use the optimized built-in Java gesture engine with lower memory usage, improved ranking, and corrected suggestion casing.

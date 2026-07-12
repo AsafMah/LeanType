@@ -1585,7 +1585,7 @@ public class LatinIME extends InputMethodService implements
         } else if (targetSubtype != null) {
             ImeCompat.INSTANCE.switchInputMethodAndSubtype(this, targetImi, targetSubtype);
         } else {
-            switchInputMethod(targetImi.getId());
+            ImeCompat.INSTANCE.switchToInputMethod(this, targetImi);
         }
     }
 

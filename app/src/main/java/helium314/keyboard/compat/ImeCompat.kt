@@ -14,7 +14,7 @@ object ImeCompat {
     fun InputMethodService.switchInputMethod(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) return switchToNextInputMethod(false)
         val window = window.window ?: return false
-        val token = window.attributes.token
+        val token = window.attributes.token ?: return false
         return RichInputMethodManager.getInstance().inputMethodManager.switchToNextInputMethod(token, false)
     }
 
@@ -26,12 +26,22 @@ object ImeCompat {
         return RichInputMethodManager.getInstance().inputMethodManager.shouldOfferSwitchingToNextInputMethod(token)
     }
 
+    fun InputMethodService.switchToInputMethod(imi: InputMethodInfo) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            switchInputMethod(imi.id)
+        } else {
+            val window = window.window ?: return
+            val token = window.attributes.token ?: return
+            RichInputMethodManager.getInstance().inputMethodManager.setInputMethod(token, imi.id)
+        }
+    }
+
     fun InputMethodService.switchInputMethodAndSubtype(imi: InputMethodInfo, subtype: InputMethodSubtype) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             switchInputMethod(imi.id, subtype)
         } else {
             val window = window.window ?: return
-            val token = window.attributes.token
+            val token = window.attributes.token ?: return
             RichInputMethodManager.getInstance().inputMethodManager.setInputMethodAndSubtype(token, imi.id, subtype)
         }
     }
