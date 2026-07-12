@@ -17,24 +17,24 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [3.11.0] - 2026-07-12
 
 ### Added
-- **Direct IME switching** — configure a target keyboard/subtype and map keycode `-10076` to a toolbar action for immediate switching without the system picker.
-- **Five persistent custom layout slots** — custom layouts now restore correctly across symbol mode, orientation changes, and keyboard reloads.
-- **Suggestion controls** — configure auto-correct trigger characters and optionally suppress multi-word suggestions.
+- **Direct IME switching** — configure a target keyboard/subtype and map keycode `-10076` to a toolbar action for immediate switching without the system picker. (#118)
+- **Five persistent custom layout slots** — custom layouts now restore correctly across symbol mode, orientation changes, and keyboard reloads. (#118)
+- **Suggestion controls** — configure auto-correct trigger characters and optionally suppress multi-word suggestions. (#118)
 
 ### Changed
-- **Built-in Java gesture typing** uses less memory, streams dictionary entries, and improves path scoring/ranking performance.
-- **Text Expander placeholder handling** now resolves and advances placeholders synchronously to avoid cursor/selection desynchronization.
+- **Built-in Java gesture typing** uses less memory, streams dictionary entries, and improves path scoring/ranking performance. (#118)
+- **Text Expander placeholder handling** now resolves and advances placeholders synchronously to avoid cursor/selection desynchronization. (#118)
 
 ### Fixed
 - **Fallback gesture suggestions no longer leak dictionary capitalization** when Shift is off; the Java gesture engine now emits canonical lowercase candidates before the existing suggestion presentation-casing layer. (#118)
-- **Dictionary and blacklist handling** prevents blocked words from leaking back into gesture and normal suggestions.
+- **Dictionary and blacklist handling** prevents blocked words from leaking back into gesture and normal suggestions. (#118)
 
 ### Reliability & testing
-- Added regression coverage for KeyCode uniqueness, custom-layout state restoration, direct IME switch branches, multi-word filtering, and fallback gesture casing.
-- Fixed the Windows release tool to read dictionary metadata as UTF-8.
+- Added regression coverage for KeyCode uniqueness, custom-layout state restoration, direct IME switch branches, multi-word filtering, and fallback gesture casing. (#118)
+- Fixed the Windows release tool to read dictionary metadata as UTF-8. (#119)
 
 ### Upstream
-- Merged **LeanBitLab/LeanType v3.9.5** (pinned at `8cfe7f1fc`, including v3.9.3/v3.9.4). Fork identity (`LeanTypeDual`, distinct `applicationId`, privacy tiers, and fork-specific features) is preserved.
+- Merged **LeanBitLab/LeanType v3.9.5** (pinned at `8cfe7f1fc`, including v3.9.3/v3.9.4). Fork identity (`LeanTypeDual`, distinct `applicationId`, privacy tiers, and fork-specific features) is preserved. (#118)
 
 ## [3.10.0] - 2026-06-20
 
