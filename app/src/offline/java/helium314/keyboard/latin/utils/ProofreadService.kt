@@ -9,6 +9,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import kotlinx.coroutines.Dispatchers
@@ -385,14 +386,18 @@ private const val TAG = "LlamaProofreadService"
                 }
             } else {
                 // Default proofreading with few-shot examples for better local model guidance
-                val instruction = systemPrompt.ifBlank { "Correct the grammar and spelling of the input text. Output only the corrected text, nothing else." }
-                "Instruction: ${instruction.trim()}\n\n" +
-                "Input: heko hw r u\n" +
-                "Output: Hello, how are you?\n\n" +
-                "Input: what you name\n" +
-                "Output: What is your name?\n\n" +
-                "Input: $text\n" +
-                "Output:"
+                val instruction = systemPrompt.ifBlank { "Correct the grammar and spelling of the input text. Keep the SAME language as the input. Do NOT translate. Output only the corrected text, nothing else." }
+                val currentLocale = try {
+                    RichInputMethodManager.getInstance().currentSubtype.locale.toString()
+                } catch (_: Exception) { "" }
+                val localExamples = getProofreadFewShot(currentLocale)
+                val builder = StringBuilder("Instruction: ${instruction.trim()}\n\n")
+                builder.append("Input: heko hw r u\nOutput: Hello, how are you?\n\n")
+                for (ex in localExamples) {
+                    builder.append("Input: ${ex.first}\nOutput: ${ex.second}\n\n")
+                }
+                builder.append("Input: $text\nOutput:")
+                builder.toString()
             }
 
             // Collect generated text from the flow
@@ -636,6 +641,56 @@ private const val TAG = "LlamaProofreadService"
             lang.contains("hindi") || lang.contains("हिन्दी") -> listOf(
                 "Hello, how are you?" to "नमस्ते, आप कैसे हैं?",
                 "My name is Alex." to "मेरा नाम एलेक्स है।"
+            )
+            else -> emptyList()
+        }
+    }
+
+    private fun getProofreadFewShot(languageTag: String): List<Pair<String, String>> {
+        val lang = languageTag.lowercase()
+        return when {
+            lang.startsWith("en") -> emptyList() // English example already included
+            lang.startsWith("fr") -> listOf(
+                "je sui content de te voire" to "Je suis content de te voir."
+            )
+            lang.startsWith("es") -> listOf(
+                "hola como estas tu vien" to "Hola, ¿cómo estás? Bien."
+            )
+            lang.startsWith("de") -> listOf(
+                "ich habe ein grose Haus" to "Ich habe ein großes Haus."
+            )
+            lang.startsWith("it") -> listOf(
+                "io sono molto contento di vederte" to "Io sono molto contento di vederti."
+            )
+            lang.startsWith("pt") -> listOf(
+                "eu estou muito felis hoje" to "Eu estou muito feliz hoje."
+            )
+            lang.startsWith("nl") -> listOf(
+                "ik ben heel blei om je te zien" to "Ik ben heel blij om je te zien."
+            )
+            lang.startsWith("ru") -> listOf(
+                "привет как дила у тебя" to "Привет, как дела у тебя?"
+            )
+            lang.startsWith("tr") -> listOf(
+                "ben bugün çok mutluyım" to "Ben bugün çok mutluyum."
+            )
+            lang.startsWith("pl") -> listOf(
+                "jestem bardzo szczesliwy dzisiaj" to "Jestem bardzo szczęśliwy dzisiaj."
+            )
+            lang.startsWith("hi") -> listOf(
+                "मैं बहुत खुस हूं आज" to "मैं बहुत खुश हूं आज।"
+            )
+            lang.startsWith("ar") -> listOf(
+                "انا سعيد جدا اليوم" to "أنا سعيد جداً اليوم."
+            )
+            lang.startsWith("ja") -> listOf(
+                "きょう は とても いい てんき です" to "今日はとてもいい天気です。"
+            )
+            lang.startsWith("zh") -> listOf(
+                "我今天很高心" to "我今天很高兴。"
+            )
+            lang.startsWith("ko") -> listOf(
+                "오늘 날씨가 너무 조아요" to "오늘 날씨가 너무 좋아요."
             )
             else -> emptyList()
         }

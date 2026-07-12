@@ -212,6 +212,18 @@ fun createToolbarSettings(context: Context): List<Setting> {
         {
             SwitchPreference(it, Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD)
         },
+        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
+            Setting(
+                context,
+                Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR,
+                R.string.show_download_button_in_toolbar,
+                R.string.show_download_button_in_toolbar_summary
+            ) {
+                SwitchPreference(it, Defaults.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR) {
+                    KeyboardSwitcher.getInstance().setThemeNeedsReload()
+                }
+            }
+        } else null
     )
 }
 

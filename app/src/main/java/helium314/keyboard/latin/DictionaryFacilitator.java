@@ -117,6 +117,8 @@ public interface DictionaryFacilitator {
 
     void reloadBlacklist();
 
+    boolean isBlacklisted(String word);
+
     void closeDictionaries();
 
     /** main dictionaries are loaded asynchronously after resetDictionaries */
@@ -170,5 +172,8 @@ public interface DictionaryFacilitator {
     @NonNull
     default Map<String, Integer> getAllMainDictionaryWordsWithFrequency() {
         return Collections.emptyMap();
+    }
+
+    default void forEachMainDictionaryWord(java.util.function.BiConsumer<String, Integer> consumer) {
     }
 }

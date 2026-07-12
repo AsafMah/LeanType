@@ -25,6 +25,7 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 - **[🛡️ Offline AI (GGUF)](docs/FEATURES.md#5-offline-proofreading-privacy-focused)** - Private, on-device proofreading and translation using local **GGUF models** powered by `llama.cpp` (Offline build only).
 - **🌐 AI Translation** - Translate selected text using your chosen provider, with a separate model selector.
 - **[✍️ Handwriting Input](docs/FEATURES.md#8-handwriting-input)** - Draw characters directly on a handwriting recognition canvas (Standard version, requires [Leantype-Handwriting-Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin)).
+- **[👆 Built-in Gesture Typing](docs/FEATURES.md#9-built-in-gesture-typing)** - Gesture typing works out of the box using our new built-in pure-Java fallback engine, removing the strict dependency on native Google libraries.
 - **[🧠 Custom AI Keys](docs/FEATURES.md#4-custom-ai-keys--keywords)** - Assign custom prompts, personas (#editor, #proofread), and labels/tags (themed capsules) to 10 customizable toolbar keys.
 - **📝 Text Expander** - Shortcut → expansion with dynamic placeholders (`%clipboard%`, `%day%`, `%time12%`, `%cursor%`, lists), regex shortcuts, backspace-to-revert, and a guide.
 - **🧠 Smarter learned words** - *graduated trust* keeps a just-learned word below real-dictionary suggestions until you've used it a few times (no premature autocorrect to half-typed words); flag unknown words to **Add** or **Block** them via a Blocklist screen.
@@ -34,6 +35,8 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 - **🪟 Floating Keyboard** - Detach the keyboard into a draggable, resizable window (true OS-level overlay), with an optional persistent mode.
 - **⌨️ Dual Toolbar / Split Suggestions** - Split the suggestion strip and toolbar for easier reach.
 - **🖱️ Touchpad Mode** - Swipe the spacebar up for a cursor touchpad with sensitivity controls and edge-scroll acceleration, including a full-screen laptop-style mode.
+- **[⌨️ Direct Switch IME](docs/FEATURES.md#10-direct-switch-target-ime)** - Map custom keycode (`-10076`) to any toolbar key to switch directly to another input method.
+- **[🎨 Custom Layouts](docs/FEATURES.md#11-custom-layouts-customization)** - Save up to five custom layout profiles with persistent slot index tracking.
 - **✍️ Text editing mode** - A toolbar key opens a text-editing overlay for selection, cursor movement, and clipboard actions.
 - **🎨 Modern UI** - "Squircle" key backgrounds, refined icons, and polished aesthetics.
 - **🔄 Google Dictionary Import** - Import your personal dictionary words.
@@ -109,7 +112,7 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
   <li>Customize keyboard themes (style, colors and background image)</li>
   <li>Customize keyboard layouts</li>
   <li>Multilingual typing</li>
-  <li>Glide typing (<i>requires library</i>)</li>
+  <li>Glide typing (works out of the box with built-in pure-Java fallback engine, or use native library)</li>
   <li>Clipboard history</li>
   <li>One-handed mode</li>
   <li>Split keyboard</li>

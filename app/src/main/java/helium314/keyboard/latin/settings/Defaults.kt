@@ -42,9 +42,15 @@ object Defaults {
         LayoutType.SHORTCUT_BOTTOM -> "shortcut_bottom"
         LayoutType.HANDWRITING_BOTTOM -> "handwriting_bottom_row"
         LayoutType.EDITING -> "editing"
+        LayoutType.CUSTOM1 -> "symbols"
+        LayoutType.CUSTOM2 -> "symbols"
+        LayoutType.CUSTOM3 -> "symbols"
+        LayoutType.CUSTOM4 -> "symbols"
+        LayoutType.CUSTOM5 -> "symbols"
     }
     
     const val PREF_SPLIT_TOOLBAR = false
+    const val PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR = true
 
 
     private const val DEFAULT_SIZE_SCALE = 1.0f // 100%
@@ -69,6 +75,7 @@ object Defaults {
     @JvmField
     var PREF_POPUP_ON = true
     const val PREF_AUTO_CORRECTION = false
+    const val PREF_AUTO_CORRECT_TRIGGER = "both"
     const val PREF_MORE_AUTO_CORRECTION = false
     const val PREF_AUTO_CORRECT_THRESHOLD = 0.185f
     const val PREF_AUTOCORRECT_SHORTCUTS = true
@@ -82,6 +89,7 @@ object Defaults {
     const val PREF_BLOCK_POTENTIALLY_OFFENSIVE = true
     const val PREF_SHOW_LANGUAGE_SWITCH_KEY = false
     const val PREF_LANGUAGE_SWITCH_KEY = "internal"
+    const val PREF_DIRECT_IME_SWITCH_TARGET = ""
     const val PREF_SHOW_EMOJI_KEY = false
     const val PREF_VARIABLE_TOOLBAR_DIRECTION = true
     const val PREF_ADDITIONAL_SUBTYPES = "de${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwerty${Separators.SETS}" +
@@ -92,6 +100,8 @@ object Defaults {
     const val PREF_PERSIST_FLOATING_KEYBOARD = false
     // ponytail: persist text edit mode default
     const val PREF_PERSIST_TEXT_EDIT_MODE = false
+    // ponytail: default value to disable multi-word suggestions is false
+    const val PREF_DISABLE_MULTI_WORD_SUGGESTIONS = false
     @JvmField
     val PREF_SPLIT_SPACER_SCALE = Array(2) { DEFAULT_SIZE_SCALE }
     @JvmField
@@ -117,6 +127,7 @@ object Defaults {
     const val PREF_AUTOSPACE_AFTER_GESTURE_TYPING = true
     const val PREF_AUTOSPACE_BEFORE_GESTURE_TYPING = true
     const val PREF_SHIFT_REMOVES_AUTOSPACE = false
+    const val PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION = false
     const val PREF_ALWAYS_INCOGNITO_MODE = false
     const val PREF_BIGRAM_PREDICTIONS = true
     const val PREF_SUGGEST_PUNCTUATION = false
@@ -199,7 +210,7 @@ object Defaults {
     const val PREF_OFFLINE_TOP_K = 40
     const val PREF_OFFLINE_MIN_P = 0.05f
     const val PREF_OFFLINE_SHOW_THINKING = false
-    const val PREF_OFFLINE_SYSTEM_PROMPT = "Correct the grammar and spelling. Output only the corrected text."
+    const val PREF_OFFLINE_SYSTEM_PROMPT = "Correct the grammar and spelling. Keep the same language as the input. Do not translate. Output only the corrected text."
     const val PREF_OFFLINE_TRANSLATE_SYSTEM_PROMPT = "Translate the following text to {lang}. Output only the translation, nothing else:\n\n"
     const val PREF_OFFLINE_MAX_TOKENS = 64  // Accurate (64 tokens) default
     const val PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE = "French"

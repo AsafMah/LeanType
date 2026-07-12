@@ -110,6 +110,12 @@ public abstract class Dictionary {
         return Collections.emptyMap();
     }
 
+    public void forEachWord(java.util.function.BiConsumer<String, Integer> consumer) {
+        for (Map.Entry<String, Integer> entry : getAllWordsWithFrequency().entrySet()) {
+            consumer.accept(entry.getKey(), entry.getValue());
+        }
+    }
+
     /**
      * Get the frequency of the word.
      * @param word the word to get the frequency of.

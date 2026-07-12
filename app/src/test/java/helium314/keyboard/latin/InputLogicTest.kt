@@ -1563,6 +1563,53 @@ class InputLogicTest {
         }
         assertEquals("", text)
     }
+    private fun typeNoAssert(text: String) {
+        text.forEach {
+            latinIME.onEvent(Event.createEventForCodePointFromUnknownSource(it.code))
+            handleMessages()
+        }
+    }
+
+    @Test fun testTextExpanderPlaceholders() {
+        reset()
+        // Enable text expander
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+
+        // Define a shortcut
+        val shortcuts = mapOf("exp" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("Hi %cursor1%,your order %cursor2% is ready for %cursor3%.", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        // Type the shortcut
+        typeNoAssert("exp")
+
+        // Type bob at %cursor1%
+        typeNoAssert("bob")
+
+        // Press ENTER to jump to %cursor2%
+        latinIME.onEvent(Event.createEventForCodePointFromUnknownSource(Constants.CODE_ENTER))
+        handleMessages()
+
+        // Type pizza at %cursor2%
+        typeNoAssert("pizza")
+
+        // Press ENTER to jump to %cursor3%
+        latinIME.onEvent(Event.createEventForCodePointFromUnknownSource(Constants.CODE_ENTER))
+        handleMessages()
+
+        // Type takeout at %cursor3%
+        typeNoAssert("takeout")
+
+        // Press ENTER (no more placeholders)
+        latinIME.onEvent(Event.createEventForCodePointFromUnknownSource(Constants.CODE_ENTER))
+        handleMessages()
+
+        assertEquals("Hi bob,your order pizza is ready for takeout.", getText())
+    }
+
+
 
     // ------- helper functions ---------
 
@@ -2024,7 +2071,7 @@ private val ic = object : InputConnection {
     override fun getCursorCapsMode(p0: Int): Int = TODO("Not yet implemented")
     override fun deleteSurroundingTextInCodePoints(p0: Int, p1: Int): Boolean = TODO("Not yet implemented")
     override fun commitCompletion(p0: CompletionInfo?): Boolean = TODO("Not yet implemented")
-    override fun performEditorAction(p0: Int): Boolean = TODO("Not yet implemented")
+    override fun performEditorAction(p0: Int): Boolean = true
     override fun performContextMenuAction(p0: Int): Boolean = TODO("Not yet implemented")
     override fun clearMetaKeyStates(p0: Int): Boolean = TODO("Not yet implemented")
     override fun reportFullscreenMode(p0: Boolean): Boolean = TODO("Not yet implemented")

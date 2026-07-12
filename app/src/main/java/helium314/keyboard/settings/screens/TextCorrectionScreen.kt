@@ -67,6 +67,7 @@ fun TextCorrectionScreen(
         R.string.settings_category_correction,
         Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE,
         Settings.PREF_AUTO_CORRECTION,
+        if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_TRIGGER else null,
         if (autocorrectEnabled) Settings.PREF_MORE_AUTO_CORRECTION else null,
         if (autocorrectEnabled) Settings.PREF_AUTOCORRECT_SHORTCUTS else null,
         if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_THRESHOLD else null,
@@ -81,6 +82,7 @@ fun TextCorrectionScreen(
         if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING else null,
         if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING else null,
         Settings.PREF_SHIFT_REMOVES_AUTOSPACE,
+        Settings.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION,
         R.string.settings_category_suggestions,
         if (suggestionsVisible) Settings.PREF_SHOW_SUGGESTIONS else null,
         if (suggestionsEnabled) Settings.PREF_ALWAYS_SHOW_SUGGESTIONS else null,
@@ -91,6 +93,7 @@ fun TextCorrectionScreen(
         if (suggestionsEnabled || autocorrectEnabled) Settings.PREF_INLINE_EMOJI_SEARCH else null,
         Settings.PREF_KEY_USE_PERSONALIZED_DICTS,
         Settings.PREF_BIGRAM_PREDICTIONS,
+        if (suggestionsEnabled) Settings.PREF_DISABLE_MULTI_WORD_SUGGESTIONS else null,
         Settings.PREF_SUGGEST_PUNCTUATION,
         Settings.PREF_SUGGEST_CLIPBOARD_CONTENT,
         Settings.PREF_SUGGEST_SCREENSHOTS,
@@ -118,6 +121,14 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.autocorrect, R.string.auto_correction_summary
     ) {
         SwitchPreference(it, Defaults.PREF_AUTO_CORRECTION)
+    },
+    Setting(context, Settings.PREF_AUTO_CORRECT_TRIGGER, R.string.auto_correction_trigger) {
+        val items = listOf(
+            stringResource(R.string.auto_correction_trigger_both) to "both",
+            stringResource(R.string.auto_correction_trigger_space) to "space",
+            stringResource(R.string.auto_correction_trigger_punctuation) to "punctuation",
+        )
+        ListPreference(it, items, Defaults.PREF_AUTO_CORRECT_TRIGGER)
     },
     Setting(context, Settings.PREF_MORE_AUTO_CORRECTION,
         R.string.more_autocorrect, R.string.more_autocorrect_summary
@@ -175,6 +186,9 @@ fun createCorrectionSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_SHIFT_REMOVES_AUTOSPACE, R.string.shift_removes_autospace, R.string.shift_removes_autospace_summary) {
         SwitchPreference(it, Defaults.PREF_SHIFT_REMOVES_AUTOSPACE)
+    },
+    Setting(context, Settings.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION, R.string.preserve_space_before_punctuation, R.string.preserve_space_before_punctuation_summary) {
+        SwitchPreference(it, Defaults.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION)
     },
     Setting(context, Settings.PREF_SHOW_SUGGESTIONS,
         R.string.prefs_show_suggestions, R.string.prefs_show_suggestions_summary
@@ -303,6 +317,11 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.use_apps_dict, R.string.use_apps_dict_summary
     ) { setting ->
         SwitchPreference(setting, Defaults.PREF_USE_APPS)
+    },
+    Setting(context, Settings.PREF_DISABLE_MULTI_WORD_SUGGESTIONS,
+        R.string.disable_multi_word_suggestions_title, R.string.disable_multi_word_suggestions_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_DISABLE_MULTI_WORD_SUGGESTIONS)
     },
     Setting(
         context, Settings.PREF_SUGGEST_EMOJIS, R.string.suggest_emojis, R.string.suggest_emojis_summary

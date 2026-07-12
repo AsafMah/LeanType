@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.settings.DropDownField
 import helium314.keyboard.settings.SearchScreen
@@ -45,13 +46,13 @@ import java.util.Locale
 private data class BlockedWord(val word: String, val locale: Locale)
 
 private fun getBlacklistFile(context: Context, locale: Locale): File {
-    val dir = File(context.filesDir, "blacklists")
+    val dir = File(DeviceProtectedUtils.getFilesDir(context), "blacklists")
     if (!dir.exists()) dir.mkdirs()
     return File(dir, "${locale.toLanguageTag()}.txt")
 }
 
 private fun loadBlockedWords(context: Context): List<BlockedWord> {
-    val dir = File(context.filesDir, "blacklists")
+    val dir = File(DeviceProtectedUtils.getFilesDir(context), "blacklists")
     if (!dir.exists() || !dir.isDirectory) return emptyList()
     val list = mutableListOf<BlockedWord>()
     dir.listFiles()?.forEach { file ->
@@ -107,7 +108,7 @@ private fun removeBlockedWord(context: Context, word: String, locale: Locale) {
 }
 
 private fun notifyKeyboardToReload() {
-    KeyboardSwitcher.getInstance().getLatinIME()?.getDictionaryFacilitator()?.reloadBlacklist()
+    KeyboardSwitcher.getInstance().getLatinIME()?.reloadBlacklist()
 }
 
 @Composable
@@ -188,7 +189,7 @@ fun BlockedWordsScreen(
             onDismissRequest = { showClearAllDialog = false },
             onConfirmed = {
                 showClearAllDialog = false
-                val dir = File(ctx.filesDir, "blacklists")
+                val dir = File(DeviceProtectedUtils.getFilesDir(ctx), "blacklists")
                 if (dir.exists() && dir.isDirectory) {
                     dir.listFiles()?.forEach { it.delete() }
                 }
@@ -215,7 +216,7 @@ private fun EditBlockedWordDialog(
     val alreadyExists = remember(wordText, wordLocale) {
         if (wordText.isBlank()) false
         else {
-            val file = File(ctx.filesDir, "blacklists/${wordLocale.toLanguageTag()}.txt")
+            val file = File(DeviceProtectedUtils.getFilesDir(ctx), "blacklists/${wordLocale.toLanguageTag()}.txt")
             if (file.exists()) {
                 val cleanLower = wordText.trim().lowercase(wordLocale)
                 file.readLines().map { it.trim().lowercase(wordLocale) }.contains(cleanLower)

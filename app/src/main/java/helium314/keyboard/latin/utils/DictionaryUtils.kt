@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -116,9 +117,7 @@ fun MissingDictionaryDialog(onDismissRequest: () -> Unit, locale: Locale, inline
     }
     val availableDicts = createDictionaryTextAnnotated(locale)
     val repositoryLink = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_URL)
-    val dictUrl = "${Links.DICTIONARY_URL}${Links.DICTIONARY_DOWNLOAD_SUFFIX}dictionaries/main_$locale.dict"
-    val dictionaryLink = stringResource(R.string.dictionary_link_text).withHtmlLink(dictUrl)
-    val message = stringResource(R.string.no_dictionary_message, repositoryLink, locale.toString(), dictionaryLink)
+    val message = stringResource(R.string.no_dictionary_message, repositoryLink)
     var annotatedString = message.htmlToAnnotated()
     // ponytail: in standard flavor, if there are known dicts we show them as downloadable rows instead of bullet links
     val knownDicts = remember {
@@ -295,7 +294,7 @@ fun downloadDictionary(context: Context, locale: Locale, type: String, linkUrl: 
 }
 
 @Composable
-fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, onRefresh: () -> Unit) {
+fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refreshTrigger: Int = 0, onRefresh: () -> Unit) {
     val ctx = LocalContext.current
     val type = remember(link) { link.substringAfterLast("/").substringBefore("_") }
     // ponytail: extract the specific dictionary locale from the download link to avoid directory collision
@@ -306,7 +305,12 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, onRefr
     val cacheDir = remember(dictLocale) { DictionaryInfoUtils.getCacheDirectoryForLocale(dictLocale, ctx) }
     val file = remember(cacheDir, type) { cacheDir?.let { File(it, "$type.dict") } }
     var downloading by remember { mutableStateOf(false) }
-    var exists by remember(file) { mutableStateOf(file?.exists() == true) }
+    val downloadedLink = remember(link, refreshTrigger) { ctx.prefs().getString("pref_dict_download_link_${type}_${dictLocale}", "") ?: "" }
+    var exists by remember(file, downloadedLink, refreshTrigger) {
+        mutableStateOf(
+            file?.exists() == true && (downloadedLink == link || (downloadedLink.isEmpty() && link.contains("/dictionaries/")))
+        )
+    }
 
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -315,21 +319,22 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, onRefr
     ) {
         Text(desc, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         if (exists) {
-            var showDeleteDialog by remember { mutableStateOf(false) }
-            androidx.compose.material3.TextButton(onClick = { showDeleteDialog = true }) {
-                Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
-            }
-            if (showDeleteDialog) {
-                ConfirmationDialog(
-                    onDismissRequest = { showDeleteDialog = false },
-                    confirmButtonText = stringResource(R.string.remove),
-                    onConfirmed = {
-                        file?.delete()
-                        exists = false
-                        onRefresh()
-                    },
-                    content = { Text(stringResource(R.string.remove_dictionary_message, type)) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "✓ " + stringResource(R.string.installed),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(end = 8.dp)
                 )
+                helium314.keyboard.settings.DeleteButton(
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                ) {
+                    file?.delete()
+                    ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
+                    exists = false
+                    onRefresh()
+                }
             }
         } else if (downloading) {
             Text(
@@ -343,6 +348,7 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, onRefr
                 downloadDictionary(ctx, dictLocale, type, link) { success ->
                     downloading = false
                     if (success) {
+                        ctx.prefs().edit().putString("pref_dict_download_link_${type}_${dictLocale}", link).apply()
                         exists = true
                         onRefresh()
                     } else {
@@ -366,13 +372,17 @@ fun isMainDictionaryMissing(context: Context, locale: Locale): Boolean {
         }
         if (best != null) return false
     }
-    // 2. check if cache directory has a main.dict file
+    // 2. check if cache directory has a main.dict or main_user.dict file
     var cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { File(it) }
-    var hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name == "main.dict" } == true
+    var hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
     if (!hasMain && (locale.country.isNotEmpty() || locale.variant.isNotEmpty())) {
         val fallbackLocale = Locale(locale.language)
         cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
-        hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name == "main.dict" } == true
+        hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
+        if (!hasMain) {
+            val variantDir = DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)
+            hasMain = variantDir?.exists() == true && variantDir.isDirectory && variantDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
+        }
     }
     if (hasMain) return false
     // 3. check if there is a known downloadable main dictionary for this locale

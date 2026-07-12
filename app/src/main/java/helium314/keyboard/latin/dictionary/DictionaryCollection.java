@@ -100,6 +100,13 @@ public final class DictionaryCollection extends Dictionary {
     }
 
     @Override
+    public void forEachWord(java.util.function.BiConsumer<String, Integer> consumer) {
+        for (Dictionary dict : mDictionaries) {
+            dict.forEachWord(consumer);
+        }
+    }
+
+    @Override
     public boolean isInitialized() {
         return !mDictionaries.isEmpty();
     }

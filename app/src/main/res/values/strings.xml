@@ -171,6 +171,10 @@
     <string name="autocorrect">Auto-correction</string>
     <!-- Description for auto correction -->
     <string name="auto_correction_summary">Spacebar and punctuation automatically correct mistyped words</string>
+    <string name="auto_correction_trigger">Auto-correct on</string>
+    <string name="auto_correction_trigger_both">Spacebar and punctuation</string>
+    <string name="auto_correction_trigger_space">Spacebar only</string>
+    <string name="auto_correction_trigger_punctuation">Punctuation only</string>
     <!-- Option to enable auto correction for many fields that do not request auto correction -->
     <string name="more_autocorrect">More auto-correction</string>
     <!-- Description for more_autocorrect -->
@@ -493,6 +497,10 @@
     <string name="shift_removes_autospace">No autospace when pressing shift</string>
     <!-- Description for "autospace_after_punctuation" setting -->
     <string name="shift_removes_autospace_summary">Shift removes pending autospace</string>
+    <!-- Preferences item for preserving space before punctuation -->
+    <string name="preserve_space_before_punctuation">Preserve space before punctuation</string>
+    <!-- Description for "preserve_space_before_punctuation" setting -->
+    <string name="preserve_space_before_punctuation_summary">Do not automatically delete space before punctuation marks: ]}):;!?,.</string>
     <!-- Preferences item for showing popup keys in long-press popup -->
     <string name="show_popup_keys_title">Show more letters with diacritics in popup</string>
     <!-- Option for showing only letters defined in the current language file in long-press popup -->
@@ -641,6 +649,8 @@
     <string name="ai_provider_gemini">Google Gemini</string>
     <string name="split_toolbar">Split toolbar</string>
     <string name="split_toolbar_summary">Separate suggestions from toolbar</string>
+    <string name="show_download_button_in_toolbar">Show download button in toolbar</string>
+    <string name="show_download_button_in_toolbar_summary">Show dictionary download icon in suggestion strip when main dictionary is missing</string>
     <string name="ai_provider_huggingface">Groq</string>
     <string name="ai_provider_openai">HF/OpenAI-compatible</string>
     <string name="huggingface_token_title">API Token</string>
@@ -933,12 +943,18 @@ language, hence "No language". -->
     <string name="delete_layout">Really delete custom layout %s?</string>
     <!-- Message when layout to be deleted is in use -->
     <string name="layout_in_use">Warning: layout is in currently use</string>
+    <string name="add_custom_layout">Add custom layout</string>
     <!-- Message on layout error -->
     <string name="layout_error">Layout error: %s</string>
     <!-- Text hint for editing layout -->
     <string name="edit_layout">Tap to edit raw layout</string>
     <!-- Settings screen title for secondary layouts (functional keys, symbols, numpad, ...) -->
     <string name="settings_screen_secondary_layouts">Secondary layouts</string>
+    <string name="layout_custom1">Custom layout 1</string>
+    <string name="layout_custom2">Custom layout 2</string>
+    <string name="layout_custom3">Custom layout 3</string>
+    <string name="layout_custom4">Custom layout 4</string>
+    <string name="layout_custom5">Custom layout 5</string>
     <!-- Name for functional keys layout -->
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Functional keys</string>
     <!-- Name for functional keys layout for tablets -->
@@ -1077,7 +1093,7 @@ New dictionary:
      %1$s will be replaced by dictionary_link_text, %2$s by the language code, %3$s by dictionary_link_text again.
      This string will be interpreted as HTML -->
     <string name="no_dictionary_message">"Without a dictionary, you will only get suggestions for text you entered before.&lt;br&gt;
-        You can download dictionaries %1$s, or check whether a dictionary for \"%2$s\" can be downloaded directly %3$s."</string>
+        You can download dictionaries %1$s."</string>
     <!-- Button to never show the no_dictionary_message when enabling a language that has no dictionary -->
     <string name="no_dictionary_dont_show_again_button">"Don't show again"</string>
     <!-- Message for the user dictionary selection dialog, %s will be replaced by dictionary_link_text. -->
@@ -1229,10 +1245,10 @@ New dictionary:
     <string name="sponsor_dialog_never_show_again">Never show again</string>
     <string name="sponsor_dialog_sponsor">Sponsor</string>
     <string name="sponsor_dialog_not_now">Not now</string>
-    <!-- link to the wiki for about screen -->
-    <string name="about_wiki_link">Go to Wiki</string>
-    <!-- description for wiki link -->
-    <string name="about_wiki_link_description">The Wiki can be improved by any GitHub user!</string>
+    <!-- link to features.md for about screen -->
+    <string name="about_features_link">Go to FEATURES.md</string>
+    <!-- description for features.md link -->
+    <string name="about_features_link_description">List of main features and keyboard manual</string>
 
     <!-- Libraries Hub -->
     <string name="libraries_hub_title">Libraries</string>
@@ -1257,6 +1273,9 @@ New dictionary:
     <string name="text_tap_languages">Tap the language to open settings</string>
     <!-- Title of internal InputMethodPicker, strings should be same as the ones from Android system -->
     <string name="select_input_method">Choose input method</string>
+    <string name="direct_ime_switch_title">Direct Switch Target IME</string>
+    <string name="direct_ime_switch_summary">Input Method to switch to directly when using the custom keycode option</string>
+    <string name="direct_ime_switch_none">None</string>
     <!-- Settings screen title for appearance preferences -->
     <string name="settings_screen_appearance">Appearance</string>
     <!-- Settings screen title for toolbar preferences -->
@@ -1470,4 +1489,6 @@ New dictionary:
     <!-- ponytail: persist text edit mode strings -->
     <string name="persist_text_edit_mode_title">Persist text editing mode</string>
     <string name="persist_text_edit_mode_summary">Do not exit text editing mode when input finishes</string>
+    <string name="disable_multi_word_suggestions_title">Disable multi-word suggestions</string>
+    <string name="disable_multi_word_suggestions_summary">Prevent suggestions that consist of multiple combined words (recommended for Turkish)</string>
 </resources>

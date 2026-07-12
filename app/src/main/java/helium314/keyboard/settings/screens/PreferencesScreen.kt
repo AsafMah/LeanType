@@ -21,6 +21,8 @@ import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.RichInputMethodManager
+import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.preferences.ReorderSwitchPreference
@@ -78,6 +80,7 @@ fun PreferencesScreen(
             Settings.PREF_COMPACT_NUMBER_ROW_IN_SYMBOLS else null,
         Settings.PREF_SHOW_LANGUAGE_SWITCH_KEY,
         Settings.PREF_LANGUAGE_SWITCH_KEY,
+        Settings.PREF_DIRECT_IME_SWITCH_TARGET,
         Settings.PREF_SHOW_EMOJI_KEY,
         Settings.PREF_REMOVE_REDUNDANT_POPUPS,
         R.string.settings_category_clipboard_history,
@@ -162,6 +165,13 @@ fun createPreferencesSettings(context: Context) = listOf(
             ),
             Defaults.PREF_LANGUAGE_SWITCH_KEY
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_DIRECT_IME_SWITCH_TARGET, R.string.direct_ime_switch_title, R.string.direct_ime_switch_summary) {
+        ListPreference(
+            it,
+            getDirectImeSwitchItems(context),
+            Defaults.PREF_DIRECT_IME_SWITCH_TARGET
+        )
     },
     Setting(context, Settings.PREF_SHOW_EMOJI_KEY, R.string.show_emoji_key) {
         SwitchPreference(it, Defaults.PREF_SHOW_EMOJI_KEY) { KeyboardSwitcher.getInstance().reloadKeyboard() }
@@ -273,4 +283,40 @@ private fun Preview() {
             PreferencesScreen { }
         }
     }
+}
+
+private fun getDirectImeSwitchItems(context: Context): List<Pair<String, String>> {
+    val pm = context.packageManager
+    val richImm = RichInputMethodManager.getInstance()
+    val thisImi = richImm.inputMethodInfoOfThisIme
+    val enabledImis = richImm.inputMethodManager.enabledInputMethodList
+        .sortedBy { it.hashCode() }.sortedBy { it.loadLabel(pm).toString() }
+
+    val items = mutableListOf<Pair<String, String>>()
+    items.add(context.getString(R.string.direct_ime_switch_none) to "")
+
+    enabledImis.forEach { imi ->
+        val subtypes = if (imi != thisImi) richImm.getEnabledInputMethodSubtypes(imi, true)
+            else richImm.getEnabledInputMethodSubtypes(imi, true).sortedBy { it.displayName() }
+        if (subtypes.isEmpty()) {
+            val label = imi.loadLabel(pm).toString()
+            val value = "${imi.id};"
+            items.add(label to value)
+        } else {
+            subtypes.forEach { subtype ->
+                if (!subtype.isAuxiliary) {
+                    val subtypeName = if (imi == thisImi) {
+                        subtype.displayName()
+                    } else {
+                        subtype.getDisplayName(context, imi.packageName, imi.serviceInfo.applicationInfo)
+                    }
+                    val label = if (subtypeName.isBlank()) imi.loadLabel(pm).toString()
+                        else "$subtypeName (${imi.loadLabel(pm)})"
+                    val value = "${imi.id};${subtype.hashCode()}"
+                    items.add(label to value)
+                }
+            }
+        }
+    }
+    return items
 }

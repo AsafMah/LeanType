@@ -547,6 +547,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onCreate() {
+        helium314.keyboard.latin.gesture.SwipeGestureEngine.initialize(this);
         mSettings.startListener();
         KeyboardIconsSet.Companion.getInstance().loadIcons(this);
         mRichImm = RichInputMethodManager.getInstance();
@@ -853,6 +854,15 @@ public class LatinIME extends InputMethodService implements
         mHandler.onFinishInputView(finishingInput);
         mStatsUtilsManager.onFinishInputView();
         mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
+        // ponytail: reset text edit mode when input view finishes if persist is false
+        if (KeyboardActionListenerImpl.sPersistentTextEditModeActive) {
+            if (!Settings.getInstance().getCurrent().mPersistTextEditMode) {
+                KeyboardActionListenerImpl.sPersistentTextEditModeActive = false;
+                if (mKeyboardSwitcher != null) {
+                    mKeyboardSwitcher.hideTextEditView();
+                }
+            }
+        }
     }
 
     @Override
@@ -1533,6 +1543,52 @@ public class LatinIME extends InputMethodService implements
         mSubtypeState.switchSubtype(mRichImm);
     }
 
+    public void switchToUserIme() {
+        final android.content.SharedPreferences prefs = helium314.keyboard.latin.utils.DeviceProtectedUtils
+                .getSharedPreferences(this);
+        final String target = prefs.getString(Settings.PREF_DIRECT_IME_SWITCH_TARGET, helium314.keyboard.latin.settings.Defaults.PREF_DIRECT_IME_SWITCH_TARGET);
+        if (target == null || target.isEmpty()) {
+            return;
+        }
+        final String[] parts = target.split(";");
+        if (parts.length == 0) return;
+        final String imiId = parts[0];
+        if (imiId.isEmpty()) return;
+
+        android.view.inputmethod.InputMethodInfo targetImi = null;
+        for (final android.view.inputmethod.InputMethodInfo imi : mRichImm.getInputMethodManager().getEnabledInputMethodList()) {
+            if (imi.getId().equals(imiId)) {
+                targetImi = imi;
+                break;
+            }
+        }
+        if (targetImi == null) return;
+
+        android.view.inputmethod.InputMethodSubtype targetSubtype = null;
+        if (parts.length > 1 && !parts[1].isEmpty()) {
+            try {
+                final int subtypeHash = java.lang.Integer.parseInt(parts[1]);
+                for (final android.view.inputmethod.InputMethodSubtype subtype : mRichImm.getEnabledInputMethodSubtypes(targetImi, true)) {
+                    if (subtype.hashCode() == subtypeHash) {
+                        targetSubtype = subtype;
+                        break;
+                    }
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if (targetImi.getId().equals(mRichImm.getInputMethodInfoOfThisIme().getId())) {
+            if (targetSubtype != null) {
+                switchToSubtype(targetSubtype);
+            }
+        } else if (targetSubtype != null) {
+            ImeCompat.INSTANCE.switchInputMethodAndSubtype(this, targetImi, targetSubtype);
+        } else {
+            switchInputMethod(targetImi.getId());
+        }
+    }
+
     // Implementation of {@link SuggestionStripView.Listener}.
     @Override
     public void onCodeInput(final int codePoint, final int x, final int y, final boolean isKeyRepeat) {
@@ -1543,6 +1599,10 @@ public class LatinIME extends InputMethodService implements
     // should
     // completely replace #onCodeInput.
     public void onEvent(@NonNull final Event event) {
+        if (KeyCode.SWITCH_TO_USER_IME == event.getKeyCode()) {
+            switchToUserIme();
+            return;
+        }
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
             mRichImm.switchToShortcutIme(this);
         }
@@ -1742,11 +1802,15 @@ public class LatinIME extends InputMethodService implements
             }
         }
 
-        // ponytail: self-learning — bump gesture rank for words the user picks from fallback engine
         if (suggestionInfo.isKindOf(helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo.KIND_CORRECTION)
                 && helium314.keyboard.latin.dictionary.Dictionary.DICTIONARY_USER_TYPED.equals(
                         suggestionInfo.mSourceDict != null ? suggestionInfo.mSourceDict.mDictType : "")) {
-            helium314.keyboard.latin.gesture.SwipeGestureEngine.recordAccepted(suggestionInfo.mWord);
+            helium314.keyboard.latin.gesture.SwipeGestureEngine.recordAccepted(
+                    suggestionInfo.mWord,
+                    mInputLogic.getWordComposer().getComposedDataSnapshot().mInputPointers,
+                    mKeyboardSwitcher.getKeyboard(),
+                    mInputLogic.getSuggest().getGestureIndex()
+            );
         }
     }
 
@@ -1860,6 +1924,11 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void removeSuggestion(final String word) {
         mDictionaryFacilitator.removeWord(word);
+        mInputLogic.getSuggest().clearNextWordSuggestionsCache();
+    }
+
+    public void reloadBlacklist() {
+        mDictionaryFacilitator.reloadBlacklist();
         mInputLogic.getSuggest().clearNextWordSuggestionsCache();
     }
 
@@ -2033,6 +2102,7 @@ public class LatinIME extends InputMethodService implements
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra("from_ime", true);
         startActivity(intent);
     }
 

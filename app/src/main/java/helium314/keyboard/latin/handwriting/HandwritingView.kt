@@ -154,6 +154,7 @@ class HandwritingView @JvmOverloads constructor(
                         val intent = android.content.Intent()
                         intent.setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
                         intent.putExtra("screen", helium314.keyboard.settings.SettingsDestination.Libraries)
+                        intent.putExtra("from_ime", true)
                         intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
                         try {
                             context.startActivity(intent)

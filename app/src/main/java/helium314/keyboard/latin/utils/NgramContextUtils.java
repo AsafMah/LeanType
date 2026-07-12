@@ -49,6 +49,26 @@ public final class NgramContextUtils {
     public static NgramContext getNgramContextFromNthPreviousWord(final CharSequence prev,
             final SpacingAndPunctuations spacingAndPunctuations, final int n) {
         if (prev == null) return NgramContext.EMPTY_PREV_WORDS_INFO;
+        int lastNewlineIdx = -1;
+        for (int i = prev.length() - 1; i >= 0; i--) {
+            char c = prev.charAt(i);
+            if (c == '\n' || c == '\r') {
+                lastNewlineIdx = i;
+                break;
+            }
+        }
+        if (lastNewlineIdx != -1) {
+            boolean hasNonWhitespaceAfter = false;
+            for (int i = lastNewlineIdx + 1; i < prev.length(); i++) {
+                if (!Character.isWhitespace(prev.charAt(i))) {
+                    hasNonWhitespaceAfter = true;
+                    break;
+                }
+            }
+            if (!hasNonWhitespaceAfter) {
+                return new NgramContext(WordInfo.BEGINNING_OF_SENTENCE_WORD_INFO);
+            }
+        }
         final String[] lines = NEWLINE_REGEX.split(prev);
         if (lines.length == 0) {
             return new NgramContext(WordInfo.BEGINNING_OF_SENTENCE_WORD_INFO);

@@ -56,7 +56,7 @@ fun AboutScreen(
         SettingsWithoutKey.VERSION,
         SettingsWithoutKey.LICENSE,
         SettingsWithoutKey.HIDDEN_FEATURES,
-        SettingsWithoutKey.GITHUB_WIKI,
+        SettingsWithoutKey.GITHUB_FEATURES,
         SettingsWithoutKey.GITHUB,
         SettingsWithoutKey.SPONSOR,
         SettingsWithoutKey.SAVE_LOG,
@@ -133,14 +133,14 @@ fun createAboutSettings(context: Context) = listOf(
             icon = R.drawable.ic_settings_about_hidden_features
         )
     },
-    Setting(context, SettingsWithoutKey.GITHUB_WIKI, R.string.about_wiki_link, R.string.about_wiki_link_description) {
+    Setting(context, SettingsWithoutKey.GITHUB_FEATURES, R.string.about_features_link, R.string.about_features_link_description) {
         val ctx = LocalContext.current
         Preference(
             name = it.title,
             description = it.description,
             onClick = {
                 val intent = Intent()
-                intent.data = Links.WIKI_URL.toUri()
+                intent.data = Links.FEATURES_URL.toUri()
                 intent.action = Intent.ACTION_VIEW
                 ctx.startActivity(intent)
             },

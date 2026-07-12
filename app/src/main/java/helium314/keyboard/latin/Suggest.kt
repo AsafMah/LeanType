@@ -49,6 +49,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     @Volatile private var gestureIndex: SwipeGestureEngine.GestureIndex? = null
     @Volatile private var gestureIndexFingerprint: Int = 0
 
+    fun getGestureIndex(): SwipeGestureEngine.GestureIndex? = gestureIndex
+
     // Cached scoreLimit to avoid repeated Settings lookups in hot path
     // The read-then-write of (mLastScoreLimitUpdateTime, mCachedScoreLimitForAutocorrect)
     // is guarded by `synchronized(this)` in shouldBeAutoCorrected() to make the update atomic
@@ -59,6 +61,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     // cache cleared whenever LatinIME.loadSettings is called, notably on changing layout and switching input fields
     fun clearNextWordSuggestionsCache() {
         nextWordSuggestionsCache.evictAll()
+        gestureIndex = null
         // Also reset scoreLimit cache to force refresh on next use
         synchronized(this) {
             mLastScoreLimitUpdateTime = 0
@@ -101,6 +104,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 getNextWordSuggestions(ngramContext, keyboard, inputStyleIfNotPrediction, settingsValuesForSuggestion)
             else mDictionaryFacilitator.getSuggestionResults(wordComposer.composedDataSnapshot, ngramContext, keyboard,
                 settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyleIfNotPrediction)
+        filterMultiWordSuggestions(suggestionResults, Settings.getValues().mDisableMultiWordSuggestions)
         val trailingSingleQuotesCount = StringUtils.getTrailingSingleQuotesCount(typedWordString)
         val suggestionsContainer = getTransformedSuggestedWordInfoList(wordComposer, suggestionResults,
             trailingSingleQuotesCount, mDictionaryFacilitator.mainLocale, keyboard)
@@ -344,8 +348,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             val fingerprint = SwipeGestureEngine.layoutFingerprint(keyboard)
             var index = gestureIndex
             if (index == null || index.byFirst.isEmpty() || gestureIndexFingerprint != fingerprint) {
-                val words = mDictionaryFacilitator.getAllMainDictionaryWordsWithFrequency()
-                index = SwipeGestureEngine.buildIndex(words, keyboard)
+                index = SwipeGestureEngine.buildIndex(mDictionaryFacilitator, keyboard)
                 if (index.byFirst.isNotEmpty()) {
                     gestureIndex = index
                     gestureIndexFingerprint = fingerprint
@@ -366,7 +369,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
             )
         }
+        filterMultiWordSuggestions(suggestionResults, Settings.getValues().mDisableMultiWordSuggestions)
         replaceSingleLetterFirstSuggestion(suggestionResults)
+        adjustToTooSuggestions(suggestionResults, pointers, keyboard)
 
         // For transforming words that don't come from a dictionary, because it's our best bet
         val locale = mDictionaryFacilitator.mainLocale
@@ -444,8 +449,44 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         if (cachedResults != null) return cachedResults
         val newResults = mDictionaryFacilitator.getSuggestionResults(ComposedData(InputPointers(1),
             false, ""), ngramContext, keyboard, settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyle)
+        filterMultiWordSuggestions(newResults, Settings.getValues().mDisableMultiWordSuggestions)
         nextWordSuggestionsCache.put(ngramContext, newResults)
         return newResults
+    }
+
+    private fun adjustToTooSuggestions(suggestionResults: SuggestionResults, pointers: InputPointers, keyboard: Keyboard) {
+        if (suggestionResults.size < 2) return
+        val hasLoop = SwipeGestureEngine.hasLoopAtEnd(pointers, keyboard)
+        if (!hasLoop) {
+            var toInfo: SuggestedWordInfo? = null
+            var tooInfo: SuggestedWordInfo? = null
+            for (info in suggestionResults) {
+                val lower = info.mWord.lowercase(Locale.ROOT)
+                if (lower == "to") {
+                    toInfo = info
+                } else if (lower == "too") {
+                    tooInfo = info
+                }
+            }
+            if (toInfo != null && tooInfo != null && tooInfo.mScore >= toInfo.mScore) {
+                suggestionResults.remove(toInfo)
+                suggestionResults.remove(tooInfo)
+                val toScore = tooInfo.mScore
+                val tooScore = if (tooInfo.mScore > toInfo.mScore) toInfo.mScore else tooInfo.mScore - 1
+                suggestionResults.add(
+                    SuggestedWordInfo(
+                        toInfo.mWord, toInfo.mPrevWordsContext, toScore,
+                        toInfo.mKindAndFlags, toInfo.mSourceDict, toInfo.mIndexOfTouchPointOfSecondWord, toInfo.mAutoCommitFirstWordConfidence
+                    )
+                )
+                suggestionResults.add(
+                    SuggestedWordInfo(
+                        tooInfo.mWord, tooInfo.mPrevWordsContext, tooScore,
+                        tooInfo.mKindAndFlags, tooInfo.mSourceDict, tooInfo.mIndexOfTouchPointOfSecondWord, tooInfo.mAutoCommitFirstWordConfidence
+                    )
+                )
+            }
+        }
     }
 
     companion object {
@@ -638,4 +679,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             return pseudoTypedWordInfo
         }
     }
+}
+
+
+internal fun filterMultiWordSuggestions(results: SuggestionResults, enabled: Boolean) {
+    if (enabled) results.removeAll { it.mWord.contains(' ') }
 }

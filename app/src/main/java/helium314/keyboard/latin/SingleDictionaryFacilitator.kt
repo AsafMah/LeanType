@@ -136,6 +136,8 @@ class SingleDictionaryFacilitator(private val dict: Dictionary) : DictionaryFaci
 
     override fun reloadBlacklist() {}
 
+    override fun isBlacklisted(word: String): Boolean = false
+
     override fun clearUserHistoryDictionary(context: Context) {}
 
     override fun localesAndConfidences(): String? = null

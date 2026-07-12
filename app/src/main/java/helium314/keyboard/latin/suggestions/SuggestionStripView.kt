@@ -68,7 +68,6 @@ import helium314.keyboard.latin.utils.removePinnedKey
 import helium314.keyboard.latin.utils.setToolbarButtonsActivatedState
 import helium314.keyboard.latin.utils.setToolbarButtonsActivatedStateOnPrefChange
 import helium314.keyboard.latin.utils.isMainDictionaryMissing
-import helium314.keyboard.latin.utils.showMissingDictionaryComposeDialog
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.settings.SettingsWithoutKey
@@ -383,6 +382,10 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     fun setSuggestions(suggestions: SuggestedWords, isRtlLanguage: Boolean) {
+
+        if (isShowingEmojiSuggestions && !helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().isShowingEmojiPalettes) {
+            isShowingEmojiSuggestions = false
+        }
         if (isShowingEmojiSuggestions) return
         if (isExternalSuggestionVisible && (suggestions.isEmpty || suggestions.isPunctuationSuggestions)) {
             // Keep external suggestion (clipboard/screenshot) if new suggestions are empty or just punctuation
@@ -405,6 +408,9 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     fun setExternalSuggestionView(view: View?, addCloseButton: Boolean) {
+        if (isShowingEmojiSuggestions && !helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().isShowingEmojiPalettes) {
+            isShowingEmojiSuggestions = false
+        }
         if (isShowingEmojiSuggestions) return
         clear()
         if (view == null) {
@@ -516,11 +522,14 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             || key == Settings.PREF_QUICK_PIN_TOOLBAR_KEYS
             || key == Settings.PREF_AUTO_HIDE_PINNED_KEYS
             || key == Settings.PREF_SPLIT_TOOLBAR
+            || key == Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR
             || key == "pref_custom_ai_show_tags_on_toolbar"
-            || key?.startsWith("pref_custom_ai_tag_") == true) {
+            || key?.startsWith("pref_custom_ai_tag_") == true
+            || key?.startsWith("pref_dict_download_link_") == true) {
             rebuildToolbarKeys()
             // Update visibility with auto-hide logic
             setToolbarVisibility(isToolbarManuallyOpen, false)
+            updateKeys()
         }
     }
 
@@ -806,9 +815,16 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val languageCodes = resources.getStringArray(R.array.translate_language_codes)
         val prefs = context.prefs()
 
+        val list = languageNames.zip(languageCodes).toMutableList()
+        val currentLanguageCode = prefs.getString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, "English") ?: "English"
+        val currentLanguageName = prefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, currentLanguageCode) ?: currentLanguageCode
+
+        if (!languageCodes.contains(currentLanguageCode) && currentLanguageCode.isNotEmpty()) {
+            list.add(0, currentLanguageName to currentLanguageCode)
+        }
+
         // Create a button for each language
-        for ((index, languageName) in languageNames.withIndex()) {
-            val languageCode = languageCodes.getOrNull(index) ?: return
+        for ((languageName, languageCode) in list) {
             val button = android.widget.TextView(context, null, R.attr.suggestionWordStyle).apply {
                 text = languageName
                 gravity = android.view.Gravity.CENTER
@@ -816,7 +832,6 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
                 setSingleLine()
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                // Set minimum width for consistent appearance
                 minimumWidth = 100.dpToPx(resources)
             }
             button.layoutParams = LinearLayout.LayoutParams(
@@ -828,19 +843,59 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 // Set the selected language and start translation
                 context.prefs().edit().apply {
                     putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, languageName)
-                    // Also update Gemini target language
                     putString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, languageCode)
                 }.apply()
                 helium314.keyboard.latin.utils.ProofreadService(context).setTargetLanguage(languageCode)
-                // Hide selector and trigger translation
                 hideTranslateLanguageSelector()
-                // Trigger translation with new language
                 listener.onCodeInput(KeyCode.TRANSLATE, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, false)
             }
             Settings.getValues().mColors.setColor(button.background, ColorType.TOOL_BAR_KEY)
             button.setBackgroundResource(R.drawable.toolbar_key_background)
             languageList.addView(button)
         }
+
+        // Setup Custom... button
+        val customButton = android.widget.TextView(context, null, R.attr.suggestionWordStyle).apply {
+            text = "Custom..."
+            gravity = android.view.Gravity.CENTER
+            setPadding(8.dpToPx(resources), 0, 8.dpToPx(resources), 0)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setSingleLine()
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            minimumWidth = 100.dpToPx(resources)
+        }
+        customButton.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.MATCH_PARENT
+        ).apply { gravity = android.view.Gravity.CENTER_VERTICAL }
+
+        customButton.setOnClickListener {
+            val builder = android.app.AlertDialog.Builder(context)
+            builder.setTitle("Custom Target Language")
+            val input = android.widget.EditText(context).apply {
+                setText(if (currentLanguageCode == "custom") "" else currentLanguageCode)
+                setSingleLine()
+            }
+            builder.setView(input)
+            builder.setPositiveButton("OK") { dialog, _ ->
+                val customLang = input.text.toString().trim()
+                if (customLang.isNotEmpty()) {
+                    prefs.edit().apply {
+                        putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, customLang)
+                        putString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, customLang)
+                    }.apply()
+                    helium314.keyboard.latin.utils.ProofreadService(context).setTargetLanguage(customLang)
+                    hideTranslateLanguageSelector()
+                    listener.onCodeInput(KeyCode.TRANSLATE, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, false)
+                }
+                dialog.dismiss()
+            }
+            builder.setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
+            builder.show()
+        }
+        Settings.getValues().mColors.setColor(customButton.background, ColorType.TOOL_BAR_KEY)
+        customButton.setBackgroundResource(R.drawable.toolbar_key_background)
+        languageList.addView(customButton)
 
         // Setup close button
         translateLanguageCloseButton.isVisible = true
@@ -914,7 +969,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // ponytail: show/hide dictionary download button if dictionary is missing
         if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
             val currentLocale = SubtypeSettings.getSelectedSubtype(context.prefs()).locale()
-            if (isMainDictionaryMissing(context, currentLocale) && !hideToolbarKeys) {
+            val showDownloadButton = Settings.getValues().mShowDownloadButtonInToolbar
+            if (showDownloadButton && isMainDictionaryMissing(context, currentLocale) && !hideToolbarKeys) {
                 if (dictDownloadButton == null) {
                     dictDownloadButton = ImageButton(context, null, R.attr.suggestionWordStyle).apply {
                         scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
@@ -923,15 +979,20 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                         setImageResource(R.drawable.ic_dictionary)
                         contentDescription = context.getString(R.string.download)
                         setOnClickListener {
-                            val token = this.windowToken
-                            if (token != null) {
-                                showMissingDictionaryComposeDialog(context, currentLocale, token) {
-                                    updateKeys()
-                                }
+                            val intent = android.content.Intent().apply {
+                                setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
+                                putExtra("screen", "dictionaries")
+                                putExtra("from_ime", true)
+                                setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                        or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                                        or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
                             }
+                            context.startActivity(intent)
                         }
                     }
-                    val toolbarHeight = min(toolbarExpandKey.layoutParams.height, resources.getDimension(R.dimen.config_suggestions_strip_height).toInt())
+                    val configHeight = resources.getDimension(R.dimen.config_suggestions_strip_height).toInt()
+                    val rawHeight = toolbarExpandKey.layoutParams.height
+                    val toolbarHeight = if (rawHeight > 0) min(rawHeight, configHeight) else configHeight
                     dictDownloadButton?.layoutParams = LinearLayout.LayoutParams(toolbarHeight, toolbarHeight).apply {
                         gravity = android.view.Gravity.CENTER_VERTICAL
                     }
@@ -1111,13 +1172,26 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         btn.isAllCaps = false
         btn.isEnabled = !isDownloading
         btn.layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = android.view.Gravity.CENTER
+        }
         btn.setOnClickListener {
             onClick.run()
         }
-        suggestionsStrip.addView(btn)
+
+        // Wrap button in a container that properly constrains its height
+        val container = LinearLayout(context)
+        container.orientation = LinearLayout.HORIZONTAL
+        container.gravity = android.view.Gravity.CENTER
+        container.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.MATCH_PARENT
+        )
+        container.addView(btn)
+
+        suggestionsStrip.addView(container)
         suggestionsStrip.isVisible = true
     }
 

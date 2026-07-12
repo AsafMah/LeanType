@@ -17,6 +17,9 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | 📝 **[Text Expander](#6-text-expander)** | Custom text shortcut expansion. |
 | 🖱️ **[Touchpad Mode](#7-touchpad-mode)** | Full-screen touchpad gestures and controls. |
 | ✍️ **[Handwriting Input](#8-handwriting-input)** | Use handwriting recognition to draw letters directly on a canvas. |
+| 👆 **[Built-in Gesture Typing](#9-built-in-gesture-typing)** | Use gesture typing without downloading native libraries. |
+| ⌨️ **[Direct Switch Target IME](#10-direct-switch-target-ime)** | Switch directly to another input method using custom keycode `-10076`. |
+| 🎨 **[Custom Layouts Customization](#11-custom-layouts-customization)** | Persistent custom layout profiles and management. |
 
 ## Summary of New Features
 
@@ -42,6 +45,9 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | **Two-thumb Typing** | Mix taps and swipes naturally, multi-tap then swipe, manual spacing, recognition tweaks. All experimental and opt-in. | `Two-thumb typing (experimental)` |
 | **Text Expander** | Expand custom shortcuts using dynamic template variables (date, time, clipboard, custom placeholders). | `Text correction > Text Expander` |
 | **Handwriting Input** | Draw letters or words directly on the screen keyboard space to type (standard variant, requires plugin). | `Libraries > Handwriting Input Plugin` |
+| **Built-in Gesture Typing** | Gesture typing works out of the box using our new built-in pure-Java fallback engine, removing the strict dependency on native Google libraries. | `Gesture typing` |
+| **Direct Switch Target IME** | Direct input method switching using custom keycode `-10076` assigned to toolbar keys. | `Preferences > Direct Switch Target IME` |
+| **Custom Layouts** | Supports up to 5 custom layouts with persistent layout index tracking. | `Languages > Custom layouts` |
 
 ---
 
@@ -423,3 +429,39 @@ LeanType integrates a handwriting recognition canvas that allows you to write ch
 3. Draw characters, words, or punctuation symbols on the canvas. The keyboard will automatically inputs recognized characters.
 4. Tap the **Clear (X)** button on the bottom row to clear the current drawing canvas.
 5. Tap the **Handwriting** icon again to toggle back to the standard keyboard layout.
+---
+
+## 9. Built-in Gesture Typing
+
+*   **Functionality**: Gesture typing (swipe/glide typing) works out of the box without requiring any external or native libraries.
+*   **Engine**: Powered by a pure-Java fallback gesture engine (`SwipeGestureEngine`) ported from HeliBoard.
+*   **Accuracy & Ranking**: Includes end-point-weighted L2 path scoring, shape length mismatch penalty, sequence matching penalty, next-word bigram prediction boost, and forgiving start/end matching.
+*   **Optional Native Engine**: Users can still choose to toggle to the native swipe library. If using the Standard flavor, the library can be downloaded automatically via the built-in downloader.
+*   **Settings Configuration**:
+    1. Go to **Settings > Gesture typing**.
+    2. Toggle **Use fallback gesture engine** to select between the pure-Java engine and the native library.
+    3. Self-learning can be toggled via **Enable gesture self-learning**.
+---
+
+## 10. Direct Switch Target IME
+
+*   **Functionality**: Switch directly to another configured input method (and subtype) instead of opening the system input method picker.
+*   **Behavior**:
+    *   Map the custom keycode `-10076` (`SWITCH_TO_USER_IME`) to any toolbar key (supports click or long-press).
+    *   Tapping/long-pressing the key immediately switches input methods.
+*   **How to Setup**:
+    1. Go to **Settings > Preferences**.
+    2. Tap **Direct Switch Target IME** and select the target keyboard/subtype from the list of enabled inputs.
+    3. Go to **Settings > Toolbar > Customize toolbar key codes** to map `-10076` to a toolbar key.
+
+---
+
+## 11. Custom Layouts Customization
+
+*   **Functionality**: Save up to five custom layout profiles with persistent active slot tracking.
+*   **Behavior**:
+    *   The active custom layout slot index is preserved across orientation changes and switching between alphabet and symbol states.
+    *   Unused custom layout profiles can be directly deleted from settings.
+*   **How to Setup**:
+    1. Go to **Settings > Languages > Custom layouts**.
+    2. Manage custom layouts and slots as needed.

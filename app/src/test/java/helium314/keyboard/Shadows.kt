@@ -27,13 +27,36 @@ object ShadowLocaleManagerCompat {
 @Implements(InputMethodManager::class)
 class ShadowInputMethodManager2 : ShadowInputMethodManager() {
     @Implementation
-    override fun getInputMethodList() = listOf(
-        if (BuildConfig.BUILD_TYPE == "debug" || BuildConfig.BUILD_TYPE == "debugNoMinify")
-            InputMethodInfo("helium314.keyboard.debug", "LatinIME", "LeanType debug", null)
-        else InputMethodInfo("helium314.keyboard", "LatinIME", "LeanType", null),
-    )
+    override fun getInputMethodList() = inputMethods
+
+    @Implementation
+    override fun getEnabledInputMethodList() = inputMethods
+
+    @Implementation
+    fun getEnabledInputMethodSubtypeList(
+        imi: InputMethodInfo?,
+        allowsImplicitlySelectedSubtypes: Boolean,
+    ) = imi?.let { enabledSubtypes[it.id] }.orEmpty()
+
     @Implementation
     fun getShortcutInputMethodsAndSubtypes() = emptyMap<InputMethodInfo, List<InputMethodSubtype>>()
+
+    companion object {
+        private fun defaultInputMethod() = InputMethodInfo(
+            BuildConfig.APPLICATION_ID,
+            "helium314.keyboard.latin.LatinIME",
+            if (BuildConfig.BUILD_TYPE == "debug" || BuildConfig.BUILD_TYPE == "debugNoMinify") "LeanType debug" else "LeanType",
+            null,
+        )
+
+        var inputMethods: List<InputMethodInfo> = listOf(defaultInputMethod())
+        val enabledSubtypes = mutableMapOf<String, List<InputMethodSubtype>>()
+
+        fun reset() {
+            inputMethods = listOf(defaultInputMethod())
+            enabledSubtypes.clear()
+        }
+    }
 }
 
 @Implements(BinaryDictionaryUtils::class)
