@@ -6,6 +6,7 @@
 - Create and persist up to five custom layout slots across symbol mode, rotation, and keyboard reloads.
 - Configure auto-correct trigger characters and optionally suppress multi-word suggestions.
 - Use the optimized built-in Java gesture engine with lower memory usage, improved ranking, and corrected suggestion casing.
+- Browse an updated dictionary download catalog with stale unavailable entries removed and newly published dictionaries added.
 - Benefit from more reliable Text Expander placeholder navigation and dictionary/blacklist handling.
 
 ## Build variants

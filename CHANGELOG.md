@@ -24,6 +24,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Changed
 - **Built-in Java gesture typing** uses less memory, streams dictionary entries, and improves path scoring/ranking performance. (#118)
 - **Text Expander placeholder handling** now resolves and advances placeholders synchronously to avoid cursor/selection desynchronization. (#118)
+- **Dictionary download catalog** is refreshed to the current repository inventory, removing stale unavailable entries and adding newly published dictionaries. (#119)
 
 ### Fixed
 - **Fallback gesture suggestions no longer leak dictionary capitalization** when Shift is off; the Java gesture engine now emits canonical lowercase candidates before the existing suggestion presentation-casing layer. (#118)
