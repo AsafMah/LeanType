@@ -1,0 +1,5 @@
+- Switch directly to a configured keyboard and subtype.
+- Save and restore up to five custom layout slots.
+- Configure auto-correct triggers and hide multi-word suggestions.
+- Faster, lower-memory built-in gesture typing with corrected suggestion casing.
+- Improved Text Expander, dictionary, and blacklist reliability.
