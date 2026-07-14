@@ -28,11 +28,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 - **Direct IME switching on Android 6–8** now uses the legacy input-method manager API instead of calling an Android 9+ framework method. (#119)
+- **Unshifted typing and swiping preserve lowercase words** instead of promoting ordinary words such as `to`, `no`, and `meet` to title-case dictionary candidates. (#120)
 - **Fallback gesture suggestions no longer leak dictionary capitalization** when Shift is off; the Java gesture engine now emits canonical lowercase candidates before the existing suggestion presentation-casing layer. (#118)
 - **Dictionary and blacklist handling** prevents blocked words from leaking back into gesture and normal suggestions. (#118)
 
 ### Reliability & testing
 - Added regression coverage for KeyCode uniqueness, custom-layout state restoration, direct IME switch branches, multi-word filtering, and fallback gesture casing. (#118)
+- Added tap, batch-commit, shift-mode, acronym, mixed-case, and Unicode regression coverage for suggestion casing. (#120)
 - Fixed the Windows release tool to read dictionary metadata as UTF-8. (#119)
 
 ### Upstream

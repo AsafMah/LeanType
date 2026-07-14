@@ -18,6 +18,7 @@ import helium314.keyboard.latin.utils.TextRange
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -27,6 +28,25 @@ import kotlin.test.assertEquals
     ShadowInputMethodManager2::class,
 ])
 class StringUtilsTest {
+    @Test fun lowercaseFirstLetterCodePointHandlesPrefixesAndSupplementaryPlaneLetter() {
+        val uppercaseDeseret = String(Character.toChars(0x10400)) + "word"
+        val lowercaseDeseret = String(Character.toChars(0x10428)) + "word"
+
+        assertEquals(
+            lowercaseDeseret,
+            StringUtils.lowercaseFirstLetterCodePoint(uppercaseDeseret, Locale.ENGLISH),
+        )
+        assertEquals(true, StringUtils.hasAtLeastTwoLetters(uppercaseDeseret))
+        assertEquals(false, StringUtils.hasAtLeastTwoLetters("I'"))
+        assertEquals("'to", StringUtils.lowercaseFirstLetterCodePoint("'To", Locale.ENGLISH))
+        assertEquals("'iPhone", StringUtils.lowercaseFirstLetterCodePoint("'iPhone", Locale.ENGLISH))
+        assertEquals("'123", StringUtils.lowercaseFirstLetterCodePoint("'123", Locale.ENGLISH))
+        assertEquals(
+            "istanbul",
+            StringUtils.lowercaseFirstLetterCodePoint("\u0130stanbul", Locale.forLanguageTag("tr")),
+        )
+    }
+
     @Test fun `not inside double quotes without quotes`() {
         assert(!StringUtils.isInsideDoubleQuoteOrAfterDigit("hello yes"))
     }
