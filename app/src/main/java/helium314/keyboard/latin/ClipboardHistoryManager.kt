@@ -39,7 +39,17 @@ class ClipboardHistoryManager(
     // allocating a fresh Handler on every postDelayed().
     private val mainHandler = Handler(Looper.getMainLooper())
     private var clipboardSuggestionView: View? = null
-    private var clipboardDao: ClipboardDao? = null
+    private var _clipboardDao: ClipboardDao? = null
+    private var clipboardDao: ClipboardDao?
+        get() {
+            if (_clipboardDao == null || _clipboardDao?.isClosed == true) {
+                _clipboardDao = ClipboardDao.getInstance(latinIME)
+            }
+            return _clipboardDao
+        }
+        set(value) {
+            _clipboardDao = value
+        }
     private var dontShowCurrentSuggestion: Boolean = false
     private var mediaStoreObserver: ContentObserver? = null
     // ponytail: track last clip state to avoid resetting dismiss state on duplicate events

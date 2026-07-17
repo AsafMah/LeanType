@@ -101,7 +101,8 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
             params.mBaseWidth = params.mOccupiedWidth - params.mLeftPadding - params.mRightPadding
         }
 
-        val numberRow = getNumberRow()
+        val numberRows = getNumberRows()
+        val numberRow = numberRows.first()
         addNumberRowOrPopupKeys(baseKeys, numberRow)
         if (params.mId.isAlphabetKeyboard)
             addSymbolPopupKeys(baseKeys)
@@ -109,7 +110,9 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
                 || (!params.mId.isAlphabetKeyboard && params.mId.mNumberRowInSymbols && !params.mId.mCompactNumberRowInSymbols))) {
             val newLabelFlags = defaultLabelFlags or
                     if (Settings.getValues().mShowNumberRowHints) 0 else Key.LABEL_FLAGS_DISABLE_HINT_LABEL
-            baseKeys.add(0, numberRow.mapTo(mutableListOf()) { it.copy(newLabelFlags = newLabelFlags) })
+            numberRows.forEachIndexed { rowIndex, row ->
+                baseKeys.add(rowIndex, row.mapTo(mutableListOf()) { it.copy(newLabelFlags = newLabelFlags) })
+            }
         }
         if (!params.mAllowRedundantPopupKeys)
             params.baseKeys = baseKeys.flatMap { row -> row.map { it.toKeyParams(params) } }
@@ -317,38 +320,49 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
         }
     }
 
-    private fun getNumberRow(): MutableList<KeyData> {
-        val row = LayoutParser.parseLayout(LayoutType.NUMBER_ROW, params, context).first()
+    private fun getNumberRows(): MutableList<MutableList<KeyData>> {
+        val rows = LayoutParser.parseLayout(LayoutType.NUMBER_ROW, params, context)
+        if (rows.isEmpty()) {
+            rows.add(mutableListOf())
+        }
         val localizedNumbers = params.mLocaleKeyboardInfos.localizedNumberKeys
         if (localizedNumbers?.size == 10) {
-            if (Settings.getValues().mLocalizedNumberRow) {
-                // replace 0-9 with localized numbers, and move latin number into popup
-                for (i in row.indices) {
-                    val key = row[i]
-                    val number = key.label.toIntOrNull() ?: continue
-                    when (number) {
-                        0 -> row[i] = key.copy(newLabel = localizedNumbers[9], newCode = KeyCode.UNSPECIFIED, newPopup = SimplePopups(listOf(key.label)).merge(key.popup))
-                        in 1..9 -> row[i] = key.copy(newLabel = localizedNumbers[number - 1], newCode = KeyCode.UNSPECIFIED, newPopup = SimplePopups(listOf(key.label)).merge(key.popup))
+            for (row in rows) {
+                if (Settings.getValues().mLocalizedNumberRow) {
+                    // replace 0-9 with localized numbers, and move latin number into popup
+                    for (i in row.indices) {
+                        val key = row[i]
+                        val number = key.label.toIntOrNull() ?: continue
+                        when (number) {
+                            0 -> row[i] = key.copy(newLabel = localizedNumbers[9], newCode = KeyCode.UNSPECIFIED, newPopup = SimplePopups(listOf(key.label)).merge(key.popup))
+                            in 1..9 -> row[i] = key.copy(newLabel = localizedNumbers[number - 1], newCode = KeyCode.UNSPECIFIED, newPopup = SimplePopups(listOf(key.label)).merge(key.popup))
+                        }
                     }
-                }
-            } else {
-                // add localized numbers to popups on 0-9
-                for (i in row.indices) {
-                    val key = row[i]
-                    val number = key.label.toIntOrNull() ?: continue
-                    when (number) {
-                        0 -> row[i] = key.copy(newPopup = SimplePopups(listOf(localizedNumbers[9])).merge(key.popup))
-                        in 1..9 -> row[i] = key.copy(newPopup = SimplePopups(listOf(localizedNumbers[number - 1])).merge(key.popup))
+                } else {
+                    // add localized numbers to popups on 0-9
+                    for (i in row.indices) {
+                        val key = row[i]
+                        val number = key.label.toIntOrNull() ?: continue
+                        when (number) {
+                            0 -> row[i] = key.copy(newPopup = SimplePopups(listOf(localizedNumbers[9])).merge(key.popup))
+                            in 1..9 -> row[i] = key.copy(newPopup = SimplePopups(listOf(localizedNumbers[number - 1])).merge(key.popup))
+                        }
                     }
                 }
             }
         }
         if (params.mId.mElementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED) {
-            for (i in row.indices) {
-                row[i] = shiftKeyData(row[i])
+            for (row in rows) {
+                for (i in row.indices) {
+                    row[i] = shiftKeyData(row[i])
+                }
             }
         }
-        return row
+        return rows
+    }
+
+    private fun getNumberRow(): MutableList<KeyData> {
+        return getNumberRows().first()
     }
 
     private fun shiftKeyData(key: KeyData): KeyData {

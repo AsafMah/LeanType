@@ -177,6 +177,7 @@ public class SettingsValues {
         public final boolean mAutoShowToolbar;
         public final boolean mAutoShowToolbarOnSelect;
         public final boolean mAutoHideToolbar;
+        public final boolean mToolbarSwipeDownDismiss;
         public final boolean mAutoHidePinnedKeys;
         public final boolean mRememberToolbarState;
         public final boolean mToolbarSwipeDownToHide;
@@ -361,8 +362,7 @@ public class SettingsValues {
                                 Defaults.PREF_KEYPRESS_SOUND_VOLUME);
                 mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
                                 Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY);
-                mGestureMethod = prefs.getString(Settings.PREF_GESTURE_METHOD,
-                                JniUtils.sHaveNativeGestureLib ? "native" : "fallback");
+                mGestureMethod = prefs.getString(Settings.PREF_GESTURE_METHOD, "fallback");
                 mGestureInputEnabled = JniUtils.sHaveGestureLib
                                 && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
                                 && (!"native".equals(mGestureMethod) || JniUtils.sHaveNativeGestureLib);
@@ -544,6 +544,7 @@ public class SettingsValues {
                                 && prefs.getBoolean(Settings.PREF_AUTO_SHOW_TOOLBAR, Defaults.PREF_AUTO_SHOW_TOOLBAR);
                 mAutoHideToolbar = mSuggestionsEnabledPerUserSettings
                                 && prefs.getBoolean(Settings.PREF_AUTO_HIDE_TOOLBAR, Defaults.PREF_AUTO_HIDE_TOOLBAR);
+                mToolbarSwipeDownDismiss = prefs.getBoolean(Settings.PREF_TOOLBAR_SWIPE_DOWN_DISMISS, Defaults.PREF_TOOLBAR_SWIPE_DOWN_DISMISS);
                 mAutoHidePinnedKeys = mToolbarMode == ToolbarMode.EXPANDABLE
                                 && !mSplitToolbar
                                 && prefs.getBoolean(Settings.PREF_AUTO_HIDE_PINNED_KEYS, Defaults.PREF_AUTO_HIDE_PINNED_KEYS);

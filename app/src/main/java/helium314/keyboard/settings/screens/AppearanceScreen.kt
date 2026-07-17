@@ -87,6 +87,7 @@ fun AppearanceScreen(
         Settings.PREF_FONT_SCALE,
         SettingsWithoutKey.CUSTOM_EMOJI_FONT,
         Settings.PREF_EMOJI_FONT_SCALE,
+        Settings.PREF_USE_SYSTEM_EMOJI,
         if (prefs.getFloat(Settings.PREF_EMOJI_FONT_SCALE, Defaults.PREF_EMOJI_FONT_SCALE) != 1f)
             Settings.PREF_EMOJI_KEY_FIT else null,
         if (prefs.getInt(Settings.PREF_EMOJI_MAX_SDK, 0) >= 24)
@@ -302,6 +303,13 @@ fun createAppearanceSettings(context: Context) = listOf(
             range = 0.5f..1.5f,
             description = { "${(100 * it).toInt()}%" }
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_USE_SYSTEM_EMOJI, R.string.prefs_use_system_emoji, R.string.prefs_use_system_emoji_summary) { setting ->
+        val ctx = LocalContext.current
+        SwitchPreference(setting, Defaults.PREF_USE_SYSTEM_EMOJI) { newValue ->
+            ctx.prefs().edit(commit = true) { putBoolean(Settings.PREF_USE_SYSTEM_EMOJI, newValue) }
+            Runtime.getRuntime().exit(0)
+        }
     },
     Setting(context, Settings.PREF_EMOJI_KEY_FIT, R.string.prefs_emoji_key_fit) {
         SwitchPreference(it, Defaults.PREF_EMOJI_KEY_FIT) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }

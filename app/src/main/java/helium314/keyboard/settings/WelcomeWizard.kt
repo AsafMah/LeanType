@@ -236,7 +236,7 @@ fun WelcomeWizard(
                         mutableStateOf(
                             ctx.prefs().getString(
                                 Settings.PREF_GESTURE_METHOD,
-                                if (JniUtils.sHaveNativeGestureLib) "native" else "fallback"
+                                "fallback"
                             )!!
                         )
                     }
@@ -302,7 +302,7 @@ fun WelcomeWizard(
                                             SubtypeSettings.addEnabledSubtype(ctx.prefs(), subtype)
                                         }
                                     }
-                                    enabledSubtypes.forEach { subtype ->
+                                    enabledSubtypes.toList().forEach { subtype ->
                                         if (subtype !in selected && selected.isNotEmpty()) {
                                             SubtypeSettings.removeEnabledSubtype(ctx, subtype)
                                         }
@@ -325,7 +325,7 @@ fun WelcomeWizard(
                             ) {
                                 DropDownField(
                                     items = gestureMethods,
-                                    selectedItem = gestureMethods.first { it.second == selectedMethod },
+                                    selectedItem = gestureMethods.firstOrNull { it.second == selectedMethod } ?: gestureMethods.first(),
                                     onSelected = { pair ->
                                         selectedMethod = pair.second
                                         ctx.prefs().edit { putString(Settings.PREF_GESTURE_METHOD, pair.second) }

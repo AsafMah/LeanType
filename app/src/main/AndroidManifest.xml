@@ -137,17 +137,8 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 android:name="androidx.work.WorkManagerInitializer"
                 android:value="androidx.startup"
                 tools:node="remove" />
-        </provider>
-
-        <!-- Disable WorkManager auto-initializer; App implements Configuration.Provider instead.
-             Required for ML Kit Digital Ink plugin loaded via DexClassLoader. -->
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge">
             <meta-data
-                android:name="androidx.work.WorkManagerInitializer"
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>

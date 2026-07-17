@@ -88,6 +88,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         Dictionary.TYPE_MAIN,
         Dictionary.TYPE_CONTACTS,
         Dictionary.TYPE_APPS,
+        Dictionary.TYPE_USER,
         Dictionary.TYPE_USER_HISTORY
     )
     // Caches for spell checking word validity
@@ -214,11 +215,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
 
-        // Clean up old dictionaries.
-        existingDictsToCleanup.forEach { (locale, dictTypes) ->
-            val dictGroupToCleanup = findDictionaryGroupWithLocale(oldDictionaryGroups, locale) ?: return@forEach
-            for (dictType in dictTypes) {
-                dictGroupToCleanup.closeDict(dictType)
+        // Clean up old dictionaries in the background to avoid blocking the main thread.
+        scope.launch {
+            existingDictsToCleanup.forEach { (locale, dictTypes) ->
+                val dictGroupToCleanup = findDictionaryGroupWithLocale(oldDictionaryGroups, locale) ?: return@forEach
+                for (dictType in dictTypes) {
+                    dictGroupToCleanup.closeDict(dictType)
+                }
             }
         }
 
@@ -312,9 +315,10 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 }
 
                 listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
-                latchForWaitingLoadingMainDictionary.countDown()
             } catch (e: Throwable) {
                 Log.e(TAG, "could not initialize main dictionaries for $locales", e)
+            } finally {
+                latchForWaitingLoadingMainDictionary.countDown()
             }
         }
     }
@@ -575,19 +579,31 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         settingsValuesForSuggestion: SettingsValuesForSuggestion, sessionId: Int, inputStyle: Int
     ): SuggestionResults {
         val proximityInfoHandle = keyboard.proximityInfo.nativeProximityInfo
-        val weightOfLangModelVsSpatialModel = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
 
-        val waitForOtherDicts = if (dictionaryGroups.size == 1) null else CountDownLatch(dictionaryGroups.size - 1)
-        val suggestionsArray = Array<List<SuggestedWordInfo>?>(dictionaryGroups.size) { null }
-        for (i in 1..dictionaryGroups.lastIndex) {
+        val dictionaryGroupsSnapshot = dictionaryGroups
+        val waitForOtherDicts = if (dictionaryGroupsSnapshot.size == 1) null else CountDownLatch(dictionaryGroupsSnapshot.size - 1)
+        val suggestionsArray = Array<List<SuggestedWordInfo>?>(dictionaryGroupsSnapshot.size) { null }
+        for (i in 1..dictionaryGroupsSnapshot.lastIndex) {
+            val dictionaryGroup = dictionaryGroupsSnapshot[i]
             scope.launch {
-                suggestionsArray[i] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
-                    proximityInfoHandle, weightOfLangModelVsSpatialModel, dictionaryGroups[i])
-                waitForOtherDicts?.countDown()
+                try {
+                    // Native suggestion generation writes back into this one-element array;
+                    // each parallel dictionary needs independent mutable state.
+                    val dictionaryWeight = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
+                    suggestionsArray[i] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
+                        proximityInfoHandle, dictionaryWeight, dictionaryGroup, dictionaryGroupsSnapshot)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "could not get suggestions for ${dictionaryGroup.locale}", e)
+                } finally {
+                    waitForOtherDicts?.countDown()
+                }
             }
         }
+        val primaryDictionaryWeight = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
         suggestionsArray[0] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
-            proximityInfoHandle, weightOfLangModelVsSpatialModel, dictionaryGroups[0])
+            proximityInfoHandle, primaryDictionaryWeight, dictionaryGroupsSnapshot[0], dictionaryGroupsSnapshot)
         val suggestionResults = SuggestionResults(
             SuggestedWords.MAX_SUGGESTIONS, ngramContext.isBeginningOfSentenceContext, false
         )
@@ -618,10 +634,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private fun getSuggestions(
         composedData: ComposedData, ngramContext: NgramContext,
         settingsValuesForSuggestion: SettingsValuesForSuggestion, sessionId: Int,
-        proximityInfoHandle: Long, weightOfLangModelVsSpatialModel: FloatArray, dictGroup: DictionaryGroup
+        proximityInfoHandle: Long, weightOfLangModelVsSpatialModel: FloatArray, dictGroup: DictionaryGroup,
+        allDictionaryGroups: List<DictionaryGroup>
     ): List<SuggestedWordInfo> {
         val suggestions = ArrayList<SuggestedWordInfo>()
-        val weightForLocale = dictGroup.getWeightForLocale(dictionaryGroups, composedData.mIsBatchMode)
+        val weightForLocale = dictGroup.getWeightForLocale(allDictionaryGroups, composedData.mIsBatchMode)
         for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
             val dictionary = dictGroup.getDict(dictType) ?: continue
             var dictionarySuggestions = dictionary.getSuggestions(composedData, ngramContext, proximityInfoHandle,
@@ -1067,9 +1084,9 @@ private class DictionaryGroup(
     private fun rebuildCompiledPatterns(patterns: Collection<String>) {
         compiledBlacklistPatterns = patterns.map { pattern ->
             try {
-                Regex(pattern, RegexOption.IGNORE_CASE)
+                Regex(pattern)
             } catch (e: Exception) {
-                Regex(Regex.escape(pattern), RegexOption.IGNORE_CASE)
+                Regex(Regex.escape(pattern))
             }
         }
     }
@@ -1101,7 +1118,8 @@ private class DictionaryGroup(
 
     fun isBlacklisted(word: String): Boolean {
         val patterns = compiledBlacklistPatterns
-        return patterns.any { it.matches(word) }
+        val lowercased = word.lowercase(locale)
+        return patterns.any { it.matches(lowercased) }
     }
 
     fun addToBlacklist(word: String) {
