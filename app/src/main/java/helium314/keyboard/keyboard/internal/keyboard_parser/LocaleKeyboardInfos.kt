@@ -123,13 +123,17 @@ class LocaleKeyboardInfos(dataStream: InputStream?, locale: Locale) {
         val key = split.first()
         // punctuation keys must always be normal popups (or getPunctuationPopupKeys needs to be adjusted)
         val popupsMap = if (priority && key != "punctuation") priorityPopupKeys else popupKeys
-        if (popupsMap[key] is MutableList)
-            popupsMap[key] = popupsMap[key]!!.toMutableSet().also { it.addAll(split.drop(1)) }
-        else if (popupsMap.containsKey(key)) popupsMap[key]!!.addAll(split.drop(1))
-        else popupsMap[key] = split.drop(1).toMutableList() // first use a list because usually it's enough
-        adjustAutoColumnOrder(popupsMap[key]!!)
+        val existing = popupsMap[key]
+        val updated = if (existing is MutableList) {
+            existing.toMutableSet().also { it.addAll(split.drop(1)) }.also { popupsMap[key] = it }
+        } else if (existing != null) {
+            existing.also { it.addAll(split.drop(1)) }
+        } else {
+            split.drop(1).toMutableList().also { popupsMap[key] = it }
+        }
+        adjustAutoColumnOrder(updated)
         when (key) {
-            "'", "\"", "«", "»" -> addFixedColumnOrder(popupsMap[key]!!)
+            "'", "\"", "«", "»" -> addFixedColumnOrder(updated)
         }
     }
 

@@ -173,6 +173,7 @@ public final class RichInputConnection implements PrivateCommandPerformer {
 
     public void onStartInput() {
         mLastSlowInputConnectionTime = -SLOW_INPUTCONNECTION_PERSIST_MS;
+        mNestLevel = 0;
     }
 
     private void checkConsistencyForDebug() {
@@ -878,21 +879,6 @@ public final class RichInputConnection implements PrivateCommandPerformer {
             if (DebugFlags.DEBUG_ENABLED)
                 Log.d(TAG, "setting composing text of length " + text.length()); // don't log actual text
             mIC.setComposingText(text, newCursorPosition);
-            if (!Settings.getValues().mInputAttributes.mShouldShowSuggestions && text.length() > 0) {
-                // We have a field that disables suggestions, but still committed text is set.
-                // This might lead to weird bugs (e.g.
-                // https://github.com/Helium314/HeliBoard/issues/225), so better do
-                // a sanity check whether the wanted text has been set.
-                // Note that the check may also fail because the text field is not yet updated,
-                // so we don't want to check everything!
-                final CharSequence lastChar = mIC.getTextBeforeCursor(1, 0);
-                if (lastChar == null || lastChar.length() == 0
-                        || text.charAt(text.length() - 1) != lastChar.charAt(0)) {
-                    Log.w(TAG, "did set " + text + ", but got " + mIC.getTextBeforeCursor(text.length(), 0)
-                            + " as last character");
-                    return false;
-                }
-            }
         }
         if (DEBUG_PREVIOUS_TEXT)
             checkConsistencyForDebug();

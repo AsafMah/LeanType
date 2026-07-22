@@ -249,7 +249,7 @@ private fun hasAnythingOtherThanExtractedMainDictionary(context: Context, dir: F
 fun downloadDictionary(context: Context, locale: Locale, type: String, linkUrl: String, onComplete: (Boolean) -> Unit) {
     val cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context) ?: return onComplete(false)
     val targetFile = File(cacheDir, "${type}.dict")
-    CoroutineScope(Dispatchers.IO).launch {
+    CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob()).launch {
         var success = false
         try {
             var url = java.net.URL(linkUrl)
@@ -459,11 +459,16 @@ fun isMainDictionaryMissing(context: Context, locale: Locale): Boolean {
     // 2. check if cache directory has a main.dict or main_user.dict file
     var cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { File(it) }
     var hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
-    if (!hasMain && (locale.country.isNotEmpty() || locale.variant.isNotEmpty())) {
-        val fallbackLocale = Locale(locale.language)
-        cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
-        hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
-        if (!hasMain) {
+    if (!hasMain) {
+        if (locale.country.isNotEmpty() || locale.variant.isNotEmpty()) {
+            val fallbackLocale = Locale(locale.language)
+            cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
+            hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
+            if (!hasMain) {
+                val variantDir = DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)
+                hasMain = variantDir?.exists() == true && variantDir.isDirectory && variantDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
+            }
+        } else {
             val variantDir = DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)
             hasMain = variantDir?.exists() == true && variantDir.isDirectory && variantDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
         }

@@ -146,7 +146,9 @@ private constructor(val themeId: Int, @JvmField val mStyleId: Int) {
                 prefs.getString(Settings.PREF_THEME_COLORS, Defaults.PREF_THEME_COLORS)
             val themeStyle = prefs.getString(Settings.PREF_THEME_STYLE, Defaults.PREF_THEME_STYLE)
 
-            return getThemeColors(themeName!!, themeStyle!!, context, prefs, isNight)
+            val safeThemeName = themeName ?: Defaults.PREF_THEME_COLORS
+            val safeThemeStyle = themeStyle ?: Defaults.PREF_THEME_STYLE
+            return getThemeColors(safeThemeName, safeThemeStyle, context, prefs, isNight)
         }
 
         private fun getThemeColors(themeName: String, themeStyle: String, context: Context, prefs: SharedPreferences, isNight: Boolean): Colors {

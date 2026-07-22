@@ -93,6 +93,10 @@ fun LoadEmojiLibPreference(
                             input.copyTo(output)
                         }
                     }
+                    ctx.protectedPrefs().edit {
+                        putString("pref_dict_download_link_emoji_${locale}", urlStr)
+                        putString("pref_dict_download_link_emoji_${locale.toLanguageTag()}", urlStr)
+                    }
                     withContext(Dispatchers.Main) {
                         FeedbackManager.message(ctx, R.string.load_gesture_library_download_success) // Reusing success string
                         isDownloading = false

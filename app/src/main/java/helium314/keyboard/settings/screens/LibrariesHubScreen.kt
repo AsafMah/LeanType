@@ -26,7 +26,6 @@ import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.settings.NextScreenIcon
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.preferences.LoadGestureLibPreference
-import helium314.keyboard.settings.preferences.LoadEmojiLibPreference
 import helium314.keyboard.settings.preferences.LoadHandwritingPluginPreference
 import helium314.keyboard.latin.handwriting.HandwritingLoader
 import helium314.keyboard.latin.BuildConfig
@@ -83,17 +82,6 @@ fun LibrariesHubScreen(
                             onClick = onClickDictionaries,
                             icon = R.drawable.ic_dictionary
                         ) { NextScreenIcon() }
-
-                        // Emoji Libraries
-                        val emojiDicts = DictionaryInfoUtils.getLocalesWithEmojiDicts(context)
-                        LoadEmojiLibPreference(
-                            title = stringResource(R.string.libraries_hub_emoji_title),
-                            summary = if (emojiDicts.isEmpty()) 
-                                stringResource(R.string.libraries_status_not_installed)
-                            else 
-                                stringResource(R.string.libraries_status_active) + ": " + emojiDicts.joinToString { it.displayLanguage },
-                            icon = R.drawable.ic_emoji_smileys_emotion
-                        )
 
                         // Handwriting Input Plugin
                         if (BuildConfig.FLAVOR == "standardfull") {

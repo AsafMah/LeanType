@@ -625,7 +625,7 @@ public class LatinIME extends InputMethodService implements
         // avoids the SecurityException thrown by the plain registerReceiver()
         // overload on API 33+ when no exported flag is set.
         ContextCompat.registerReceiver(this, mRingerModeChangeReceiver, filter,
-                ContextCompat.RECEIVER_NOT_EXPORTED);
+                ContextCompat.RECEIVER_EXPORTED);
 
         // Register to receive installation and removal of a dictionary pack.
         final IntentFilter packageFilter = new IntentFilter();
@@ -792,20 +792,23 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
+        helium314.keyboard.latin.gesture.SwipeGestureEngine.cancelIndexing();
+        mHandler.removeCallbacksAndMessages(null);
         if (mFloatingKeyboardManager != null) {
             mFloatingKeyboardManager.destroy();
         }
         mClipboardHistoryManager.onDestroy();
         mOtpSuggestionManager.stop();
-        mDictionaryFacilitator.closeDictionaries();
+        helium314.keyboard.latin.utils.ExecutorUtils.getBackgroundExecutor(helium314.keyboard.latin.utils.ExecutorUtils.KEYBOARD).execute(() -> {
+            mDictionaryFacilitator.closeDictionaries();
+        });
         mSettings.onDestroy();
-        unregisterReceiver(mRingerModeChangeReceiver);
-        unregisterReceiver(mDictionaryPackInstallReceiver);
-        unregisterReceiver(mDictionaryDumpBroadcastReceiver);
-        unregisterReceiver(mRestartAfterDeviceUnlockReceiver);
+        try { unregisterReceiver(mRingerModeChangeReceiver); } catch (Exception e) {}
+        try { unregisterReceiver(mDictionaryPackInstallReceiver); } catch (Exception e) {}
+        try { unregisterReceiver(mDictionaryDumpBroadcastReceiver); } catch (Exception e) {}
+        try { unregisterReceiver(mRestartAfterDeviceUnlockReceiver); } catch (Exception e) {}
         mStatsUtilsManager.onDestroy(this /* context */);
         super.onDestroy();
-        mHandler.removeCallbacksAndMessages(null);
         deallocateMemory();
     }
 
@@ -1023,6 +1026,7 @@ public class LatinIME extends InputMethodService implements
         super.onStartInputView(editorInfo, restarting);
         helium314.keyboard.latin.utils.ProofreadHelper.preloadModel(this);
 
+        mClipboardHistoryManager.onStartInputView();
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for
         // which we
@@ -1246,6 +1250,7 @@ public class LatinIME extends InputMethodService implements
         super.onFinishInputView(finishingInput);
         Log.i(TAG, "onFinishInputView");
         mOtpSuggestionManager.stop();
+        mClipboardHistoryManager.onFinishInputView();
         cleanupInternalStateForFinishInput();
     }
 
@@ -1766,15 +1771,22 @@ public class LatinIME extends InputMethodService implements
     }
 
     public void onStartBatchInput() {
+        if (!JniUtils.sHaveGestureLib) {
+            mKeyboardSwitcher.showToast(getString(R.string.load_gesture_library), true);
+            mInputLogic.onCancelBatchInput(mHandler);
+            return;
+        }
         mInputLogic.onStartBatchInput(mSettings.getCurrent(), mKeyboardSwitcher, mHandler);
         mGestureConsumer.onGestureStarted(mRichImm.getCurrentSubtypeLocale(), mKeyboardSwitcher.getKeyboard());
     }
 
     public void onUpdateBatchInput(final InputPointers batchPointers) {
+        if (!JniUtils.sHaveGestureLib) return;
         mInputLogic.onUpdateBatchInput(batchPointers);
     }
 
     public void onEndBatchInput(final InputPointers batchPointers) {
+        if (!JniUtils.sHaveGestureLib) return;
         mInputLogic.onEndBatchInput(batchPointers);
         mGestureConsumer.onGestureCompleted(batchPointers);
     }
@@ -1961,7 +1973,11 @@ public class LatinIME extends InputMethodService implements
                 mSuggestionStripView.setToolbarVisibility(false);
             return;
         }
-        if (currentSettings.mBigramPredictionEnabled) {
+        final NgramContext ngramContext = mInputLogic.getNgramContextFromNthPreviousWordForSuggestion(
+                currentSettings.mSpacingAndPunctuations, 1);
+        final boolean isFirstWord = ngramContext.isBeginningOfSentenceContext();
+        final boolean predictionEnabled = isFirstWord ? currentSettings.mFirstWordPredictionEnabled : currentSettings.mBigramPredictionEnabled;
+        if (predictionEnabled) {
             mInputLogic.getSuggestedWords(SuggestedWords.INPUT_STYLE_PREDICTION, 0, new Suggest.OnGetSuggestedWordsCallback() {
                 @Override
                 public void onGetSuggestedWords(SuggestedWords suggestedWords) {
@@ -2288,13 +2304,12 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
-        switch (level) {
-            case TRIM_MEMORY_RUNNING_LOW, TRIM_MEMORY_RUNNING_CRITICAL, TRIM_MEMORY_COMPLETE -> {
-                KeyboardLayoutSet.onSystemLocaleChanged(); // clears caches, nothing else
-                mKeyboardSwitcher.trimMemory();
-            }
-            // deallocateMemory always called on hiding, and should not be called when
-            // showing
+        if (level >= TRIM_MEMORY_BACKGROUND || level == TRIM_MEMORY_UI_HIDDEN) {
+            mKeyboardSwitcher.trimMemory();
+            deallocateMemory();
+        } else if (level >= TRIM_MEMORY_RUNNING_LOW) {
+            KeyboardLayoutSet.onSystemLocaleChanged();
+            mKeyboardSwitcher.trimMemory();
         }
     }
 }

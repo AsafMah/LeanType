@@ -46,7 +46,7 @@ class AccessibilityUtils private constructor() {
      * @return `true` if accessibility is enabled.
      */
     val isAccessibilityEnabled: Boolean
-        get() = ENABLE_ACCESSIBILITY && mAccessibilityManager.isEnabled
+        get() = ENABLE_ACCESSIBILITY && this::mAccessibilityManager.isInitialized && mAccessibilityManager.isEnabled
 
     /**
      * Returns `true` if touch exploration is enabled. Currently, this

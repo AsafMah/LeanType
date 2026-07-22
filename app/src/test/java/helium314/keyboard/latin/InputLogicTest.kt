@@ -16,7 +16,10 @@ import helium314.keyboard.event.Event
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.MainKeyboardView
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
+import helium314.keyboard.latin.ShadowFacilitator2.Companion.addedWords
 import helium314.keyboard.latin.ShadowFacilitator2.Companion.lastAddedWord
+import helium314.keyboard.latin.ShadowFacilitator2.Companion.lastNgramContext
+import helium314.keyboard.latin.ShadowFacilitator2.Companion.ngramContexts
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
@@ -88,6 +91,15 @@ class InputLogicTest {
         assertEquals("", textAfterCursor)
         assertEquals("c", composingText)
         latinIME.mHandler.onFinishInput()
+        assertEquals("", composingText)
+    }
+
+    @Test fun `english space-separated typing keeps composing word`() {
+        reset()
+        chainInput("hello")
+        assertEquals("hello", composingText)
+        input(' ')
+        assertEquals("hello ", text)
         assertEquals("", composingText)
     }
 
@@ -165,6 +177,140 @@ class InputLogicTest {
         latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
         chainInput("ㅛ.")
         assertEquals("ㅛ.", text)
+    }
+
+    @Test fun `space after thai composing word inserts space`() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("th".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_THAI
+        chainInput("ภาษาไทย")
+        assertEquals("ไทย", composingText)
+        input(' ')
+        assertEquals("ภาษาไทย ", text)
+        assertEquals("", composingText)
+    }
+
+    @Test fun `thai composing word follows word boundaries`() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("th".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_THAI
+        chainInput("ภาษาไทยดี")
+        assertEquals("ภาษาไทยดี", text)
+        assertEquals("ดี", composingText)
+        assertEquals("ไทย", lastAddedWord)
+        assertEquals("ภาษา", lastNgramContext)
+        assertEquals(listOf("ภาษา", "ไทย"), addedWords)
+        assertEquals(listOf("<S>", "ภาษา"), ngramContexts)
+    }
+
+    @Test fun `single thai composing segment remains composing`() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("th".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_THAI
+        chainInput("ไทย")
+        assertEquals("ไทย", text)
+        assertEquals("ไทย", composingText)
+    }
+
+    @Test fun `space after segmented thai composing word inserts one space`() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("th".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_THAI
+        chainInput("ภาษาไทยดี")
+        input(' ')
+        assertEquals("ภาษาไทยดี ", text)
+        assertEquals("", composingText)
+    }
+
+    @Test fun `immediate text expansion uses full segmented thai word`() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("th".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_THAI
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf("ภาษาไทย" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("expanded", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        typeNoAssert("ภาษาไทย")
+
+        assertEquals("expanded", text)
+        assertEquals("", composingText)
+        assertEquals("", lastAddedWord)
+    }
+
+    @Test fun `immediate text expansion uses prefixed segmented thai word`() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("th".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_THAI
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf(".ภาษาไทย" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("expanded", "."))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        typeNoAssert(".ภาษาไทย")
+
+        assertEquals("expanded", text)
+        assertEquals("", composingText)
+        assertEquals("", lastAddedWord)
+    }
+
+    @Test fun `prefixed immediate text expansion does not defer thai without prefix`() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("th".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_THAI
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf(".ภาษาไทย" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("expanded", "."))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        typeNoAssert("ภาษาไทย")
+
+        assertEquals("ภาษาไทย", text)
+        assertEquals("ไทย", composingText)
+        assertEquals("ภาษา", lastAddedWord)
+    }
+
+    @Test fun `immediate text expansion still segments thai non-shortcut`() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("th".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_THAI
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf("อื่น" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("expanded", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        chainInput("ภาษาไทยดี")
+
+        assertEquals("ภาษาไทยดี", text)
+        assertEquals("ดี", composingText)
+        assertEquals("ไทย", lastAddedWord)
+    }
+
+    @Test fun `failed immediate expansion commits thai segments separately`() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("th".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_THAI
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf("ภาษาไทยดี" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("expanded", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        typeNoAssert("ภาษาไทยแดง")
+
+        assertEquals("ภาษาไทยแดง", text)
+        assertEquals("แดง", composingText)
+        assertEquals("ไทย", lastAddedWord)
+        assertEquals("ภาษา", lastNgramContext)
     }
 
     // see issue 1551 (debug only)
@@ -1044,6 +1190,31 @@ class InputLogicTest {
         assertEquals("b", composingText)
     }
 
+    @Test fun immediateAutospaceAfterSelectingSuggestionIsInsertedOnce() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_IMMEDIATE_AUTO_SPACE, true) }
+
+        pickSuggestion("this")
+
+        assertEquals("this ", text)
+        assertEquals(SpaceState.DOUBLE, spaceState)
+        input('b')
+        assertEquals("this b", text)
+    }
+
+    @Test fun combiningRevertSpaceTakesPriorityOverImmediateSuggestionAutospace() {
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_IMMEDIATE_AUTO_SPACE, true) }
+        InputLogic::class.java.getDeclaredField("mInsertTrailingSpaceAfterPick")
+            .apply { isAccessible = true }
+            .setBoolean(inputLogic, true)
+
+        pickSuggestion("the")
+
+        assertEquals("the ", text)
+        assertEquals(SpaceState.NONE, spaceState)
+    }
+
     @Test fun `autospace works in URL field when input isn't URL`() {
         reset()
         latinIME.prefs().edit { putBoolean(Settings.PREF_URL_DETECTION, true) }
@@ -1625,11 +1796,20 @@ class InputLogicTest {
         batchEdit = 0
         currentInputType = InputType.TYPE_CLASS_TEXT
         lastAddedWord = ""
+        lastNgramContext = ""
+        addedWords.clear()
+        ngramContexts.clear()
 
         // reset settings
-        latinIME.prefs().edit { clear() }
+        latinIME.prefs().edit {
+            clear()
+            putBoolean(Settings.PREF_AUTO_CORRECTION, true)
+        }
 
-        setText("") // (re)sets selection and composing word
+        setText("") // initializes the input connection before switching subtype
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("en_US".constructLocale())
+            .first { it.languageTag == "en-US" })
+        setText("") // (re)sets selection and composing word for the English subtype
     }
 
     private fun chainInput(text: String) = text.forEach { input(it.code) }
@@ -2139,9 +2319,15 @@ class ShadowFacilitator2 {
                          ngramContext: NgramContext, timeStampInSeconds: Long,
                          blockPotentiallyOffensive: Boolean) {
         lastAddedWord = suggestion
+        lastNgramContext = ngramContext.extractPrevWordsContext()
+        addedWords.add(suggestion)
+        ngramContexts.add(lastNgramContext)
     }
     companion object {
         var lastAddedWord = ""
+        var lastNgramContext = ""
+        val addedWords = mutableListOf<String>()
+        val ngramContexts = mutableListOf<String>()
     }
 }
 

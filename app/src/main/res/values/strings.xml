@@ -203,6 +203,26 @@
     <string name="bigram_prediction">Next-word suggestions</string>
     <!-- Description for "next word suggestion" option. This displays suggestions even when there is no input, based on the previous word. -->
     <string name="bigram_prediction_summary">Use the previous word in making suggestions</string>
+    <!-- Option to prioritize personal dictionary and learned words for next-word suggestions. -->
+    <string name="prioritize_personal_suggestions">Prioritize personal &amp; learned words</string>
+    <!-- Description for prioritize personal suggestions option. -->
+    <string name="prioritize_personal_suggestions_summary">Give higher score priority to personal dictionary and learned words during next-word prediction</string>
+    <!-- Option to adjust boost level for personal dictionary and learned words. -->
+    <string name="next_word_boost_level">Learned word boost level</string>
+    <!-- Description for boost level option. -->
+    <string name="next_word_boost_level_summary">Set score priority boost strength for learned and personal dictionary entries</string>
+    <!-- Option to require strict preceding context for learned word suggestions. -->
+    <string name="next_word_strict_ngram">Require context match for learned words</string>
+    <!-- Description for strict ngram option. -->
+    <string name="next_word_strict_ngram_summary">Only suggest learned words when the preceding word context matches</string>
+
+    <string name="immediate_auto_space">Immediate auto-space</string>
+    <string name="immediate_auto_space_summary">Commit space instantly when picking a suggestion to prevent delay on next typed letter</string>
+
+    <!-- Option to show first-word suggestions when there is no input at the start of a sentence. -->
+    <string name="first_word_prediction">First-word suggestions</string>
+    <!-- Description for first-word suggestions option -->
+    <string name="first_word_prediction_summary">Show suggestions when there is no input at the start of a sentence</string>
     <!-- Option to enable using punctuation suggestions. -->
     <string name="suggest_punctuation">Punctuation suggestions</string>
     <!-- Description for "suggest_punctuation" option. -->

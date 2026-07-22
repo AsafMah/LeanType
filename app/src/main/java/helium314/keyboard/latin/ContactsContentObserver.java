@@ -41,6 +41,11 @@ public class ContactsContentObserver implements Runnable {
     }
 
     public void registerObserver(final ContactsChangedListener listener) {
+        final boolean useContacts = helium314.keyboard.latin.utils.KtxKt.prefs(mContext).getBoolean(helium314.keyboard.latin.settings.Settings.PREF_USE_CONTACTS, helium314.keyboard.latin.settings.Defaults.PREF_USE_CONTACTS);
+        if (!useContacts) {
+            Log.i(TAG, "Contacts dictionary disabled in settings. Not registering.");
+            return;
+        }
         if (!PermissionsUtil.checkAllPermissionsGranted(
                 mContext, Manifest.permission.READ_CONTACTS)) {
             Log.i(TAG, "No permission to read contacts. Not registering the observer.");
@@ -76,6 +81,10 @@ public class ContactsContentObserver implements Runnable {
             if (DebugFlags.DEBUG_ENABLED) {
                 Log.d(TAG, "run() : Already running. Don't waste time checking again.");
             }
+            return;
+        }
+        if (mContext instanceof LatinIME && !((LatinIME) mContext).isInputViewShown()) {
+            mRunning.set(false);
             return;
         }
         if (haveContentsChanged()) {
@@ -121,6 +130,13 @@ public class ContactsContentObserver implements Runnable {
     }
 
     public void unregister() {
-        mContext.getContentResolver().unregisterContentObserver(mContentObserver);
+        if (mContentObserver != null) {
+            try {
+                mContext.getContentResolver().unregisterContentObserver(mContentObserver);
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to unregister contacts content observer", e);
+            }
+            mContentObserver = null;
+        }
     }
 }
