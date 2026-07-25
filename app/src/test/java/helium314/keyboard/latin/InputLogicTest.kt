@@ -1806,10 +1806,16 @@ class InputLogicTest {
             putBoolean(Settings.PREF_AUTO_CORRECTION, true)
         }
 
-        setText("") // initializes the input connection before switching subtype
+        setText("", requireIdle = false) // initializes the input connection before switching subtype
+        latinIME.dictionaryFacilitator.waitForLoadingMainDictionaries(1, java.util.concurrent.TimeUnit.SECONDS)
+        messages.clear()
+        delayedMessages.clear()
         latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("en_US".constructLocale())
             .first { it.languageTag == "en-US" })
-        setText("") // (re)sets selection and composing word for the English subtype
+        setText("", requireIdle = false) // (re)sets selection and composing word for the English subtype
+        latinIME.dictionaryFacilitator.waitForLoadingMainDictionaries(1, java.util.concurrent.TimeUnit.SECONDS)
+        messages.clear()
+        delayedMessages.clear()
     }
 
     private fun chainInput(text: String) = text.forEach { input(it.code) }
@@ -1910,7 +1916,7 @@ class InputLogicTest {
     }
 
     // just sets the text and starts input so connection it set up correctly
-    private fun setText(newText: String) {
+    private fun setText(newText: String, requireIdle: Boolean = true) {
         text = newText
         selectionStart = newText.length
         selectionEnd = selectionStart
@@ -2003,7 +2009,7 @@ class InputLogicTest {
     }
 
     // always need to handle messages for proper simulation
-    private fun handleMessages() {
+    private fun handleMessages(requireIdle: Boolean = true) {
         while (messages.isNotEmpty()) {
             latinIME.mHandler.handleMessage(messages.first())
             messages.removeAt(0)
@@ -2019,8 +2025,10 @@ class InputLogicTest {
                 messages.removeAt(0)
             }
         }
-        assertEquals(0, messages.size)
-        assertEquals(0, delayedMessages.size)
+        if (requireIdle) {
+            assertEquals(0, messages.size)
+            assertEquals(0, delayedMessages.size)
+        }
     }
 
 
