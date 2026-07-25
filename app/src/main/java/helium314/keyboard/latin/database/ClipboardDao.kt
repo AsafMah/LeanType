@@ -31,6 +31,9 @@ class ClipboardDao private constructor(private val db: Database) {
 
     var listener: Listener? = null
 
+    var isClosed = false
+        private set
+
     // we clean up old clips when a new clip is added, but not too frequently
     private var lastClearOldClips = 0L
 
@@ -302,6 +305,15 @@ class ClipboardDao private constructor(private val db: Database) {
                     Log.e(TAG, "can't create ClipboardDao", e)
                 }
             return instance
+        }
+
+        @Synchronized
+        fun closeInstance() {
+            instance?.let {
+                it.isClosed = true
+                it.db.close()
+            }
+            instance = null
         }
     }
 }

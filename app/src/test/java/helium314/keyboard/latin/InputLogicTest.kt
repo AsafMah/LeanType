@@ -1615,6 +1615,10 @@ class InputLogicTest {
 
     // should be called before every test, so the same state is guaranteed
     private fun reset() {
+        // Drop messages left by asynchronous service setup or a previous scenario.
+        messages.clear()
+        delayedMessages.clear()
+
         // reset input connection & facilitator
         currentScript = ScriptUtils.SCRIPT_LATIN
         text = ""

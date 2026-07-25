@@ -34,6 +34,7 @@ import helium314.keyboard.latin.AppUpgrade
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.database.Database
+import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
@@ -303,6 +304,8 @@ private fun restoreLauncher(
                             }
                         }
                         if (selectedCategories.contains(BackupCategory.CLIPBOARD)) {
+                            ClipboardDao.closeInstance()
+                            Database.closeInstance()
                             ctx.deleteDatabase(Database.NAME)
                         }
 

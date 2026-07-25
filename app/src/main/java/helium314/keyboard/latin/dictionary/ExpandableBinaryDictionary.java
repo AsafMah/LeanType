@@ -98,6 +98,7 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
     private boolean mNeedsToRecreate;
 
     private final ReentrantReadWriteLock mLock;
+    private final Object mIterationLock = new Object();
 
     /* A extension for a binary dictionary file. */
     protected static final String DICT_FILE_EXTENSION = ".dict";
@@ -427,66 +428,70 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
 
     @Override
     public Map<String, Integer> getAllWordsWithFrequency() {
-        Map<String, Integer> words = new java.util.HashMap<>();
-        boolean lockAcquired = false;
-        try {
-            lockAcquired = mLock.readLock().tryLock(
-                    TIMEOUT_FOR_READ_OPS_IN_MILLISECONDS, TimeUnit.MILLISECONDS);
-            if (lockAcquired) {
-                if (mBinaryDictionary == null || !mBinaryDictionary.isValidDictionary()) {
-                    return words;
-                }
-                int token = 0;
-                do {
-                    BinaryDictionary.GetNextWordAndFrequencyResult result =
-                            mBinaryDictionary.getNextWordAndFrequency(token);
-                    if (result.mWordAndFrequency == null) break;
-                    String word = result.mWordAndFrequency.mWord;
-                    int freq = result.mWordAndFrequency.mFrequency;
-                    if (word != null && !word.isEmpty() && freq >= 0) {
-                        words.put(word, freq);
+        synchronized (mIterationLock) {
+            Map<String, Integer> words = new java.util.HashMap<>();
+            boolean lockAcquired = false;
+            try {
+                lockAcquired = mLock.readLock().tryLock(
+                        TIMEOUT_FOR_READ_OPS_IN_MILLISECONDS, TimeUnit.MILLISECONDS);
+                if (lockAcquired) {
+                    if (mBinaryDictionary == null || !mBinaryDictionary.isValidDictionary()) {
+                        return words;
                     }
-                    token = result.mNextToken;
-                } while (token != 0);
+                    int token = 0;
+                    do {
+                        BinaryDictionary.GetNextWordAndFrequencyResult result =
+                                mBinaryDictionary.getNextWordAndFrequency(token);
+                        if (result.mWordAndFrequency == null) break;
+                        String word = result.mWordAndFrequency.mWord;
+                        int freq = result.mWordAndFrequency.mFrequency;
+                        if (word != null && !word.isEmpty() && freq >= 0) {
+                            words.put(word, freq);
+                        }
+                        token = result.mNextToken;
+                    } while (token != 0);
+                }
+            } catch (final InterruptedException e) {
+                Log.e(TAG, "Interrupted tryLock() in getAllWordsWithFrequency().", e);
+            } finally {
+                if (lockAcquired) {
+                    mLock.readLock().unlock();
+                }
             }
-        } catch (final InterruptedException e) {
-            Log.e(TAG, "Interrupted tryLock() in getAllWordsWithFrequency().", e);
-        } finally {
-            if (lockAcquired) {
-                mLock.readLock().unlock();
-            }
+            return words;
         }
-        return words;
     }
 
     @Override
     public void forEachWord(java.util.function.BiConsumer<String, Integer> consumer) {
-        boolean lockAcquired = false;
-        try {
-            lockAcquired = mLock.readLock().tryLock(
-                    TIMEOUT_FOR_READ_OPS_IN_MILLISECONDS, TimeUnit.MILLISECONDS);
-            if (lockAcquired) {
-                if (mBinaryDictionary == null || !mBinaryDictionary.isValidDictionary()) {
-                    return;
-                }
-                int token = 0;
-                do {
-                    BinaryDictionary.GetNextWordAndFrequencyResult result =
-                            mBinaryDictionary.getNextWordAndFrequency(token);
-                    if (result.mWordAndFrequency == null) break;
-                    String word = result.mWordAndFrequency.mWord;
-                    int freq = result.mWordAndFrequency.mFrequency;
-                    if (word != null && !word.isEmpty() && freq >= 0) {
-                        consumer.accept(word, freq);
+        synchronized (mIterationLock) {
+            boolean lockAcquired = false;
+            try {
+                lockAcquired = mLock.readLock().tryLock(
+                        TIMEOUT_FOR_READ_OPS_IN_MILLISECONDS, TimeUnit.MILLISECONDS);
+                if (lockAcquired) {
+                    if (mBinaryDictionary == null || !mBinaryDictionary.isValidDictionary()) {
+                        return;
                     }
-                    token = result.mNextToken;
-                } while (token != 0);
-            }
-        } catch (final InterruptedException e) {
-            Log.e(TAG, "Interrupted tryLock() in forEachWord().", e);
-        } finally {
-            if (lockAcquired) {
-                mLock.readLock().unlock();
+                    int token = 0;
+                    do {
+                        BinaryDictionary.GetNextWordAndFrequencyResult result =
+                                mBinaryDictionary.getNextWordAndFrequency(token);
+                        if (result.mWordAndFrequency == null) break;
+                        String word = result.mWordAndFrequency.mWord;
+                        int freq = result.mWordAndFrequency.mFrequency;
+                        if (word != null && !word.isEmpty() && freq >= 0) {
+                            consumer.accept(word, freq);
+                        }
+                        token = result.mNextToken;
+                    } while (token != 0);
+                }
+            } catch (final InterruptedException e) {
+                Log.e(TAG, "Interrupted tryLock() in forEachWord().", e);
+            } finally {
+                if (lockAcquired) {
+                    mLock.readLock().unlock();
+                }
             }
         }
     }
@@ -669,29 +674,31 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
         final String tag = TAG;
         final String dictName = mDictName;
         asyncExecuteTaskWithLock(mLock.readLock(), () -> {
-            Log.d(tag, "Dump dictionary: " + dictName + " for " + mLocale);
-            final BinaryDictionary binaryDictionary = getBinaryDictionary();
-            if (binaryDictionary == null) {
-                return;
-            }
-            try {
-                final DictionaryHeader header = binaryDictionary.getHeader();
-                Log.d(tag, "Format version: " + binaryDictionary.getFormatVersion());
-                Log.d(tag, CombinedFormatUtils.formatAttributeMap(header.mDictionaryOptions.mAttributes));
-            } catch (final UnsupportedFormatException e) {
-                Log.d(tag, "Cannot fetch header information.", e);
-            }
-            int token = 0;
-            do {
-                final BinaryDictionary.GetNextWordPropertyResult result = binaryDictionary.getNextWordProperty(token);
-                final WordProperty wordProperty = result.mWordProperty;
-                if (wordProperty == null) {
-                    Log.d(tag, " dictionary is empty.");
-                    break;
+            synchronized (mIterationLock) {
+                Log.d(tag, "Dump dictionary: " + dictName + " for " + mLocale);
+                final BinaryDictionary binaryDictionary = getBinaryDictionary();
+                if (binaryDictionary == null) {
+                    return;
                 }
-                Log.d(tag, wordProperty.toString());
-                token = result.mNextToken;
-            } while (token != 0);
+                try {
+                    final DictionaryHeader header = binaryDictionary.getHeader();
+                    Log.d(tag, "Format version: " + binaryDictionary.getFormatVersion());
+                    Log.d(tag, CombinedFormatUtils.formatAttributeMap(header.mDictionaryOptions.mAttributes));
+                } catch (final UnsupportedFormatException e) {
+                    Log.d(tag, "Cannot fetch header information.", e);
+                }
+                int token = 0;
+                do {
+                    final BinaryDictionary.GetNextWordPropertyResult result = binaryDictionary.getNextWordProperty(token);
+                    final WordProperty wordProperty = result.mWordProperty;
+                    if (wordProperty == null) {
+                        Log.d(tag, " dictionary is empty.");
+                        break;
+                    }
+                    Log.d(tag, wordProperty.toString());
+                    token = result.mNextToken;
+                } while (token != 0);
+            }
         });
     }
 
@@ -702,24 +709,26 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
         reloadDictionaryIfRequired();
         final AsyncResultHolder<WordProperty[]> result = new AsyncResultHolder<>("WordPropertiesForSync");
         asyncExecuteTaskWithLock(mLock.readLock(), () -> {
-            final ArrayList<WordProperty> wordPropertyList = new ArrayList<>();
-            final BinaryDictionary binaryDictionary = getBinaryDictionary();
-            if (binaryDictionary == null) {
-                return;
-            }
-            int token = 0;
-            do {
-                // TODO: We need a new API that returns *new* un-synced data.
-                final BinaryDictionary.GetNextWordPropertyResult nextWordPropertyResult = binaryDictionary
-                        .getNextWordProperty(token);
-                final WordProperty wordProperty = nextWordPropertyResult.mWordProperty;
-                if (wordProperty == null) {
-                    break;
+            synchronized (mIterationLock) {
+                final ArrayList<WordProperty> wordPropertyList = new ArrayList<>();
+                final BinaryDictionary binaryDictionary = getBinaryDictionary();
+                if (binaryDictionary == null) {
+                    return;
                 }
-                wordPropertyList.add(wordProperty);
-                token = nextWordPropertyResult.mNextToken;
-            } while (token != 0);
-            result.set(wordPropertyList.toArray(new WordProperty[0]));
+                int token = 0;
+                do {
+                    // TODO: We need a new API that returns *new* un-synced data.
+                    final BinaryDictionary.GetNextWordPropertyResult nextWordPropertyResult = binaryDictionary
+                            .getNextWordProperty(token);
+                    final WordProperty wordProperty = nextWordPropertyResult.mWordProperty;
+                    if (wordProperty == null) {
+                        break;
+                    }
+                    wordPropertyList.add(wordProperty);
+                    token = nextWordPropertyResult.mNextToken;
+                } while (token != 0);
+                result.set(wordPropertyList.toArray(new WordProperty[0]));
+            }
         });
         // TODO: Figure out the best timeout duration for this API.
         return result.get(DEFAULT_WORD_PROPERTIES_FOR_SYNC, TIMEOUT_FOR_READ_OPS_IN_MILLISECONDS);

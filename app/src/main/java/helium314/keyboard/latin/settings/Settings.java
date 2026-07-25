@@ -93,6 +93,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SHOW_LANGUAGE_SWITCH_KEY = "show_language_switch_key";
     public static final String PREF_LANGUAGE_SWITCH_KEY = "language_switch_key";
     public static final String PREF_DIRECT_IME_SWITCH_TARGET = "direct_ime_switch_target";
+    public static final String PREF_APP_LANGUAGE = "pref_app_language";
     public static final String PREF_SHOW_EMOJI_KEY = "show_emoji_key";
     public static final String PREF_VARIABLE_TOOLBAR_DIRECTION = "var_toolbar_direction";
     public static final String PREF_ADDITIONAL_SUBTYPES = "additional_subtypes";
@@ -104,6 +105,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SIDE_PADDING_SCALE_PREFIX = "side_padding_scale";
     public static final String PREF_FONT_SCALE = "font_scale";
     public static final String PREF_EMOJI_FONT_SCALE = "emoji_font_scale";
+    public static final String PREF_USE_SYSTEM_EMOJI = "use_system_emoji";
     public static final String PREF_EMOJI_KEY_FIT = "emoji_key_fit";
     public static final String PREF_EMOJI_SKIN_TONE = "emoji_skin_tone";
     public static final String PREF_SPACE_HORIZONTAL_SWIPE = "horizontal_space_swipe";
@@ -267,6 +269,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_AUTO_SHOW_TOOLBAR = "auto_show_toolbar";
     public static final String PREF_AUTO_SHOW_TOOLBAR_ON_SELECT = "auto_show_toolbar_on_select";
     public static final String PREF_AUTO_HIDE_TOOLBAR = "auto_hide_toolbar";
+    public static final String PREF_TOOLBAR_SWIPE_DOWN_DISMISS = "toolbar_swipe_down_dismiss";
     public static final String PREF_AUTO_HIDE_PINNED_KEYS = "auto_hide_pinned_keys";
     public static final String PREF_REMEMBER_TOOLBAR_STATE = "remember_toolbar_state";
     public static final String PREF_TOOLBAR_EXPANDED = "toolbar_expanded";
@@ -371,6 +374,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
             ToolbarUtilsKt.clearCustomToolbarKeyCodes();
             loadSettings(mContext, mSettingsValues.mLocale, mSettingsValues.mInputAttributes, mSettingsValues.mCurrentKeyboardScript);
             StatsUtils.onLoadSettings(mSettingsValues);
+            helium314.keyboard.latin.LatinIME.sSettingsDirty = true;
         } finally {
             mSettingsValuesLock.unlock();
         }
@@ -723,6 +727,10 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     private boolean isSubtypePerApp() {
         return mPrefs.getBoolean(PREF_SAVE_SUBTYPE_PER_APP, Defaults.PREF_SAVE_SUBTYPE_PER_APP);
+    }
+
+    public boolean useSystemEmoji() {
+        return mPrefs.getBoolean(PREF_USE_SYSTEM_EMOJI, Defaults.PREF_USE_SYSTEM_EMOJI);
     }
 
     @Nullable

@@ -11,6 +11,7 @@ import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode.check
 import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Constants.Separators
 import helium314.keyboard.latin.common.Constants.Subtype.ExtraValue
+import helium314.keyboard.latin.common.LocaleUtils
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.common.encodeBase36
 import helium314.keyboard.latin.database.ClipboardDao
@@ -57,10 +58,53 @@ object AppUpgrade {
         if (oldVersion == BuildConfig.VERSION_CODE)
             return
         // clear extracted dictionaries, in case updated version contains newer ones
-        DictionaryInfoUtils.getCacheDirectories(context).forEach {
-            for (file in it.listFiles()!!) {
-                if (!file.name.endsWith(USER_DICTIONARY_SUFFIX))
+        val assetsList = DictionaryInfoUtils.getAssetsDictionaryList(context)
+        DictionaryInfoUtils.getCacheDirectories(context).forEach { dir ->
+            val locale = DictionaryInfoUtils.getWordListIdFromFileName(dir.name).constructLocale()
+            for (file in dir.listFiles().orEmpty()) {
+                if (file.name.endsWith(USER_DICTIONARY_SUFFIX)) continue
+                
+                val type = file.name.substringBefore("_").substringBefore(".dict")
+                
+                // Check if this dictionary type has a corresponding bundled asset for this locale
+                val hasAsset = if (assetsList != null) {
+                    val matchingAssets = assetsList.filter { it.startsWith("${type}_") }
+                    LocaleUtils.getBestMatch(locale, matchingAssets) { asset ->
+                        DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(asset)
+                    } != null
+                } else {
+                    false
+                }
+                
+                // Check if there is a download preference for this dictionary
+                val hasDownloadPref = prefs.contains("pref_dict_download_link_${type}_${locale}")
+                        || prefs.contains("pref_dict_download_link_${type}_${locale.toLanguageTag()}")
+
+                var isExtractedAsset = prefs.getBoolean("pref_extracted_asset_${type}_${locale.toLanguageTag()}", false)
+                        || prefs.getBoolean("pref_extracted_asset_${type}_${locale}", false)
+
+                // For backward compatibility, check if the file size matches the current asset
+                if (!isExtractedAsset && hasAsset && assetsList != null) {
+                    val matchingAssets = assetsList.filter { it.startsWith("${type}_") }
+                    val bestAsset = LocaleUtils.getBestMatch(locale, matchingAssets) { asset ->
+                        DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(asset)
+                    }
+                    if (bestAsset != null) {
+                        runCatching {
+                            context.assets.open("${DictionaryInfoUtils.ASSETS_DICTIONARY_FOLDER}/$bestAsset").use { input ->
+                                if (file.length() == input.available().toLong()) {
+                                    isExtractedAsset = true
+                                    prefs.edit().putBoolean("pref_extracted_asset_${type}_${locale.toLanguageTag()}", true).apply()
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Only delete if it is an asset-backed dictionary, was marked as extracted, and wasn't downloaded by the user
+                if (hasAsset && isExtractedAsset && !hasDownloadPref) {
                     file.delete()
+                }
             }
         }
         if (oldVersion <= 1000) { // upgrade old custom layouts name

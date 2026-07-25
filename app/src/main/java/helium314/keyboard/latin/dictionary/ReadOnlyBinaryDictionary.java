@@ -31,6 +31,7 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
      * that change the state of dictionary.
      */
     private final ReentrantReadWriteLock mLock = new ReentrantReadWriteLock();
+    private final Object mIterationLock = new Object();
 
     private final BinaryDictionary mBinaryDictionary;
 
@@ -114,96 +115,92 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
     @Override
     @androidx.annotation.NonNull
     public Map<String, Integer> getAllWordsWithFrequency() {
-        Map<String, Integer> words = new HashMap<>();
-        int token = 0;
-        int count = 0;
-        do {
-            if (!mLock.readLock().tryLock()) {
+        synchronized (mIterationLock) {
+            Map<String, Integer> words = new HashMap<>();
+            int token = 0;
+            int count = 0;
+            do {
+                if (!mLock.readLock().tryLock()) {
+                    try {
+                        Thread.sleep(5);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    continue;
+                }
                 try {
-                    Thread.sleep(5);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
+                    if (!mBinaryDictionary.isValidDictionary()) {
+                        break;
+                    }
+                    BinaryDictionary.GetNextWordAndFrequencyResult result =
+                            mBinaryDictionary.getNextWordAndFrequency(token);
+                    if (result.mWordAndFrequency == null) break;
+                    String word = result.mWordAndFrequency.mWord;
+                    int freq = result.mWordAndFrequency.mFrequency;
+                    if (word != null && !word.isEmpty() && freq >= 0) {
+                        words.put(word, freq);
+                    }
+                    token = result.mNextToken;
+                } finally {
+                    mLock.readLock().unlock();
                 }
-                continue;
-            }
-            try {
-                if (!mBinaryDictionary.isValidDictionary()) {
-                    break;
-                }
-                BinaryDictionary.GetNextWordAndFrequencyResult result =
-                        mBinaryDictionary.getNextWordAndFrequency(token);
-                if (result.mWordAndFrequency == null) break;
-                String word = result.mWordAndFrequency.mWord;
-                int freq = result.mWordAndFrequency.mFrequency;
-                if (word != null && !word.isEmpty() && freq >= 0) {
-                    words.put(word, freq);
-                }
-                token = result.mNextToken;
-            } finally {
-                mLock.readLock().unlock();
-            }
 
-            count++;
-            if (count % 200 == 0) {
-                Thread.yield();
-            }
-            if (count % 2000 == 0) {
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
+                count++;
+                if (count % 200 == 0) {
+                    Thread.yield();
                 }
-            }
-        } while (token != 0);
-        return words;
+                if (count % 2000 == 0) {
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            } while (token != 0);
+            return words;
+        }
     }
 
     @Override
     public void forEachWord(java.util.function.BiConsumer<String, Integer> consumer) {
-        int token = 0;
-        int count = 0;
-        do {
-            if (!mLock.readLock().tryLock()) {
-                try {
-                    Thread.sleep(5);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-                continue;
-            }
+        synchronized (mIterationLock) {
+            mLock.readLock().lock();
             try {
                 if (!mBinaryDictionary.isValidDictionary()) {
-                    break;
+                    return;
                 }
-                BinaryDictionary.GetNextWordAndFrequencyResult result =
-                        mBinaryDictionary.getNextWordAndFrequency(token);
-                if (result.mWordAndFrequency == null) break;
-                String word = result.mWordAndFrequency.mWord;
-                int freq = result.mWordAndFrequency.mFrequency;
-                if (word != null && !word.isEmpty() && freq >= 0) {
-                    consumer.accept(word, freq);
-                }
-                token = result.mNextToken;
+                int token = 0;
+                int count = 0;
+                do {
+                    BinaryDictionary.GetNextWordAndFrequencyResult result =
+                            mBinaryDictionary.getNextWordAndFrequency(token);
+                    if (result.mWordAndFrequency == null) break;
+                    String word = result.mWordAndFrequency.mWord;
+                    int freq = result.mWordAndFrequency.mFrequency;
+                    if (word != null && !word.isEmpty() && freq >= 0) {
+                        consumer.accept(word, freq);
+                    }
+                    token = result.mNextToken;
+
+                    count++;
+                    if (count % 200 == 0) {
+                        Thread.yield();
+                    }
+                    if (count % 2000 == 0) {
+                        try {
+                            Thread.sleep(1);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    }
+                } while (token != 0);
             } finally {
                 mLock.readLock().unlock();
             }
-
-            count++;
-            if (count % 200 == 0) {
-                Thread.yield();
-            }
-            if (count % 2000 == 0) {
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
-        } while (token != 0);
+        }
     }
 
     @Override

@@ -190,6 +190,46 @@ fun DictionaryScreen(
                             }
                             NextScreenIcon()
                         }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+
+                        // Dictionary Source Entry
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(helium314.keyboard.latin.common.Links.DICTIONARY_URL))
+                                    ctx.startActivity(intent)
+                                }
+                                .padding(vertical = 14.dp, horizontal = 16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_settings_about_github),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(end = 12.dp).size(24.dp)
+                                )
+                                Column {
+                                    Text(
+                                        stringResource(R.string.dictionary_source_title),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        stringResource(R.string.dictionary_source_summary),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            NextScreenIcon()
+                        }
                     }
                 }
                 androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))

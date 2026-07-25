@@ -23,6 +23,7 @@ import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
+import helium314.keyboard.latin.utils.LocaleUtils
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.preferences.ReorderSwitchPreference
@@ -46,6 +47,7 @@ fun PreferencesScreen(
     val clipboardHistoryEnabled = prefs.getBoolean(Settings.PREF_ENABLE_CLIPBOARD_HISTORY, Defaults.PREF_ENABLE_CLIPBOARD_HISTORY)
     val items = listOf(
         R.string.settings_category_input,
+        Settings.PREF_APP_LANGUAGE,
         Settings.PREF_SHOW_HINTS,
         if (prefs.getBoolean(Settings.PREF_SHOW_HINTS, Defaults.PREF_SHOW_HINTS))
             Settings.PREF_POPUP_KEYS_LABELS_ORDER else null,
@@ -171,6 +173,13 @@ fun createPreferencesSettings(context: Context) = listOf(
             it,
             getDirectImeSwitchItems(context),
             Defaults.PREF_DIRECT_IME_SWITCH_TARGET
+        )
+    },
+    Setting(context, Settings.PREF_APP_LANGUAGE, R.string.app_language_title, R.string.app_language_summary) {
+        ListPreference(
+            it,
+            LocaleUtils.getAppLanguageItems(context),
+            Defaults.PREF_APP_LANGUAGE
         )
     },
     Setting(context, Settings.PREF_SHOW_EMOJI_KEY, R.string.show_emoji_key) {

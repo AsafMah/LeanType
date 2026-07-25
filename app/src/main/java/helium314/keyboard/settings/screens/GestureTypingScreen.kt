@@ -40,7 +40,7 @@ fun GestureTypingScreen(
     val hasGestureLib = JniUtils.sHaveGestureLib
     val gestureFloatingPreviewEnabled = prefs.getBoolean(Settings.PREF_GESTURE_FLOATING_PREVIEW_TEXT, Defaults.PREF_GESTURE_FLOATING_PREVIEW_TEXT)
     val gestureEnabled = hasGestureLib && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
-    val selectedMethod = prefs.getString(Settings.PREF_GESTURE_METHOD, if (JniUtils.sHaveNativeGestureLib) "native" else "fallback")
+    val selectedMethod = prefs.getString(Settings.PREF_GESTURE_METHOD, "fallback")
 
     // Always show library loader first when no library
     val items = buildList {
@@ -102,7 +102,7 @@ fun createGestureTypingSettings(context: Context) = listOf(
             stringResource(R.string.gesture_method_native) to "native",
             stringResource(R.string.gesture_method_fallback) to "fallback"
         )
-        ListPreference(it, items, if (JniUtils.sHaveNativeGestureLib) "native" else "fallback")
+        ListPreference(it, items, "fallback")
     },
     Setting(context, Settings.PREF_GESTURE_PREVIEW_TRAIL, R.string.gesture_preview_trail) {
         SwitchPreference(it, Defaults.PREF_GESTURE_PREVIEW_TRAIL)

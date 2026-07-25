@@ -49,7 +49,28 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     @Volatile private var gestureIndex: SwipeGestureEngine.GestureIndex? = null
     @Volatile private var gestureIndexFingerprint: Int = 0
 
+    fun buildGestureIndexAsync(keyboard: Keyboard) {
+        val fingerprint = SwipeGestureEngine.layoutFingerprint(keyboard)
+        if (gestureIndex != null && gestureIndexFingerprint == fingerprint) {
+            return
+        }
+        Thread {
+            try {
+                val index = SwipeGestureEngine.buildIndex(mDictionaryFacilitator, keyboard)
+                gestureIndex = index
+                gestureIndexFingerprint = fingerprint
+            } catch (t: Throwable) {
+                Log.e(TAG, "Failed to build Java/JNI gesture index", t)
+                gestureIndex = null
+            }
+        }.start()
+    }
+
     fun getGestureIndex(): SwipeGestureEngine.GestureIndex? = gestureIndex
+
+    fun recordAccepted(word: String, pointers: InputPointers, keyboard: Keyboard) {
+        SwipeGestureEngine.recordAccepted(word, pointers, keyboard, gestureIndex)
+    }
 
     // Cached scoreLimit to avoid repeated Settings lookups in hot path
     // The read-then-write of (mLastScoreLimitUpdateTime, mCachedScoreLimitForAutocorrect)
@@ -343,26 +364,25 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         inputStyle: Int, sequenceNumber: Int
     ): SuggestedWords {
         val pointers = wordComposer.composedDataSnapshot.mInputPointers
-        val useFallback = "fallback" == settingsValuesForSuggestion.mGestureMethod || !JniUtils.sHaveNativeGestureLib
+        val method = settingsValuesForSuggestion.mGestureMethod
+        val useFallback = "fallback" == method || !JniUtils.sHaveNativeGestureLib
         val suggestionResults = if (useFallback) {
             val fingerprint = SwipeGestureEngine.layoutFingerprint(keyboard)
-            var index = gestureIndex
-            if (index == null || index.byFirst.isEmpty() || gestureIndexFingerprint != fingerprint) {
-                index = SwipeGestureEngine.buildIndex(mDictionaryFacilitator, keyboard)
-                if (index.byFirst.isNotEmpty()) {
-                    gestureIndex = index
-                    gestureIndexFingerprint = fingerprint
-                }
-            }
-            val predictionSet = if (ngramContext.isValid) {
-                mDictionaryFacilitator.getSuggestionResults(
-                    ComposedData(InputPointers(32), false, ""), ngramContext, keyboard,
-                    settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
-                ).map { it.mWord.lowercase(Locale.ROOT) }.toSet()
+            val index = gestureIndex
+            if (index == null || gestureIndexFingerprint != fingerprint) {
+                buildGestureIndexAsync(keyboard)
+                SuggestionResults(1, false, false)
             } else {
-                emptySet()
+                val predictionSet = if (ngramContext.isValid) {
+                    mDictionaryFacilitator.getSuggestionResults(
+                        ComposedData(InputPointers(32), false, ""), ngramContext, keyboard,
+                        settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
+                    ).map { it.mWord.lowercase(Locale.ROOT) }.toSet()
+                } else {
+                    emptySet()
+                }
+                SwipeGestureEngine.rankByIndex(index, pointers, keyboard, SuggestedWords.MAX_SUGGESTIONS, predictionSet)
             }
-            SwipeGestureEngine.rankByIndex(index, pointers, keyboard, SuggestedWords.MAX_SUGGESTIONS, predictionSet)
         } else {
             mDictionaryFacilitator.getSuggestionResults(
                 wordComposer.composedDataSnapshot, ngramContext, keyboard,

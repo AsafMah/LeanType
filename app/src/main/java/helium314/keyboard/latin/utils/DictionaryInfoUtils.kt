@@ -186,9 +186,11 @@ object DictionaryInfoUtils {
         val targetFile = File(cacheDir, "${dictionaryFileName.substringBefore("_")}.dict")
         try {
             FileUtils.copyStreamToNewFile(
-                context.assets.open(ASSETS_DICTIONARY_FOLDER + File.separator + dictionaryFileName),
+                context.assets.open("$ASSETS_DICTIONARY_FOLDER/$dictionaryFileName"),
                 targetFile
             )
+            val type = dictionaryFileName.substringBefore("_")
+            context.prefs().edit().putBoolean("pref_extracted_asset_${type}_${locale.toLanguageTag()}", true).apply()
         } catch (e: IOException) {
             Log.e(TAG, "Could not extract assets dictionary $dictionaryFileName", e)
             return null

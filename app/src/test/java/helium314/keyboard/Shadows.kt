@@ -41,6 +41,24 @@ class ShadowInputMethodManager2 : ShadowInputMethodManager() {
     @Implementation
     fun getShortcutInputMethodsAndSubtypes() = emptyMap<InputMethodInfo, List<InputMethodSubtype>>()
 
+    @Implementation
+    fun switchToNextInputMethod(token: android.os.IBinder?, onlyCurrentIme: Boolean): Boolean {
+        switchedToNextInputMethod = true
+        return true
+    }
+
+    @Implementation
+    fun setInputMethod(token: android.os.IBinder?, id: String) {
+        switchedImeId = id
+        switchedSubtype = null
+    }
+
+    @Implementation
+    fun setInputMethodAndSubtype(token: android.os.IBinder?, id: String, subtype: InputMethodSubtype) {
+        switchedImeId = id
+        switchedSubtype = subtype
+    }
+
     companion object {
         private fun defaultInputMethod() = InputMethodInfo(
             BuildConfig.APPLICATION_ID,
@@ -51,10 +69,16 @@ class ShadowInputMethodManager2 : ShadowInputMethodManager() {
 
         var inputMethods: List<InputMethodInfo> = listOf(defaultInputMethod())
         val enabledSubtypes = mutableMapOf<String, List<InputMethodSubtype>>()
+        var switchedImeId: String? = null
+        var switchedSubtype: InputMethodSubtype? = null
+        var switchedToNextInputMethod = false
 
         fun reset() {
             inputMethods = listOf(defaultInputMethod())
             enabledSubtypes.clear()
+            switchedImeId = null
+            switchedSubtype = null
+            switchedToNextInputMethod = false
         }
     }
 }
