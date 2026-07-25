@@ -72,7 +72,7 @@ private fun loadBlockedWords(context: Context): List<BlockedWord> {
         }
     }
     val uniqueList = list.distinct()
-    return uniqueList.sortedWith(compareBy({ it.word.lowercase() }, { it.locale.toLanguageTag() }))
+    return uniqueList.sortedWith(compareBy({ it.word.lowercase(it.locale) }, { it.locale.toLanguageTag() }))
 }
 
 private fun addBlockedWord(context: Context, word: String, locale: Locale) {
@@ -132,7 +132,11 @@ fun BlockedWordsScreen(
                 stringResource(R.string.clear_all) to { showClearAllDialog = true }
             ),
             filteredItems = { term ->
-                blockedWords.filter { it.word.startsWith(term, true) }
+                blockedWords.filter {
+                    val termLower = term.lowercase(it.locale)
+                    val wordLower = it.word.lowercase(it.locale)
+                    wordLower.startsWith(termLower)
+                }
             },
             itemContent = { item ->
                 Row(

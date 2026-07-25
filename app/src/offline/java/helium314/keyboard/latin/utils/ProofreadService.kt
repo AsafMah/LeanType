@@ -599,6 +599,39 @@ private const val TAG = "LlamaProofreadService"
             .trim()
     }
 
+    private fun cleanTranslationOutput(text: String): String {
+        var cleaned = text.trim()
+
+        // 1. Cut off reasoning / explanation sections at the end
+        val reasoningHeaders = listOf(
+            "\nReasoning", "\n\nReasoning",
+            "\nExplanation", "\n\nExplanation",
+            "\nNotes:", "\n\nNotes:",
+            "\nJustification:", "\n\nJustification:",
+            "\n- The original", "\n\n- The original",
+            "\n* The original", "\n\n* The original"
+        )
+        for (header in reasoningHeaders) {
+            val index = cleaned.indexOf(header, ignoreCase = true)
+            if (index > 0) {
+                cleaned = cleaned.substring(0, index).trim()
+            }
+        }
+
+        // 2. Strip leading section prefixes
+        val prefixRegex = Regex("^(?i)(translated\\s+text:?|translation:?|here\\s+is\\s+the\\s+translation:?)\\s*", RegexOption.MULTILINE)
+        cleaned = cleaned.replace(prefixRegex, "").trim()
+
+        // 3. Remove outer quotes if wrapped in quotes
+        if ((cleaned.startsWith("\"") && cleaned.endsWith("\"")) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+            if (cleaned.length >= 2) {
+                cleaned = cleaned.substring(1, cleaned.length - 1).trim()
+            }
+        }
+
+        return cleaned
+    }
+
     private fun getTranslationFewShot(targetLanguage: String): List<Pair<String, String>> {
         val lang = targetLanguage.trim().lowercase()
         return when {

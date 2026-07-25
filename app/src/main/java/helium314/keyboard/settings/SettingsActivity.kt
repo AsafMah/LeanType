@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings
 
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -28,12 +29,14 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
 import helium314.keyboard.compat.locale
 import helium314.keyboard.keyboard.KeyboardSwitcher
+import helium314.keyboard.latin.utils.LocaleUtils
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.InputAttributes
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
 import helium314.keyboard.latin.utils.UncachedInputMethodManagerUtils
@@ -55,6 +58,13 @@ import java.util.zip.ZipOutputStream
 //  https://developer.android.com/topic/performance/baselineprofiles/overview
 // todo: consider viewModel, at least for LanguageScreen and ColorsScreen it might help making them less awkward and complicated
 open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = DeviceProtectedUtils.getSharedPreferences(newBase)
+        val lang = prefs.getString(Settings.PREF_APP_LANGUAGE, Defaults.PREF_APP_LANGUAGE) ?: Defaults.PREF_APP_LANGUAGE
+        val wrapped = LocaleUtils.wrapContextWithLocale(newBase, lang)
+        super.attachBaseContext(wrapped)
+    }
+
     private val prefs by lazy { this.prefs() }
     val prefChanged = MutableStateFlow(0) // simple counter, as the only relevant information is that something changed
     fun prefChanged() = prefChanged.value++
@@ -262,6 +272,9 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
     override fun onSharedPreferenceChanged(prefereces: SharedPreferences?, key: String?) {
         prefChanged()
+        if (key == Settings.PREF_APP_LANGUAGE) {
+            recreate()
+        }
     }
 }
 

@@ -2,6 +2,8 @@
 package helium314.keyboard.latin
 
 import android.app.Application
+import androidx.emoji2.text.EmojiCompat
+import androidx.emoji2.text.DefaultEmojiCompatConfig
 import androidx.work.Configuration
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
 import helium314.keyboard.latin.define.DebugFlags
@@ -23,6 +25,13 @@ class App : Application(), Configuration.Provider {
         super.onCreate()
         DebugFlags.init(this)
         Settings.init(this)
+        val useSystemEmoji = Settings.getInstance().useSystemEmoji()
+        if (!useSystemEmoji) {
+            val config = DefaultEmojiCompatConfig.create(this)
+            if (config != null) {
+                EmojiCompat.init(config)
+            }
+        }
         SubtypeSettings.init(this)
         RichInputMethodManager.init(this)
 

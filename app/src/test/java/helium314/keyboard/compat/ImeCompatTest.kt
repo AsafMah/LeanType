@@ -34,7 +34,7 @@ class ImeCompatTest {
     fun preAndroidPDirectImeSwitchUsesInputMethodManager() {
         val service = serviceWithWindowToken()
 
-        ImeCompat.run { service.switchToInputMethod(EXTERNAL_IME) }
+        ImeCompat.run { service.switchInputMethodCompat(EXTERNAL_IME.id) }
 
         assertEquals(EXTERNAL_IME.id, ShadowInputMethodManager2.switchedImeId)
         assertNull(ShadowInputMethodManager2.switchedSubtype)
@@ -51,11 +51,11 @@ class ImeCompatTest {
     }
 
     @Test
-    fun preAndroidPWithoutWindowTokenIsNoOp() {
+    fun preAndroidPDirectImeWithoutWindowTokenIsNoOp() {
         val service = serviceWithWindowToken(null)
 
-        ImeCompat.run { service.switchToInputMethod(EXTERNAL_IME) }
-        ImeCompat.run { service.switchInputMethodAndSubtype(EXTERNAL_IME, EXTERNAL_SUBTYPE) }
+        ImeCompat.run { service.switchInputMethodCompat(EXTERNAL_IME.id) }
+        ImeCompat.run { service.switchInputMethodAndSubtypeCompat(EXTERNAL_IME, EXTERNAL_SUBTYPE) }
 
         assertNull(ShadowInputMethodManager2.switchedImeId)
         assertNull(ShadowInputMethodManager2.switchedSubtype)
@@ -65,7 +65,7 @@ class ImeCompatTest {
     fun preAndroidPDirectImeSubtypeSwitchUsesInputMethodManager() {
         val service = serviceWithWindowToken()
 
-        ImeCompat.run { service.switchInputMethodAndSubtype(EXTERNAL_IME, EXTERNAL_SUBTYPE) }
+        ImeCompat.run { service.switchInputMethodAndSubtypeCompat(EXTERNAL_IME, EXTERNAL_SUBTYPE) }
 
         assertEquals(EXTERNAL_IME.id, ShadowInputMethodManager2.switchedImeId)
         assertEquals(EXTERNAL_SUBTYPE, ShadowInputMethodManager2.switchedSubtype)

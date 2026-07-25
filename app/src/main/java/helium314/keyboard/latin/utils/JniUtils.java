@@ -69,7 +69,8 @@ public final class JniUtils {
                 if (TextUtils.equals(wantedChecksum, checksum)) {
                     // try loading the library
                     System.load(userSuppliedLibrary.getAbsolutePath());
-                    sHaveGestureLib = true; // this is an assumption, any way to actually check?
+                    sHaveGestureLib = true;
+                    sHaveNativeGestureLib = true;
                 } else {
                     // delete if checksum doesn't match
                     // this is bad if we can't get the application and the user has a different library than expected...
@@ -89,21 +90,21 @@ public final class JniUtils {
             try {
                 System.loadLibrary(JNI_LIB_NAME_GOOGLE);
                 sHaveGestureLib = true;
+                sHaveNativeGestureLib = true;
             } catch (UnsatisfiedLinkError ul) {
                 Log.w(TAG, "Could not load system glide typing library " + JNI_LIB_NAME_GOOGLE + ": " + ul.getMessage());
             }
         }
         if (!sHaveGestureLib) {
-            // try loading built-in library
+            // try loading built-in library (standard dictionary only, no gesture engine)
             try {
                 System.loadLibrary(JNI_LIB_NAME);
+                sHaveGestureLib = true;
+                sHaveNativeGestureLib = false;
             } catch (UnsatisfiedLinkError ul) {
                 Log.w(TAG, "Could not load native library " + JNI_LIB_NAME, ul);
             }
         }
-        sHaveNativeGestureLib = sHaveGestureLib;
-        // We have a Java-side gesture engine (SwipeGestureEngine) that doesn't need the native lib.
-        sHaveGestureLib = true;
     }
 
     private JniUtils() {

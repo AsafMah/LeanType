@@ -93,9 +93,17 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SHOW_LANGUAGE_SWITCH_KEY = "show_language_switch_key";
     public static final String PREF_LANGUAGE_SWITCH_KEY = "language_switch_key";
     public static final String PREF_DIRECT_IME_SWITCH_TARGET = "direct_ime_switch_target";
+    public static final String PREF_APP_LANGUAGE = "pref_app_language";
     public static final String PREF_SHOW_EMOJI_KEY = "show_emoji_key";
     public static final String PREF_VARIABLE_TOOLBAR_DIRECTION = "var_toolbar_direction";
+    public static final String PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD = "only_toolbar_with_hw_keyboard";
     public static final String PREF_ADDITIONAL_SUBTYPES = "additional_subtypes";
+
+    public static final String PREF_ENABLE_SPELL_CHECKER_SERVICE = "enable_spell_checker_service";
+    public static final String PREF_ENABLE_CONTACTS_OBSERVER = "enable_contacts_observer";
+    public static final String PREF_ENABLE_CLIPBOARD_LISTENER = "enable_clipboard_listener";
+    public static final String PREF_ENABLE_SMS_OTP_RECEIVER = "enable_sms_otp_receiver";
+    public static final String PREF_ENABLE_APP_SYNC_LISTENER = "enable_app_sync_listener";
     public static final String PREF_ENABLE_SPLIT_KEYBOARD = "split_keyboard";
     public static final String PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE = "split_keyboard_landscape";
     public static final String PREF_SPLIT_SPACER_SCALE_PREFIX = "split_spacer_scale";
@@ -104,6 +112,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SIDE_PADDING_SCALE_PREFIX = "side_padding_scale";
     public static final String PREF_FONT_SCALE = "font_scale";
     public static final String PREF_EMOJI_FONT_SCALE = "emoji_font_scale";
+    public static final String PREF_USE_SYSTEM_EMOJI = "use_system_emoji";
     public static final String PREF_EMOJI_KEY_FIT = "emoji_key_fit";
     public static final String PREF_EMOJI_SKIN_TONE = "emoji_skin_tone";
     public static final String PREF_SPACE_HORIZONTAL_SWIPE = "horizontal_space_swipe";
@@ -125,6 +134,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION = "preserve_space_before_punctuation";
     public static final String PREF_ALWAYS_INCOGNITO_MODE = "always_incognito_mode";
     public static final String PREF_BIGRAM_PREDICTIONS = "next_word_prediction";
+    public static final String PREF_PRIORITIZE_PERSONAL_SUGGESTIONS = "prioritize_personal_suggestions";
+    public static final String PREF_NEXT_WORD_BOOST_LEVEL = "next_word_boost_level";
+    public static final String PREF_NEXT_WORD_STRICT_NGRAM = "next_word_strict_ngram";
+    public static final String PREF_IMMEDIATE_AUTO_SPACE = "immediate_auto_space";
+    public static final String PREF_FIRST_WORD_PREDICTIONS = "first_word_prediction";
     public static final String PREF_SUGGEST_PUNCTUATION = "suggest_punctuation";
     public static final String PREF_SUGGEST_CLIPBOARD_CONTENT = "suggest_clipboard_content";
     public static final String PREF_GESTURE_INPUT = "gesture_input";
@@ -267,6 +281,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_AUTO_SHOW_TOOLBAR = "auto_show_toolbar";
     public static final String PREF_AUTO_SHOW_TOOLBAR_ON_SELECT = "auto_show_toolbar_on_select";
     public static final String PREF_AUTO_HIDE_TOOLBAR = "auto_hide_toolbar";
+    public static final String PREF_TOOLBAR_SWIPE_DOWN_DISMISS = "toolbar_swipe_down_dismiss";
     public static final String PREF_AUTO_HIDE_PINNED_KEYS = "auto_hide_pinned_keys";
     public static final String PREF_REMEMBER_TOOLBAR_STATE = "remember_toolbar_state";
     public static final String PREF_TOOLBAR_EXPANDED = "toolbar_expanded";
@@ -282,7 +297,6 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_TOOLBAR_HIDING_GLOBAL = "toolbar_hiding_global";
     public static final String PREF_SPLIT_TOOLBAR = "split_toolbar";
     public static final String PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE = "toolbar_swipe_down_to_hide";
-    public static final String PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD = "only_toolbar_with_hw_keyboard";
     public static final String PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR = "show_download_button_in_toolbar";
 
     // Emoji
@@ -331,6 +345,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     }
 
     public static SettingsValues getValues() {
+        if (sInstance == null || sInstance.mSettingsValues == null) {
+            if (sInstance != null && sInstance.mContext != null) {
+                sInstance.loadSettings(sInstance.mContext);
+            }
+        }
         return sInstance.mSettingsValues;
     }
 
@@ -371,6 +390,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
             ToolbarUtilsKt.clearCustomToolbarKeyCodes();
             loadSettings(mContext, mSettingsValues.mLocale, mSettingsValues.mInputAttributes, mSettingsValues.mCurrentKeyboardScript);
             StatsUtils.onLoadSettings(mSettingsValues);
+            helium314.keyboard.latin.LatinIME.sSettingsDirty = true;
         } finally {
             mSettingsValuesLock.unlock();
         }
@@ -608,6 +628,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
                 && conf.hardKeyboardHidden != Configuration.HARDKEYBOARDHIDDEN_YES;
     }
 
+    public boolean readShowToolbarOnly() {
+        return mSettingsValues.mHasHardwareKeyboard
+            && mPrefs.getBoolean(PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD, Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD);
+    }
+
     @Nullable
     public static Drawable readUserBackgroundImage(final Context context, final boolean night) {
         final boolean landscape = context.getResources()
@@ -725,6 +750,10 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         return mPrefs.getBoolean(PREF_SAVE_SUBTYPE_PER_APP, Defaults.PREF_SAVE_SUBTYPE_PER_APP);
     }
 
+    public boolean useSystemEmoji() {
+        return mPrefs.getBoolean(PREF_USE_SYSTEM_EMOJI, Defaults.PREF_USE_SYSTEM_EMOJI);
+    }
+
     @Nullable
     public Typeface getCustomTypeface() {
         if (!sCustomTypefaceLoaded) {
@@ -739,6 +768,9 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     @Nullable
     public Typeface getCustomEmojiTypeface() {
+        if (useSystemEmoji()) {
+            return null;
+        }
         if (!sCustomEmojiTypefaceLoaded) {
             try {
                 sCachedEmojiTypeface = Typeface.createFromFile(getCustomEmojiFontFile(mContext));

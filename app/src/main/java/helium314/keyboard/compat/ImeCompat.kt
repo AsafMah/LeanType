@@ -26,23 +26,40 @@ object ImeCompat {
         return RichInputMethodManager.getInstance().inputMethodManager.shouldOfferSwitchingToNextInputMethod(token)
     }
 
-    fun InputMethodService.switchToInputMethod(imi: InputMethodInfo) {
+    fun InputMethodService.switchInputMethodCompat(imiId: String) {
+        val window = window.window
+        val token = window?.attributes?.token
+        if (token != null) {
+            try {
+                RichInputMethodManager.getInstance().inputMethodManager.setInputMethod(token, imiId)
+                return
+            } catch (e: Throwable) {
+                // fallback
+            }
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            switchInputMethod(imi.id)
-        } else {
-            val window = window.window ?: return
-            val token = window.attributes.token ?: return
-            RichInputMethodManager.getInstance().inputMethodManager.setInputMethod(token, imi.id)
+            switchInputMethod(imiId)
         }
     }
 
-    fun InputMethodService.switchInputMethodAndSubtype(imi: InputMethodInfo, subtype: InputMethodSubtype) {
+    fun InputMethodService.switchInputMethodAndSubtypeCompat(imi: InputMethodInfo, subtype: InputMethodSubtype) {
+        val window = window.window
+        val token = window?.attributes?.token
+        if (token != null) {
+            try {
+                RichInputMethodManager.getInstance().inputMethodManager.setInputMethodAndSubtype(token, imi.id, subtype)
+                return
+            } catch (e: Throwable) {
+                // fallback
+            }
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             switchInputMethod(imi.id, subtype)
         } else {
-            val window = window.window ?: return
-            val token = window.attributes.token ?: return
-            RichInputMethodManager.getInstance().inputMethodManager.setInputMethodAndSubtype(token, imi.id, subtype)
+            val fallbackToken = token ?: return
+            try {
+                RichInputMethodManager.getInstance().inputMethodManager.setInputMethod(fallbackToken, imi.id)
+            } catch (e: Throwable) {}
         }
     }
 }

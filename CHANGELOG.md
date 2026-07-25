@@ -38,7 +38,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Fixed the Windows release tool to read dictionary metadata as UTF-8. (#119)
 
 ### Upstream
-- Merged **LeanBitLab/LeanType v3.9.5** (pinned at `8cfe7f1fc`, including v3.9.3/v3.9.4). Fork identity (`LeanTypeDual`, distinct `applicationId`, privacy tiers, and fork-specific features) is preserved. (#118)
+- Merged **LeanBitLab/LeanType v4.0.2** (pinned at `0477ef83`, including v4.0.0/v4.0.1) — adds JNI and lifecycle hardening, first-word and next-word controls, background-service controls, immediate autospace, translation-history improvements, and pointer/input-connection stability fixes. LeanTypeDual retains its Java fallback gesture engine, distinct `applicationId`, privacy tiers, two-thumb behavior, and fork-owned release metadata. (#123)
 
 ## [3.10.0] - 2026-06-20
 

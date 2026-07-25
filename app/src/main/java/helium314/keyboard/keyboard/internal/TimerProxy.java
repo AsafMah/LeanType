@@ -12,6 +12,8 @@ import helium314.keyboard.keyboard.Key;
 import helium314.keyboard.keyboard.PointerTracker;
 
 public interface TimerProxy {
+    TimerProxy NULL = new Adapter();
+
     /**
      * Start a timer to detect if a user is typing keys.
      * @param typedKey the key that is typed.

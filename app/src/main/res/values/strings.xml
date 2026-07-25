@@ -203,6 +203,26 @@
     <string name="bigram_prediction">Next-word suggestions</string>
     <!-- Description for "next word suggestion" option. This displays suggestions even when there is no input, based on the previous word. -->
     <string name="bigram_prediction_summary">Use the previous word in making suggestions</string>
+    <!-- Option to prioritize personal dictionary and learned words for next-word suggestions. -->
+    <string name="prioritize_personal_suggestions">Prioritize personal &amp; learned words</string>
+    <!-- Description for prioritize personal suggestions option. -->
+    <string name="prioritize_personal_suggestions_summary">Give higher score priority to personal dictionary and learned words during next-word prediction</string>
+    <!-- Option to adjust boost level for personal dictionary and learned words. -->
+    <string name="next_word_boost_level">Learned word boost level</string>
+    <!-- Description for boost level option. -->
+    <string name="next_word_boost_level_summary">Set score priority boost strength for learned and personal dictionary entries</string>
+    <!-- Option to require strict preceding context for learned word suggestions. -->
+    <string name="next_word_strict_ngram">Require context match for learned words</string>
+    <!-- Description for strict ngram option. -->
+    <string name="next_word_strict_ngram_summary">Only suggest learned words when the preceding word context matches</string>
+
+    <string name="immediate_auto_space">Immediate auto-space</string>
+    <string name="immediate_auto_space_summary">Commit space instantly when picking a suggestion to prevent delay on next typed letter</string>
+
+    <!-- Option to show first-word suggestions when there is no input at the start of a sentence. -->
+    <string name="first_word_prediction">First-word suggestions</string>
+    <!-- Description for first-word suggestions option -->
+    <string name="first_word_prediction_summary">Show suggestions when there is no input at the start of a sentence</string>
     <!-- Option to enable using punctuation suggestions. -->
     <string name="suggest_punctuation">Punctuation suggestions</string>
     <!-- Description for "suggest_punctuation" option. -->
@@ -860,6 +880,10 @@
     <string name="custom_font">Set custom font from file</string>
     <!-- Title of the setting for adding / removing custom font file used only for emojis -->
     <string name="custom_emoji_font">Set custom emoji font from file</string>
+    <!-- Title of the setting for using system emoji font -->
+    <string name="prefs_use_system_emoji">Use system emoji font</string>
+    <!-- Summary/description of the setting for using system emoji font -->
+    <string name="prefs_use_system_emoji_summary">Use system emoji font in settings and search (restarts app)</string>
     <!-- Description for English (UK) keyboard subtype
          (UK) should be an abbreviation of United Kingdom. -->
     <string name="subtype_en_GB">English (UK)</string>
@@ -1276,6 +1300,9 @@ New dictionary:
     <string name="direct_ime_switch_title">Direct Switch Target IME</string>
     <string name="direct_ime_switch_summary">Input Method to switch to directly when using the custom keycode option</string>
     <string name="direct_ime_switch_none">None</string>
+    <string name="app_language_title">App Language</string>
+    <string name="app_language_summary">Change the language of the settings screen and keyboard interface</string>
+    <string name="app_language_system">System default</string>
     <!-- Settings screen title for appearance preferences -->
     <string name="settings_screen_appearance">Appearance</string>
     <!-- Settings screen title for toolbar preferences -->
@@ -1420,6 +1447,10 @@ New dictionary:
     <string name="auto_hide_toolbar">Auto hide toolbar</string>
     <!-- Description of the setting for hiding the toolbar automatically -->
     <string name="auto_hide_toolbar_summary">Hide the toolbar when suggestions become available</string>
+    <!-- Title of the setting to swipe down on toolbar to dismiss keyboard -->
+    <string name="toolbar_swipe_down_dismiss">Swipe down to close</string>
+    <!-- Description of the setting for swiping down on toolbar to dismiss keyboard -->
+    <string name="toolbar_swipe_down_dismiss_summary">Swipe down on toolbar to hide keyboard</string>
     <!-- Title of the setting to auto hide pinned keys when toolbar is expanded -->
     <string name="auto_hide_pinned_keys">Auto hide pinned keys</string>
     <!-- Description of the setting to auto hide pinned keys when toolbar is expanded -->
@@ -1491,4 +1522,10 @@ New dictionary:
     <string name="persist_text_edit_mode_summary">Do not exit text editing mode when input finishes</string>
     <string name="disable_multi_word_suggestions_title">Disable multi-word suggestions</string>
     <string name="disable_multi_word_suggestions_summary">Prevent suggestions that consist of multiple combined words (recommended for Turkish)</string>
+
+    <!-- ponytail: dictionary updates and source links -->
+    <string name="upgrade">Upgrade</string>
+    <string name="dictionary_update_available">Update available</string>
+    <string name="dictionary_source_title">Dictionary repository</string>
+    <string name="dictionary_source_summary">Browse or download dictionaries directly in your browser</string>
 </resources>

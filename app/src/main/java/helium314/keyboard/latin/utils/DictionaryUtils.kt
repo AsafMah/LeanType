@@ -4,6 +4,7 @@ package helium314.keyboard.latin.utils
 
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,6 +130,8 @@ fun MissingDictionaryDialog(onDismissRequest: () -> Unit, locale: Locale, inline
     if (availableDicts.isNotEmpty() && knownDicts.isEmpty())
         annotatedString += AnnotatedString("\n") + availableDicts
 
+    var refreshTrigger by remember { mutableStateOf(0) }
+
     if (inline) {
         ConfirmationDialogContent(
             onDismissRequest = onDismissRequest,
@@ -140,7 +144,7 @@ fun MissingDictionaryDialog(onDismissRequest: () -> Unit, locale: Locale, inline
                     if (knownDicts.isNotEmpty()) {
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         knownDicts.forEach { (desc, link) ->
-                            DownloadableDictionaryRow(locale = locale, desc = desc, link = link, onRefresh = {})
+                            DownloadableDictionaryRow(locale = locale, desc = desc, link = link, refreshTrigger = refreshTrigger, onRefresh = { refreshTrigger++ })
                         }
                     }
                 }
@@ -158,7 +162,7 @@ fun MissingDictionaryDialog(onDismissRequest: () -> Unit, locale: Locale, inline
                     if (knownDicts.isNotEmpty()) {
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         knownDicts.forEach { (desc, link) ->
-                            DownloadableDictionaryRow(locale = locale, desc = desc, link = link, onRefresh = {})
+                            DownloadableDictionaryRow(locale = locale, desc = desc, link = link, refreshTrigger = refreshTrigger, onRefresh = { refreshTrigger++ })
                         }
                     }
                 }
@@ -245,7 +249,7 @@ private fun hasAnythingOtherThanExtractedMainDictionary(context: Context, dir: F
 fun downloadDictionary(context: Context, locale: Locale, type: String, linkUrl: String, onComplete: (Boolean) -> Unit) {
     val cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context) ?: return onComplete(false)
     val targetFile = File(cacheDir, "${type}.dict")
-    CoroutineScope(Dispatchers.IO).launch {
+    CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob()).launch {
         var success = false
         try {
             var url = java.net.URL(linkUrl)
@@ -274,10 +278,14 @@ fun downloadDictionary(context: Context, locale: Locale, type: String, linkUrl: 
             }
 
             if (status == java.net.HttpURLConnection.HTTP_OK) {
+                val lastModified = conn.lastModified
                 conn.inputStream.use { input ->
                     targetFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
+                }
+                if (lastModified > 0L) {
+                    targetFile.setLastModified(lastModified)
                 }
                 success = true
             } else {
@@ -306,10 +314,51 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
     val file = remember(cacheDir, type) { cacheDir?.let { File(it, "$type.dict") } }
     var downloading by remember { mutableStateOf(false) }
     val downloadedLink = remember(link, refreshTrigger) { ctx.prefs().getString("pref_dict_download_link_${type}_${dictLocale}", "") ?: "" }
-    var exists by remember(file, downloadedLink, refreshTrigger) {
-        mutableStateOf(
-            file?.exists() == true && (downloadedLink == link || (downloadedLink.isEmpty() && link.contains("/dictionaries/")))
-        )
+    val isInstalled = remember(file, downloadedLink, link, refreshTrigger) {
+        file?.exists() == true && (downloadedLink == link || (downloadedLink.isEmpty() && !link.contains("experimental")))
+    }
+    var onlineLastModified by remember(link) { mutableStateOf(0L) }
+    LaunchedEffect(link, isInstalled) {
+        if (isInstalled) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val url = java.net.URL(link)
+                    val connection = url.openConnection() as java.net.HttpURLConnection
+                    connection.requestMethod = "HEAD"
+                    connection.setRequestProperty("User-Agent", "HeliboardL/3.8.9 (Android)")
+                    connection.connectTimeout = 5000
+                    connection.readTimeout = 5000
+                    connection.instanceFollowRedirects = true
+                    var status = connection.responseCode
+                    var conn = connection
+                    var redirectCount = 0
+                    while ((status == java.net.HttpURLConnection.HTTP_MOVED_TEMP || 
+                            status == java.net.HttpURLConnection.HTTP_MOVED_PERM || 
+                            status == 307 || status == 308) && redirectCount < 5) {
+                        val newUrl = conn.getHeaderField("Location") ?: break
+                        conn.disconnect()
+                        val nextUrl = java.net.URL(newUrl)
+                        conn = nextUrl.openConnection() as java.net.HttpURLConnection
+                        conn.requestMethod = "HEAD"
+                        conn.setRequestProperty("User-Agent", "HeliboardL/3.8.9 (Android)")
+                        conn.connectTimeout = 5000
+                        conn.readTimeout = 5000
+                        conn.instanceFollowRedirects = true
+                        status = conn.responseCode
+                        redirectCount++
+                    }
+                    if (status == java.net.HttpURLConnection.HTTP_OK) {
+                        onlineLastModified = conn.lastModified
+                    }
+                    conn.disconnect()
+                } catch (e: Exception) {
+                    android.util.Log.e("DictionaryUtils", "Failed to check online last modified", e)
+                }
+            }
+        }
+    }
+    val hasUpgrade = remember(isInstalled, file, onlineLastModified, refreshTrigger) {
+        isInstalled && file != null && onlineLastModified > 0L && onlineLastModified > file.lastModified()
     }
 
     Row(
@@ -317,8 +366,51 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
     ) {
-        Text(desc, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        if (exists) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(desc, style = MaterialTheme.typography.bodyMedium)
+            if (hasUpgrade && !downloading) {
+                Text(
+                    text = stringResource(R.string.dictionary_update_available),
+                    color = MaterialTheme.colorScheme.secondary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+        if (downloading) {
+            Text(
+                stringResource(R.string.downloading),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        } else if (hasUpgrade) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        downloading = true
+                        downloadDictionary(ctx, dictLocale, type, link) { success ->
+                            downloading = false
+                            if (success) {
+                                ctx.prefs().edit().putString("pref_dict_download_link_${type}_${dictLocale}", link).apply()
+                                onRefresh()
+                            } else {
+                                android.widget.Toast.makeText(ctx, ctx.getString(R.string.download_failed), android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.padding(end = 4.dp)
+                ) {
+                    Text(stringResource(R.string.upgrade))
+                }
+                helium314.keyboard.settings.DeleteButton(
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                ) {
+                    file?.delete()
+                    ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
+                    onRefresh()
+                }
+            }
+        } else if (isInstalled) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "✓ " + stringResource(R.string.installed),
@@ -332,16 +424,9 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
                 ) {
                     file?.delete()
                     ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
-                    exists = false
                     onRefresh()
                 }
             }
-        } else if (downloading) {
-            Text(
-                stringResource(R.string.downloading),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(end = 8.dp)
-            )
         } else {
             androidx.compose.material3.TextButton(onClick = {
                 downloading = true
@@ -349,7 +434,6 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
                     downloading = false
                     if (success) {
                         ctx.prefs().edit().putString("pref_dict_download_link_${type}_${dictLocale}", link).apply()
-                        exists = true
                         onRefresh()
                     } else {
                         android.widget.Toast.makeText(ctx, ctx.getString(R.string.download_failed), android.widget.Toast.LENGTH_SHORT).show()
@@ -375,11 +459,16 @@ fun isMainDictionaryMissing(context: Context, locale: Locale): Boolean {
     // 2. check if cache directory has a main.dict or main_user.dict file
     var cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { File(it) }
     var hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
-    if (!hasMain && (locale.country.isNotEmpty() || locale.variant.isNotEmpty())) {
-        val fallbackLocale = Locale(locale.language)
-        cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
-        hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
-        if (!hasMain) {
+    if (!hasMain) {
+        if (locale.country.isNotEmpty() || locale.variant.isNotEmpty()) {
+            val fallbackLocale = Locale(locale.language)
+            cacheDir = DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
+            hasMain = cacheDir?.exists() == true && cacheDir.isDirectory && cacheDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
+            if (!hasMain) {
+                val variantDir = DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)
+                hasMain = variantDir?.exists() == true && variantDir.isDirectory && variantDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
+            }
+        } else {
             val variantDir = DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)
             hasMain = variantDir?.exists() == true && variantDir.isDirectory && variantDir.listFiles()?.any { it.name.startsWith("main") && it.name.endsWith(".dict") } == true
         }

@@ -26,8 +26,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class SwipeGestureEngine {
+
+    private static final ExecutorService sSaveExecutor = Executors.newSingleThreadExecutor();
 
     private static final int N_PTS = 16;
     private static final float FREQ_WEIGHT = 0.05f;
@@ -99,14 +103,14 @@ public class SwipeGestureEngine {
         try (java.io.DataOutputStream out = new java.io.DataOutputStream(
                 new java.io.BufferedOutputStream(new java.io.FileOutputStream(sUserDataFile)))) {
             out.writeInt(1); // format version
-
+            
             // Save boosts
             out.writeInt(sUserBoost.size());
             for (Map.Entry<String, Integer> entry : sUserBoost.entrySet()) {
                 out.writeUTF(entry.getKey());
                 out.writeInt(entry.getValue());
             }
-
+            
             // Save paths
             out.writeInt(sUserPaths.size());
             for (Map.Entry<String, float[]> entry : sUserPaths.entrySet()) {
@@ -122,11 +126,11 @@ public class SwipeGestureEngine {
     }
 
     private static void saveUserDataAsync() {
-        new Thread(() -> {
+        sSaveExecutor.execute(() -> {
             synchronized (SwipeGestureEngine.class) {
                 saveUserData();
             }
-        }).start();
+        });
     }
 
     private static void loadUserData() {
@@ -136,7 +140,7 @@ public class SwipeGestureEngine {
                     new java.io.BufferedInputStream(new java.io.FileInputStream(sUserDataFile)))) {
                 int version = in.readInt();
                 if (version != 1) return;
-
+                
                 sUserBoost.clear();
                 int numBoosts = in.readInt();
                 for (int i = 0; i < numBoosts; i++) {
@@ -144,7 +148,7 @@ public class SwipeGestureEngine {
                     int count = in.readInt();
                     sUserBoost.put(key, count);
                 }
-
+                
                 sUserPaths.clear();
                 int numPaths = in.readInt();
                 for (int i = 0; i < numPaths; i++) {
@@ -208,7 +212,7 @@ public class SwipeGestureEngine {
             this.word = word;
             this.frequency = frequency;
             this.freqBonus = (frequency > 0) ? (float)(Math.log(frequency + 1) * FREQ_WEIGHT) : 0f;
-
+            
             String lk = getLowerCase(word);
             float[] blended = path;
             float[] userPath = sUserPaths.get(lk);
@@ -240,41 +244,64 @@ public class SwipeGestureEngine {
     public static class GestureIndex {
         public final Map<Character, List<IndexEntry>> byFirst;
         // ponytail: store charToPos in index so rankByIndex doesn't rebuild it every call
-        public final float[][] charToPos;
-        GestureIndex(Map<Character, List<IndexEntry>> byFirst, float[][] charToPos) {
+        public final Map<Character, float[]> charToPos;
+        GestureIndex(Map<Character, List<IndexEntry>> byFirst, Map<Character, float[]> charToPos) {
             this.byFirst = byFirst;
             this.charToPos = charToPos;
         }
     }
 
+    public static volatile boolean isCancelled = false;
+
+    public static void cancelIndexing() {
+        isCancelled = true;
+    }
+
     public static GestureIndex buildIndex(helium314.keyboard.latin.DictionaryFacilitator facilitator, Keyboard keyboard) {
-        float[][] charToPos = buildCharToPos(keyboard);
+        isCancelled = false;
+        Map<Character, float[]> charToPos = buildCharToPos(keyboard);
         Map<Character, List<IndexEntry>> byFirst = new HashMap<>();
-        facilitator.forEachMainDictionaryWord((raw, freqVal) -> {
-            if (raw == null) return;
-            if (facilitator.isBlacklisted(raw)) return;
-            int freq = freqVal != null ? freqVal : 0;
-            // ponytail: apply user boost to freq so self-learned words rank higher immediately
-            String lk = getLowerCase(raw);
-            Integer boost = sUserBoost.get(lk);
-            if (boost != null) freq = Math.min(freq + boost * 5, 255);
-            if (freq < 3) return;
-            String word = lk;
-            if (word.isEmpty()) return;
-            char first = word.charAt(0);
-            if (first < 'a' || first > 'z') return;
-            float[] path = wordPath(word, charToPos);
-            byFirst.computeIfAbsent(first, k -> new ArrayList<>())
-                    .add(new IndexEntry(word, path, freq));
-        });
-        for (List<IndexEntry> list : byFirst.values()) {
-            list.sort((a, b) -> Integer.compare(b.frequency, a.frequency));
+        try {
+            facilitator.forEachMainDictionaryWord((raw, freqVal) -> {
+                if (isCancelled) return;
+                if (raw == null) return;
+                if (facilitator.isBlacklisted(raw)) return;
+                int freq = freqVal != null ? freqVal : 0;
+                // ponytail: apply user boost to freq so self-learned words rank higher immediately
+                String lk = getLowerCase(raw);
+                Integer boost = sUserBoost.get(lk);
+                if (boost != null) freq = Math.min(freq + boost * 5, 255);
+                if (freq < 12) return;
+                String word = lk;
+                if (word.isEmpty()) return;
+                char first = word.charAt(0);
+                if (!charToPos.containsKey(first)) return;
+                float[] path = wordPath(word, charToPos);
+                byFirst.computeIfAbsent(first, k -> new ArrayList<>())
+                        .add(new IndexEntry(word, path, freq));
+            });
+            for (Map.Entry<Character, List<IndexEntry>> entry : byFirst.entrySet()) {
+                List<IndexEntry> list = entry.getValue();
+                list.sort((a, b) -> Integer.compare(b.frequency, a.frequency));
+                if (list.size() > 2000) {
+                    entry.setValue(new ArrayList<>(list.subList(0, 2000)));
+                }
+            }
+        } catch (OutOfMemoryError e) {
+            android.util.Log.e("SwipeGestureEngine", "OOM building gesture index, using partial index", e);
+            System.gc();
         }
         return new GestureIndex(byFirst, charToPos);
     }
 
     public static int layoutFingerprint(Keyboard keyboard) {
-        return Arrays.deepHashCode(buildCharToPos(keyboard));
+        Map<Character, float[]> map = buildCharToPos(keyboard);
+        Object[] values = new Object[map.size()];
+        int idx = 0;
+        for (float[] p : map.values()) {
+            values[idx++] = p;
+        }
+        return Arrays.deepHashCode(values);
     }
 
     // ── Public matching API ───────────────────────────────────────────────────
@@ -284,20 +311,20 @@ public class SwipeGestureEngine {
     }
 
     // ponytail: use charToPos directly instead of iterating all keys on every gesture
-    private static List<Character> nearestLettersFromMap(float nx, float ny, float[][] charToPos) {
+    private static List<Character> nearestLettersFromMap(float nx, float ny, Map<Character, float[]> charToPos) {
         float minDist = Float.MAX_VALUE;
-        float[] dists = new float[26];
-        for (int i = 0; i < 26; i++) {
-            float cx = charToPos[i][0], cy = charToPos[i][1];
-            if (cx == 0f && cy == 0f) { dists[i] = Float.MAX_VALUE; continue; }
+        Map<Character, Float> dists = new HashMap<>();
+        for (Map.Entry<Character, float[]> entry : charToPos.entrySet()) {
+            float[] pos = entry.getValue();
+            float cx = pos[0], cy = pos[1];
             float d = (nx - cx) * (nx - cx) + (ny - cy) * (ny - cy);
-            dists[i] = d;
+            dists.put(entry.getKey(), d);
             if (d < minDist) minDist = d;
         }
         List<Character> results = new ArrayList<>(4);
         float threshold = minDist + 0.035f;
-        for (int i = 0; i < 26; i++) {
-            if (dists[i] <= threshold) results.add((char) ('a' + i));
+        for (Map.Entry<Character, Float> entry : dists.entrySet()) {
+            if (entry.getValue() <= threshold) results.add(entry.getKey());
         }
         return results;
     }
@@ -325,7 +352,7 @@ public class SwipeGestureEngine {
         return (px - closestX) * (px - closestX) + (py - closestY) * (py - closestY);
     }
 
-    public static boolean isSequenceMatch(String word, float[] path, float[][] charToPos) {
+    public static boolean isSequenceMatch(String word, float[] path, Map<Character, float[]> charToPos) {
         int n = path.length / 2;
         int segmentIdx = 0;
         float prevT = -0.01f;
@@ -333,10 +360,9 @@ public class SwipeGestureEngine {
         float[] outT = new float[1];
         for (int i = 0; i < word.length(); i++) {
             char c = word.charAt(i);
-            if (c < 'a' || c > 'z') continue;
             if (c == lastChar) continue;
-            float[] target = charToPos[c - 'a'];
-            if (target[0] == 0f && target[1] == 0f) continue;
+            float[] target = charToPos.get(c);
+            if (target == null) continue;
             boolean found = false;
             while (segmentIdx < n - 1) {
                 float distSq = sqDistanceToSegment(target[0], target[1],
@@ -375,7 +401,7 @@ public class SwipeGestureEngine {
         float kw = keyboard.mOccupiedWidth, kh = keyboard.mOccupiedHeight;
 
         // ponytail: use charToPos from index — already built, no reallocation
-        float[][] charToPos = index.charToPos;
+        Map<Character, float[]> charToPos = index.charToPos;
 
         List<Character> startLetters = nearestLettersFromMap(xs[0] / kw, ys[0] / kh, charToPos);
         List<Character> endLetters   = nearestLettersFromMap(xs[n-1] / kw, ys[n-1] / kh, charToPos);
@@ -410,6 +436,7 @@ public class SwipeGestureEngine {
         // ponytail: parallel float[] + int[] sort avoids Integer boxing
         float[] scores = new float[m];
         int[]   order  = new int[m];
+        int count = 0;
         float[] topScores = new float[maxResults];
         Arrays.fill(topScores, -Float.MAX_VALUE);
         float threshold = -Float.MAX_VALUE;
@@ -418,46 +445,55 @@ public class SwipeGestureEngine {
         for (int i = 0; i < m; i++) {
             IndexEntry e = filtered.get(i);
             String lower = getLowerCase(e.word);
-            e.unpackPath(candidatePath);
-            boolean seqMatch = isSequenceMatch(lower, inputVec, charToPos);
-            float seqPenalty = seqMatch ? 0f : -0.4f;
             boolean isPredicted = predictionSet != null && predictionSet.contains(lower);
             float predBonus = isPredicted ? 0.15f : 0f;
             float lenPenalty = -Math.abs(inputLength - e.pathLen) * 0.4f;
             Integer ub = sUserBoost.get(lower);
             float userBonus = ub != null ? sUserBoostCache[ub] : 0f;
 
-            float bonuses = e.freqBonus + seqPenalty + predBonus + lenPenalty + userBonus;
-            float maxL2 = (threshold == -Float.MAX_VALUE) ? Float.MAX_VALUE : (bonuses - threshold);
-            float distance;
-            if (maxL2 <= 0f) {
-                distance = Float.MAX_VALUE;
-            } else {
-                distance = l2(inputVec, candidatePath, maxL2);
+            float bonuses = e.freqBonus + predBonus + lenPenalty + userBonus;
+            if (bonuses < threshold) {
+                continue;
             }
-            float score = -distance + bonuses;
-            scores[i] = score;
-            order[i] = i;
 
+            boolean seqMatch = isSequenceMatch(lower, inputVec, charToPos);
+            float seqPenalty = seqMatch ? 0f : -0.4f;
+            float scoreWithSeq = bonuses + seqPenalty;
+            if (scoreWithSeq < threshold) {
+                continue;
+            }
+
+            e.unpackPath(candidatePath);
+            float maxL2 = (threshold == -Float.MAX_VALUE) ? Float.MAX_VALUE : (scoreWithSeq - threshold);
+            float distance = l2(inputVec, candidatePath, maxL2);
+            float score = -distance + scoreWithSeq;
+
+            scores[count] = score;
+            order[count] = i;
+            count++;
 
             if (score > threshold) {
                 threshold = updateThreshold(topScores, score);
             }
         }
 
+        if (count == 0) return empty;
+
         // ponytail: primitive int sort with insertion sort for small N (fast for <500 items)
-        for (int i = 1; i < m; i++) {
+        for (int i = 1; i < count; i++) {
             int key = order[i];
-            float ks = scores[key];
+            float ks = scores[i];
             int j = i - 1;
-            while (j >= 0 && scores[order[j]] < ks) {
+            while (j >= 0 && scores[j] < ks) {
+                scores[j + 1] = scores[j];
                 order[j + 1] = order[j];
                 j--;
             }
+            scores[j + 1] = ks;
             order[j + 1] = key;
         }
 
-        int take = Math.min(maxResults, m);
+        int take = Math.min(maxResults, count);
         SuggestionResults result = new SuggestionResults(take, false, false);
         int baseScore = 1_000_000;
         for (int rank = 0; rank < take; rank++) {
@@ -487,29 +523,27 @@ public class SwipeGestureEngine {
         return len;
     }
 
-    static float[][] buildCharToPos(Keyboard keyboard) {
-        float[][] map = new float[26][2];
+    static Map<Character, float[]> buildCharToPos(Keyboard keyboard) {
+        Map<Character, float[]> map = new HashMap<>();
         float kw = keyboard.mOccupiedWidth, kh = keyboard.mOccupiedHeight;
         for (Key key : keyboard.getSortedKeys()) {
             int code = key.getCode();
-            if (!isAsciiLetter(code)) continue;
-            int idx = Character.toLowerCase((char) code) - 'a';
+            if (code <= 0) continue;
+            char c = Character.toLowerCase((char) code);
             Rect hitBox = key.getHitBox();
-            map[idx][0] = hitBox.exactCenterX() / kw;
-            map[idx][1] = hitBox.exactCenterY() / kh;
+            map.put(c, new float[]{hitBox.exactCenterX() / kw, hitBox.exactCenterY() / kh});
         }
         return map;
     }
 
-    static float[] wordPath(String word, float[][] charToPos) {
+    static float[] wordPath(String word, Map<Character, float[]> charToPos) {
         float[] pts = new float[word.length() * 2];
         int count = 0;
         float lastX = -1f, lastY = -1f;
         for (int i = 0; i < word.length(); i++) {
             char c = word.charAt(i);
-            int idx = c - 'a';
-            if (idx < 0 || idx >= 26) continue;
-            float[] p = charToPos[idx];
+            float[] p = charToPos.get(c);
+            if (p == null) continue;
             if (count == 0 || p[0] != lastX || p[1] != lastY) {
                 pts[2 * count] = p[0];
                 pts[2 * count + 1] = p[1];
@@ -600,27 +634,27 @@ public class SwipeGestureEngine {
         if (n < 6) return false;
         int[] xs = pointers.getXCoordinates();
         int[] ys = pointers.getYCoordinates();
-
+        
         // Look at the last min(n/2, 10) points
         int pointsToCheck = Math.min(n / 2, 10);
         if (pointsToCheck < 4) pointsToCheck = 4;
         int startIdx = n - pointsToCheck;
-
+        
         float pathLen = 0f;
         for (int i = startIdx; i < n - 1; i++) {
             float dx = xs[i+1] - xs[i];
             float dy = ys[i+1] - ys[i];
             pathLen += (float) Math.sqrt(dx * dx + dy * dy);
         }
-
+        
         float startEndX = xs[n - 1] - xs[startIdx];
         float startEndY = ys[n - 1] - ys[startIdx];
         float displacement = (float) Math.sqrt(startEndX * startEndX + startEndY * startEndY);
-
+        
         float kw = keyboard.mOccupiedWidth;
         // Make sure the loop is physically large enough to be a deliberate loop, not finger jitter
         if (pathLen < kw * 0.02f) return false;
-
+        
         return pathLen > 2.0f * displacement;
     }
 }

@@ -1,6 +1,7 @@
 - Switch directly to a configured keyboard and subtype, including on Android 6–8.
 - Save and restore up to five custom layout slots.
-- Configure auto-correct triggers and hide multi-word suggestions.
+- Configure auto-correct, first-word, next-word, and multi-word suggestions.
+- Manage background services and optional immediate suggestion spacing.
 - Keep ordinary lowercase words lowercase when typing or swiping without Shift.
 - Faster, lower-memory built-in gesture typing with corrected suggestion casing.
 - Updated the dictionary download catalog and improved Text Expander and blacklist reliability.

@@ -51,6 +51,13 @@ object Defaults {
     
     const val PREF_SPLIT_TOOLBAR = false
     const val PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR = true
+    const val PREF_USE_SYSTEM_EMOJI = false
+
+    const val PREF_ENABLE_SPELL_CHECKER_SERVICE = true
+    const val PREF_ENABLE_CONTACTS_OBSERVER = false
+    const val PREF_ENABLE_CLIPBOARD_LISTENER = true
+    const val PREF_ENABLE_SMS_OTP_RECEIVER = false
+    const val PREF_ENABLE_APP_SYNC_LISTENER = false
 
 
     private const val DEFAULT_SIZE_SCALE = 1.0f // 100%
@@ -90,8 +97,10 @@ object Defaults {
     const val PREF_SHOW_LANGUAGE_SWITCH_KEY = false
     const val PREF_LANGUAGE_SWITCH_KEY = "internal"
     const val PREF_DIRECT_IME_SWITCH_TARGET = ""
+    const val PREF_APP_LANGUAGE = ""
     const val PREF_SHOW_EMOJI_KEY = false
     const val PREF_VARIABLE_TOOLBAR_DIRECTION = true
+    const val PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD = false
     const val PREF_ADDITIONAL_SUBTYPES = "de${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwerty${Separators.SETS}" +
             "fr${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwertz${Separators.SETS}" +
             "hu${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwerty"
@@ -130,12 +139,17 @@ object Defaults {
     const val PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION = false
     const val PREF_ALWAYS_INCOGNITO_MODE = false
     const val PREF_BIGRAM_PREDICTIONS = true
+    const val PREF_PRIORITIZE_PERSONAL_SUGGESTIONS = false
+    const val PREF_NEXT_WORD_BOOST_LEVEL = "500"
+    const val PREF_NEXT_WORD_STRICT_NGRAM = false
+    const val PREF_IMMEDIATE_AUTO_SPACE = false
+    const val PREF_FIRST_WORD_PREDICTIONS = true
     const val PREF_SUGGEST_PUNCTUATION = false
     const val PREF_SUGGEST_CLIPBOARD_CONTENT = true
     const val PREF_SUGGEST_SCREENSHOTS = false
     const val PREF_COMPRESS_SCREENSHOTS = true
     const val PREF_AUTO_READ_OTP = false
-    const val PREF_GESTURE_INPUT = true
+    const val PREF_GESTURE_INPUT = false
     // ponytail: gesture method default value
     const val PREF_GESTURE_METHOD = "fallback"
     const val PREF_VIBRATION_DURATION_SETTINGS = -1
@@ -235,17 +249,17 @@ object Defaults {
     const val PREF_DISABLE_NETWORK = false
     const val PREF_TOOLBAR_MODE = "EXPANDABLE"
     const val PREF_TOOLBAR_HIDING_GLOBAL = true
-    const val PREF_QUICK_PIN_TOOLBAR_KEYS = true
+    const val PREF_QUICK_PIN_TOOLBAR_KEYS = false
     const val PREF_TOOLBAR_LONG_PRESS_HINT = true
     val PREF_PINNED_TOOLBAR_KEYS = defaultPinnedToolbarPref
     val PREF_TOOLBAR_KEYS = defaultToolbarPref
     const val PREF_AUTO_SHOW_TOOLBAR = false
     const val PREF_AUTO_SHOW_TOOLBAR_ON_SELECT = false
     const val PREF_AUTO_HIDE_TOOLBAR = true
+    const val PREF_TOOLBAR_SWIPE_DOWN_DISMISS = false
     const val PREF_AUTO_HIDE_PINNED_KEYS = true
     const val PREF_REMEMBER_TOOLBAR_STATE = false
     const val PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE = false
-    const val PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD = false
     const val PREF_TOOLBAR_EXPANDED = false
     val PREF_CLIPBOARD_TOOLBAR_KEYS = defaultClipboardToolbarPref
     const val PREF_ABC_AFTER_EMOJI = false

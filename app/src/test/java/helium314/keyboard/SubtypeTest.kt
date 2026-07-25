@@ -15,6 +15,7 @@ import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional
 import helium314.keyboard.latin.utils.prefs
 import org.junit.runner.RunWith
+import java.util.Locale
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -40,6 +41,23 @@ class SubtypeTest {
         params.mId = KeyboardLayoutSet.getFakeKeyboardId(KeyboardId.ELEMENT_ALPHABET)
         params.mPopupKeyTypes.add(POPUP_KEYS_LAYOUT)
         addLocaleKeyTextsToParams(latinIME, params, POPUP_KEYS_NORMAL)
+    }
+
+    @Test fun testGetDictionaryLocales() {
+        val prefs = latinIME.prefs()
+        prefs.edit().putString(Settings.PREF_ENABLED_SUBTYPES, "").apply()
+        SubtypeSettings.reloadEnabledSubtypes(latinIME)
+
+        val enSubtype = SubtypeSettings.getResourceSubtypesForLocale("en_US".constructLocale()).first()
+        val frSubtype = SubtypeSettings.getResourceSubtypesForLocale("fr".constructLocale()).first()
+
+        SubtypeSettings.addEnabledSubtype(prefs, enSubtype)
+        SubtypeSettings.addEnabledSubtype(prefs, frSubtype)
+        SubtypeSettings.reloadEnabledSubtypes(latinIME)
+
+        val locales = helium314.keyboard.latin.utils.getDictionaryLocales(latinIME)
+        assertTrue(locales.contains("en_US".constructLocale()))
+        assertTrue(locales.contains("fr".constructLocale()))
     }
 
     @Test fun emptyAdditionalSubtypesResultsInEmptyList() {

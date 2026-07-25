@@ -26,6 +26,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import kotlin.concurrent.thread
+import helium314.keyboard.latin.utils.ExecutorUtils
 import helium314.keyboard.latin.utils.prefs
 
 class ClipboardHistoryManager(
@@ -39,9 +40,18 @@ class ClipboardHistoryManager(
     // allocating a fresh Handler on every postDelayed().
     private val mainHandler = Handler(Looper.getMainLooper())
     private var clipboardSuggestionView: View? = null
-    private var clipboardDao: ClipboardDao? = null
+    private var _clipboardDao: ClipboardDao? = null
+    private var clipboardDao: ClipboardDao?
+        get() {
+            if (_clipboardDao == null || _clipboardDao?.isClosed == true) {
+                _clipboardDao = ClipboardDao.getInstance(latinIME)
+            }
+            return _clipboardDao
+        }
+        set(value) {
+            _clipboardDao = value
+        }
     private var dontShowCurrentSuggestion: Boolean = false
-    private var mediaStoreObserver: ContentObserver? = null
     // ponytail: track last clip state to avoid resetting dismiss state on duplicate events
     private var lastPrimaryClipText: String? = null
     private var lastPrimaryClipUri: String? = null
@@ -69,7 +79,7 @@ class ClipboardHistoryManager(
             return
         }
 
-        thread {
+        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
             val projection = mutableListOf(
                 android.provider.MediaStore.Images.Media._ID,
                 android.provider.MediaStore.Images.Media.DISPLAY_NAME,
@@ -126,7 +136,7 @@ class ClipboardHistoryManager(
                                 if (onComplete != null) {
                                     mainHandler.post { onComplete() }
                                 }
-                                return@thread
+                                return@execute
                             }
                         } else {
                             break
@@ -143,9 +153,21 @@ class ClipboardHistoryManager(
         }
     }
 
+    fun stopListening() {
+        try {
+            if (::clipboardManager.isInitialized) {
+                clipboardManager.removePrimaryClipChangedListener(this)
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
+    }
+
     fun onCreate() {
         clipboardManager = latinIME.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboardManager.addPrimaryClipChangedListener(this)
+        if (latinIME.prefs().getBoolean(helium314.keyboard.latin.settings.Settings.PREF_ENABLE_CLIPBOARD_LISTENER, helium314.keyboard.latin.settings.Defaults.PREF_ENABLE_CLIPBOARD_LISTENER)) {
+            clipboardManager.addPrimaryClipChangedListener(this)
+        }
         clipboardDao = ClipboardDao.getInstance(latinIME)
         // ponytail: initialize last clip state
         try {
@@ -159,37 +181,21 @@ class ClipboardHistoryManager(
             // Ignore
         }
         if (latinIME.mSettings.current.mClipboardHistoryEnabled)
-            thread { fetchPrimaryClip() }
-        thread { cleanUpImageCache() }
+            ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute { fetchPrimaryClip() }
+        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute { cleanUpImageCache() }
         if (latinIME.mSettings.current.mSuggestScreenshots) {
             updateLatestScreenshotCache()
         }
-        registerMediaStoreObserver()
     }
 
-    private fun registerMediaStoreObserver() {
-        if (mediaStoreObserver == null) {
-            mediaStoreObserver = object : ContentObserver(mainHandler) {
-                override fun onChange(selfChange: Boolean, uri: Uri?) {
-                    super.onChange(selfChange, uri)
-                    if (latinIME.mSettings.current.mSuggestScreenshots) {
-                        mainHandler.postDelayed({
-                            updateLatestScreenshotCache {
-                                dontShowCurrentSuggestion = false
-                                val prefs = latinIME.prefs()
-                                prefs.edit().remove("last_dismissed_screenshot_uri").apply()
-                                latinIME.setNeutralSuggestionStrip()
-                            }
-                        }, 1000)
-                    }
-                }
-            }
-            latinIME.contentResolver.registerContentObserver(
-                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                true,
-                mediaStoreObserver!!
-            )
+    fun onStartInputView() {
+        if (latinIME.mSettings.current.mSuggestScreenshots) {
+            updateLatestScreenshotCache()
         }
+    }
+
+    fun onFinishInputView() {
+        mainHandler.removeCallbacksAndMessages(null)
     }
 
     private fun cleanUpImageCache() {
@@ -211,10 +217,7 @@ class ClipboardHistoryManager(
 
     fun onDestroy() {
         clipboardManager.removePrimaryClipChangedListener(this)
-        mediaStoreObserver?.let {
-            latinIME.contentResolver.unregisterContentObserver(it)
-            mediaStoreObserver = null
-        }
+        mainHandler.removeCallbacksAndMessages(null)
     }
 
     override fun onPrimaryClipChanged() {
@@ -251,7 +254,7 @@ class ClipboardHistoryManager(
                 lastPrimaryClipUri = currentUri
                 lastPrimaryClipTimestamp = currentTimestamp
 
-                thread { fetchPrimaryClip() }
+                ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute { fetchPrimaryClip() }
                 dontShowCurrentSuggestion = false
                 val prefs = latinIME.prefs()
                 prefs.edit().remove("last_dismissed_clipboard_text").apply()
@@ -536,7 +539,7 @@ class ClipboardHistoryManager(
 
         if (!isAlreadySuggested) {
             if (latinIME.mSettings.current.mClipboardHistoryEnabled) {
-                thread {
+                ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
                     val cachedPath = cacheImage(contentUri)
                     if (cachedPath != null) {
                         mainHandler.post {

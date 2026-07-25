@@ -402,7 +402,7 @@ class HandwritingView @JvmOverloads constructor(
         button.isEnabled = false
         android.widget.Toast.makeText(context, "Downloading Handwriting Plugin...", android.widget.Toast.LENGTH_SHORT).show()
 
-        java.util.concurrent.Executors.newSingleThreadExecutor().execute {
+        recognitionExecutor.execute {
             try {
                 val urlStr = "https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest/download/handwriting_plugin.apk"
                 var url = java.net.URL(urlStr)
@@ -440,7 +440,7 @@ class HandwritingView @JvmOverloads constructor(
                 val success = HandwritingLoader.importPlugin(context, android.net.Uri.fromFile(tempFile))
                 tempFile.delete()
 
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                mainHandler.post {
                     button.isEnabled = true
                     if (success) {
                         button.text = "Success"
@@ -459,7 +459,7 @@ class HandwritingView @JvmOverloads constructor(
                 }
             } catch (e: Exception) {
                 Log.e("HandwritingView", "Failed to download plugin", e)
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                mainHandler.post {
                     button.isEnabled = true
                     button.text = "Download Plugin"
                     android.widget.Toast.makeText(context, "Download failed: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
