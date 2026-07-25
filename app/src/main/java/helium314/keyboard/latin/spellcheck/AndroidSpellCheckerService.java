@@ -142,7 +142,21 @@ public final class AndroidSpellCheckerService extends SpellCheckerService
         return new SuggestionsInfo(SuggestionsInfo.RESULT_ATTR_IN_THE_DICTIONARY, EMPTY_STRING_ARRAY);
     }
 
+    public void releaseMemory() {
+        mSemaphore.acquireUninterruptibly(MAX_NUM_OF_THREADS_READ_DICTIONARY);
+        try {
+            mDictionaryFacilitatorCache.closeDictionaries();
+        } finally {
+            mSemaphore.release(MAX_NUM_OF_THREADS_READ_DICTIONARY);
+        }
+        mKeyboardCache.clear();
+    }
+
     public boolean isValidWord(final Locale locale, final String word) {
+        final SharedPreferences prefs = KtxKt.prefs(this);
+        if (!prefs.getBoolean(Settings.PREF_ENABLE_SPELL_CHECKER_SERVICE, Defaults.PREF_ENABLE_SPELL_CHECKER_SERVICE)) {
+            return true;
+        }
         mSemaphore.acquireUninterruptibly();
         try {
             DictionaryFacilitator dictionaryFacilitatorForLocale = mDictionaryFacilitatorCache.get(locale);

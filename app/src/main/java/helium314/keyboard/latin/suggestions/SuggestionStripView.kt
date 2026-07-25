@@ -387,6 +387,9 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
         toolbarExpandKey.scaleX = (if (toolbarVisible && !locked) -1f else 1f) * direction
 
+        applyToolbarKeyLayoutParams(toolbarVisible && !locked)
+        toolbarContainer.post { applyToolbarKeyLayoutParams(toolbarContainer.isVisible) }
+
         if (saveState && Settings.getValues().mRememberToolbarState) {
             context.prefs().edit().putBoolean(Settings.PREF_TOOLBAR_EXPANDED, toolbarVisible).apply()
         }
@@ -826,21 +829,25 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         pinnedKeys.findViewWithTag<View>(ToolbarKey.VOICE)?.isVisible = show
     }
 
-    private fun getLanguageHistory(prefs: SharedPreferences): List<Pair<String, String>> {
-        val historyString = prefs.getString("pref_translation_language_history", "") ?: ""
-        if (historyString.isEmpty()) return emptyList()
-        return historyString.split("\n").mapNotNull {
-            val parts = it.split("|", limit = 2)
-            if (parts.size == 2) parts[1] to parts[0] else null
-        }
-    }
+    private fun getLanguageHistory(prefs: SharedPreferences) = helium314.keyboard.latin.utils.TranslationUtils.getLanguageHistory(prefs)
 
-    private fun saveLanguageHistory(prefs: SharedPreferences, name: String, code: String) {
-        val currentHistory = getLanguageHistory(prefs).toMutableList()
-        currentHistory.removeAll { it.second == code }
-        currentHistory.add(0, name to code)
-        val serialized = currentHistory.joinToString("\n") { "${it.second}|${it.first}" }
-        prefs.edit().putString("pref_translation_language_history", serialized).apply()
+    private fun saveLanguageHistory(prefs: SharedPreferences, name: String, code: String) = helium314.keyboard.latin.utils.TranslationUtils.saveLanguageHistory(prefs, name, code)
+
+    private fun removeLanguageHistory(prefs: SharedPreferences, code: String) = helium314.keyboard.latin.utils.TranslationUtils.removeLanguageHistory(prefs, code)
+
+    private fun isSameLanguage(p1: Pair<String, String>, p2: Pair<String, String>) = helium314.keyboard.latin.utils.TranslationUtils.isSameLanguage(p1, p2)
+
+    private fun showDialogForIme(builder: android.app.AlertDialog.Builder) {
+        val dialog = builder.create()
+        val window = dialog.window
+        if (window != null) {
+            val lp = window.attributes
+            lp.token = windowToken
+            lp.type = android.view.WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+            window.attributes = lp
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+        }
+        dialog.show()
     }
 
     fun showTranslateLanguageSelector() {
@@ -865,21 +872,32 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val currentLanguageName = prefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, currentLanguageCode) ?: currentLanguageCode
         
         val history = getLanguageHistory(prefs).toMutableList()
-        if (currentLanguageCode.isNotEmpty() && history.none { it.second == currentLanguageCode }) {
-            history.add(0, currentLanguageName to currentLanguageCode)
+        if (currentLanguageCode.isNotEmpty() && currentLanguageCode != "custom") {
+            val currentPair = currentLanguageName to currentLanguageCode
+            if (history.none { isSameLanguage(it, currentPair) }) {
+                history.add(0, currentPair)
+            }
         }
 
         val list = mutableListOf<Pair<String, String>>()
-        list.addAll(history)
-        val historyCodes = history.map { it.second }.toSet()
+        for (item in history) {
+            if (list.none { isSameLanguage(it, item) }) {
+                list.add(item)
+            }
+        }
         for (item in defaultList) {
-            if (item.second !in historyCodes) {
+            if (list.none { isSameLanguage(it, item) }) {
                 list.add(item)
             }
         }
 
+        val removed = helium314.keyboard.latin.utils.TranslationUtils.getRemovedLanguages(prefs)
+        val filteredList = list.filter { 
+            it.first.lowercase() !in removed && it.second.lowercase() !in removed 
+        }
+
         // Create a button for each language
-        for ((languageName, languageCode) in list) {
+        for ((languageName, languageCode) in filteredList) {
             val button = android.widget.TextView(context, null, R.attr.suggestionWordStyle).apply {
                 text = languageName
                 gravity = android.view.Gravity.CENTER
@@ -905,6 +923,21 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 hideTranslateLanguageSelector()
                 listener.onCodeInput(KeyCode.TRANSLATE, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, false)
             }
+
+            button.setOnLongClickListener {
+                val builder = android.app.AlertDialog.Builder(context)
+                builder.setTitle(languageName)
+                builder.setMessage("Remove this language from translation list?")
+                builder.setPositiveButton("Remove") { dialog, _ ->
+                    removeLanguageHistory(prefs, languageCode)
+                    showTranslateLanguageSelector()
+                    dialog.dismiss()
+                }
+                builder.setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
+                showDialogForIme(builder)
+                true
+            }
+
             button.setBackgroundResource(R.drawable.toolbar_key_background)
             val colors = Settings.getValues().mColors
             colors.setColor(button.background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
@@ -912,53 +945,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             languageList.addView(button)
         }
 
-        // Setup Custom... button
-        val customButton = android.widget.TextView(context, null, R.attr.suggestionWordStyle).apply {
-            text = "Custom..."
-            gravity = android.view.Gravity.CENTER
-            setPadding(8.dpToPx(resources), 0, 8.dpToPx(resources), 0)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-            setSingleLine()
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            minimumWidth = 100.dpToPx(resources)
-        }
-        customButton.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.MATCH_PARENT
-        ).apply { gravity = android.view.Gravity.CENTER_VERTICAL }
-
-        customButton.setOnClickListener {
-            val builder = android.app.AlertDialog.Builder(context)
-            builder.setTitle("Custom Target Language")
-            val input = android.widget.EditText(context).apply {
-                setText(if (currentLanguageCode == "custom") "" else currentLanguageCode)
-                setSingleLine()
-            }
-            builder.setView(input)
-            builder.setPositiveButton("OK") { dialog, _ ->
-                val customLang = input.text.toString().trim()
-                if (customLang.isNotEmpty()) {
-                    prefs.edit().apply {
-                        putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, customLang)
-                        putString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, customLang)
-                    }.apply()
-                    saveLanguageHistory(prefs, customLang, customLang)
-                    helium314.keyboard.latin.utils.ProofreadService(context).setTargetLanguage(customLang)
-                    hideTranslateLanguageSelector()
-                    listener.onCodeInput(KeyCode.TRANSLATE, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, false)
-                }
-                dialog.dismiss()
-            }
-            builder.setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
-            builder.show()
-        }
-        customButton.setBackgroundResource(R.drawable.toolbar_key_background)
-        val colors = Settings.getValues().mColors
-        colors.setColor(customButton.background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
-        customButton.setTextColor(colors.get(ColorType.KEY_TEXT))
-        languageList.addView(customButton)
-
         // Setup close button
+        val colors = Settings.getValues().mColors
         translateLanguageCloseButton.setBackgroundResource(R.drawable.toolbar_key_background)
         val closePadding = 9.dpToPx(resources)
         translateLanguageCloseButton.setPadding(closePadding, closePadding, closePadding, closePadding)
@@ -1017,6 +1005,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
             updateVoiceKey() // Re-apply voice logic to pinned keys
             layoutHelper.setSuggestionsCountInStrip(5)
+            applyToolbarKeyLayoutParams(true)
+            toolbarContainer.post { applyToolbarKeyLayoutParams(true) }
         } else {
             toolbarExpandKey.isVisible = toolbarIsExpandable
             // Don't manage visibility here - let setToolbarVisibility handle it
@@ -1060,10 +1050,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                     wrapper.addView(dictDownloadButton, expandIndex + 1)
                 }
                 val colors = Settings.getValues().mColors
-                colors.setColor(dictDownloadButton!!, ColorType.TOOL_BAR_KEY)
-                dictDownloadButton?.setBackgroundResource(R.drawable.toolbar_key_background)
-                colors.setColor(dictDownloadButton!!.background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
-                dictDownloadButton?.isVisible = true
+                dictDownloadButton?.let { btn ->
+                    colors.setColor(btn, ColorType.TOOL_BAR_KEY)
+                    btn.setBackgroundResource(R.drawable.toolbar_key_background)
+                    btn.background?.let { bg -> colors.setColor(bg, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND) }
+                    btn.isVisible = true
+                }
             } else {
                 dictDownloadButton?.isVisible = false
             }
@@ -1112,7 +1104,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             } else {
                 getEnabledToolbarKeys(context.prefs()).filterNot { it in pinnedKeysList }
             }
-            for (key in keysToRender) {                val button = createToolbarKey(context, key)
+            for (key in keysToRender) {
+                val button = createToolbarKey(context, key)
                 button.layoutParams = toolbarKeyLayoutParams
                 setupKey(button, colors)
                 toolbar.addView(button)
@@ -1131,6 +1124,29 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         updateVoiceKey()
         setToolbarButtonsActivatedState(toolbar)
         setToolbarButtonsActivatedState(pinnedKeys)
+        applyToolbarKeyLayoutParams(toolbarContainer.isVisible)
+        toolbarContainer.post { applyToolbarKeyLayoutParams(toolbarContainer.isVisible) }
+    }
+
+    private fun applyToolbarKeyLayoutParams(isExpanded: Boolean) {
+        val count = toolbar.childCount
+        if (count == 0) return
+        val containerWidth = toolbarContainer.width.takeIf { it > 0 } ?: toolbarContainer.measuredWidth
+        val singleKeyWidth = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
+        val totalKeysWidth = count * singleKeyWidth
+
+        val isSplit = Settings.getValues().mSplitToolbar
+        val isToolbarVisible = toolbarContainer.isVisible && (isExpanded || isSplit)
+        val useEqualSpacing = isToolbarVisible && containerWidth > 0 && totalKeysWidth <= containerWidth
+
+        for (i in 0 until count) {
+            val child = toolbar.getChildAt(i) ?: continue
+            child.layoutParams = if (useEqualSpacing) {
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+            } else {
+                toolbarKeyLayoutParams
+            }
+        }
     }
 
     private fun updateSplitToolbarState() {
@@ -1168,7 +1184,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         suggestionsStrip.removeAllViews()
 
         val colors = Settings.getValues().mColors
-        val customTypeface = Settings.getInstance().customTypeface
+        val customTypeface = Settings.getInstance().customEmojiTypeface
         val stripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
 
         // Create a horizontal scroll container for emojis

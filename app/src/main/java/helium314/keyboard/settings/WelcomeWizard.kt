@@ -227,24 +227,21 @@ fun WelcomeWizard(
                     var showDialog by remember { mutableStateOf(false) }
                     val allSubtypes = remember { SubtypeSettings.getAllAvailableSubtypes() }
                     var enabledSubtypes by remember { mutableStateOf(SubtypeSettings.getEnabledSubtypes(true)) }
-
                     val gestureMethods = listOf(
                         stringResource(R.string.gesture_method_native) to "native",
-                        stringResource(R.string.gesture_method_fallback) to "fallback"
+                        stringResource(R.string.gesture_method_fallback) to "fallback",
                     )
                     var selectedMethod by remember {
-                        mutableStateOf(
-                            ctx.prefs().getString(
-                                Settings.PREF_GESTURE_METHOD,
-                                "fallback"
-                            )!!
-                        )
+                        mutableStateOf(ctx.prefs().getString(
+                            Settings.PREF_GESTURE_METHOD,
+                            Defaults.PREF_GESTURE_METHOD,
+                        ) ?: Defaults.PREF_GESTURE_METHOD)
                     }
 
                     Step(
                         3,
                         "Language & Input Selection",
-                        "Configure your typing languages and choose the gesture typing engine type.",
+                        "Configure your typing languages and gesture engine.",
                         "Next",
                         painterResource(R.drawable.sym_keyboard_language_switch),
                         { step++ },
@@ -314,8 +311,8 @@ fun WelcomeWizard(
                             )
                         }
 
-                        Spacer(Modifier.height(16.dp))
 
+                        Spacer(Modifier.height(16.dp))
                         WithSmallTitle("Gesture Typing Engine") {
                             Column(
                                 modifier = Modifier
@@ -325,24 +322,25 @@ fun WelcomeWizard(
                             ) {
                                 DropDownField(
                                     items = gestureMethods,
-                                    selectedItem = gestureMethods.firstOrNull { it.second == selectedMethod } ?: gestureMethods.first(),
+                                    selectedItem = gestureMethods.firstOrNull { it.second == selectedMethod }
+                                        ?: gestureMethods.last(),
                                     onSelected = { pair ->
                                         selectedMethod = pair.second
                                         ctx.prefs().edit { putString(Settings.PREF_GESTURE_METHOD, pair.second) }
                                         refreshTrigger++
-                                    }
+                                    },
                                 ) { pair ->
                                     Text(pair.first, style = MaterialTheme.typography.bodyLarge)
                                 }
                                 Spacer(Modifier.height(8.dp))
                                 Text(
                                     text = if (selectedMethod == "native") {
-                                        "Note: Native engine provides high performance but requires swypelib to be downloaded in the next step."
+                                        "Native engine requires a compatible gesture library."
                                     } else {
-                                        "Note: Pure-Java engine works out of the box (Experimental)."
+                                        "Fallback engine works without an external gesture library."
                                     },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -360,8 +358,11 @@ fun WelcomeWizard(
                         val trigger = refreshTrigger // Force recomposition
                         val locale = helium314.keyboard.latin.RichInputMethodManager.getInstance().currentSubtype.locale
                         val emojiLibInstalled = java.io.File(helium314.keyboard.latin.utils.DictionaryInfoUtils.getCacheDirectoryForLocale(locale, ctx), "emoji_${locale.language}.dict").exists()
-                        val gestureLibInstalled = java.io.File(ctx.filesDir, "libjni_latinime.so").exists() || JniUtils.sHaveGestureLib
-                        val showGestureDownload = ctx.prefs().getString(Settings.PREF_GESTURE_METHOD, "fallback") == "native"
+                        val gestureLibInstalled = java.io.File(ctx.filesDir, "libjni_latinime.so").exists() || JniUtils.sHaveNativeGestureLib
+                        val showGestureDownload = ctx.prefs().getString(
+                            Settings.PREF_GESTURE_METHOD,
+                            Defaults.PREF_GESTURE_METHOD,
+                        ) == "native"
 
                         Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)) {
                             LoadEmojiLibPreference(

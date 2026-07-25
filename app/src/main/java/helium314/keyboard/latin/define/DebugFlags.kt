@@ -58,7 +58,7 @@ $stackTrace
 Last log:
 ${Log.getLog(100).joinToString("\n")}
 """)
-        defaultUncaughtExceptionHandler!!.uncaughtException(t, e)
+        defaultUncaughtExceptionHandler?.uncaughtException(t, e)
     }
 
     private fun writeCrashReportToFile(text: String) {

@@ -18,7 +18,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Fallback gesture suggestions no longer leak dictionary capitalization** when Shift is off; the Java gesture engine now emits canonical lowercase candidates before the existing suggestion presentation-casing layer. (#118)
 
 ### Upstream
-- Merged **LeanBitLab/LeanType v3.9.9** (pinned at `adb7c3755`, including v3.9.6–v3.9.8) — adds system-emoji and app-language settings, multi-row number rows, toolbar swipe-to-dismiss, translation and spellcheck improvements, asynchronous fallback-gesture indexing, dictionary upgrade preservation, and native dictionary crash/ANR fixes. Fork identity (`LeanTypeDual`, distinct `applicationId`, privacy tiers, and fork-specific features) is preserved. (#121)
+- Merged **LeanBitLab/LeanType v4.0.2** (pinned at `0477ef83`, including v4.0.0/v4.0.1) — adds JNI and lifecycle hardening, first-word and next-word controls, background-service controls, immediate autospace, translation-history improvements, and pointer/input-connection stability fixes. LeanTypeDual retains its Java fallback gesture engine, distinct `applicationId`, privacy tiers, two-thumb behavior, and fork-owned release metadata. (#123)
 
 ## [3.10.0] - 2026-06-20
 

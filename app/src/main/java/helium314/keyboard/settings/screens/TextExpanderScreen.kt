@@ -79,6 +79,10 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
         mutableStateOf(TextExpanderUtils.isImmediateEnabled(context))
     }
 
+    var isBackspaceRevertsEnabled by remember {
+        mutableStateOf(TextExpanderUtils.isBackspaceRevertsEnabled(context))
+    }
+
     var shortcutsMap by remember {
         mutableStateOf(TextExpanderUtils.getShortcuts(context))
     }
@@ -321,6 +325,15 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                         description = "Expand shortcuts immediately without pressing space.",
                         enabled = isExpanderEnabled,
                         onCheckedChange = { isImmediateEnabled = it }
+                    )
+
+                    SwitchPreference(
+                        name = "Backspace undoes expansion",
+                        key = TextExpanderUtils.PREF_BACKSPACE_REVERTS,
+                        default = false,
+                        description = "Revert expanded text back to shortcut on backspace.",
+                        enabled = isExpanderEnabled,
+                        onCheckedChange = { isBackspaceRevertsEnabled = it }
                     )
 
                     SwitchPreference(

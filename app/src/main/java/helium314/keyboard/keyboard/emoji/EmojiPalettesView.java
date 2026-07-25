@@ -1165,7 +1165,7 @@ public final class EmojiPalettesView extends LinearLayout
 
         Toast.makeText(getContext(), "Downloading Emoji Dictionary...", Toast.LENGTH_SHORT).show();
 
-        java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+        helium314.keyboard.latin.utils.ExecutorUtils.getBackgroundExecutor(helium314.keyboard.latin.utils.ExecutorUtils.KEYBOARD).execute(() -> {
             try {
                 java.net.URL url = new java.net.URL(urlStr);
                 java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
@@ -1191,13 +1191,21 @@ public final class EmojiPalettesView extends LinearLayout
                         }
                     }
 
+                    // Save download preference so AppUpgrade and cleanUnusedMainDicts do not delete it
+                    android.content.SharedPreferences prefs = helium314.keyboard.latin.utils.DeviceProtectedUtils.getSharedPreferences(getContext());
+                    prefs.edit()
+                            .putString("pref_dict_download_link_emoji_" + locale.toString(), urlStr)
+                            .putString("pref_dict_download_link_emoji_" + locale.toLanguageTag(), urlStr)
+                            .apply();
+
                     // Success! Switch back to UI thread
                     EmojiPalettesView.this.post(() -> {
                         Toast.makeText(getContext(), "Emoji dictionary installed!", Toast.LENGTH_SHORT).show();
+                        closeDictionaryFacilitator();
                         initDictionaryFacilitator();
                         mIsDownloadingEmojiDict = false;
+                        updateSplitToolbarEmojiSuggestions();
                         if (mInSearchMode) {
-                            // ponytail: close search mode automatically on successful dictionary download
                             stopSearchMode();
                         }
                     });

@@ -83,9 +83,9 @@ fun ToolbarScreen(
         if (toolbarMode == ToolbarMode.EXPANDABLE && !isSplitToolbar) Settings.PREF_AUTO_HIDE_TOOLBAR else null,
         if (toolbarMode == ToolbarMode.EXPANDABLE && !isSplitToolbar) Settings.PREF_AUTO_HIDE_PINNED_KEYS else null,
         if (toolbarMode == ToolbarMode.EXPANDABLE) Settings.PREF_REMEMBER_TOOLBAR_STATE else null,
+        if (toolbarMode != ToolbarMode.HIDDEN) Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD else null,
         if (toolbarMode != ToolbarMode.HIDDEN) Settings.PREF_VARIABLE_TOOLBAR_DIRECTION else null,
         if (toolbarMode != ToolbarMode.HIDDEN) Settings.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE else null,
-        if (toolbarMode != ToolbarMode.HIDDEN) Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD else null,
         Settings.PREF_TOOLBAR_SWIPE_DOWN_DISMISS,
     )
     SearchSettingsScreen(
@@ -181,6 +181,13 @@ fun createToolbarSettings(context: Context): List<Setting> {
         {
             SwitchPreference(it, Defaults.PREF_TOOLBAR_SWIPE_DOWN_DISMISS)
         },
+        Setting(context, Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD,
+            R.string.toolbar_only_with_hw_keyboard, R.string.toolbar_only_with_hw_keyboard_summary)
+        {
+            SwitchPreference(it, Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD) {
+                KeyboardSwitcher.getInstance().setThemeNeedsReload() // necessary for updating insets
+            }
+        },
         Setting(context, Settings.PREF_VARIABLE_TOOLBAR_DIRECTION,
             R.string.var_toolbar_direction, R.string.var_toolbar_direction_summary)
         {
@@ -212,11 +219,6 @@ fun createToolbarSettings(context: Context): List<Setting> {
             R.string.toolbar_swipe_down_to_hide, R.string.toolbar_swipe_down_to_hide_summary)
         {
             SwitchPreference(it, Defaults.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE)
-        },
-        Setting(context, Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD,
-            R.string.toolbar_only_with_hw_keyboard, R.string.toolbar_only_with_hw_keyboard_summary)
-        {
-            SwitchPreference(it, Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD)
         },
         if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
             Setting(

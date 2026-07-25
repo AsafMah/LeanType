@@ -581,6 +581,9 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val proximityInfoHandle = keyboard.proximityInfo.nativeProximityInfo
 
         val dictionaryGroupsSnapshot = dictionaryGroups
+        if (dictionaryGroupsSnapshot.isEmpty()) {
+            return SuggestionResults(SuggestedWords.MAX_SUGGESTIONS, ngramContext.isBeginningOfSentenceContext, false)
+        }
         val waitForOtherDicts = if (dictionaryGroupsSnapshot.size == 1) null else CountDownLatch(dictionaryGroupsSnapshot.size - 1)
         val suggestionsArray = Array<List<SuggestedWordInfo>?>(dictionaryGroupsSnapshot.size) { null }
         for (i in 1..dictionaryGroupsSnapshot.lastIndex) {
@@ -602,12 +605,16 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             }
         }
         val primaryDictionaryWeight = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
-        suggestionsArray[0] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
-            proximityInfoHandle, primaryDictionaryWeight, dictionaryGroupsSnapshot[0], dictionaryGroupsSnapshot)
+        try {
+            suggestionsArray[0] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
+                proximityInfoHandle, primaryDictionaryWeight, dictionaryGroupsSnapshot[0], dictionaryGroupsSnapshot)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying primary dictionary for locale ${dictionaryGroupsSnapshot[0].locale}", e)
+        }
         val suggestionResults = SuggestionResults(
             SuggestedWords.MAX_SUGGESTIONS, ngramContext.isBeginningOfSentenceContext, false
         )
-        waitForOtherDicts?.await()
+        waitForOtherDicts?.await(500, TimeUnit.MILLISECONDS)
 
         suggestionsArray.forEach {
             if (it == null) return@forEach
@@ -645,32 +652,34 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 settingsValuesForSuggestion, sessionId, weightForLocale, weightOfLangModelVsSpatialModel
             )
             if (composedData.mTypedWord.isEmpty() && (dictionarySuggestions == null || dictionarySuggestions.isEmpty())
-                && (dictType == Dictionary.TYPE_USER || dictType == Dictionary.TYPE_USER_HISTORY)
+                && dictType == Dictionary.TYPE_USER
             ) {
-                val allWords = try {
-                    dictionary.allWordsWithFrequency
-                } catch (e: Exception) {
-                    null
-                }
-                if (allWords != null && allWords.isNotEmpty()) {
-                    val topWords = allWords.entries
-                        .sortedByDescending { it.value }
-                        .take(15)
-                    val unigramSuggestions = ArrayList<SuggestedWordInfo>()
-                    for (entry in topWords) {
-                        unigramSuggestions.add(
-                            SuggestedWordInfo(
-                                entry.key,
-                                "",
-                                entry.value,
-                                SuggestedWordInfo.KIND_PREDICTION,
-                                dictionary,
-                                SuggestedWordInfo.NOT_AN_INDEX,
-                                SuggestedWordInfo.NOT_A_CONFIDENCE
-                            )
-                        )
+                if (!Settings.getValues().mNextWordStrictNgram && Settings.getValues().mPrioritizePersonalSuggestions) {
+                    val allWords = try {
+                        dictionary.allWordsWithFrequency
+                    } catch (e: Exception) {
+                        null
                     }
-                    dictionarySuggestions = unigramSuggestions
+                    if (allWords != null && allWords.isNotEmpty()) {
+                        val topWords = allWords.entries
+                            .sortedByDescending { it.value }
+                            .take(15)
+                        val unigramSuggestions = ArrayList<SuggestedWordInfo>()
+                        for (entry in topWords) {
+                            unigramSuggestions.add(
+                                SuggestedWordInfo(
+                                    entry.key,
+                                    "",
+                                    entry.value,
+                                    SuggestedWordInfo.KIND_PREDICTION,
+                                    dictionary,
+                                    SuggestedWordInfo.NOT_AN_INDEX,
+                                    SuggestedWordInfo.NOT_A_CONFIDENCE
+                                )
+                            )
+                        }
+                        dictionarySuggestions = unigramSuggestions
+                    }
                 }
             }
             if (dictionarySuggestions == null) continue
@@ -700,7 +709,12 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     continue
 
                 if (composedData.mTypedWord.isEmpty() && (dictType == Dictionary.TYPE_USER_HISTORY || dictType == Dictionary.TYPE_USER)) {
-                    val boostedScore = info.mScore + 1000
+                    val settingsValues = Settings.getValues()
+                    val boostedScore = if (settingsValues.mPrioritizePersonalSuggestions) {
+                        info.mScore + settingsValues.mNextWordBoostLevel
+                    } else {
+                        info.mScore
+                    }
                     val boostedInfo = SuggestedWordInfo(
                         info.mWord, info.mPrevWordsContext, boostedScore, info.mKindAndFlags,
                         info.mSourceDict, info.mIndexOfTouchPointOfSecondWord, info.mAutoCommitFirstWordConfidence

@@ -57,6 +57,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -263,7 +264,9 @@ private fun backupLauncher(
                 wait.countDown()
             }
         }
-        wait.await()
+        if (!wait.await(30, TimeUnit.SECONDS)) {
+            Log.w("AdvancedScreen", "Backup timed out")
+        }
     }
 }
 
@@ -392,7 +395,9 @@ private fun restoreLauncher(
                 wait.countDown()
             }
         }
-        wait.await()
+        if (!wait.await(30, TimeUnit.SECONDS)) {
+            Log.w("AdvancedScreen", "Restore timed out")
+        }
         AppUpgrade.checkVersionUpgrade(ctx)
         AppUpgrade.transferOldPinnedClips(ctx)
         Settings.getInstance().startListener()
@@ -534,7 +539,7 @@ private fun getCategoryForPrefKey(key: String): BackupCategory {
     }
     
     val dictKeys = setOf(
-        "use_personalized_dicts", "block_potentially_offensive", "next_word_prediction",
+        "use_personalized_dicts", "block_potentially_offensive", "next_word_prediction", "first_word_prediction",
         "suggest_emojis", "inline_emoji_search", "show_emoji_descriptions",
         "auto_correction", "more_auto_correction", "auto_correct_threshold",
         "autocorrect_shortcuts", "backspace_reverts_autocorrect", "suggest_punctuation",

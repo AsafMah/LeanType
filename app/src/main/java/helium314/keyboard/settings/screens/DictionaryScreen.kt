@@ -475,26 +475,13 @@ fun getUserAndInternalDictionaries(context: Context, locale: Locale): Pair<List<
     val userDicts = mutableListOf<File>()
     var hasInternalDict = false
 
-    var userLocaleDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { File(it) }
-    var hasFiles = userLocaleDir?.exists() == true && userLocaleDir.isDirectory && userLocaleDir.listFiles()?.any {
-        it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX) || it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX) || it.name.endsWith(".dict")
-    } == true
-
-    if (!hasFiles && (locale.country.isNotEmpty() || locale.variant.isNotEmpty())) {
+    val candidateDirs = mutableListOf<File>()
+    DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { candidateDirs.add(File(it)) }
+    if (locale.country.isNotEmpty() || locale.variant.isNotEmpty()) {
         val fallbackLocale = Locale(locale.language)
-        val fallbackDir = DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
-        val hasFallbackFiles = fallbackDir?.exists() == true && fallbackDir.isDirectory && fallbackDir.listFiles()?.any {
-            it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX) || it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX) || it.name.endsWith(".dict")
-        } == true
-        if (hasFallbackFiles) {
-            userLocaleDir = fallbackDir
-        } else {
-            val variantDir = DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)
-            if (variantDir != null) {
-                userLocaleDir = variantDir
-            }
-        }
+        DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { candidateDirs.add(File(it)) }
     }
+    DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)?.let { candidateDirs.add(it) }
 
     val internalDicts = DictionaryInfoUtils.getAssetsDictionaryList(context)
     val best = internalDicts?.let {
@@ -504,28 +491,31 @@ fun getUserAndInternalDictionaries(context: Context, locale: Locale): Pair<List<
     }
     val hasAsset = best != null
 
-    if (userLocaleDir?.exists() == true && userLocaleDir.isDirectory) {
-        userLocaleDir.listFiles()?.forEach {
-            if (it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX)) {
-                userDicts.add(it)
-            } else if (it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX)) {
-                hasInternalDict = true
-            } else if (it.name.endsWith(".dict")) {
-                if (it.name == DictionaryInfoUtils.MAIN_DICT_FILE_NAME) {
-                    if (!hasAsset) {
-                        userDicts.add(it)
+    val seenFiles = mutableSetOf<String>()
+    candidateDirs.filter { it.exists() && it.isDirectory }.forEach { dir ->
+        dir.listFiles()?.forEach { file ->
+            if (seenFiles.add(file.name)) {
+                if (file.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX)) {
+                    userDicts.add(file)
+                } else if (file.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX)) {
+                    hasInternalDict = true
+                } else if (file.name.endsWith(".dict")) {
+                    if (file.name == DictionaryInfoUtils.MAIN_DICT_FILE_NAME) {
+                        if (!hasAsset) {
+                            userDicts.add(file)
+                        } else {
+                            hasInternalDict = true
+                        }
+                    } else if (file.name == "emoji.dict") {
+                        val hasEmojiAsset = internalDicts?.any { asset -> asset.startsWith("emoji") } == true
+                        if (!hasEmojiAsset) {
+                            userDicts.add(file)
+                        } else {
+                            hasInternalDict = true
+                        }
                     } else {
-                        hasInternalDict = true
+                        userDicts.add(file)
                     }
-                } else if (it.name == "emoji.dict") {
-                    val hasEmojiAsset = internalDicts?.any { asset -> asset.startsWith("emoji") } == true
-                    if (!hasEmojiAsset) {
-                        userDicts.add(it)
-                    } else {
-                        hasInternalDict = true
-                    }
-                } else {
-                    userDicts.add(it)
                 }
             }
         }

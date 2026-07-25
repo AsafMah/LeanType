@@ -332,7 +332,13 @@ public final class BinaryDictionary extends Dictionary {
     }
 
     public int getFormatVersion() {
-        return getFormatVersionNative(mNativeDict);
+        if (!isValidDictionary()) return 0;
+        try {
+            return getFormatVersionNative(mNativeDict);
+        } catch (final Throwable e) {
+            Log.e(TAG, "getFormatVersion failed", e);
+            return 0;
+        }
     }
 
     @Override
@@ -342,20 +348,30 @@ public final class BinaryDictionary extends Dictionary {
 
     @Override
     public int getFrequency(final String word) {
-        if (TextUtils.isEmpty(word)) {
+        if (TextUtils.isEmpty(word) || !isValidDictionary()) {
             return NOT_A_PROBABILITY;
         }
-        final int[] codePoints = StringUtils.toCodePointArray(word);
-        return getProbabilityNative(mNativeDict, codePoints);
+        try {
+            final int[] codePoints = StringUtils.toCodePointArray(word);
+            return getProbabilityNative(mNativeDict, codePoints);
+        } catch (final Throwable e) {
+            Log.e(TAG, "getFrequency failed", e);
+            return NOT_A_PROBABILITY;
+        }
     }
 
     @Override
     public int getMaxFrequencyOfExactMatches(final String word) {
-        if (TextUtils.isEmpty(word)) {
+        if (TextUtils.isEmpty(word) || !isValidDictionary()) {
             return NOT_A_PROBABILITY;
         }
-        final int[] codePoints = StringUtils.toCodePointArray(word);
-        return getMaxProbabilityOfExactMatchesNative(mNativeDict, codePoints);
+        try {
+            final int[] codePoints = StringUtils.toCodePointArray(word);
+            return getMaxProbabilityOfExactMatchesNative(mNativeDict, codePoints);
+        } catch (final Throwable e) {
+            Log.e(TAG, "getMaxFrequencyOfExactMatches failed", e);
+            return NOT_A_PROBABILITY;
+        }
     }
 
     public boolean isValidNgram(final NgramContext ngramContext, final String word) {
@@ -363,46 +379,56 @@ public final class BinaryDictionary extends Dictionary {
     }
 
     public int getNgramProbability(final NgramContext ngramContext, final String word) {
-        if (!ngramContext.isValid() || TextUtils.isEmpty(word)) {
+        if (!ngramContext.isValid() || TextUtils.isEmpty(word) || !isValidDictionary()) {
             return NOT_A_PROBABILITY;
         }
-        final int[][] prevWordCodePointArrays = new int[ngramContext.getPrevWordCount()][];
-        final boolean[] isBeginningOfSentenceArray = new boolean[ngramContext.getPrevWordCount()];
-        ngramContext.outputToArray(prevWordCodePointArrays, isBeginningOfSentenceArray);
-        final int[] wordCodePoints = StringUtils.toCodePointArray(word);
-        return getNgramProbabilityNative(mNativeDict, prevWordCodePointArrays,
-                isBeginningOfSentenceArray, wordCodePoints);
+        try {
+            final int[][] prevWordCodePointArrays = new int[ngramContext.getPrevWordCount()][];
+            final boolean[] isBeginningOfSentenceArray = new boolean[ngramContext.getPrevWordCount()];
+            ngramContext.outputToArray(prevWordCodePointArrays, isBeginningOfSentenceArray);
+            final int[] wordCodePoints = StringUtils.toCodePointArray(word);
+            return getNgramProbabilityNative(mNativeDict, prevWordCodePointArrays,
+                    isBeginningOfSentenceArray, wordCodePoints);
+        } catch (final Throwable e) {
+            Log.e(TAG, "getNgramProbability failed", e);
+            return NOT_A_PROBABILITY;
+        }
     }
 
     public WordProperty getWordProperty(final String word, final boolean isBeginningOfSentence) {
-        if (word == null) {
+        if (word == null || !isValidDictionary()) {
             return null;
         }
-        final int[] codePoints = StringUtils.toCodePointArray(word);
-        final int[] outCodePoints = new int[DICTIONARY_MAX_WORD_LENGTH];
-        final boolean[] outFlags = new boolean[FORMAT_WORD_PROPERTY_OUTPUT_FLAG_COUNT];
-        final int[] outProbabilityInfo =
-                new int[FORMAT_WORD_PROPERTY_OUTPUT_PROBABILITY_INFO_COUNT];
-        final ArrayList<int[][]> outNgramPrevWordsArray = new ArrayList<>();
-        final ArrayList<boolean[]> outNgramPrevWordIsBeginningOfSentenceArray =
-                new ArrayList<>();
-        final ArrayList<int[]> outNgramTargets = new ArrayList<>();
-        final ArrayList<int[]> outNgramProbabilityInfo = new ArrayList<>();
-        final ArrayList<int[]> outShortcutTargets = new ArrayList<>();
-        final ArrayList<Integer> outShortcutProbabilities = new ArrayList<>();
-        getWordPropertyNative(mNativeDict, codePoints, isBeginningOfSentence, outCodePoints,
-                outFlags, outProbabilityInfo, outNgramPrevWordsArray,
-                outNgramPrevWordIsBeginningOfSentenceArray, outNgramTargets,
-                outNgramProbabilityInfo, outShortcutTargets, outShortcutProbabilities);
-        return new WordProperty(codePoints,
-                outFlags[FORMAT_WORD_PROPERTY_IS_NOT_A_WORD_INDEX],
-                outFlags[FORMAT_WORD_PROPERTY_IS_POSSIBLY_OFFENSIVE_INDEX],
-                outFlags[FORMAT_WORD_PROPERTY_HAS_NGRAMS_INDEX],
+        try {
+            final int[] codePoints = StringUtils.toCodePointArray(word);
+            final int[] outCodePoints = new int[DICTIONARY_MAX_WORD_LENGTH];
+            final boolean[] outFlags = new boolean[FORMAT_WORD_PROPERTY_OUTPUT_FLAG_COUNT];
+            final int[] outProbabilityInfo =
+                    new int[FORMAT_WORD_PROPERTY_OUTPUT_PROBABILITY_INFO_COUNT];
+            final ArrayList<int[][]> outNgramPrevWordsArray = new ArrayList<>();
+            final ArrayList<boolean[]> outNgramPrevWordIsBeginningOfSentenceArray =
+                    new ArrayList<>();
+            final ArrayList<int[]> outNgramTargets = new ArrayList<>();
+            final ArrayList<int[]> outNgramProbabilityInfo = new ArrayList<>();
+            final ArrayList<int[]> outShortcutTargets = new ArrayList<>();
+            final ArrayList<Integer> outShortcutProbabilities = new ArrayList<>();
+            getWordPropertyNative(mNativeDict, codePoints, isBeginningOfSentence, outCodePoints,
+                    outFlags, outProbabilityInfo, outNgramPrevWordsArray,
+                    outNgramPrevWordIsBeginningOfSentenceArray, outNgramTargets,
+                    outNgramProbabilityInfo, outShortcutTargets, outShortcutProbabilities);
+            return new WordProperty(codePoints,
+                    outFlags[FORMAT_WORD_PROPERTY_IS_NOT_A_WORD_INDEX],
+                    outFlags[FORMAT_WORD_PROPERTY_IS_POSSIBLY_OFFENSIVE_INDEX],
+                    outFlags[FORMAT_WORD_PROPERTY_HAS_NGRAMS_INDEX],
                 outFlags[FORMAT_WORD_PROPERTY_HAS_SHORTCUTS_INDEX],
                 outFlags[FORMAT_WORD_PROPERTY_IS_BEGINNING_OF_SENTENCE_INDEX], outProbabilityInfo,
                 outNgramPrevWordsArray, outNgramPrevWordIsBeginningOfSentenceArray,
                 outNgramTargets, outNgramProbabilityInfo, outShortcutTargets,
                 outShortcutProbabilities);
+        } catch (final Throwable e) {
+            Log.e(TAG, "getWordProperty failed", e);
+            return null;
+        }
     }
 
     public static class GetNextWordPropertyResult {

@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import helium314.keyboard.latin.utils.ExecutorUtils;
 
@@ -70,7 +71,9 @@ public class FileUtils {
             }
         });
         try {
-            wait.await();
+            if (!wait.await(10, TimeUnit.SECONDS)) {
+                allOk[0] = false;
+            }
         } catch (InterruptedException e) {
             allOk[0] = false;
         }

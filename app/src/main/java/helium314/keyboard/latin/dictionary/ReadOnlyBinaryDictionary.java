@@ -166,14 +166,22 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
     @Override
     public void forEachWord(java.util.function.BiConsumer<String, Integer> consumer) {
         synchronized (mIterationLock) {
-            mLock.readLock().lock();
-            try {
-                if (!mBinaryDictionary.isValidDictionary()) {
-                    return;
+            int token = 0;
+            int count = 0;
+            do {
+                if (!mLock.readLock().tryLock()) {
+                    try {
+                        Thread.sleep(2);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    continue;
                 }
-                int token = 0;
-                int count = 0;
-                do {
+                try {
+                    if (!mBinaryDictionary.isValidDictionary()) {
+                        break;
+                    }
                     BinaryDictionary.GetNextWordAndFrequencyResult result =
                             mBinaryDictionary.getNextWordAndFrequency(token);
                     if (result.mWordAndFrequency == null) break;
@@ -183,23 +191,15 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
                         consumer.accept(word, freq);
                     }
                     token = result.mNextToken;
+                } finally {
+                    mLock.readLock().unlock();
+                }
 
-                    count++;
-                    if (count % 200 == 0) {
-                        Thread.yield();
-                    }
-                    if (count % 2000 == 0) {
-                        try {
-                            Thread.sleep(1);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    }
-                } while (token != 0);
-            } finally {
-                mLock.readLock().unlock();
-            }
+                count++;
+                if (count % 200 == 0) {
+                    Thread.yield();
+                }
+            } while (token != 0);
         }
     }
 
@@ -217,11 +217,18 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
 
     @Override
     public void close() {
-        mLock.writeLock().lock();
         try {
+            if (mLock.writeLock().tryLock(300, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                try {
+                    mBinaryDictionary.close();
+                } finally {
+                    mLock.writeLock().unlock();
+                }
+            } else {
+                mBinaryDictionary.close();
+            }
+        } catch (InterruptedException e) {
             mBinaryDictionary.close();
-        } finally {
-            mLock.writeLock().unlock();
         }
     }
 }

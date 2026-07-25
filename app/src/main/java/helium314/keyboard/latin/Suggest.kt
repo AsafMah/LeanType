@@ -26,6 +26,8 @@ import helium314.keyboard.latin.utils.AutoCorrectionUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.SuggestionResults
+import helium314.keyboard.latin.utils.ExecutorUtils
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.Locale
 import kotlin.math.min
 
@@ -43,30 +45,33 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             // Optionally log evicted entries for debugging
         }
     }
-    // Precomputed gesture word index, keyed by a fingerprint of the key positions.
-    // Rebuilt only when key centres actually change (language/layout switch), not on shift-state
-    // or action-button changes, and not on text-field focus changes.
+    // Java fallback index, rebuilt only when keyboard geometry changes.
     @Volatile private var gestureIndex: SwipeGestureEngine.GestureIndex? = null
     @Volatile private var gestureIndexFingerprint: Int = 0
+    private val buildingFingerprint = AtomicInteger(0)
 
     fun buildGestureIndexAsync(keyboard: Keyboard) {
+        if (!Settings.getValues().mGestureInputEnabled) return
         val fingerprint = SwipeGestureEngine.layoutFingerprint(keyboard)
-        if (gestureIndex != null && gestureIndexFingerprint == fingerprint) {
-            return
-        }
-        Thread {
+        if (fingerprint == 0) return
+        if ((gestureIndex != null && gestureIndexFingerprint == fingerprint)
+            || buildingFingerprint.get() == fingerprint
+        ) return
+        if (!buildingFingerprint.compareAndSet(0, fingerprint)) return
+
+        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
             try {
                 val index = SwipeGestureEngine.buildIndex(mDictionaryFacilitator, keyboard)
                 gestureIndex = index
                 gestureIndexFingerprint = fingerprint
             } catch (t: Throwable) {
-                Log.e(TAG, "Failed to build Java/JNI gesture index", t)
+                Log.e(TAG, "Failed to build Java gesture index", t)
                 gestureIndex = null
+            } finally {
+                buildingFingerprint.compareAndSet(fingerprint, 0)
             }
-        }.start()
+        }
     }
-
-    fun getGestureIndex(): SwipeGestureEngine.GestureIndex? = gestureIndex
 
     fun recordAccepted(word: String, pointers: InputPointers, keyboard: Keyboard) {
         SwipeGestureEngine.recordAccepted(word, pointers, keyboard, gestureIndex)
@@ -83,6 +88,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     fun clearNextWordSuggestionsCache() {
         nextWordSuggestionsCache.evictAll()
         gestureIndex = null
+        buildingFingerprint.set(0)
         // Also reset scoreLimit cache to force refresh on next use
         synchronized(this) {
             mLastScoreLimitUpdateTime = 0
@@ -476,7 +482,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
 
     private fun adjustToTooSuggestions(suggestionResults: SuggestionResults, pointers: InputPointers, keyboard: Keyboard) {
         if (suggestionResults.size < 2) return
-        val hasLoop = SwipeGestureEngine.hasLoopAtEnd(pointers, keyboard)
+        val hasLoop = false
         if (!hasLoop) {
             var toInfo: SuggestedWordInfo? = null
             var tooInfo: SuggestedWordInfo? = null
@@ -565,9 +571,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
 
         @JvmStatic
         fun addDebugInfo(wordInfo: SuggestedWordInfo?, typedWord: String) {
-            if (!SuggestionStripView.DEBUG_SUGGESTIONS)
+            if (!SuggestionStripView.DEBUG_SUGGESTIONS || wordInfo == null)
                 return
-            val normalizedScore = BinaryDictionaryUtils.calcNormalizedScore(typedWord, wordInfo.toString(), wordInfo!!.mScore)
+            val normalizedScore = BinaryDictionaryUtils.calcNormalizedScore(typedWord, wordInfo.toString(), wordInfo.mScore)
             val scoreInfoString: String
             val dict = wordInfo.mSourceDict.mDictType + ":" + wordInfo.mSourceDict.mLocale
             scoreInfoString = if (normalizedScore > 0) {

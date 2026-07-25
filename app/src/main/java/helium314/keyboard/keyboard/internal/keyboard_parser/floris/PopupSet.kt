@@ -42,8 +42,9 @@ open class PopupSet<T : AbstractKeyData>(
         }
         val newMain = if (main == null) other.main else main
         val newRelevant = addCollections(relevant, other.relevant)
-        if (main != null && other.main != null)
-            return PopupSet(newMain, addCollections(listOf(other.main!!), newRelevant))
+        val otherMain = other.main
+        if (main != null && otherMain != null)
+            return PopupSet(newMain, addCollections(listOf(otherMain), newRelevant))
         return PopupSet(newMain, newRelevant)
     }
 }
