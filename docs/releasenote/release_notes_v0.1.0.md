@@ -20,6 +20,6 @@
 
 ## Upgrade notes
 
-LeanTypeDual's visible version series restarts at `0.1.0`. Android version code `4100` remains above the previous `3.10.0`/`4000` release, so existing LeanTypeDual installations upgrade normally. The separate `com.asafmah.leantypedual` application ID continues to prevent collisions with upstream LeanType.
+LeanTypeDual's visible version series restarts at `0.1.0`. Android version code `4100` remains above the previous `3.10.0`/`4000` release, so the versionCode permits upgrades when APKs use the established LeanTypeDual signing key. The separate `com.asafmah.leantypedual` application ID continues to prevent collisions with upstream LeanType.
 
 LeanTypeDual remains a separate application with the same package identity. Existing settings and dictionaries are retained when upgrading.
