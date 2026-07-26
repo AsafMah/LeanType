@@ -14,7 +14,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
-## [3.11.0] - 2026-07-12
+## [0.1.0] - 2026-07-12
 
 ### Added
 - **Direct IME switching** — configure a target keyboard/subtype and map keycode `-10076` to a toolbar action for immediate switching without the system picker. (#118)

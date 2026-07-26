@@ -14,6 +14,11 @@ val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
+val releaseStoreFile = keystoreProperties.getProperty("storeFile")?.let(rootProject::file)
+val releaseSigningConfigured = releaseStoreFile?.isFile == true
+    && listOf("storePassword", "keyAlias", "keyPassword").all { key ->
+        keystoreProperties.getProperty(key)?.let { it.isNotBlank() && it != "YOUR_PASSWORD" } == true
+    }
 
 android {
     compileSdk = 36
@@ -23,7 +28,7 @@ android {
         minSdk = 21
         targetSdk = 35
         versionCode = 4100
-        versionName = "3.11.0"
+        versionName = "0.1.0"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
@@ -54,11 +59,11 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (releaseSigningConfigured) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+                storeFile = releaseStoreFile
                 storePassword = keystoreProperties["storePassword"] as String
                 enableV1Signing = true
                 enableV2Signing = true
@@ -73,7 +78,7 @@ android {
             isShrinkResources = true  // Enable resource shrinking to reduce APK size and memory usage
             isDebuggable = false
             isJniDebuggable = false
-            if (keystorePropertiesFile.exists()) {
+            if (releaseSigningConfigured) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
@@ -286,5 +291,19 @@ dependencies {
 tasks.configureEach {
     if (name.contains("ArtProfile", ignoreCase = true)) {
         enabled = false
+    }
+}
+
+if (!releaseSigningConfigured) {
+    tasks.matching {
+        it.name.endsWith("Release") && (it.name.startsWith("assemble")
+            || it.name.startsWith("bundle") || it.name.startsWith("package"))
+    }.configureEach {
+        outputs.upToDateWhen { false }
+        doFirst {
+            throw GradleException(
+                "Release signing is not configured. Provide a real keystore.properties and keystore; unsigned release artifacts are forbidden."
+            )
+        }
     }
 }

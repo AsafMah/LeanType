@@ -1,6 +1,6 @@
-# Builds the signed release APKs (all three flavors) and drafts a GitHub Release.
+# Builds the signed release APKs (all four flavors) and drafts a GitHub Release.
 #
-# Triggers on pushing a version tag (e.g. `git tag v3.8.5 && git push origin v3.8.5`),
+# Triggers on pushing a version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`),
 # or manually via "Run workflow" (workflow_dispatch) for a signing/build dry run that
 # uploads the APKs as an artifact WITHOUT creating a Release.
 #
@@ -60,7 +60,21 @@ jobs:
           EOF
 
       - name: Build signed release APKs (all flavors)
-        run: ./gradlew :app:assembleStandardRelease :app:assembleOfflineRelease :app:assembleOfflineliteRelease
+        run: ./gradlew :app:assembleStandardRelease :app:assembleStandardfullRelease :app:assembleOfflineRelease :app:assembleOfflineliteRelease
+
+      - name: Verify release APK signatures
+        run: |
+          APKSIGNER="$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          test -x "$APKSIGNER"
+          count=0
+          for apk in app/build/outputs/apk/*/release/*.apk; do
+            "$APKSIGNER" verify --verbose --print-certs "$apk"
+            count=$((count + 1))
+          done
+          test "$count" -eq 4
+
+      - name: Generate release notes
+        run: python3 docs/scripts/generate_release_notes.py
 
       - name: Collect APKs
         run: |
@@ -80,5 +94,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          generate_release_notes: true
+          body_path: docs/releasenote/release_notes_temp.md
           files: release-apks/*.apk
