@@ -67,11 +67,19 @@ jobs:
           APKSIGNER="$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner -type f | sort -V | tail -1)"
           test -x "$APKSIGNER"
           count=0
+          legacy_count=0
           for apk in app/build/outputs/apk/*/release/*.apk; do
             "$APKSIGNER" verify --verbose --print-certs "$apk"
+            case "$apk" in
+              *-standard-release.apk|*-standardfull-release.apk|*-offlinelite-release.apk)
+                "$APKSIGNER" verify --verbose --min-sdk-version 21 --max-sdk-version 23 "$apk"
+                legacy_count=$((legacy_count + 1))
+                ;;
+            esac
             count=$((count + 1))
           done
           test "$count" -eq 4
+          test "$legacy_count" -eq 3
 
       - name: Generate release notes
         run: python3 docs/scripts/generate_release_notes.py
