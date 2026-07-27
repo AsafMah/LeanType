@@ -319,7 +319,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             sInGesture = false;
         }
         // Two-thumb typing (#1.2 visual): also clear the pending-commit indicator.
-        sDrawingProxy.setGestureCommitPending(false);
+        if (sDrawingProxy != null) {
+            sDrawingProxy.setGestureCommitPending(false);
+        }
     }
 
     /**

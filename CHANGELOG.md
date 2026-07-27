@@ -31,12 +31,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Unshifted typing and swiping preserve lowercase words** instead of promoting ordinary words such as `to`, `no`, and `meet` to title-case dictionary candidates. (#125)
 - **Fallback gesture suggestions no longer leak dictionary capitalization** when Shift is off; the Java gesture engine now emits canonical lowercase candidates before the existing suggestion presentation-casing layer. (#118)
 - **Dictionary and blacklist handling** prevents blocked words from leaking back into gesture and normal suggestions. (#118)
+- **Text Expander settings no longer show a duplicate “Expand immediately” switch.** (#125)
+- **Memory-pressure cleanup no longer crashes after the keyboard view releases its drawing proxy.** (#125)
 
 ### Reliability & testing
 - Added regression coverage for KeyCode uniqueness, custom-layout state restoration, direct IME switch branches, multi-word filtering, and fallback gesture casing. (#118)
 - Added tap, batch-commit, shift-mode, acronym, mixed-case, and Unicode regression coverage for suggestion casing. (#125)
 - Fixed the Windows release tool to read dictionary metadata as UTF-8. (#119)
 - Release CI verifies API 21–23 v1/JAR signature coverage for every flavor that supports pre-Android 7 devices. (#119)
+- Added regression coverage for Text Expander control uniqueness and pointer cancellation after keyboard-view deallocation. (#125)
 
 ### Upstream
 - Merged **LeanBitLab/LeanType v4.0.2** (pinned at `0477ef83`, including v4.0.0/v4.0.1) — adds JNI and lifecycle hardening, first-word and next-word controls, background-service controls, immediate autospace, translation-history improvements, and pointer/input-connection stability fixes. LeanTypeDual retains its Java fallback gesture engine, distinct `applicationId`, privacy tiers, two-thumb behavior, and fork-owned release metadata. (#123)
