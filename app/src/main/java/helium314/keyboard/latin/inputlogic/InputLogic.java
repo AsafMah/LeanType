@@ -70,6 +70,7 @@ import helium314.keyboard.latin.utils.TextPlacement;
 import helium314.keyboard.latin.utils.TextRange;
 import helium314.keyboard.latin.utils.TimestampKt;
 
+import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -81,7 +82,12 @@ import java.util.concurrent.TimeUnit;
 public final class InputLogic {
     private static final String TAG = InputLogic.class.getSimpleName();
     private static final char INLINE_EMOJI_SEARCH_MARKER = ':';
-    private static final int[] EMPTY_CODE_POINTS = new int[0];
+    // Currently only Thai needs word segmentation. If additional scripts are
+    // added to ScriptUtils.needsWordSegmentation(), the BreakIterator locale
+    // selection must be revisited.
+    private static final Locale THAI_LOCALE = Locale.forLanguageTag("th");
+    private static final ThreadLocal<BreakIterator> THAI_WORD_BREAK_ITERATOR =
+            ThreadLocal.withInitial(() -> BreakIterator.getWordInstance(THAI_LOCALE));
 
     // TODO : Remove this member when we can.
     private final LatinIME mLatinIME;
@@ -185,12 +191,13 @@ public final class InputLogic {
     private String mLastShortcutText = null;
     private int mLastExpandedCursorPosition = -1;
     private int mLastExpandedCursorOffset = -1;
+    private String mJustRevertedExpandedShortcut = null;
 
     private boolean mJustRevertedACommit = false;
 
     /**
      * Create a new instance of the input logic.
-     * 
+     *
      * @param latinIME                    the instance of the parent LatinIME. We
      *                                    should remove this when we can.
      * @param suggestionStripViewAccessor an object to access the suggestion strip
@@ -307,7 +314,7 @@ public final class InputLogic {
 
     /**
      * Call this when the subtype changes.
-     * 
+     *
      * @param combiningSpec  the spec string for the combining rules
      * @param settingsValues the current settings values
      */
@@ -318,7 +325,7 @@ public final class InputLogic {
 
     /**
      * Call this when the orientation changes.
-     * 
+     *
      * @param settingsValues the current values of the settings.
      */
     public void onOrientationChange(final SettingsValues settingsValues) {
@@ -391,7 +398,8 @@ public final class InputLogic {
         StatsUtils.onWordCommitUserTyped(mEnteredText, mWordComposer.isBatchMode());
         mConnection.endBatchEdit();
         // Space state must be updated before calling updateShiftState
-        mSpaceState = SpaceState.NONE;
+        // ponytail: set PHANTOM space state after emoji if autospace after emoji is enabled
+        mSpaceState = (settingsValues.mAutospaceAfterEmoji && StringUtilsKt.isEmoji(text)) ? SpaceState.PHANTOM : SpaceState.NONE;
         mEnteredText = text;
         mWordBeingCorrectedByCursor = null;
         inputTransaction.setDidAffectContents();
@@ -401,7 +409,7 @@ public final class InputLogic {
 
     /**
      * A suggestion was picked from the suggestion strip.
-     * 
+     *
      * @param settingsValues     the current values of the settings.
      * @param suggestionInfo     the suggestion info.
      * @param keyboardShiftState the shift state of the keyboard, as returned by
@@ -496,21 +504,26 @@ public final class InputLogic {
 
         commitChosenWord(settingsValues, suggestion, LastComposedWord.COMMIT_TYPE_MANUAL_PICK,
                 LastComposedWord.NOT_A_SEPARATOR);
-        mConnection.endBatchEdit();
-        // Combining-mode revert: the auto-committed word's trailing space was wiped along
-        // with the word at the top of this method; re-insert it now so cursor lands at
-        // "the |" rather than "the|". Uses the same helper as the timer's autospace so
-        // URL / e-mail / phantom guards apply consistently.
+        // Combining-mode revert: restore the auto-committed word's trailing space before
+        // applying the normal post-suggestion spacing policy.
         if (mInsertTrailingSpaceAfterPick) {
             mInsertTrailingSpaceAfterPick = false;
             insertAutomaticSpaceIfOptionsAndTextAllow(settingsValues);
-            // Don't ALSO set PHANTOM below — we already inserted a real space.
             mSpaceState = SpaceState.NONE;
         } else if (settingsValues.mAutospaceAfterSuggestion) {
-            mSpaceState = SpaceState.PHANTOM;
+            if (settingsValues.mImmediateAutoSpace) {
+                mConnection.finishComposingText();
+                mConnection.commitText(" ", 1);
+                mConnection.finishComposingText();
+                resetComposingState(false);
+                mSpaceState = SpaceState.DOUBLE;
+            } else {
+                mSpaceState = SpaceState.PHANTOM;
+            }
         }
         // Don't allow cancellation of manual pick
         mLastComposedWord.deactivate();
+        mConnection.endBatchEdit();
         inputTransaction.requireShiftUpdate(InputTransaction.SHIFT_UPDATE_NOW);
         setInlineEmojiSearchAction(false);
 
@@ -531,7 +544,7 @@ public final class InputLogic {
      * part of normal typing or whether it was an explicit cursor move by the user.
      * In any case,
      * do the necessary adjustments.
-     * 
+     *
      * @param oldSelStart    old selection start
      * @param oldSelEnd      old selection end
      * @param newSelStart    new selection start
@@ -570,6 +583,7 @@ public final class InputLogic {
                 mLastShortcutText = null;
                 mLastExpandedCursorPosition = -1;
                 mLastExpandedCursorOffset = -1;
+                mJustRevertedExpandedShortcut = null;
             }
         }
 
@@ -686,6 +700,7 @@ public final class InputLogic {
             mLastShortcutText = null;
             mLastExpandedCursorPosition = -1;
             mLastExpandedCursorOffset = -1;
+            mJustRevertedExpandedShortcut = null;
         }
         mLastKeyTime = inputTransaction.getTimestamp();
         mConnection.beginBatchEdit();
@@ -1971,6 +1986,9 @@ public final class InputLogic {
             final LatinIME.UIHandler handler) {
         inputTransaction.setDidAffectContents();
         if (event.getCodePoint() == Constants.CODE_ENTER) {
+            if (tryJumpToNextPlaceholder()) {
+                return;
+            }
             final EditorInfo editorInfo = getCurrentInputEditorInfo();
             final int imeOptionsActionId = InputTypeUtils.getImeOptionsActionIdFromEditorInfo(editorInfo);
             if (InputTypeUtils.IME_ACTION_CUSTOM_LABEL == imeOptionsActionId) {
@@ -2085,7 +2103,7 @@ public final class InputLogic {
 
     /**
      * Handle a non-separator.
-     * 
+     *
      * @param event            The event to handle.
      * @param settingsValues   The current settings values.
      * @param inputTransaction The transaction in progress.
@@ -2213,29 +2231,51 @@ public final class InputLogic {
             if (mWordComposer.isSingleLetter()) {
                 mWordComposer.setCapitalizedModeAtStartComposingTime(inputTransaction.getShiftState());
             }
-            setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
-            // Two-thumb typing (#1.1): record this tap as a fragment boundary so a future
-            // backspace under PREF_GESTURE_FRAGMENT_BACKSPACE can pop the whole tap.
-            recordFragmentBoundaryIfTracking(settingsValues);
-            consumeJoinNextActionAndNotifyIfChanged();
-            // Combining mode: arm/refresh the grace timer for the next input.
-            enterCombiningMode(settingsValues, true /* fromTap, unused — kept for clarity */);
+            boolean didSetComposingText = false;
+            boolean didExpand = false;
+            boolean shouldDeferSegmentation = false;
             if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
                     && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
                 final String typedWord = mWordComposer.getTypedWord();
+                setComposingTextInternal(getTextWithUnderline(typedWord), 1);
+                didSetComposingText = true;
                 final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
                 if (textBefore != null) {
                     final String textStr = textBefore.toString();
                     final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
                             helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(typedWord, textStr, mLatinIME);
                     if (result != null) {
-                        if (result.getPrefixLength() > 0) {
-                            mConnection.deleteTextBeforeCursor(result.getPrefixLength());
+                        if (mJustRevertedExpandedShortcut != null
+                                && result.getMatchedString().equalsIgnoreCase(mJustRevertedExpandedShortcut)) {
+                            // Skip re-expanding a shortcut that was just reverted by backspace
+                        } else {
+                            if (result.getPrefixLength() > 0) {
+                                mConnection.commitText("", 1);
+                                mConnection.deleteTextBeforeCursor(result.getPrefixLength());
+                            }
+                            commitExpandedText(result.getMatchedString(), result.getExpandedText());
+                            resetComposingState(true);
+                            didExpand = true;
                         }
-                        commitExpandedText(result.getMatchedString(), result.getExpandedText());
-                        resetComposingState(true);
                     }
+                    shouldDeferSegmentation = !didExpand
+                            && ScriptUtils.needsWordSegmentation(settingsValues.mLocale)
+                            && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE
+                                    .isPrefixOfNonRegexShortcut(typedWord, textStr, mLatinIME);
                 }
+            }
+            if (!didExpand && !shouldDeferSegmentation) {
+                final boolean didCommitCompletedWordSegments =
+                        maybeCommitCompletedWordSegments(settingsValues);
+                if (!didSetComposingText || didCommitCompletedWordSegments) {
+                    setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
+                }
+            }
+            consumeJoinNextActionAndNotifyIfChanged();
+            if (!didExpand) {
+                // Two-thumb typing: retain the tap as a fragment and refresh combining grace.
+                recordFragmentBoundaryIfTracking(settingsValues);
+                enterCombiningMode(settingsValues, true /* fromTap */);
             }
         } else {
             final boolean swapWeakSpace = tryStripSpaceAndReturnWhetherShouldSwapInstead(event, inputTransaction);
@@ -2264,9 +2304,63 @@ public final class InputLogic {
                 || settingsValues.mSpacingAndPunctuations.isWordSeparator(codePointBeforeCursor);
     }
 
+    private boolean maybeCommitCompletedWordSegments(final SettingsValues settingsValues) {
+        if (!ScriptUtils.needsWordSegmentation(settingsValues.mLocale)
+                || settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces) {
+            return false;
+        }
+
+        final String typedWord = mWordComposer.getTypedWord();
+        final int length = typedWord.length();
+        if (length <= 1) {
+            return false;
+        }
+
+        final BreakIterator iterator = THAI_WORD_BREAK_ITERATOR.get();
+        iterator.setText(typedWord);
+        int segmentStart = iterator.first();
+        int wordBoundary = iterator.next();
+        boolean didCommitSegment = false;
+        while (wordBoundary != BreakIterator.DONE && wordBoundary < length) {
+            final String completedWordSegment = typedWord.substring(segmentStart, wordBoundary);
+            if (!TextUtils.isEmpty(completedWordSegment)) {
+                commitCompletedWordSegment(settingsValues, completedWordSegment);
+                didCommitSegment = true;
+            }
+            segmentStart = wordBoundary;
+            wordBoundary = iterator.next();
+        }
+        if (!didCommitSegment) {
+            return false;
+        }
+
+        // Scripts that require explicit word segmentation (currently only Thai) can accumulate
+        // multiple word segments in one composing span. Commit completed segments and
+        // leave the latest segment composing so underline and candidate handling stay local.
+        final String remainingWord = typedWord.substring(segmentStart);
+        final int[] codePoints = StringUtils.toCodePointArray(remainingWord);
+        mWordComposer.setComposingWord(codePoints,
+                mLatinIME.getCoordinatesForCurrentKeyboard(codePoints));
+        return true;
+    }
+
+    private void commitCompletedWordSegment(final SettingsValues settingsValues,
+            final String completedWordSegment) {
+        final NgramContext ngramContext = getNgramContextFromNthPreviousWordForSuggestion(
+                settingsValues.mSpacingAndPunctuations, 2);
+        mConnection.commitText(completedWordSegment, 1);
+        performAdditionToUserHistoryDictionary(settingsValues, completedWordSegment, ngramContext);
+        mLastComposedWord = new LastComposedWord(new ArrayList<>(), null, completedWordSegment,
+                completedWordSegment, LastComposedWord.NOT_A_SEPARATOR, ngramContext,
+                WordComposer.CAPS_MODE_OFF);
+        StatsUtils.onWordCommitUserTyped(completedWordSegment, mWordComposer.isBatchMode());
+    }
+
+
+
     /**
      * Handle input of a separator code point.
-     * 
+     *
      * @param event            The event to handle.
      * @param inputTransaction The transaction in progress.
      */
@@ -2315,10 +2409,14 @@ public final class InputLogic {
             // re-establish PHANTOM if appropriate after the comma is committed.
         }
         final boolean wasComposingWord = mWordComposer.isComposingWord();
+        // Scripts that require explicit word segmentation should still allow an
+        // explicit Space to be inserted while committing composing text.
+        final boolean needsSegmentation = ScriptUtils.needsWordSegmentation(settingsValues.mLocale);
         // We avoid sending spaces in languages without spaces if we were composing.
         final boolean shouldAvoidSendingCode = Constants.CODE_SPACE == codePoint
                 && !settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
-                && wasComposingWord;
+                && wasComposingWord
+                && !needsSegmentation;
 
         // wrap / unwrap selected text in codepoint pairs
         if (!wasComposingWord && mConnection.hasSelection()) { // we should never be composing when something is
@@ -2340,7 +2438,15 @@ public final class InputLogic {
         }
         // isComposingWord() may have changed since we stored wasComposing
         if (mWordComposer.isComposingWord()) {
-            if (settingsValues.mAutoCorrectEnabled && !isInlineEmojiSearchAction()) {
+            boolean shouldTriggerAutoCorrect = settingsValues.mAutoCorrectEnabled;
+            if (shouldTriggerAutoCorrect) {
+                if ("space".equals(settingsValues.mAutoCorrectTrigger)) {
+                    shouldTriggerAutoCorrect = Character.isWhitespace(codePoint);
+                } else if ("punctuation".equals(settingsValues.mAutoCorrectTrigger)) {
+                    shouldTriggerAutoCorrect = !Character.isWhitespace(codePoint);
+                }
+            }
+            if (shouldTriggerAutoCorrect && !isInlineEmojiSearchAction()) {
                 final String separator = shouldAvoidSendingCode ? LastComposedWord.NOT_A_SEPARATOR
                         : StringUtils.newSingleCodePointString(codePoint);
                 commitCurrentAutoCorrection(settingsValues, separator, handler);
@@ -2447,7 +2553,7 @@ public final class InputLogic {
 
     /**
      * Handle a press on the backspace key.
-     * 
+     *
      * @param event            The event to handle.
      * @param inputTransaction The transaction in progress.
      */
@@ -2519,7 +2625,27 @@ public final class InputLogic {
             }
         }
 
-        if (mLastExpandedText != null && !event.isKeyRepeat()) {
+        final CharSequence selection = mConnection.getSelectedText(0 /* 0 for no styles */);
+        final boolean hasSelection = !TextUtils.isEmpty(selection) || mConnection.hasSelection();
+        if (hasSelection) {
+            final int numCharsDeleted = !TextUtils.isEmpty(selection) ? selection.length()
+                    : (mConnection.getExpectedSelectionEnd() - mConnection.getExpectedSelectionStart());
+            if (!TextUtils.isEmpty(selection)) {
+                unlearnWord(selection.toString(), inputTransaction.getSettingsValues(),
+                        Constants.EVENT_BACKSPACE);
+            }
+            mWordComposer.reset();
+            sendDownUpKeyEvent(KeyEvent.KEYCODE_DEL);
+            StatsUtils.onBackspaceSelectedText(numCharsDeleted);
+            if (inputTransaction.getSettingsValues().needsToLookupSuggestions()
+                    && inputTransaction.getSettingsValues().mSpacingAndPunctuations.mCurrentLanguageHasSpaces) {
+                restartSuggestionsOnWordTouchedByCursor(inputTransaction.getSettingsValues());
+            }
+            return;
+        }
+
+        if (mLastExpandedText != null && !event.isKeyRepeat()
+                && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isBackspaceRevertsEnabled(mLatinIME)) {
             final int expectedCursor = mConnection.getExpectedSelectionEnd();
             if (expectedCursor == mLastExpandedCursorPosition) {
                 final int beforeLen = mLastExpandedCursorOffset;
@@ -2530,12 +2656,14 @@ public final class InputLogic {
                 final String expectedAfter = mLastExpandedText.substring(beforeLen);
                 if (textBefore != null && textBefore.toString().equals(expectedBefore)
                         && textAfter != null && textAfter.toString().equals(expectedAfter)) {
+                    mJustRevertedExpandedShortcut = mLastShortcutText;
                     mConnection.setSelection(expectedCursor - beforeLen, expectedCursor + afterLen);
                     mConnection.commitText(mLastShortcutText, 1);
                     mLastExpandedText = null;
                     mLastShortcutText = null;
                     mLastExpandedCursorPosition = -1;
                     mLastExpandedCursorOffset = -1;
+                    mLastComposedWord = LastComposedWord.NOT_A_COMPOSED_WORD;
                     return;
                 }
             }
@@ -2705,21 +2833,10 @@ public final class InputLogic {
 
             // No cancelling of commit/double space/swap: we have a regular backspace.
             // We should backspace one char and restart suggestion if at the end of a word.
-            if (mConnection.hasSelection()) {
-                // If there is a selection, remove it.
-                // We also need to unlearn the selected text.
-                final CharSequence selection = mConnection.getSelectedText(0 /* 0 for no styles */);
-                if (!TextUtils.isEmpty(selection)) {
-                    unlearnWord(selection.toString(), inputTransaction.getSettingsValues(),
-                            Constants.EVENT_BACKSPACE);
-                    hasUnlearnedWordBeingDeleted = true;
-                }
-                final int numCharsDeleted = mConnection.getExpectedSelectionEnd()
-                        - mConnection.getExpectedSelectionStart();
-                mConnection.setSelection(mConnection.getExpectedSelectionEnd(),
-                        mConnection.getExpectedSelectionEnd());
-                mConnection.deleteTextBeforeCursor(numCharsDeleted);
-                StatsUtils.onBackspaceSelectedText(numCharsDeleted);
+            final CharSequence fallbackSel = mConnection.getSelectedText(0);
+            if (!TextUtils.isEmpty(fallbackSel) || mConnection.hasSelection()) {
+                mWordComposer.reset();
+                sendDownUpKeyEvent(KeyEvent.KEYCODE_DEL);
             } else {
                 // There is no selection, just delete one character.
                 if (inputTransaction.getSettingsValues().mInputAttributes.isTypeNull()
@@ -2862,7 +2979,7 @@ public final class InputLogic {
      * This method will check that there are two characters before the cursor and
      * that the first
      * one is a space before it does the actual swapping.
-     * 
+     *
      * @param event            The event to handle.
      * @param inputTransaction The transaction in progress.
      * @return true if the swap has been performed, false if it was prevented by
@@ -2911,11 +3028,11 @@ public final class InputLogic {
     /*
      * Strip a trailing space if necessary and returns whether it's a swap weak
      * space situation.
-     * 
+     *
      * @param event The event to handle.
-     * 
+     *
      * @param inputTransaction The transaction in progress.
-     * 
+     *
      * @return whether we should swap the space instead of removing it.
      */
     private boolean tryStripSpaceAndReturnWhetherShouldSwapInstead(final Event event,
@@ -2928,14 +3045,18 @@ public final class InputLogic {
             return false;
         }
 
-        if (isSpaceStrippingPunctuation(codePoint)
-                && !inputTransaction.getSettingsValues().isUsuallyPrecededBySpace(codePoint)) {
+        // ponytail: only strip auto-inserted spaces (WEAK/PHANTOM/SWAP), never manual (NONE)
+        if (!inputTransaction.getSettingsValues().mPreserveSpaceBeforePunctuation
+                && isSpaceStrippingPunctuation(codePoint)
+                && !inputTransaction.getSettingsValues().isUsuallyPrecededBySpace(codePoint)
+                && inputTransaction.getSpaceState() != SpaceState.NONE) {
             if (mConnection.getCodePointBeforeCursor() == Constants.CODE_SPACE) {
                 mConnection.removeTrailingSpace();
             }
         }
 
-        if ((SpaceState.WEAK == inputTransaction.getSpaceState()
+        if (!inputTransaction.getSettingsValues().mPreserveSpaceBeforePunctuation
+                && (SpaceState.WEAK == inputTransaction.getSpaceState()
                 || SpaceState.SWAP_PUNCTUATION == inputTransaction.getSpaceState())
                 && isFromSuggestionStrip) {
             if (inputTransaction.getSettingsValues().isUsuallyPrecededBySpace(codePoint)) {
@@ -3060,7 +3181,7 @@ public final class InputLogic {
 
     /**
      * Performs a recapitalization event.
-     * 
+     *
      * @param settingsValues The current settings values.
      */
     private void performRecapitalization(final SettingsValues settingsValues) {
@@ -3158,9 +3279,15 @@ public final class InputLogic {
             return;
         }
 
-        if (!mWordComposer.isComposingWord() && !settingsValues.mBigramPredictionEnabled) {
-            mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
-            return;
+        if (!mWordComposer.isComposingWord()) {
+            final NgramContext ngramContext = getNgramContextFromNthPreviousWordForSuggestion(
+                    settingsValues.mSpacingAndPunctuations, 1);
+            final boolean isFirstWord = ngramContext.isBeginningOfSentenceContext();
+            if ((isFirstWord && !settingsValues.mFirstWordPredictionEnabled)
+                    || (!isFirstWord && !settingsValues.mBigramPredictionEnabled)) {
+                mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
+                return;
+            }
         }
 
         final AsyncResultHolder<SuggestedWords> holder = new AsyncResultHolder<>("Suggest");
@@ -3506,7 +3633,7 @@ public final class InputLogic {
 
     /**
      * Factor in auto-caps and manual caps and compute the current caps mode.
-     * 
+     *
      * @param settingsValues    the current settings values.
      * @param keyboardShiftMode the current shift mode of the keyboard. See
      *                          KeyboardSwitcher#getKeyboardShiftMode() for possible
@@ -3587,7 +3714,7 @@ public final class InputLogic {
     /**
      * Get n-gram context from the nth previous word before the cursor as context
      * for the suggestion process.
-     * 
+     *
      * @param spacingAndPunctuations the current spacing and punctuations settings.
      * @param nthPreviousWord        reverse index of the word to get (1-indexed)
      * @return the information of previous words
@@ -3737,7 +3864,7 @@ public final class InputLogic {
      * See
      * {@link helium314.keyboard.latin.SuggestedWords#getTypedWordAndPreviousSuggestions(
      * SuggestedWordInfo, helium314.keyboard.latin.SuggestedWords)}.
-     * 
+     *
      * @param typedWordInfo          The typed word as a SuggestedWordInfo.
      * @param previousSuggestedWords The previously suggested words.
      * @return Obsolete suggestions with the newly typed word.
@@ -3929,7 +4056,7 @@ public final class InputLogic {
     /**
      * Do the final processing after a batch input has ended. This commits the word
      * to the editor.
-     * 
+     *
      * @param settingsValues the current values of the settings.
      * @param suggestedWords suggestedWords to use.
      */
@@ -4038,12 +4165,12 @@ public final class InputLogic {
                     + " prevTyped='" + prevTypedWord + "'"
                     + " chosen='" + batchInputText + "'");
         }
-        // Auto-capitalize the first letter of a fresh-word gesture when the keyboard is in
-        // auto-shifted / manual-shifted / shift-locked state. The gesture-recognizer always
-        // returns lowercase, so without this fix swiping "Hello" at sentence-start types
-        // "hello". We deliberately skip this when extending an existing composing word, since
-        // those continuation gestures should append in the casing the user already chose for
-        // the start of the word.
+        // Apply presentation casing at the batch-commit boundary. Recognizers usually emit
+        // lowercase, but native/dictionary-backed candidates may preserve title casing. The
+        // gesture-start shift snapshot is authoritative: shifted modes add requested casing,
+        // while OFF removes only unrequested multi-letter title casing. We deliberately skip
+        // this when extending an existing composing word, since continuation gestures should
+        // append in the casing the user already chose for the start of the word.
         if (!extendExistingCompose && !batchInputText.isEmpty()) {
             // Use the shift mode captured at gesture-start, not the live mode — the
             // keyboard auto-clears the shifted indicator during the gesture, so a live
@@ -4055,6 +4182,12 @@ public final class InputLogic {
             } else if (shiftMode == WordComposer.CAPS_MODE_AUTO_SHIFT_LOCKED
                     || shiftMode == WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED) {
                 batchInputText = batchInputText.toUpperCase(settingsValues.mLocale);
+            } else if (shiftMode == WordComposer.CAPS_MODE_OFF
+                    && StringUtils.hasAtLeastTwoLetters(batchInputText)
+                    && StringUtils.getCapitalizationType(batchInputText)
+                            == StringUtils.CAPITALIZE_FIRST) {
+                batchInputText = StringUtils.lowercaseFirstLetterCodePoint(
+                        batchInputText, settingsValues.mLocale);
             }
         }
         // Clear so a stale value from a previous gesture can't leak into a non-gesture
@@ -4293,11 +4426,17 @@ public final class InputLogic {
                 final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
                         helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(chosenWord, textStr, mLatinIME);
                 if (result != null) {
-                    mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
-                    mConnection.deleteTextBeforeCursor(result.getPrefixLength() + chosenWord.length());
-                    commitExpandedText(result.getMatchedString(), result.getExpandedText());
-                    return;
+                    if (mJustRevertedExpandedShortcut != null
+                            && result.getMatchedString().equalsIgnoreCase(mJustRevertedExpandedShortcut)) {
+                        // Skip re-expanding a shortcut that was just reverted by backspace
+                    } else {
+                        mConnection.commitText(getTextWithSuggestionSpan(mLatinIME, chosenWord, mSuggestedWords, getDictionaryFacilitatorLocale()), 1);
+                        mConnection.deleteTextBeforeCursor(result.getPrefixLength() + chosenWord.length());
+                        commitExpandedText(result.getMatchedString(), result.getExpandedText());
+                        resetComposingState(true);
+                        return;
 
+                    }
                 }
             }
         }
@@ -4522,7 +4661,7 @@ public final class InputLogic {
     /**
      * Gets an object allowing private IME commands to be sent to the
      * underlying editor.
-     * 
+     *
      * @return An object for sending private commands to the underlying editor.
      */
     public PrivateCommandPerformer getPrivateCommandPerformer() {
@@ -4555,7 +4694,7 @@ public final class InputLogic {
     /**
      * Gets the expected length in Java chars of the composing span.
      * May be 0 if there is no valid composing span.
-     * 
+     *
      * @see #getComposingStart()
      * @return The expected length of the composing span.
      */
@@ -4876,24 +5015,112 @@ public final class InputLogic {
                 });
     }
 
+    private boolean tryJumpToNextPlaceholder() {
+        final CharSequence before = mConnection.getTextBeforeCursor(1000, 0);
+        final CharSequence after = mConnection.getTextAfterCursor(1000, 0);
+        final String beforeStr = before != null ? before.toString() : "";
+        final String afterStr = after != null ? after.toString() : "";
+
+        final String fullText = beforeStr + afterStr;
+
+        Log.d(TAG, "tryJumpToNextPlaceholder: beforeStr=[" + beforeStr + "] afterStr=[" + afterStr + "]");
+
+        final java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("%cursor(\\d+)%");
+        final java.util.regex.Matcher matcher = pattern.matcher(fullText);
+
+        int bestStart = -1;
+        int bestEnd = -1;
+        int lowestNum = Integer.MAX_VALUE;
+
+        while (matcher.find()) {
+            try {
+                final int num = Integer.parseInt(matcher.group(1));
+                Log.d(TAG, "tryJumpToNextPlaceholder: found %cursor" + num + "% at [" + matcher.start() + "," + matcher.end() + ")");
+                if (num < lowestNum) {
+                    lowestNum = num;
+                    bestStart = matcher.start();
+                    bestEnd = matcher.end();
+                }
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+        }
+
+        if (bestStart != -1) {
+            mConnection.finishComposingText();
+            mConnection.tryFixIncorrectCursorPosition();
+            resetComposingState(true);
+
+            final CharSequence before2 = mConnection.getTextBeforeCursor(1000, 0);
+            final String beforeStr2 = before2 != null ? before2.toString() : "";
+            final int cursorPositionInFull = beforeStr2.length();
+
+            final int currentSelectionEnd = mConnection.getExpectedSelectionEnd();
+            final int targetStart = currentSelectionEnd - cursorPositionInFull + bestStart;
+            final int targetEnd = currentSelectionEnd - cursorPositionInFull + bestEnd;
+            Log.d(TAG, "tryJumpToNextPlaceholder: jumping to [" + targetStart + "," + targetEnd + ") currentSelEnd=" + currentSelectionEnd);
+            mConnection.beginBatchEdit();
+            mConnection.setSelection(targetStart, targetEnd);
+            mConnection.commitText("", 1);
+            mConnection.endBatchEdit();
+            return true;
+        }
+        Log.d(TAG, "tryJumpToNextPlaceholder: no placeholder found");
+        return false;
+    }
+
     private void commitExpandedText(final String shortcut, final String expanded) {
         final int cursorOffset = expanded.indexOf("%cursor%");
-        final String finalExpandedText = cursorOffset != -1 ? expanded.replace("%cursor%", "") : expanded;
-        
-        mConnection.commitText(finalExpandedText, 1);
-        
-        mLastExpandedText = finalExpandedText;
-        mLastShortcutText = shortcut;
-        mLastExpandedCursorOffset = cursorOffset != -1 ? cursorOffset : finalExpandedText.length();
-        
         if (cursorOffset != -1) {
+            final String finalExpandedText = expanded.replace("%cursor%", "");
+            mConnection.commitText(finalExpandedText, 1);
+            mLastExpandedText = finalExpandedText;
+            mLastShortcutText = shortcut;
+            mLastExpandedCursorOffset = cursorOffset;
             final int moveBackAmount = finalExpandedText.length() - cursorOffset;
             if (moveBackAmount > 0) {
                 final int newCursorPos = mConnection.getExpectedSelectionEnd() - moveBackAmount;
                 mConnection.setSelection(newCursorPos, newCursorPos);
             }
+            mLastExpandedCursorPosition = mConnection.getExpectedSelectionEnd();
+            return;
         }
-        
+
+        final java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("%cursor(\\d+)%");
+        final java.util.regex.Matcher matcher = pattern.matcher(expanded);
+        int bestStart = -1;
+        int bestEnd = -1;
+        int lowestNum = Integer.MAX_VALUE;
+        while (matcher.find()) {
+            try {
+                final int num = Integer.parseInt(matcher.group(1));
+                if (num < lowestNum) {
+                    lowestNum = num;
+                    bestStart = matcher.start();
+                    bestEnd = matcher.end();
+                }
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+        }
+
+        if (bestStart != -1) {
+            final String finalExpandedText = expanded.substring(0, bestStart) + expanded.substring(bestEnd);
+            mConnection.commitText(finalExpandedText, 1);
+            mLastExpandedText = finalExpandedText;
+            mLastShortcutText = shortcut;
+            mLastExpandedCursorOffset = bestStart;
+            final int moveBackAmount = finalExpandedText.length() - bestStart;
+            if (moveBackAmount > 0) {
+                final int newCursorPos = mConnection.getExpectedSelectionEnd() - moveBackAmount;
+                mConnection.setSelection(newCursorPos, newCursorPos);
+            }
+        } else {
+            mConnection.commitText(expanded, 1);
+            mLastExpandedText = expanded;
+            mLastShortcutText = shortcut;
+            mLastExpandedCursorOffset = expanded.length();
+        }
         mLastExpandedCursorPosition = mConnection.getExpectedSelectionEnd();
     }
 }

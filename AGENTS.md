@@ -72,13 +72,14 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
 - Docs: `docs/FEATURES.md`, `docs/TWO_THUMB_TYPING_INTERNALS.md`, `docs/IMPROVEMENT_PLAN.md`, `layouts.md`, `CONTRIBUTING.md`
 
 ## Runtime/Tooling Preferences
-- **Android:** `compileSdk`/`targetSdk` 35, `minSdk` 21; Java/Kotlin JVM target 17. Build with JDK 17 or 21.
+- **Android:** `compileSdk` 36, `targetSdk` 35, `minSdk` 21; Java/Kotlin JVM target 17. Build with JDK 17 or 21.
 - **Toolchain:** Gradle 8.13 (wrapper), Kotlin 2.2.21, Compose BOM 2025.11.01 (`material3`, `navigation-compose`). Package management is **Gradle only** (no npm/bun/yarn).
 - **Native:** ABIs `armeabi-v7a`, `arm64-v8a`; built via `ndkBuild` (`app/src/main/jni/Android.mk`).
-- **Flavors** (dimension `privacy`, appId base `com.leanbitlab.leantype`):
+- **Flavors** (dimension `privacy`, appId base `com.asafmah.leantypedual`):
   - `standard` — cloud AI (Gemini, `generativeai`), has `INTERNET`.
-  - `offline` — on-device ONNX (`onnxruntime-android`), **no** `INTERNET`; appId `+.offline`.
-  - `offlinelite` — no AI, smallest; appId `+.offlinelite`.
+  - `standardfull` — cloud AI plus handwriting, has `INTERNET`.
+  - `offline` — on-device llama.cpp / GGUF, **no** `INTERNET`; appId `+.offline`, minSdk 26.
+  - `offlinelite` — no AI, smallest; **no** `INTERNET`; appId `+.offlinelite`.
 - **Build types:** `debug` (no minify, `+.debug`), `release` (minify + shrink + signed via `keystore.properties`), `runTests` (CI variant that skips known-failing tests), `debugNoMinify` (fast IDE builds).
 - **CI:** `.github/workflows/build-test-auto.yml` runs `compileOfflineRunTestsKotlin` on PRs touching `app/src/main/java**`; `build-debug-apk.yml` runs `assembleDebug` on manual dispatch. Release chores live in `tools/release.py`.
 
@@ -109,5 +110,5 @@ This convention is loaded every session, so any agent (and future-you) is expect
 Keep `CHANGELOG.md` current — it is LeanTypeDual's own history, not a per-line provenance log.
 - **Every user-facing or notable change** gets a line under `## [Unreleased]` (or the in-progress version), grouped `Added` / `Changed` / `Fixed` / `Reliability & testing`, with the `(#N)` issue/PR ref. Internal-only refactors go under `Changed`/`Reliability`; do not enumerate them in the user-facing fastlane note.
 - **Provenance is coarse, not per-entry.** Do NOT tag each line ours/LeanType/HeliBoard. When upstream code is merged in, add a single `Upstream` marker line under that release (e.g. `Upstream — merged HeliBoard 3.9`). Everything not under an `Upstream` marker is original to this fork by default. The fork-only feature set lives in the README, not the changelog.
-- **Versioning:** SemVer `versionName` in `app/build.gradle.kts`; `versionCode` follows `major*1000 + minor*100 + patch*10` (e.g. `3.9.0` → `3900`). On release, also add `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` (terse, user-facing bullets only). Release chores: `tools/release.py`.
+- **Versioning:** LeanTypeDual restarted its visible SemVer at `0.1.0`, independently of upstream. To preserve Android upgrades from the previous `3.10.0`/`4000` fork release, `versionCode` uses the offset formula `4000 + major*1000 + minor*100 + patch*10` (`0.1.0` → `4100`). On release, also add `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` (terse, user-facing bullets only). Release chores: `tools/release.py`.
 - On cutting a release, rename `[Unreleased]` to the version + date and start a fresh `[Unreleased]`.

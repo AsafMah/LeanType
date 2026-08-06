@@ -32,6 +32,7 @@ import helium314.keyboard.compat.locale
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.LocaleUtils
+import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.common.LocaleUtils.localizedDisplayName
 import helium314.keyboard.latin.utils.DictionaryInfoUtils
 import helium314.keyboard.latin.utils.prefs
@@ -80,8 +81,9 @@ fun DictionaryDialog(
                         DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(dict)
                     }
                 }
-                val internalId = best?.let { "main:" + it.substringAfter("_").substringBefore(".") }
-                val mainPrefKey = "pref_dict_enabled_" + (internalId ?: "main:${locale.language}")
+                // ponytail: normalize key to match format used by DictionaryFactory (lowercase, replace - with _)
+                val internalId = best?.let { "main:" + it.substringAfter("_").substringBefore(".").lowercase().replace("-", "_") }
+                val mainPrefKey = "pref_dict_enabled_" + (internalId ?: "main:${locale.toLanguageTag().lowercase().replace("-", "_")}")
 
                 val prefs = ctx.prefs()
                 var enabled by remember { mutableStateOf(prefs.getBoolean(mainPrefKey, true)) }
@@ -129,7 +131,7 @@ fun DictionaryDialog(
                         style = MaterialTheme.typography.titleSmall
                     )
                     knownDicts.forEach { (desc, link) ->
-                        DownloadableDictionaryRow(locale, desc, link) {
+                        DownloadableDictionaryRow(locale, desc, link, refreshTrigger) {
                             refreshTrigger++
                         }
                     }
@@ -159,9 +161,9 @@ fun DictionaryDialog(
 
 @Composable
 private fun DictionaryDetails(dict: File, onDelete: () -> Unit) {
+    val ctx = LocalContext.current
     val header = DictionaryInfoUtils.getDictionaryFileHeaderOrNull(dict) ?: return
     val type = header.mIdString.substringBefore(":")
-    val ctx = LocalContext.current
     val prefs = ctx.prefs()
     val prefKey = "pref_dict_enabled_${header.mIdString}"
     var enabled by remember { mutableStateOf(prefs.getBoolean(prefKey, true)) }
@@ -185,6 +187,13 @@ private fun DictionaryDetails(dict: File, onDelete: () -> Unit) {
             modifier = Modifier.padding(end = 8.dp)
         )
         Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        DeleteButton {
+            dict.delete()
+            dict.parentFile?.name?.constructLocale()?.let { dictLocale ->
+                ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
+            }
+            onDelete()
+        }
         ExpandButton { showDetails = !showDetails }
     }
     AnimatedVisibility(showDetails, enter = fadeIn(), exit = fadeOut()) {

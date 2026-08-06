@@ -190,6 +190,46 @@ fun DictionaryScreen(
                             }
                             NextScreenIcon()
                         }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+
+                        // Dictionary Source Entry
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(helium314.keyboard.latin.common.Links.DICTIONARY_URL))
+                                    ctx.startActivity(intent)
+                                }
+                                .padding(vertical = 14.dp, horizontal = 16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_settings_about_github),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(end = 12.dp).size(24.dp)
+                                )
+                                Column {
+                                    Text(
+                                        stringResource(R.string.dictionary_source_title),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        stringResource(R.string.dictionary_source_summary),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            NextScreenIcon()
+                        }
                     }
                 }
                 androidx.compose.material3.Divider(modifier = Modifier.padding(vertical = 4.dp))
@@ -435,33 +475,14 @@ fun getUserAndInternalDictionaries(context: Context, locale: Locale): Pair<List<
     val userDicts = mutableListOf<File>()
     var hasInternalDict = false
 
-    var userLocaleDir = DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { File(it) }
-    var hasFiles = userLocaleDir?.exists() == true && userLocaleDir.isDirectory && userLocaleDir.listFiles()?.any {
-        it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX) || it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX) || it.name.endsWith(".dict")
-    } == true
-
-    if (!hasFiles && (locale.country.isNotEmpty() || locale.variant.isNotEmpty())) {
+    val candidateDirs = mutableListOf<File>()
+    DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { candidateDirs.add(File(it)) }
+    if (locale.country.isNotEmpty() || locale.variant.isNotEmpty()) {
         val fallbackLocale = Locale(locale.language)
-        val fallbackDir = DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { File(it) }
-        val hasFallbackFiles = fallbackDir?.exists() == true && fallbackDir.isDirectory && fallbackDir.listFiles()?.any {
-            it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX) || it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX) || it.name.endsWith(".dict")
-        } == true
-        if (hasFallbackFiles) {
-            userLocaleDir = fallbackDir
-        }
+        DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { candidateDirs.add(File(it)) }
     }
+    DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)?.let { candidateDirs.add(it) }
 
-    if (userLocaleDir?.exists() == true && userLocaleDir.isDirectory) {
-        userLocaleDir.listFiles()?.forEach {
-            if (it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX)) {
-                userDicts.add(it)
-            } else if (it.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX)) {
-                hasInternalDict = true
-            } else if (it.name.endsWith(".dict")) {
-                userDicts.add(it)
-            }
-        }
-    }
     val internalDicts = DictionaryInfoUtils.getAssetsDictionaryList(context)
     val best = internalDicts?.let {
         LocaleUtils.getBestMatch(locale, it.toList()) { dict ->
@@ -469,6 +490,36 @@ fun getUserAndInternalDictionaries(context: Context, locale: Locale): Pair<List<
         }
     }
     val hasAsset = best != null
+
+    val seenFiles = mutableSetOf<String>()
+    candidateDirs.filter { it.exists() && it.isDirectory }.forEach { dir ->
+        dir.listFiles()?.forEach { file ->
+            if (seenFiles.add(file.name)) {
+                if (file.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX)) {
+                    userDicts.add(file)
+                } else if (file.name.startsWith(DictionaryInfoUtils.MAIN_DICT_PREFIX)) {
+                    hasInternalDict = true
+                } else if (file.name.endsWith(".dict")) {
+                    if (file.name == DictionaryInfoUtils.MAIN_DICT_FILE_NAME) {
+                        if (!hasAsset) {
+                            userDicts.add(file)
+                        } else {
+                            hasInternalDict = true
+                        }
+                    } else if (file.name == "emoji.dict") {
+                        val hasEmojiAsset = internalDicts?.any { asset -> asset.startsWith("emoji") } == true
+                        if (!hasEmojiAsset) {
+                            userDicts.add(file)
+                        } else {
+                            hasInternalDict = true
+                        }
+                    } else {
+                        userDicts.add(file)
+                    }
+                }
+            }
+        }
+    }
 
     return userDicts to (hasInternalDict || hasAsset)
 }

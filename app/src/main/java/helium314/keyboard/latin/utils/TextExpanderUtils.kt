@@ -16,6 +16,7 @@ object TextExpanderUtils {
     const val PREF_ENABLED = "pref_text_expander_enabled"
     const val PREF_PREFIX = "pref_text_expander_prefix"
     const val PREF_IMMEDIATE = "pref_text_expander_immediate"
+    const val PREF_BACKSPACE_REVERTS = "pref_text_expander_backspace_reverts"
     const val PREF_DATA = "pref_text_expander_data"
     const val REGEX_PREFIX = "__regex__:"
 
@@ -27,9 +28,11 @@ object TextExpanderUtils {
         return context.prefs().getBoolean(PREF_IMMEDIATE, false)
     }
 
-    fun getPrefix(context: Context): String {
-        return ""
+    fun isBackspaceRevertsEnabled(context: Context): Boolean {
+        return context.prefs().getBoolean(PREF_BACKSPACE_REVERTS, false)
     }
+
+
 
     data class ShortcutEntry(
         val template: String,
@@ -210,6 +213,22 @@ object TextExpanderUtils {
 
         return result
     }
+
+    fun isPrefixOfNonRegexShortcut(
+        word: String,
+        textBeforeCursor: String,
+        context: Context,
+    ): Boolean =
+        getShortcuts(context).any { (key, entry) ->
+            if (key.startsWith(REGEX_PREFIX) || key.length < entry.prefix.length) {
+                false
+            } else {
+                val shortcut = key.substring(entry.prefix.length)
+                !shortcut.equals(word, ignoreCase = true) &&
+                    shortcut.startsWith(word, ignoreCase = true) &&
+                    textBeforeCursor.endsWith(entry.prefix + word, ignoreCase = true)
+            }
+        }
 
     fun getExpandedWordForTyped(word: String?, textBeforeCursor: String?, context: Context): ExpandedResult? {
         if (word == null || textBeforeCursor == null || !isEnabled(context)) return null

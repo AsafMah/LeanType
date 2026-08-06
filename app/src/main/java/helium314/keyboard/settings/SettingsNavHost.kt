@@ -178,6 +178,9 @@ fun SettingsNavHost(
         composable(SettingsDestination.Blocklist) {
             BlocklistScreen(onClickBack = ::goBack)
         }
+        composable(SettingsDestination.BackgroundServices) {
+            helium314.keyboard.settings.screens.BackgroundServicesScreen(onClickBack = ::goBack)
+        }
     }
     if (target.value != SettingsDestination.Settings/* && target.value != navController.currentBackStackEntry?.destination?.route*/)
         navController.navigate(route = target.value)
@@ -209,6 +212,8 @@ object SettingsDestination {
     const val CustomAIKeyConfig = "custom_ai_key_config/"
     const val TextExpander = "text_expander"
     const val Blocklist = "blocklist"
+
+    const val BackgroundServices = "background_services"
     val navTarget = MutableStateFlow(Settings)
 
     // Use SupervisorJob so a cancellation in one navigation hop

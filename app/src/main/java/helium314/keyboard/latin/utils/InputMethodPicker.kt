@@ -11,7 +11,8 @@ import android.text.style.RelativeSizeSpan
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodInfo
 import android.view.inputmethod.InputMethodSubtype
-import helium314.keyboard.compat.ImeCompat.switchInputMethodAndSubtype
+import helium314.keyboard.compat.ImeCompat.switchInputMethodCompat
+import helium314.keyboard.compat.ImeCompat.switchInputMethodAndSubtypeCompat
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.RichInputMethodManager
@@ -69,9 +70,9 @@ fun createInputMethodPickerDialog(latinIme: LatinIME, richImm: RichInputMethodMa
             if (imi == thisImi)
                 latinIme.switchToSubtype(subtype)
             else if (subtype != null)
-                latinIme.switchInputMethodAndSubtype(imi, subtype)
+                latinIme.switchInputMethodAndSubtypeCompat(imi, subtype)
             else
-                latinIme.switchInputMethod(imi.id)
+                latinIme.switchInputMethodCompat(imi.id)
         }
         .create()
 

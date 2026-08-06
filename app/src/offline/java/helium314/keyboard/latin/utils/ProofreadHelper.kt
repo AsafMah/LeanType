@@ -34,16 +34,21 @@ object ProofreadHelper {
     var lastOriginalText: String? = null
         private set
     
+    private val isPreloaded = java.util.concurrent.atomic.AtomicBoolean(false)
+
     /**
      * Preload the model in the background to avoid initial latency.
      */
     @JvmStatic
     fun preloadModel(context: Context) {
+        if (isPreloaded.get()) return
         val service = ProofreadService(context)
         val modelPath = service.getModelPath()
         if (modelPath.isNullOrBlank()) return
-        scope.launch {
-            ProofreadService.ModelHolder.loadModel(context, modelPath)
+        if (isPreloaded.compareAndSet(false, true)) {
+            scope.launch {
+                ProofreadService.ModelHolder.loadModel(context, modelPath)
+            }
         }
     }
 

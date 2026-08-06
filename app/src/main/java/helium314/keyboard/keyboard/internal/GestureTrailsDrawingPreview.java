@@ -15,6 +15,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
@@ -37,7 +38,7 @@ public final class GestureTrailsDrawingPreview extends AbstractDrawingPreview im
     private final Rect mDirtyRect = new Rect();
     private final Rect mGestureTrailBoundsRect = new Rect(); // per trail
 
-    private final Handler mDrawingHandler = new Handler();
+    private final Handler mDrawingHandler = new Handler(Looper.getMainLooper());
 
     public GestureTrailsDrawingPreview(final TypedArray mainKeyboardViewAttr) {
         mDrawingParams = new GestureTrailDrawingParams(mainKeyboardViewAttr);

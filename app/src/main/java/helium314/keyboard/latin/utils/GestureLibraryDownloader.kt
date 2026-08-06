@@ -23,7 +23,7 @@ object GestureLibraryDownloader {
     
     // Base URL for the gesture library files from the trusted openboard repository
     // This is the official source referenced in HeliBoard's README
-    private const val BASE_URL = "https://github.com/erkserkserks/openboard/raw/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs"
+    private const val BASE_URL = "https://raw.githubusercontent.com/erkserkserks/openboard/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs"
     private const val LIB_NAME = "libjni_latinimegoogle.so"
     
     /**

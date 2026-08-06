@@ -27,12 +27,9 @@ object HandwritingLoader {
         apkFile.setReadOnly()
 
         try {
-            val md5 = java.security.MessageDigest.getInstance("MD5")
-            val bytes = apkFile.readBytes()
-            val hash = md5.digest(bytes).joinToString("") { "%02x".format(it) }
-            Log.i("HandwritingLoader", "Loaded plugin APK path: ${apkFile.absolutePath}, size: ${bytes.size}, md5: $hash")
+            Log.i("HandwritingLoader", "Loaded plugin APK path: ${apkFile.absolutePath}, size: ${apkFile.length()}")
         } catch (e: Exception) {
-            Log.e("HandwritingLoader", "Failed to calculate MD5", e)
+            Log.e("HandwritingLoader", "Failed to log plugin info", e)
         }
 
         try {

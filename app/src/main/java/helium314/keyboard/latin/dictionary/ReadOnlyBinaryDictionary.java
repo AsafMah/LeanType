@@ -15,7 +15,9 @@ import helium314.keyboard.latin.makedict.WordProperty;
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -29,6 +31,7 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
      * that change the state of dictionary.
      */
     private final ReentrantReadWriteLock mLock = new ReentrantReadWriteLock();
+    private final Object mIterationLock = new Object();
 
     private final BinaryDictionary mBinaryDictionary;
 
@@ -110,6 +113,97 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
     }
 
     @Override
+    @androidx.annotation.NonNull
+    public Map<String, Integer> getAllWordsWithFrequency() {
+        synchronized (mIterationLock) {
+            Map<String, Integer> words = new HashMap<>();
+            int token = 0;
+            int count = 0;
+            do {
+                if (!mLock.readLock().tryLock()) {
+                    try {
+                        Thread.sleep(5);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    continue;
+                }
+                try {
+                    if (!mBinaryDictionary.isValidDictionary()) {
+                        break;
+                    }
+                    BinaryDictionary.GetNextWordAndFrequencyResult result =
+                            mBinaryDictionary.getNextWordAndFrequency(token);
+                    if (result.mWordAndFrequency == null) break;
+                    String word = result.mWordAndFrequency.mWord;
+                    int freq = result.mWordAndFrequency.mFrequency;
+                    if (word != null && !word.isEmpty() && freq >= 0) {
+                        words.put(word, freq);
+                    }
+                    token = result.mNextToken;
+                } finally {
+                    mLock.readLock().unlock();
+                }
+
+                count++;
+                if (count % 200 == 0) {
+                    Thread.yield();
+                }
+                if (count % 2000 == 0) {
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            } while (token != 0);
+            return words;
+        }
+    }
+
+    @Override
+    public void forEachWord(java.util.function.BiConsumer<String, Integer> consumer) {
+        synchronized (mIterationLock) {
+            int token = 0;
+            int count = 0;
+            do {
+                if (!mLock.readLock().tryLock()) {
+                    try {
+                        Thread.sleep(2);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    continue;
+                }
+                try {
+                    if (!mBinaryDictionary.isValidDictionary()) {
+                        break;
+                    }
+                    BinaryDictionary.GetNextWordAndFrequencyResult result =
+                            mBinaryDictionary.getNextWordAndFrequency(token);
+                    if (result.mWordAndFrequency == null) break;
+                    String word = result.mWordAndFrequency.mWord;
+                    int freq = result.mWordAndFrequency.mFrequency;
+                    if (word != null && !word.isEmpty() && freq >= 0) {
+                        consumer.accept(word, freq);
+                    }
+                    token = result.mNextToken;
+                } finally {
+                    mLock.readLock().unlock();
+                }
+
+                count++;
+                if (count % 200 == 0) {
+                    Thread.yield();
+                }
+            } while (token != 0);
+        }
+    }
+
+    @Override
     public WordProperty getWordProperty(String word, boolean isBeginningOfSentence) {
         if (mLock.readLock().tryLock()) {
             try {
@@ -123,11 +217,18 @@ public final class ReadOnlyBinaryDictionary extends Dictionary {
 
     @Override
     public void close() {
-        mLock.writeLock().lock();
         try {
+            if (mLock.writeLock().tryLock(300, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                try {
+                    mBinaryDictionary.close();
+                } finally {
+                    mLock.writeLock().unlock();
+                }
+            } else {
+                mBinaryDictionary.close();
+            }
+        } catch (InterruptedException e) {
             mBinaryDictionary.close();
-        } finally {
-            mLock.writeLock().unlock();
         }
     }
 }

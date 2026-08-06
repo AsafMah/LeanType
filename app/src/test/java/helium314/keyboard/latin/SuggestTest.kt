@@ -153,6 +153,21 @@ class SuggestTest {
         //     todo: consider special score for case-only difference?
     }
 
+    @Test fun `lowercase words are not autocorrected to case-only capitalized candidates`() {
+        val locale = Locale.ENGLISH
+        val actual = listOf("to" to "To", "no" to "No", "meet" to "Meet").map { (typed, candidate) ->
+            shouldBeAutoCorrected(
+                typed,
+                listOf(suggestion(candidate, Int.MAX_VALUE, locale), suggestion(typed, 1500000, locale)),
+                suggestion(candidate, 200, locale),
+                suggestion(typed, 200, locale),
+                locale,
+                thresholdModest,
+            ).last()
+        }
+        assertEquals(listOf(false, false, false), actual)
+    }
+
     @Test fun `no English 'in' instead of French 'un' when typing in French`() {
         val result = shouldBeAutoCorrected(
             "un",
@@ -270,11 +285,57 @@ class SuggestTest {
         assert(!result.last()) // should not be corrected
     }
 
+    @Test fun `multi-word filter removes phrases only when enabled`() {
+        fun results() = SuggestionResults(3, false, false).apply {
+            add(suggestion("single", 100, Locale.ENGLISH))
+            add(suggestion("two words", 90, Locale.ENGLISH))
+            add(suggestion("another", 80, Locale.ENGLISH))
+        }
+
+        val disabled = results()
+        filterMultiWordSuggestions(disabled, false)
+        assertEquals(listOf("single", "two words", "another"), disabled.map { it.mWord })
+
+        val enabled = results()
+        filterMultiWordSuggestions(enabled, true)
+        assertEquals(listOf("single", "another"), enabled.map { it.mWord })
+    }
+
     @Test fun `quotes are added to suggestions when needed`() {
         val result = Suggest.getTransformedSuggestedWordInfo(suggestion("word", 1, Locale.ENGLISH, true),
             Locale.ENGLISH, false, false, 1)
         assertEquals("word'", result.mWord)
     }
+
+    @Test fun `fallback lowercase candidate uses Suggest presentation casing`() {
+        val candidate = suggestion("hello", 1, Locale.ENGLISH, true)
+
+        assertEquals("hello", Suggest.getTransformedSuggestedWordInfo(
+            candidate, Locale.ENGLISH, false, false, 0).mWord)
+        assertEquals("Hello", Suggest.getTransformedSuggestedWordInfo(
+            candidate, Locale.ENGLISH, false, true, 0).mWord)
+        assertEquals("HELLO", Suggest.getTransformedSuggestedWordInfo(
+            candidate, Locale.ENGLISH, true, false, 0).mWord)
+    }
+
+    @Test fun `misspelled word is corrected using relaxed threshold even with low score`() {
+        val locale = Locale.ENGLISH
+        // typed word: "recpa" (length 5) -> not in dictionary
+        // suggestion: "recep" (score 300,000)
+        // edit distance is 2, normalizedScore is 0.3 * (1 - 2/5) = 0.18
+        // 0.18 < 0.185 (threshold), but adjustedThreshold is 0.185 * (3/5) = 0.111
+        // Since score 300,000 > scoreLimit / 4 (237,500) and length > 3, it should correct!
+        val result = shouldBeAutoCorrected(
+            "recpa",
+            listOf(suggestion("recep", 300000, locale)),
+            null,
+            null,
+            locale,
+            thresholdModest
+        )
+        assert(result.last()) // should be corrected
+    }
+
 
     private fun shouldBeAutoCorrected(word: String, // typed word
                               suggestions: List<SuggestedWordInfo>, // suggestions ordered by score, including suggestion for typed word if in dictionary

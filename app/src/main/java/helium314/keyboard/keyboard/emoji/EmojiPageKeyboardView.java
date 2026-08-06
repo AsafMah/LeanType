@@ -13,6 +13,7 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.widget.LinearLayout;
 import helium314.keyboard.keyboard.PopupTextView;
@@ -99,7 +100,7 @@ public final class EmojiPageKeyboardView extends KeyboardView implements
     public EmojiPageKeyboardView(final Context context, final AttributeSet attrs,
             final int defStyle) {
         super(context, attrs, defStyle);
-        mHandler = new Handler();
+        mHandler = new Handler(Looper.getMainLooper());
 
         mPopupKeysPlacerView = new FrameLayout(context, attrs);
 
@@ -484,5 +485,13 @@ public final class EmojiPageKeyboardView extends KeyboardView implements
             return;
         }
         parent.requestDisallowInterceptTouchEvent(disallow);
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (mHandler != null) {
+            mHandler.removeCallbacksAndMessages(null);
+        }
     }
 }

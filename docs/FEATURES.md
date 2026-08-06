@@ -17,6 +17,9 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | 📝 **[Text Expander](#6-text-expander)** | Custom text shortcut expansion. |
 | 🖱️ **[Touchpad Mode](#7-touchpad-mode)** | Full-screen touchpad gestures and controls. |
 | ✍️ **[Handwriting Input](#8-handwriting-input)** | Use handwriting recognition to draw letters directly on a canvas. |
+| 👆 **[Gesture Typing](#9-gesture-typing)** | Swipe/glide typing powered by native C++ library. |
+| ⌨️ **[Direct Switch Target IME](#10-direct-switch-target-ime)** | Switch directly to another input method using custom keycode `-10076`. |
+| 🎨 **[Custom Layouts Customization](#11-custom-layouts-customization)** | Persistent custom layout profiles and management. |
 
 ## Summary of New Features
 
@@ -42,6 +45,9 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | **Two-thumb Typing** | Mix taps and swipes naturally, multi-tap then swipe, manual spacing, recognition tweaks. All experimental and opt-in. | `Two-thumb typing (experimental)` |
 | **Text Expander** | Expand custom shortcuts using dynamic template variables (date, time, clipboard, custom placeholders). | `Text correction > Text Expander` |
 | **Handwriting Input** | Draw letters or words directly on the screen keyboard space to type (standard variant, requires plugin). | `Libraries > Handwriting Input Plugin` |
+| **Gesture Typing** | Gesture typing (swipe/glide typing) powered by the native C++ library (`libjni_latinime.so` / `libjni_latinimegoogle.so`). | `Gesture typing` |
+| **Direct Switch Target IME** | Direct input method switching using custom keycode `-10076` assigned to toolbar keys. | `Preferences > Direct Switch Target IME` |
+| **Custom Layouts** | Supports up to 5 custom layouts with persistent layout index tracking. | `Languages > Custom layouts` |
 
 ---
 
@@ -423,3 +429,39 @@ LeanType integrates a handwriting recognition canvas that allows you to write ch
 3. Draw characters, words, or punctuation symbols on the canvas. The keyboard will automatically inputs recognized characters.
 4. Tap the **Clear (X)** button on the bottom row to clear the current drawing canvas.
 5. Tap the **Handwriting** icon again to toggle back to the standard keyboard layout.
+---
+
+## 9. Gesture Typing
+
+*   **Functionality**: Gesture typing (swipe/glide typing) supports either the built-in Java fallback engine or a compatible native C++ gesture library.
+*   **Engine choice**: The Java fallback works without an external library; the native method uses `libjni_latinimegoogle.so` when installed and compatible.
+*   **Library Loading**: Native gesture libraries can be loaded on demand via **Settings > Gesture typing** or **Settings > Libraries Hub**.
+*   **Settings Configuration**:
+    1. Go to **Settings > Gesture typing**.
+    2. Enable gesture typing and choose **Fallback engine** or **Native library**.
+    3. Configure visual options (preview trail, floating preview text, trail fadeout) and behavior options (space-aware gesture, autospace, fast typing cooldown).
+
+---
+
+## 10. Direct Switch Target IME
+
+*   **Functionality**: Switch directly to another configured input method (and subtype) instead of opening the system input method picker.
+*   **Behavior**:
+    *   Map the custom keycode `-10076` (`SWITCH_TO_USER_IME`) to any toolbar key (supports click or long-press).
+    *   Tapping/long-pressing the key immediately switches input methods.
+*   **How to Setup**:
+    1. Go to **Settings > Preferences**.
+    2. Tap **Direct Switch Target IME** and select the target keyboard/subtype from the list of enabled inputs.
+    3. Go to **Settings > Toolbar > Customize toolbar key codes** to map `-10076` to a toolbar key.
+
+---
+
+## 11. Custom Layouts Customization
+
+*   **Functionality**: Save up to five custom layout profiles with persistent active slot tracking.
+*   **Behavior**:
+    *   The active custom layout slot index is preserved across orientation changes and switching between alphabet and symbol states.
+    *   Unused custom layout profiles can be directly deleted from settings.
+*   **How to Setup**:
+    1. Go to **Settings > Languages > Custom layouts**.
+    2. Manage custom layouts and slots as needed.

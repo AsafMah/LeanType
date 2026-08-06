@@ -102,6 +102,7 @@ object KeyCode {
 
     const val SETTINGS =                    -301
     const val TOGGLE_TEXT_EDIT_MODE =       -305
+    const val TOGGLE_SELECTION_MODE =       -306
 
     const val CURRENCY_SLOT_1 =             -801
     const val CURRENCY_SLOT_2 =             -802
@@ -111,6 +112,12 @@ object KeyCode {
     const val CURRENCY_SLOT_6 =             -806
 
     const val MULTIPLE_CODE_POINTS =        -902
+
+    const val CUSTOM1 = -10081
+    const val CUSTOM2 = -10082
+    const val CUSTOM3 = -10083
+    const val CUSTOM4 = -10084
+    const val CUSTOM5 = -10085
     //const val DRAG_MARKER =                 -991
     //const val NOOP =                        -999
 
@@ -202,6 +209,7 @@ object KeyCode {
     const val CLIPBOARD_SEARCH =          -10071
     const val HANDWRITING =               -10074
     const val CLEAR_HANDWRITING =         -10075
+    const val SWITCH_TO_USER_IME =        -10076
 
 
     // Intents
@@ -228,7 +236,8 @@ object KeyCode {
         TIMESTAMP, CTRL_LEFT, CTRL_RIGHT, ALT_LEFT, ALT_RIGHT, META_LEFT, META_RIGHT, SEND_INTENT_ONE, SEND_INTENT_TWO,
         SEND_INTENT_THREE, INLINE_EMOJI_SEARCH_DONE, META_LOCK, PROOFREAD, TRANSLATE, SHOW_TRANSLATE_LANGUAGES,
         CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, CUSTOM_AI_4, CUSTOM_AI_5,
-        CUSTOM_AI_6, CUSTOM_AI_7, CUSTOM_AI_8, CUSTOM_AI_9, CUSTOM_AI_10, CLIPBOARD_SEARCH, TOGGLE_FLOATING_KEYBOARD, TOGGLE_TOUCHPAD_MODE, TOGGLE_TEXT_EDIT_MODE, HANDWRITING, CLEAR_HANDWRITING
+        CUSTOM_AI_6, CUSTOM_AI_7, CUSTOM_AI_8, CUSTOM_AI_9, CUSTOM_AI_10, CLIPBOARD_SEARCH, TOGGLE_FLOATING_KEYBOARD, TOGGLE_TOUCHPAD_MODE, TOGGLE_TEXT_EDIT_MODE, TOGGLE_SELECTION_MODE, HANDWRITING, CLEAR_HANDWRITING,
+        CUSTOM1, CUSTOM2, CUSTOM3, CUSTOM4, CUSTOM5, SWITCH_TO_USER_IME
         -> this
 
         // conversion

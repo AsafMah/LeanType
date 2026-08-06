@@ -39,6 +39,7 @@ import helium314.keyboard.latin.utils.SuggestionResults
 import helium314.keyboard.latin.utils.getSecondaryLocales
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -64,6 +65,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private var mPrefs: SharedPreferences? = null
     private var mContext: Context? = null
     private var mEnabledDictionariesState: Map<String, Boolean> = emptyMap()
+    private var mLoadedDownloadPrefs: Map<String, Any?> = emptyMap()
     private var dictionaryGroups = listOf(DictionaryGroup())
 
     @Volatile
@@ -86,6 +88,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         Dictionary.TYPE_MAIN,
         Dictionary.TYPE_CONTACTS,
         Dictionary.TYPE_APPS,
+        Dictionary.TYPE_USER,
         Dictionary.TYPE_USER_HISTORY
     )
     // Caches for spell checking word validity
@@ -143,7 +146,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         if (prefs != null) {
             val currentPrefs = prefs.all.filterKeys { it.startsWith("pref_dict_enabled_") }
                 .mapValues { it.value as? Boolean ?: true }
-            if (currentPrefs != mEnabledDictionariesState) {
+            val currentDownloadPrefs = prefs.all.filterKeys { it.startsWith("pref_dict_download_link_") }
+            if (currentPrefs != mEnabledDictionariesState || currentDownloadPrefs != mLoadedDownloadPrefs) {
                 return false
             }
         }
@@ -179,6 +183,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         mPrefs = prefs
         mEnabledDictionariesState = prefs.all.filterKeys { it.startsWith("pref_dict_enabled_") }
             .mapValues { it.value as? Boolean ?: true }
+        mLoadedDownloadPrefs = prefs.all.filterKeys { it.startsWith("pref_dict_download_link_") }
 
         // Initialize session word boost with context if not yet done
         if (sessionWordBoost == null) {
@@ -210,11 +215,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
 
-        // Clean up old dictionaries.
-        existingDictsToCleanup.forEach { (locale, dictTypes) ->
-            val dictGroupToCleanup = findDictionaryGroupWithLocale(oldDictionaryGroups, locale) ?: return@forEach
-            for (dictType in dictTypes) {
-                dictGroupToCleanup.closeDict(dictType)
+        // Clean up old dictionaries in the background to avoid blocking the main thread.
+        scope.launch {
+            existingDictsToCleanup.forEach { (locale, dictTypes) ->
+                val dictGroupToCleanup = findDictionaryGroupWithLocale(oldDictionaryGroups, locale) ?: return@forEach
+                for (dictType in dictTypes) {
+                    dictGroupToCleanup.closeDict(dictType)
+                }
             }
         }
 
@@ -308,9 +315,10 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 }
 
                 listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
-                latchForWaitingLoadingMainDictionary.countDown()
             } catch (e: Throwable) {
                 Log.e(TAG, "could not initialize main dictionaries for $locales", e)
+            } finally {
+                latchForWaitingLoadingMainDictionary.countDown()
             }
         }
     }
@@ -383,14 +391,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             )
             ngramContextForCurrentWord = ngramContextForCurrentWord.getNextNgramContext(WordInfo(currentWord))
 
-            // Un-blacklist a word the user deliberately committed — but ONLY if it is a word they
-            // genuinely know: present in a non-history dictionary (main/contacts/apps or their personal
-            // dictionary). A junk word (e.g. a gesture misfire that is in no dictionary) must STAY
-            // blacklisted, otherwise the user's "remove" never sticks: it would be un-blacklisted here
-            // and then re-learned, resurrecting it (e.g. "לא" → "לר").
-            dictionaryGroups.filter { it.confidence == preferredGroup.confidence }.forEach {
-                if (it.isInNonHistoryDictionary(currentWord)) it.removeFromBlacklist(currentWord)
-            }
+            // Upstream v3.9.1: do not automatically remove blacklisted words from the blacklist on type.
+            // Explicit Add/Blocklist actions remain the safe path for restoring blocked words.
         }
     }
 
@@ -398,6 +400,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         dictionaryGroup: DictionaryGroup, ngramContext: NgramContext, word: String, wasAutoCapitalized: Boolean,
         timeStampInSeconds: Int, blockPotentiallyOffensive: Boolean
     ) {
+        if (dictionaryGroup.isBlacklisted(word)) return
         val userHistoryDictionary = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
 
         // Never re-learn a word the user has blacklisted (e.g. a deleted gesture-misfire junk word).
@@ -542,29 +545,76 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         putWordIntoValidSpellingWordCache("unlearnFromUserHistory", word.lowercase(Locale.getDefault()))
     }
 
+    override fun getAllMainDictionaryWordsWithFrequency(): Map<String, Int> {
+        val result = mutableMapOf<String, Int>()
+        val dictGroup = dictionaryGroups.firstOrNull() ?: return emptyMap()
+        val mainDict = dictGroup.getDict(Dictionary.TYPE_MAIN)
+        if (mainDict != null) {
+            result.putAll(mainDict.getAllWordsWithFrequency())
+        }
+        val userHistoryDict = dictGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)
+        if (userHistoryDict != null) {
+            result.putAll(userHistoryDict.getAllWordsWithFrequency())
+        }
+        val userDict = dictGroup.getSubDict(Dictionary.TYPE_USER)
+        if (userDict != null) {
+            result.putAll(userDict.getAllWordsWithFrequency())
+        }
+        return result;
+    }
+
+    override fun forEachMainDictionaryWord(consumer: java.util.function.BiConsumer<String, Int>) {
+        val dictGroup = dictionaryGroups.firstOrNull() ?: return
+        val mainDict = dictGroup.getDict(Dictionary.TYPE_MAIN)
+        mainDict?.forEachWord(consumer)
+        val userHistoryDict = dictGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)
+        userHistoryDict?.forEachWord(consumer)
+        val userDict = dictGroup.getSubDict(Dictionary.TYPE_USER)
+        userDict?.forEachWord(consumer)
+    }
+
     // TODO: Revise the way to fusion suggestion results.
     override fun getSuggestionResults(
         composedData: ComposedData, ngramContext: NgramContext, keyboard: Keyboard,
         settingsValuesForSuggestion: SettingsValuesForSuggestion, sessionId: Int, inputStyle: Int
     ): SuggestionResults {
         val proximityInfoHandle = keyboard.proximityInfo.nativeProximityInfo
-        val weightOfLangModelVsSpatialModel = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
 
-        val waitForOtherDicts = if (dictionaryGroups.size == 1) null else CountDownLatch(dictionaryGroups.size - 1)
-        val suggestionsArray = Array<List<SuggestedWordInfo>?>(dictionaryGroups.size) { null }
-        for (i in 1..dictionaryGroups.lastIndex) {
+        val dictionaryGroupsSnapshot = dictionaryGroups
+        if (dictionaryGroupsSnapshot.isEmpty()) {
+            return SuggestionResults(SuggestedWords.MAX_SUGGESTIONS, ngramContext.isBeginningOfSentenceContext, false)
+        }
+        val waitForOtherDicts = if (dictionaryGroupsSnapshot.size == 1) null else CountDownLatch(dictionaryGroupsSnapshot.size - 1)
+        val suggestionsArray = Array<List<SuggestedWordInfo>?>(dictionaryGroupsSnapshot.size) { null }
+        for (i in 1..dictionaryGroupsSnapshot.lastIndex) {
+            val dictionaryGroup = dictionaryGroupsSnapshot[i]
             scope.launch {
-                suggestionsArray[i] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
-                    proximityInfoHandle, weightOfLangModelVsSpatialModel, dictionaryGroups[i])
-                waitForOtherDicts?.countDown()
+                try {
+                    // Native suggestion generation writes back into this one-element array;
+                    // each parallel dictionary needs independent mutable state.
+                    val dictionaryWeight = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
+                    suggestionsArray[i] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
+                        proximityInfoHandle, dictionaryWeight, dictionaryGroup, dictionaryGroupsSnapshot)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "could not get suggestions for ${dictionaryGroup.locale}", e)
+                } finally {
+                    waitForOtherDicts?.countDown()
+                }
             }
         }
-        suggestionsArray[0] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
-            proximityInfoHandle, weightOfLangModelVsSpatialModel, dictionaryGroups[0])
+        val primaryDictionaryWeight = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
+        try {
+            suggestionsArray[0] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
+                proximityInfoHandle, primaryDictionaryWeight, dictionaryGroupsSnapshot[0], dictionaryGroupsSnapshot)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying primary dictionary for locale ${dictionaryGroupsSnapshot[0].locale}", e)
+        }
         val suggestionResults = SuggestionResults(
             SuggestedWords.MAX_SUGGESTIONS, ngramContext.isBeginningOfSentenceContext, false
         )
-        waitForOtherDicts?.await()
+        waitForOtherDicts?.await(500, TimeUnit.MILLISECONDS)
 
         suggestionsArray.forEach {
             if (it == null) return@forEach
@@ -591,15 +641,48 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private fun getSuggestions(
         composedData: ComposedData, ngramContext: NgramContext,
         settingsValuesForSuggestion: SettingsValuesForSuggestion, sessionId: Int,
-        proximityInfoHandle: Long, weightOfLangModelVsSpatialModel: FloatArray, dictGroup: DictionaryGroup
+        proximityInfoHandle: Long, weightOfLangModelVsSpatialModel: FloatArray, dictGroup: DictionaryGroup,
+        allDictionaryGroups: List<DictionaryGroup>
     ): List<SuggestedWordInfo> {
         val suggestions = ArrayList<SuggestedWordInfo>()
-        val weightForLocale = dictGroup.getWeightForLocale(dictionaryGroups, composedData.mIsBatchMode)
+        val weightForLocale = dictGroup.getWeightForLocale(allDictionaryGroups, composedData.mIsBatchMode)
         for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
             val dictionary = dictGroup.getDict(dictType) ?: continue
-            val dictionarySuggestions = dictionary.getSuggestions(composedData, ngramContext, proximityInfoHandle,
+            var dictionarySuggestions = dictionary.getSuggestions(composedData, ngramContext, proximityInfoHandle,
                 settingsValuesForSuggestion, sessionId, weightForLocale, weightOfLangModelVsSpatialModel
-            ) ?: continue
+            )
+            if (composedData.mTypedWord.isEmpty() && (dictionarySuggestions == null || dictionarySuggestions.isEmpty())
+                && dictType == Dictionary.TYPE_USER
+            ) {
+                if (!Settings.getValues().mNextWordStrictNgram && Settings.getValues().mPrioritizePersonalSuggestions) {
+                    val allWords = try {
+                        dictionary.allWordsWithFrequency
+                    } catch (e: Exception) {
+                        null
+                    }
+                    if (allWords != null && allWords.isNotEmpty()) {
+                        val topWords = allWords.entries
+                            .sortedByDescending { it.value }
+                            .take(15)
+                        val unigramSuggestions = ArrayList<SuggestedWordInfo>()
+                        for (entry in topWords) {
+                            unigramSuggestions.add(
+                                SuggestedWordInfo(
+                                    entry.key,
+                                    "",
+                                    entry.value,
+                                    SuggestedWordInfo.KIND_PREDICTION,
+                                    dictionary,
+                                    SuggestedWordInfo.NOT_AN_INDEX,
+                                    SuggestedWordInfo.NOT_A_CONFIDENCE
+                                )
+                            )
+                        }
+                        dictionarySuggestions = unigramSuggestions
+                    }
+                }
+            }
+            if (dictionarySuggestions == null) continue
 
             // For some reason "garbage" words are produced when glide typing. For user history
             // and main dictionaries we can filter them out by checking whether the dictionary
@@ -625,7 +708,21 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 if (word.length == 1 && info.mSourceDict.mDictType == Dictionary.TYPE_EMOJI && !StringUtils.mightBeEmoji(word[0].code))
                     continue
 
-                suggestions.add(info)
+                if (composedData.mTypedWord.isEmpty() && (dictType == Dictionary.TYPE_USER_HISTORY || dictType == Dictionary.TYPE_USER)) {
+                    val settingsValues = Settings.getValues()
+                    val boostedScore = if (settingsValues.mPrioritizePersonalSuggestions) {
+                        info.mScore + settingsValues.mNextWordBoostLevel
+                    } else {
+                        info.mScore
+                    }
+                    val boostedInfo = SuggestedWordInfo(
+                        info.mWord, info.mPrevWordsContext, boostedScore, info.mKindAndFlags,
+                        info.mSourceDict, info.mIndexOfTouchPointOfSecondWord, info.mAutoCommitFirstWordConfidence
+                    )
+                    suggestions.add(boostedInfo)
+                } else {
+                    suggestions.add(info)
+                }
             }
         }
         return suggestions
@@ -719,7 +816,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         return dictionariesToCheck.any { dictionaryGroup.getDict(it)?.isValidWord(word) == true }
     }
 
-    private fun isBlacklisted(word: String): Boolean = dictionaryGroups.any { it.isBlacklisted(word) }
+    override fun isBlacklisted(word: String): Boolean = dictionaryGroups.any { it.isBlacklisted(word) }
 
     override fun removeWord(word: String) {
         for (dictionaryGroup in dictionaryGroups) {
@@ -983,9 +1080,9 @@ private class DictionaryGroup(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(2))
 
     // words cannot be (permanently) removed from some dictionaries, so we use a blacklist for "removing" words
-    private val blacklistFile = if (context?.filesDir == null) null
+    private val blacklistFile = if (context == null) null
     else {
-        val file = File(context.filesDir.absolutePath + File.separator + "blacklists" + File.separator + locale.toLanguageTag() + ".txt")
+        val file = File(DeviceProtectedUtils.getFilesDir(context).absolutePath + File.separator + "blacklists" + File.separator + locale.toLanguageTag() + ".txt")
         if (file.isDirectory) file.delete() // this apparently was an issue in some versions
         if (file.parentFile?.exists() == true || file.parentFile?.mkdirs() == true) file
         else null
@@ -1001,9 +1098,9 @@ private class DictionaryGroup(
     private fun rebuildCompiledPatterns(patterns: Collection<String>) {
         compiledBlacklistPatterns = patterns.map { pattern ->
             try {
-                Regex(pattern, RegexOption.IGNORE_CASE)
+                Regex(pattern)
             } catch (e: Exception) {
-                Regex(Regex.escape(pattern), RegexOption.IGNORE_CASE)
+                Regex(Regex.escape(pattern))
             }
         }
     }
@@ -1035,7 +1132,8 @@ private class DictionaryGroup(
 
     fun isBlacklisted(word: String): Boolean {
         val patterns = compiledBlacklistPatterns
-        return patterns.any { it.matches(word) }
+        val lowercased = word.lowercase(locale)
+        return patterns.any { it.matches(lowercased) }
     }
 
     fun addToBlacklist(word: String) {

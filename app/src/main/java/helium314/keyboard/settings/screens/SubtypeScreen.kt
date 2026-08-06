@@ -159,7 +159,7 @@ fun SubtypeScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 MainLayoutRow(currentSubtype, customMainLayouts) { setCurrentSubtype(it) }
-                if (availableLocalesForScript.size > 1) {
+                if (availableLocalesForScript.isNotEmpty()) {
                     WithSmallTitle(stringResource(R.string.secondary_locale)) {
                         ActionRow(onClick = { showSecondaryLocaleDialog = true }) {
                             val text = getSecondaryLocales(currentSubtype.extraValues).joinToString(", ") {
