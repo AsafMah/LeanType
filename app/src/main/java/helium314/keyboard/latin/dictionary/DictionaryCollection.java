@@ -16,7 +16,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Class for a collection of dictionaries that behave like one dictionary.
@@ -87,6 +89,21 @@ public final class DictionaryCollection extends Dictionary {
             maxFreq = Math.max(tempFreq, maxFreq);
         }
         return maxFreq;
+    }
+
+    @Override
+    @androidx.annotation.NonNull
+    public Map<String, Integer> getAllWordsWithFrequency() {
+        Map<String, Integer> result = new HashMap<>();
+        for (Dictionary dict : mDictionaries) result.putAll(dict.getAllWordsWithFrequency());
+        return result;
+    }
+
+    @Override
+    public void forEachWord(java.util.function.BiConsumer<String, Integer> consumer) {
+        for (Dictionary dict : mDictionaries) {
+            dict.forEachWord(consumer);
+        }
     }
 
     @Override

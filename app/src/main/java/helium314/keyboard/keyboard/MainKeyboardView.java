@@ -132,7 +132,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private final KeyPreviewChoreographer mKeyPreviewChoreographer;
 
     // More keys keyboard
-    private final Paint mBackgroundDimAlphaPaint = new Paint(); // todo: not used at all
+
     private final View mPopupKeysKeyboardContainer;
     private final View mPopupKeysKeyboardForActionContainer;
     private final WeakHashMap<Key, Keyboard> mPopupKeysKeyboardCache = new WeakHashMap<>();
@@ -186,10 +186,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
                 && !forceNonDistinctMultitouch;
         mNonDistinctMultitouchHelper = hasDistinctMultitouch ? null : new NonDistinctMultitouchHelper();
 
-        final int backgroundDimAlpha = mainKeyboardViewAttr.getInt(
-                R.styleable.MainKeyboardView_backgroundDimAlpha, 0);
-        mBackgroundDimAlphaPaint.setColor(Color.BLACK);
-        mBackgroundDimAlphaPaint.setAlpha(backgroundDimAlpha);
+
         mLanguageOnSpacebarTextRatio = mainKeyboardViewAttr.getFraction(
                 R.styleable.MainKeyboardView_languageOnSpacebarTextRatio, 1, 1, 1.0f)
                 * Settings.getValues().mFontSizeMultiplier;
@@ -495,6 +492,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private void dismissKeyPreview(@NonNull final Key key) {
         if (isHardwareAccelerated()) {
             mKeyPreviewChoreographer.dismissKeyPreview(key);
+        } else {
+            // ponytail: fallback if hardware acceleration is disabled
+            dismissKeyPreviewWithoutDelay(key);
         }
     }
 
@@ -802,12 +802,18 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         return true;
     }
 
+    public void dismissAllKeyPreviews() {
+        mKeyPreviewChoreographer.clear();
+        mDrawingPreviewPlacerView.removeAllViews();
+    }
+
     public void cancelAllOngoingEvents() {
         mTimerHandler.cancelAllMessages();
         PointerTracker.setReleasedKeyGraphicsToAllKeys();
         mGestureFloatingTextDrawingPreview.dismissGestureFloatingPreviewText();
         mSlidingKeyInputDrawingPreview.dismissSlidingKeyInputPreview();
         PointerTracker.dismissAllPopupKeysPanels();
+        dismissAllKeyPreviews();
         PointerTracker.cancelAllPointerTrackers();
     }
 

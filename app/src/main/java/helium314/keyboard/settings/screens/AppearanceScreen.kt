@@ -67,6 +67,8 @@ fun AppearanceScreen(
         SettingsWithoutKey.BACKGROUND_IMAGE_LANDSCAPE,
         R.string.settings_category_miscellaneous,
         Settings.PREF_PERSIST_FLOATING_KEYBOARD,
+        // ponytail: persist text edit mode settings item
+        Settings.PREF_PERSIST_TEXT_EDIT_MODE,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE,
         if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE)
@@ -85,6 +87,7 @@ fun AppearanceScreen(
         Settings.PREF_FONT_SCALE,
         SettingsWithoutKey.CUSTOM_EMOJI_FONT,
         Settings.PREF_EMOJI_FONT_SCALE,
+        Settings.PREF_USE_SYSTEM_EMOJI,
         if (prefs.getFloat(Settings.PREF_EMOJI_FONT_SCALE, Defaults.PREF_EMOJI_FONT_SCALE) != 1f)
             Settings.PREF_EMOJI_KEY_FIT else null,
         if (prefs.getInt(Settings.PREF_EMOJI_MAX_SDK, 0) >= 24)
@@ -205,6 +208,10 @@ fun createAppearanceSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_PERSIST_FLOATING_KEYBOARD, R.string.persist_floating_keyboard_title, R.string.persist_floating_keyboard_summary) {
         SwitchPreference(it, Defaults.PREF_PERSIST_FLOATING_KEYBOARD)
     },
+    // ponytail: persist text edit mode preference widget
+    Setting(context, Settings.PREF_PERSIST_TEXT_EDIT_MODE, R.string.persist_text_edit_mode_title, R.string.persist_text_edit_mode_summary) {
+        SwitchPreference(it, Defaults.PREF_PERSIST_TEXT_EDIT_MODE)
+    },
     Setting(context, Settings.PREF_SPLIT_SPACER_SCALE_PREFIX, R.string.split_spacer_scale) { setting ->
         MultiSliderPreference(
             name = setting.title,
@@ -296,6 +303,13 @@ fun createAppearanceSettings(context: Context) = listOf(
             range = 0.5f..1.5f,
             description = { "${(100 * it).toInt()}%" }
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_USE_SYSTEM_EMOJI, R.string.prefs_use_system_emoji, R.string.prefs_use_system_emoji_summary) { setting ->
+        val ctx = LocalContext.current
+        SwitchPreference(setting, Defaults.PREF_USE_SYSTEM_EMOJI) { newValue ->
+            ctx.prefs().edit(commit = true) { putBoolean(Settings.PREF_USE_SYSTEM_EMOJI, newValue) }
+            Runtime.getRuntime().exit(0)
+        }
     },
     Setting(context, Settings.PREF_EMOJI_KEY_FIT, R.string.prefs_emoji_key_fit) {
         SwitchPreference(it, Defaults.PREF_EMOJI_KEY_FIT) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }

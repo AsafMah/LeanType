@@ -83,41 +83,11 @@ fun SponsorDialog(
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Gradient Header
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xFF7C4DFF), // LeanBitLab Purple
-                                    Color(0xFFFE8E86)  // Sponsor Warm Pink/Rose
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // White glow/background for heart
-                    Box(
-                        modifier = Modifier
-                            .size(84.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "❤️",
-                            style = MaterialTheme.typography.displayMedium
-                        )
-                    }
-                }
-
                 // Content
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -169,12 +139,33 @@ fun SponsorDialog(
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Buttons Row
-                    Row(
+                    // Buttons Column
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Button(
+                            onClick = {
+                                if (neverShowAgain)
+                                    prefs.edit { putBoolean(Settings.PREF_DONT_SHOW_SPONSOR_DIALOG, true) }
+                                onSponsor()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            Text("💖", modifier = Modifier.padding(end = 8.dp))
+                            Text(
+                                text = "Sponsor on GitHub",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
                         TextButton(
                             onClick = {
                                 if (neverShowAgain)
@@ -188,27 +179,6 @@ fun SponsorDialog(
                             Text(
                                 text = stringResource(R.string.sponsor_dialog_not_now),
                                 fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.width(12.dp))
-                        
-                        Button(
-                            onClick = {
-                                if (neverShowAgain)
-                                    prefs.edit { putBoolean(Settings.PREF_DONT_SHOW_SPONSOR_DIALOG, true) }
-                                onSponsor()
-                            },
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
-                        ) {
-                            Text("💖", modifier = Modifier.padding(end = 6.dp))
-                            Text(
-                                text = stringResource(R.string.sponsor_dialog_sponsor),
-                                fontWeight = FontWeight.Bold
                             )
                         }
                     }

@@ -7,7 +7,6 @@ import helium314.keyboard.latin.common.StringUtils.mightBeEmoji
 import helium314.keyboard.latin.common.StringUtils.newSingleCodePointString
 import helium314.keyboard.latin.settings.SpacingAndPunctuations
 import helium314.keyboard.latin.utils.ScriptUtils
-import helium314.keyboard.latin.utils.SpacedTokens
 import helium314.keyboard.latin.utils.SpannableStringUtils
 import helium314.keyboard.latin.utils.TextRange
 import java.math.BigInteger
@@ -66,11 +65,18 @@ fun hasLetterBeforeLastSpaceBeforeCursor(text: CharSequence): Boolean {
 fun getFullEmojiAtEnd(text: CharSequence): String {
     val s = text.toString()
     var offset = s.length
+    if (offset == 0) return ""
+    val lastCodepoint = s.codePointBefore(offset)
+    if (!mightBeEmoji(lastCodepoint)) return ""
+
     while (offset > 0) {
         val codepoint = s.codePointBefore(offset)
         // continue if codepoint could be emoji, or if it's followed by a variation selector
-        if (!(mightBeEmoji(codepoint) || (offset <= s.lastIndex && (s[offset].code == 0xFE0F || s[offset].code == 0xFE0E))))
-            return text.substring(offset)
+        if (!(mightBeEmoji(codepoint) || (offset <= s.lastIndex && (s[offset].code == 0xFE0F || s[offset].code == 0xFE0E)))) {
+            val result = s.substring(offset)
+            if (isEmoji(result)) return result
+            return s.substring(s.length - Character.charCount(lastCodepoint))
+        }
         offset -= Character.charCount(codepoint)
         if (offset > 0 && s[offset - 1].code == KeyCode.ZWJ) {
             // todo: this appends ZWJ in weird cases like text, ZWJ, emoji
@@ -92,7 +98,9 @@ fun getFullEmojiAtEnd(text: CharSequence): String {
         val textToCheck = s.substring(offset)
         if (isEmoji(textToCheck)) return textToCheck
     }
-    return s.substring(offset)
+    val result = s.substring(offset)
+    if (isEmoji(result)) return result
+    return s.substring(s.length - Character.charCount(lastCodepoint))
 }
 
 /**
@@ -272,7 +280,7 @@ fun isEmoji(c: Int): Boolean = mightBeEmoji(c) && isEmoji(newSingleCodePointStri
 /** returns whether the text is a single emoji */
 fun isEmoji(text: CharSequence): Boolean = mightBeEmoji(text) && text.matches(emoRegex)
 
-fun String.splitOnWhitespace() = SpacedTokens(this).toList()
+fun String.splitOnWhitespace() = split(Regex("\\s+")).filter { it.isNotEmpty() }
 
 // from https://github.com/mathiasbynens/emoji-test-regex-pattern, MIT license
 // matches single emojis only

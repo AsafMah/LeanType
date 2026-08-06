@@ -57,7 +57,7 @@ public abstract class AndroidWordLevelSpellCheckerSession extends Session {
     protected final SuggestionsCache mSuggestionsCache = new SuggestionsCache();
     private final ContentObserver mObserver;
 
-    private static final String quotesRegexp = "([\\u0022\\u0027\\u0060\\u00B4\\u2018\\u2018\\u201C\\u201D])";
+    private static final String quotesRegexp = "([\\u0022\\u0027\\u0060\\u00B4\\u2018\\u2019\\u201C\\u201D])";
 
     private static final Map<String, String> scriptToPunctuationRegexMap = new TreeMap<>();
 
@@ -126,6 +126,7 @@ public abstract class AndroidWordLevelSpellCheckerSession extends Session {
                     : LocaleUtils.constructLocale(localeString);
             if (mLocale == null) mScript = ScriptUtils.SCRIPT_UNKNOWN;
                 else mScript = ScriptUtils.script(mLocale);
+            mSuggestionsCache.clearCache();
         }
     }
 
@@ -278,6 +279,13 @@ public abstract class AndroidWordLevelSpellCheckerSession extends Session {
 
             if (localeRegex != null) {
                 text = text.replaceAll(localeRegex, "");
+            }
+
+            final SuggestionsParams cachedSuggestionsParams =
+                    mSuggestionsCache.getSuggestionsFromCache(text);
+            if (cachedSuggestionsParams != null) {
+                return new SuggestionsInfo(cachedSuggestionsParams.mFlags,
+                        cachedSuggestionsParams.mSuggestions);
             }
 
             if (!mService.hasMainDictionaryForLocale(mLocale)) {

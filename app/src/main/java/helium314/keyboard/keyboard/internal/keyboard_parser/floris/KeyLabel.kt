@@ -113,9 +113,15 @@ object KeyLabel {
             DEL -> "Del"
             TAB -> "!icon/tab_key|!code/${KeyCode.TAB}"
             TIMESTAMP -> "⌚"
-            else -> if (label in toolbarKeyStrings.values)
-                "!icon/$label|!code/${getCodeForToolbarKey(ToolbarKey.valueOf(label.uppercase(Locale.US)))}"
-            else label
+            else -> {
+                if (label.startsWith("layout_")) {
+                    label.substringAfter("layout_")
+                } else if (label in toolbarKeyStrings.values) {
+                    "!icon/$label|!code/${getCodeForToolbarKey(ToolbarKey.valueOf(label.uppercase(Locale.US)))}"
+                } else {
+                    label
+                }
+            }
         }
         val code = when (label) { // maybe a bit lazy to not assemble the entire string above
             "clear_handwriting" -> KeyCode.CLEAR_HANDWRITING
@@ -129,7 +135,20 @@ object KeyLabel {
             ESCAPE       -> KeyCode.ESCAPE
             DEL          -> KeyCode.FORWARD_DELETE
             TIMESTAMP    -> KeyCode.TIMESTAMP
-            else         -> null
+            else         -> {
+                if (label.startsWith("layout_")) {
+                    when (label.substringAfter("layout_")) {
+                        "custom1" -> KeyCode.CUSTOM1
+                        "custom2" -> KeyCode.CUSTOM2
+                        "custom3" -> KeyCode.CUSTOM3
+                        "custom4" -> KeyCode.CUSTOM4
+                        "custom5" -> KeyCode.CUSTOM5
+                        "symbol" -> KeyCode.SYMBOL
+                        "alpha" -> KeyCode.ALPHA
+                        else -> null
+                    }
+                } else null
+            }
         }
         return if (code == null) newLabel
         else "$newLabel|!code/$code"

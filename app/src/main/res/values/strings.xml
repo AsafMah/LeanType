@@ -171,6 +171,10 @@
     <string name="autocorrect">Auto-correction</string>
     <!-- Description for auto correction -->
     <string name="auto_correction_summary">Spacebar and punctuation automatically correct mistyped words</string>
+    <string name="auto_correction_trigger">Auto-correct on</string>
+    <string name="auto_correction_trigger_both">Spacebar and punctuation</string>
+    <string name="auto_correction_trigger_space">Spacebar only</string>
+    <string name="auto_correction_trigger_punctuation">Punctuation only</string>
     <!-- Option to enable auto correction for many fields that do not request auto correction -->
     <string name="more_autocorrect">More auto-correction</string>
     <!-- Description for more_autocorrect -->
@@ -199,6 +203,26 @@
     <string name="bigram_prediction">Next-word suggestions</string>
     <!-- Description for "next word suggestion" option. This displays suggestions even when there is no input, based on the previous word. -->
     <string name="bigram_prediction_summary">Use the previous word in making suggestions</string>
+    <!-- Option to prioritize personal dictionary and learned words for next-word suggestions. -->
+    <string name="prioritize_personal_suggestions">Prioritize personal &amp; learned words</string>
+    <!-- Description for prioritize personal suggestions option. -->
+    <string name="prioritize_personal_suggestions_summary">Give higher score priority to personal dictionary and learned words during next-word prediction</string>
+    <!-- Option to adjust boost level for personal dictionary and learned words. -->
+    <string name="next_word_boost_level">Learned word boost level</string>
+    <!-- Description for boost level option. -->
+    <string name="next_word_boost_level_summary">Set score priority boost strength for learned and personal dictionary entries</string>
+    <!-- Option to require strict preceding context for learned word suggestions. -->
+    <string name="next_word_strict_ngram">Require context match for learned words</string>
+    <!-- Description for strict ngram option. -->
+    <string name="next_word_strict_ngram_summary">Only suggest learned words when the preceding word context matches</string>
+
+    <string name="immediate_auto_space">Immediate auto-space</string>
+    <string name="immediate_auto_space_summary">Commit space instantly when picking a suggestion to prevent delay on next typed letter</string>
+
+    <!-- Option to show first-word suggestions when there is no input at the start of a sentence. -->
+    <string name="first_word_prediction">First-word suggestions</string>
+    <!-- Description for first-word suggestions option -->
+    <string name="first_word_prediction_summary">Show suggestions when there is no input at the start of a sentence</string>
     <!-- Option to enable using punctuation suggestions. -->
     <string name="suggest_punctuation">Punctuation suggestions</string>
     <!-- Description for "suggest_punctuation" option. -->
@@ -438,6 +462,12 @@
     <string name="load_gesture_library">Load gesture typing library</string>
     <!-- Description for "load_gesture_library" option -->
     <string name="load_gesture_library_summary">Provide a native library to enable gesture typing</string>
+
+    <!-- ponytail: gesture engine/method selection preferences -->
+    <string name="gesture_method">Gesture typing method</string>
+    <string name="gesture_method_summary">Choose algorithm for swipe typing</string>
+    <string name="gesture_method_native">Native library (requires swypelib)</string>
+    <string name="gesture_method_fallback">Fallback engine (pure Java)</string>
     <!-- Message in load gesture library dialog -->
     <string name="load_gesture_library_message">You will need the library for \'%s\'. Incompatible libraries may crash when using gesture typing.
         \n\nWarning: loading external code can be a security risk. Only use a library from a source you trust.</string>
@@ -473,6 +503,10 @@
     <string name="autospace_after_punctuation">Autospace after punctuation</string>
     <!-- Description for "autospace_after_punctuation" setting -->
     <string name="autospace_after_punctuation_summary">Automatically insert space after punctuation when typing a new word</string>
+    <!-- Preferences item for inserting space after emoji -->
+    <string name="autospace_after_emoji">Autospace after emoji</string>
+    <!-- Description for "autospace_after_emoji" setting -->
+    <string name="autospace_after_emoji_summary">Automatically insert space after emoji when typing a new word</string>
     <!-- Preferences item for inserting space after manualle picking a suggestion -->
     <string name="autospace_after_suggestion">Autospace after picking a suggestion</string>
     <!-- Preferences item for inserting space before entering a word using gesture typing -->
@@ -483,6 +517,10 @@
     <string name="shift_removes_autospace">No autospace when pressing shift</string>
     <!-- Description for "autospace_after_punctuation" setting -->
     <string name="shift_removes_autospace_summary">Shift removes pending autospace</string>
+    <!-- Preferences item for preserving space before punctuation -->
+    <string name="preserve_space_before_punctuation">Preserve space before punctuation</string>
+    <!-- Description for "preserve_space_before_punctuation" setting -->
+    <string name="preserve_space_before_punctuation_summary">Do not automatically delete space before punctuation marks: ]}):;!?,.</string>
     <!-- Preferences item for showing popup keys in long-press popup -->
     <string name="show_popup_keys_title">Show more letters with diacritics in popup</string>
     <!-- Option for showing only letters defined in the current language file in long-press popup -->
@@ -506,6 +544,7 @@
     <string name="force_next_space">Force next space</string>
     <string name="undo_word">Undo word</string>
     <string name="text_edit">Text editing</string>
+    <string name="select_mode">Select mode</string>
     <string name="touchpad_fullscreen">Full-screen touchpad</string>
     <string name="touchpad_fullscreen_summary">Hide suggestion strip and toolbar when touchpad mode is active</string>
     <!-- Description for "prefs_force_incognito_mode" option. -->
@@ -630,6 +669,8 @@
     <string name="ai_provider_gemini">Google Gemini</string>
     <string name="split_toolbar">Split toolbar</string>
     <string name="split_toolbar_summary">Separate suggestions from toolbar</string>
+    <string name="show_download_button_in_toolbar">Show download button in toolbar</string>
+    <string name="show_download_button_in_toolbar_summary">Show dictionary download icon in suggestion strip when main dictionary is missing</string>
     <string name="ai_provider_huggingface">Groq</string>
     <string name="ai_provider_openai">HF/OpenAI-compatible</string>
     <string name="huggingface_token_title">API Token</string>
@@ -791,6 +832,10 @@
     <string name="quick_pin_toolbar_keys">Pin toolbar key on long press</string>
     <!-- Description of the setting to quick-pin toolbar keys -->
     <string name="quick_pin_toolbar_keys_summary">This will disable other long press actions for toolbar keys that are not pinned</string>
+    <!-- Title of the setting to show long-press hint dots on toolbar keys -->
+    <string name="toolbar_long_press_hint">Show long-press hint dots</string>
+    <!-- Description of the setting to show long-press hint dots on toolbar keys -->
+    <string name="toolbar_long_press_hint_summary">Show dots on toolbar keys that have a long-press action</string>
     <!-- Title of the setting to show "..." as hints for more functionality on long-press -->
     <string name="show_popup_hints">Show functional hints</string>
     <!-- Description of the show_popup_hints setting -->
@@ -835,6 +880,10 @@
     <string name="custom_font">Set custom font from file</string>
     <!-- Title of the setting for adding / removing custom font file used only for emojis -->
     <string name="custom_emoji_font">Set custom emoji font from file</string>
+    <!-- Title of the setting for using system emoji font -->
+    <string name="prefs_use_system_emoji">Use system emoji font</string>
+    <!-- Summary/description of the setting for using system emoji font -->
+    <string name="prefs_use_system_emoji_summary">Use system emoji font in settings and search (restarts app)</string>
     <!-- Description for English (UK) keyboard subtype
          (UK) should be an abbreviation of United Kingdom. -->
     <string name="subtype_en_GB">English (UK)</string>
@@ -918,12 +967,18 @@ language, hence "No language". -->
     <string name="delete_layout">Really delete custom layout %s?</string>
     <!-- Message when layout to be deleted is in use -->
     <string name="layout_in_use">Warning: layout is in currently use</string>
+    <string name="add_custom_layout">Add custom layout</string>
     <!-- Message on layout error -->
     <string name="layout_error">Layout error: %s</string>
     <!-- Text hint for editing layout -->
     <string name="edit_layout">Tap to edit raw layout</string>
     <!-- Settings screen title for secondary layouts (functional keys, symbols, numpad, ...) -->
     <string name="settings_screen_secondary_layouts">Secondary layouts</string>
+    <string name="layout_custom1">Custom layout 1</string>
+    <string name="layout_custom2">Custom layout 2</string>
+    <string name="layout_custom3">Custom layout 3</string>
+    <string name="layout_custom4">Custom layout 4</string>
+    <string name="layout_custom5">Custom layout 5</string>
     <!-- Name for functional keys layout -->
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Functional keys</string>
     <!-- Name for functional keys layout for tablets -->
@@ -1062,7 +1117,7 @@ New dictionary:
      %1$s will be replaced by dictionary_link_text, %2$s by the language code, %3$s by dictionary_link_text again.
      This string will be interpreted as HTML -->
     <string name="no_dictionary_message">"Without a dictionary, you will only get suggestions for text you entered before.&lt;br&gt;
-        You can download dictionaries %1$s, or check whether a dictionary for \"%2$s\" can be downloaded directly %3$s."</string>
+        You can download dictionaries %1$s."</string>
     <!-- Button to never show the no_dictionary_message when enabling a language that has no dictionary -->
     <string name="no_dictionary_dont_show_again_button">"Don't show again"</string>
     <!-- Message for the user dictionary selection dialog, %s will be replaced by dictionary_link_text. -->
@@ -1214,10 +1269,10 @@ New dictionary:
     <string name="sponsor_dialog_never_show_again">Never show again</string>
     <string name="sponsor_dialog_sponsor">Sponsor</string>
     <string name="sponsor_dialog_not_now">Not now</string>
-    <!-- link to the wiki for about screen -->
-    <string name="about_wiki_link">Go to Wiki</string>
-    <!-- description for wiki link -->
-    <string name="about_wiki_link_description">The Wiki can be improved by any GitHub user!</string>
+    <!-- link to features.md for about screen -->
+    <string name="about_features_link">Go to FEATURES.md</string>
+    <!-- description for features.md link -->
+    <string name="about_features_link_description">List of main features and keyboard manual</string>
 
     <!-- Libraries Hub -->
     <string name="libraries_hub_title">Libraries</string>
@@ -1242,6 +1297,12 @@ New dictionary:
     <string name="text_tap_languages">Tap the language to open settings</string>
     <!-- Title of internal InputMethodPicker, strings should be same as the ones from Android system -->
     <string name="select_input_method">Choose input method</string>
+    <string name="direct_ime_switch_title">Direct Switch Target IME</string>
+    <string name="direct_ime_switch_summary">Input Method to switch to directly when using the custom keycode option</string>
+    <string name="direct_ime_switch_none">None</string>
+    <string name="app_language_title">App Language</string>
+    <string name="app_language_summary">Change the language of the settings screen and keyboard interface</string>
+    <string name="app_language_system">System default</string>
     <!-- Settings screen title for appearance preferences -->
     <string name="settings_screen_appearance">Appearance</string>
     <!-- Settings screen title for toolbar preferences -->
@@ -1386,6 +1447,10 @@ New dictionary:
     <string name="auto_hide_toolbar">Auto hide toolbar</string>
     <!-- Description of the setting for hiding the toolbar automatically -->
     <string name="auto_hide_toolbar_summary">Hide the toolbar when suggestions become available</string>
+    <!-- Title of the setting to swipe down on toolbar to dismiss keyboard -->
+    <string name="toolbar_swipe_down_dismiss">Swipe down to close</string>
+    <!-- Description of the setting for swiping down on toolbar to dismiss keyboard -->
+    <string name="toolbar_swipe_down_dismiss_summary">Swipe down on toolbar to hide keyboard</string>
     <!-- Title of the setting to auto hide pinned keys when toolbar is expanded -->
     <string name="auto_hide_pinned_keys">Auto hide pinned keys</string>
     <!-- Description of the setting to auto hide pinned keys when toolbar is expanded -->
@@ -1416,6 +1481,8 @@ New dictionary:
     <string name="offline_model_summary">Manage local LLM</string>
     <string name="offline_max_tokens_title">Offline AI Max Tokens</string>
     <string name="offline_max_tokens_summary">Maximum length of the generated correction</string>
+    <string name="offline_max_tokens_custom_option">Custom…</string>
+    <string name="offline_max_tokens_custom_desc">Custom (%1$d tokens)</string>
     <string name="offline_temp_title">Temperature</string>
     <string name="offline_temp_summary">Controls randomness: lower is more focused and deterministic</string>
     <string name="offline_top_p_title">Top-P (Nucleus Sampling)</string>
@@ -1450,4 +1517,15 @@ New dictionary:
     <string name="floating_keyboard_resize_handle">Drag to resize keyboard</string>
     <string name="persist_floating_keyboard_title">Persist floating keyboard</string>
     <string name="persist_floating_keyboard_summary">Do not hide floating keyboard when input finishes</string>
+    <!-- ponytail: persist text edit mode strings -->
+    <string name="persist_text_edit_mode_title">Persist text editing mode</string>
+    <string name="persist_text_edit_mode_summary">Do not exit text editing mode when input finishes</string>
+    <string name="disable_multi_word_suggestions_title">Disable multi-word suggestions</string>
+    <string name="disable_multi_word_suggestions_summary">Prevent suggestions that consist of multiple combined words (recommended for Turkish)</string>
+
+    <!-- ponytail: dictionary updates and source links -->
+    <string name="upgrade">Upgrade</string>
+    <string name="dictionary_update_available">Update available</string>
+    <string name="dictionary_source_title">Dictionary repository</string>
+    <string name="dictionary_source_summary">Browse or download dictionaries directly in your browser</string>
 </resources>

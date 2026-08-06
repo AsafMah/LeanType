@@ -58,5 +58,11 @@ class Database private constructor(context: Context, name: String = NAME) : SQLi
             otherDb.close()
             file.delete()
         }
+
+        @Synchronized
+        fun closeInstance() {
+            instance?.close()
+            instance = null
+        }
     }
 }

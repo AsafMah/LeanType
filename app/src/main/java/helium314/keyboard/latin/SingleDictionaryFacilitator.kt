@@ -49,7 +49,7 @@ class SingleDictionaryFacilitator(private val dict: Dictionary) : DictionaryFaci
             ComposedData.createForWord(word),
             NgramContext.getEmptyPrevWordsContext(0),
             KeyboardSwitcher.getInstance().keyboard, // looks like actual keyboard doesn't matter (composed data doesn't contain coordinates)
-            SettingsValuesForSuggestion(false, false),
+            SettingsValuesForSuggestion(false, false, "fallback"),
             Suggest.SESSION_ID_TYPING, SuggestedWords.INPUT_STYLE_TYPING
         )
         return suggestionResults
@@ -135,6 +135,8 @@ class SingleDictionaryFacilitator(private val dict: Dictionary) : DictionaryFaci
     override fun blockWord(word: String) {}
 
     override fun reloadBlacklist() {}
+
+    override fun isBlacklisted(word: String): Boolean = false
 
     override fun clearUserHistoryDictionary(context: Context) {}
 

@@ -10,7 +10,6 @@ import helium314.keyboard.latin.AppsManager;
 import helium314.keyboard.latin.NgramContext;
 import helium314.keyboard.latin.common.StringUtils;
 import helium314.keyboard.latin.utils.Log;
-import helium314.keyboard.latin.utils.SpacedTokens;
 
 // todo: actually we only need a single AppsBinaryDictionary, but currently
 //  have one for each language, and may even have multiple instances in multilingual typing
@@ -75,7 +74,8 @@ public class AppsBinaryDictionary extends ExpandableBinaryDictionary implements 
         NgramContext ngramContext = NgramContext.getEmptyPrevWordsContext(
                 BinaryDictionary.MAX_PREV_WORD_COUNT_FOR_N_GRAM);
         // TODO: Better tokenization for non-Latin writing systems
-        for (final String word : new SpacedTokens(appLabel)) {
+        for (final String word : appLabel.split("\\s+")) {
+            if (word.isEmpty()) continue;
             if (DEBUG_DUMP) {
                 Log.d(TAG, "addName word = " + word);
             }

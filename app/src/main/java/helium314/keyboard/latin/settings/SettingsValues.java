@@ -93,10 +93,13 @@ public class SettingsValues {
         // in shouldInsertSpacesAutomatically() so this works alongside the input-type guard.
         public final boolean mAutospaceEnabled;
         public final boolean mAutospaceAfterPunctuation;
+        public final boolean mAutospaceAfterEmoji;
         public final boolean mAutospaceAfterSuggestion;
+        public final boolean mImmediateAutoSpace;
         public final boolean mAutospaceAfterGestureTyping;
         public final boolean mAutospaceBeforeGestureTyping;
         public final boolean mShiftRemovesAutospace;
+        public final boolean mPreserveSpaceBeforePunctuation;
         public final boolean mClipboardHistoryEnabled;
         public final long mClipboardHistoryRetentionTime;
         public final boolean mClipboardHistoryPinnedFirst;
@@ -113,8 +116,10 @@ public class SettingsValues {
         public final boolean mBigramPredictionEnabled;// Use bigrams to predict the next word when there is no input for
                                                       // it
                                                       // yet
+        public final boolean mFirstWordPredictionEnabled;
         public final boolean mSuggestPunctuation;
         public final boolean mCenterSuggestionTextToEnter;
+        public final String mGestureMethod;
         public final boolean mGestureInputEnabled;
         public final boolean mGestureTrailEnabled;
         public final boolean mGestureFloatingPreviewTextEnabled;
@@ -162,6 +167,11 @@ public class SettingsValues {
         public final boolean mGraduatedTrust;
         public final boolean mUseContactsDictionary;
         public final boolean mUseAppsDictionary;
+        public final boolean mEnableSpellCheckerService;
+        public final boolean mEnableContactsObserver;
+        public final boolean mEnableClipboardListener;
+        public final boolean mEnableSmsOtpReceiver;
+        public final boolean mEnableAppSyncListener;
         public final boolean mCustomNavBarColor;
         public final float mKeyboardHeightScale;
         public final boolean mUrlDetectionEnabled;
@@ -170,9 +180,11 @@ public class SettingsValues {
         public final ToolbarMode mToolbarMode;
         public final boolean mToolbarHidingGlobal;
         public final boolean mSplitToolbar;
+        public final boolean mShowDownloadButtonInToolbar;
         public final boolean mAutoShowToolbar;
         public final boolean mAutoShowToolbarOnSelect;
         public final boolean mAutoHideToolbar;
+        public final boolean mToolbarSwipeDownDismiss;
         public final boolean mAutoHidePinnedKeys;
         public final boolean mRememberToolbarState;
         public final boolean mToolbarSwipeDownToHide;
@@ -198,11 +210,18 @@ public class SettingsValues {
         public final int mKeypressVibrationAmplitude;
         public final float mKeypressSoundVolume;
         public final boolean mAutoCorrectionEnabledPerUserSettings;
+        public final String mAutoCorrectTrigger;
         public final boolean mAutoCorrectEnabled;
         public final float mAutoCorrectionThreshold;
         public final boolean mAutoCorrectShortcuts;
         public final boolean mPersistFloatingKeyboard;
+        // ponytail: persist text edit mode field
+        public final boolean mPersistTextEditMode;
         public final boolean mBackspaceRevertsAutocorrect;
+        public final boolean mDisableMultiWordSuggestions;
+        public final boolean mPrioritizePersonalSuggestions;
+        public final int mNextWordBoostLevel;
+        public final boolean mNextWordStrictNgram;
         public final int mScoreLimitForAutocorrect;
         private final boolean mSuggestionsEnabledPerUserSettings;
         private final boolean mOverrideShowingSuggestions;
@@ -234,6 +253,8 @@ public class SettingsValues {
                 mToolbarHidingGlobal = prefs.getBoolean(Settings.PREF_TOOLBAR_HIDING_GLOBAL,
                                 Defaults.PREF_TOOLBAR_HIDING_GLOBAL);
                 mSplitToolbar = prefs.getBoolean(Settings.PREF_SPLIT_TOOLBAR, Defaults.PREF_SPLIT_TOOLBAR);
+                mShowDownloadButtonInToolbar = prefs.getBoolean(Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR,
+                                Defaults.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR);
                 mAutoCap = prefs.getBoolean(Settings.PREF_AUTO_CAP, Defaults.PREF_AUTO_CAP)
                                 && ScriptUtils.scriptSupportsUppercase(mLocale);
                 mVibrateOn = Settings.readVibrationEnabled(prefs);
@@ -277,6 +298,16 @@ public class SettingsValues {
                                                 Defaults.PREF_VARIABLE_TOOLBAR_DIRECTION);
                 mUsePersonalizedDicts = prefs.getBoolean(Settings.PREF_KEY_USE_PERSONALIZED_DICTS,
                                 Defaults.PREF_KEY_USE_PERSONALIZED_DICTS);
+                mEnableSpellCheckerService = prefs.getBoolean(Settings.PREF_ENABLE_SPELL_CHECKER_SERVICE,
+                                Defaults.PREF_ENABLE_SPELL_CHECKER_SERVICE);
+                mEnableContactsObserver = prefs.getBoolean(Settings.PREF_ENABLE_CONTACTS_OBSERVER,
+                                Defaults.PREF_ENABLE_CONTACTS_OBSERVER);
+                mEnableClipboardListener = prefs.getBoolean(Settings.PREF_ENABLE_CLIPBOARD_LISTENER,
+                                Defaults.PREF_ENABLE_CLIPBOARD_LISTENER);
+                mEnableSmsOtpReceiver = prefs.getBoolean(Settings.PREF_ENABLE_SMS_OTP_RECEIVER,
+                                Defaults.PREF_ENABLE_SMS_OTP_RECEIVER);
+                mEnableAppSyncListener = prefs.getBoolean(Settings.PREF_ENABLE_APP_SYNC_LISTENER,
+                                Defaults.PREF_ENABLE_APP_SYNC_LISTENER);
                 mUseDoubleSpacePeriod = prefs.getBoolean(Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD,
                                 Defaults.PREF_KEY_USE_DOUBLE_SPACE_PERIOD)
                                 && inputAttributes.mIsGeneralTextInput;
@@ -285,6 +316,8 @@ public class SettingsValues {
                 mUrlDetectionEnabled = prefs.getBoolean(Settings.PREF_URL_DETECTION, Defaults.PREF_URL_DETECTION);
                 mAutoCorrectionEnabledPerUserSettings = prefs.getBoolean(Settings.PREF_AUTO_CORRECTION,
                                 Defaults.PREF_AUTO_CORRECTION);
+                mAutoCorrectTrigger = prefs.getString(Settings.PREF_AUTO_CORRECT_TRIGGER,
+                                Defaults.PREF_AUTO_CORRECT_TRIGGER);
                 mAutoCorrectEnabled = mAutoCorrectionEnabledPerUserSettings
                                 && (mInputAttributes.mInputTypeShouldAutoCorrect
                                                 || prefs.getBoolean(Settings.PREF_MORE_AUTO_CORRECTION,
@@ -303,10 +336,28 @@ public class SettingsValues {
                                 Defaults.PREF_AUTOCORRECT_SHORTCUTS);
                 mPersistFloatingKeyboard = prefs.getBoolean(Settings.PREF_PERSIST_FLOATING_KEYBOARD,
                                 Defaults.PREF_PERSIST_FLOATING_KEYBOARD);
+                // ponytail: load persist text edit mode value
+                mPersistTextEditMode = prefs.getBoolean(Settings.PREF_PERSIST_TEXT_EDIT_MODE,
+                                Defaults.PREF_PERSIST_TEXT_EDIT_MODE);
                 mBackspaceRevertsAutocorrect = prefs.getBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT,
                                 Defaults.PREF_BACKSPACE_REVERTS_AUTOCORRECT);
+                mDisableMultiWordSuggestions = prefs.getBoolean(Settings.PREF_DISABLE_MULTI_WORD_SUGGESTIONS,
+                                Defaults.PREF_DISABLE_MULTI_WORD_SUGGESTIONS);
                 mBigramPredictionEnabled = prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS,
                                 Defaults.PREF_BIGRAM_PREDICTIONS);
+                mPrioritizePersonalSuggestions = prefs.getBoolean(Settings.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS,
+                                Defaults.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS);
+                int boostLevel = 500;
+                try {
+                        boostLevel = Integer.parseInt(prefs.getString(Settings.PREF_NEXT_WORD_BOOST_LEVEL, Defaults.PREF_NEXT_WORD_BOOST_LEVEL));
+                } catch (Exception e) {
+                        boostLevel = 500;
+                }
+                mNextWordBoostLevel = boostLevel;
+                mNextWordStrictNgram = prefs.getBoolean(Settings.PREF_NEXT_WORD_STRICT_NGRAM,
+                                Defaults.PREF_NEXT_WORD_STRICT_NGRAM);
+                mFirstWordPredictionEnabled = prefs.getBoolean(Settings.PREF_FIRST_WORD_PREDICTIONS,
+                                Defaults.PREF_FIRST_WORD_PREDICTIONS);
                 mSuggestPunctuation = prefs.getBoolean(Settings.PREF_SUGGEST_PUNCTUATION,
                                 Defaults.PREF_SUGGEST_PUNCTUATION);
                 mSuggestClipboardContent = prefs.getBoolean(Settings.PREF_SUGGEST_CLIPBOARD_CONTENT,
@@ -344,6 +395,7 @@ public class SettingsValues {
                                 Defaults.PREF_KEYPRESS_SOUND_VOLUME);
                 mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
                                 Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY);
+                mGestureMethod = prefs.getString(Settings.PREF_GESTURE_METHOD, "fallback");
                 mGestureInputEnabled = JniUtils.sHaveGestureLib
                                 && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT);
                 mGestureTrailEnabled = prefs.getBoolean(Settings.PREF_GESTURE_PREVIEW_TRAIL,
@@ -456,14 +508,20 @@ public class SettingsValues {
                                 Defaults.PREF_AUTOSPACE_ENABLED);
                 mAutospaceAfterPunctuation = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION,
                                 Defaults.PREF_AUTOSPACE_AFTER_PUNCTUATION);
+                mAutospaceAfterEmoji = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_EMOJI,
+                                Defaults.PREF_AUTOSPACE_AFTER_EMOJI);
                 mAutospaceAfterSuggestion = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_SUGGESTION,
                                 Defaults.PREF_AUTOSPACE_AFTER_SUGGESTION);
+                mImmediateAutoSpace = prefs.getBoolean(Settings.PREF_IMMEDIATE_AUTO_SPACE,
+                                Defaults.PREF_IMMEDIATE_AUTO_SPACE);
                 mAutospaceAfterGestureTyping = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING,
                                 Defaults.PREF_AUTOSPACE_AFTER_GESTURE_TYPING);
                 mAutospaceBeforeGestureTyping = prefs.getBoolean(Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING,
                                 Defaults.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING);
                 mShiftRemovesAutospace = prefs.getBoolean(Settings.PREF_SHIFT_REMOVES_AUTOSPACE,
                                 Defaults.PREF_SHIFT_REMOVES_AUTOSPACE);
+                mPreserveSpaceBeforePunctuation = prefs.getBoolean(Settings.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION,
+                                Defaults.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION);
                 mClipboardHistoryEnabled = prefs.getBoolean(Settings.PREF_ENABLE_CLIPBOARD_HISTORY,
                                 Defaults.PREF_ENABLE_CLIPBOARD_HISTORY);
                 mClipboardHistoryRetentionTime = prefs.getInt(Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME,
@@ -503,7 +561,8 @@ public class SettingsValues {
                 mNarrowKeyGapsLevel = prefs.getInt(Settings.PREF_NARROW_KEY_GAPS_LEVEL, Defaults.PREF_NARROW_KEY_GAPS_LEVEL);
                 mSettingsValuesForSuggestion = new SettingsValuesForSuggestion(
                                 mBlockPotentiallyOffensive,
-                                prefs.getBoolean(Settings.PREF_GESTURE_SPACE_AWARE, Defaults.PREF_GESTURE_SPACE_AWARE));
+                                prefs.getBoolean(Settings.PREF_GESTURE_SPACE_AWARE, Defaults.PREF_GESTURE_SPACE_AWARE),
+                                mGestureMethod);
                 mSpacingAndPunctuations = new SpacingAndPunctuations(res, mUrlDetectionEnabled);
                 mBottomPaddingScale = Settings.readBottomPaddingScale(prefs, isLandscape);
                 mSidePaddingScale = Settings.readSidePaddingScale(prefs, isLandscape, mIsSplitKeyboardEnabled);
@@ -519,6 +578,7 @@ public class SettingsValues {
                                 && prefs.getBoolean(Settings.PREF_AUTO_SHOW_TOOLBAR, Defaults.PREF_AUTO_SHOW_TOOLBAR);
                 mAutoHideToolbar = mSuggestionsEnabledPerUserSettings
                                 && prefs.getBoolean(Settings.PREF_AUTO_HIDE_TOOLBAR, Defaults.PREF_AUTO_HIDE_TOOLBAR);
+                mToolbarSwipeDownDismiss = prefs.getBoolean(Settings.PREF_TOOLBAR_SWIPE_DOWN_DISMISS, Defaults.PREF_TOOLBAR_SWIPE_DOWN_DISMISS);
                 mAutoHidePinnedKeys = mToolbarMode == ToolbarMode.EXPANDABLE
                                 && !mSplitToolbar
                                 && prefs.getBoolean(Settings.PREF_AUTO_HIDE_PINNED_KEYS, Defaults.PREF_AUTO_HIDE_PINNED_KEYS);
@@ -666,6 +726,8 @@ public class SettingsValues {
                 sb.append("" + mBlockPotentiallyOffensive);
                 sb.append("\n   mBigramPredictionEnabled = ");
                 sb.append("" + mBigramPredictionEnabled);
+                sb.append("\n   mFirstWordPredictionEnabled = ");
+                sb.append("" + mFirstWordPredictionEnabled);
                 sb.append("\n   mGestureInputEnabled = ");
                 sb.append("" + mGestureInputEnabled);
                 sb.append("\n   mGestureTrailEnabled = ");

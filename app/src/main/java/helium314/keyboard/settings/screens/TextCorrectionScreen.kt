@@ -57,16 +57,12 @@ fun TextCorrectionScreen(
     val autocorrectEnabled = prefs.getBoolean(Settings.PREF_AUTO_CORRECTION, Defaults.PREF_AUTO_CORRECTION)
     val suggestionsVisible = Settings.readToolbarMode(prefs) in setOf(ToolbarMode.SUGGESTION_STRIP, ToolbarMode.EXPANDABLE)
     val suggestionsEnabled = suggestionsVisible && prefs.getBoolean(Settings.PREF_SHOW_SUGGESTIONS, Defaults.PREF_SHOW_SUGGESTIONS)
-    val gestureEnabled = JniUtils.sHaveGestureLib && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
-    // Two-thumb typing (#1.1): when manual spacing is on, the autospace-around-gesture
-    // toggles are no-ops at runtime. Hide them so the UI doesn't pretend they do something.
-    val manualGestureSpacing = gestureEnabled
-            && prefs.getBoolean(Settings.PREF_GESTURE_MANUAL_SPACING, Defaults.PREF_GESTURE_MANUAL_SPACING)
     val items = listOf(
 
         R.string.settings_category_correction,
         Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE,
         Settings.PREF_AUTO_CORRECTION,
+        if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_TRIGGER else null,
         if (autocorrectEnabled) Settings.PREF_MORE_AUTO_CORRECTION else null,
         if (autocorrectEnabled) Settings.PREF_AUTOCORRECT_SHORTCUTS else null,
         if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_THRESHOLD else null,
@@ -76,10 +72,11 @@ fun TextCorrectionScreen(
         R.string.settings_category_space,
         Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD,
         Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION,
+        Settings.PREF_AUTOSPACE_AFTER_EMOJI,
         Settings.PREF_AUTOSPACE_AFTER_SUGGESTION,
-        if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING else null,
-        if (gestureEnabled && !manualGestureSpacing) Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING else null,
+
         Settings.PREF_SHIFT_REMOVES_AUTOSPACE,
+        Settings.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION,
         R.string.settings_category_suggestions,
         if (suggestionsVisible) Settings.PREF_SHOW_SUGGESTIONS else null,
         if (suggestionsEnabled) Settings.PREF_ALWAYS_SHOW_SUGGESTIONS else null,
@@ -90,6 +87,16 @@ fun TextCorrectionScreen(
         if (suggestionsEnabled || autocorrectEnabled) Settings.PREF_INLINE_EMOJI_SEARCH else null,
         Settings.PREF_KEY_USE_PERSONALIZED_DICTS,
         Settings.PREF_BIGRAM_PREDICTIONS,
+        if (prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS))
+            Settings.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS else null,
+        if (prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS) &&
+            prefs.getBoolean(Settings.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS, Defaults.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS))
+            Settings.PREF_NEXT_WORD_BOOST_LEVEL else null,
+        if (prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS))
+            Settings.PREF_NEXT_WORD_STRICT_NGRAM else null,
+        if (prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS))
+            Settings.PREF_FIRST_WORD_PREDICTIONS else null,
+        if (suggestionsEnabled) Settings.PREF_DISABLE_MULTI_WORD_SUGGESTIONS else null,
         Settings.PREF_SUGGEST_PUNCTUATION,
         Settings.PREF_SUGGEST_CLIPBOARD_CONTENT,
         Settings.PREF_SUGGEST_SCREENSHOTS,
@@ -117,6 +124,14 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.autocorrect, R.string.auto_correction_summary
     ) {
         SwitchPreference(it, Defaults.PREF_AUTO_CORRECTION)
+    },
+    Setting(context, Settings.PREF_AUTO_CORRECT_TRIGGER, R.string.auto_correction_trigger) {
+        val items = listOf(
+            stringResource(R.string.auto_correction_trigger_both) to "both",
+            stringResource(R.string.auto_correction_trigger_space) to "space",
+            stringResource(R.string.auto_correction_trigger_punctuation) to "punctuation",
+        )
+        ListPreference(it, items, Defaults.PREF_AUTO_CORRECT_TRIGGER)
     },
     Setting(context, Settings.PREF_MORE_AUTO_CORRECTION,
         R.string.more_autocorrect, R.string.more_autocorrect_summary
@@ -158,17 +173,22 @@ fun createCorrectionSettings(context: Context) = listOf(
     ) {
         SwitchPreference(it, Defaults.PREF_AUTOSPACE_AFTER_PUNCTUATION)
     },
+    Setting(context, Settings.PREF_AUTOSPACE_AFTER_EMOJI,
+        R.string.autospace_after_emoji, R.string.autospace_after_emoji_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_AUTOSPACE_AFTER_EMOJI)
+    },
     Setting(context, Settings.PREF_AUTOSPACE_AFTER_SUGGESTION, R.string.autospace_after_suggestion) {
         SwitchPreference(it, Defaults.PREF_AUTOSPACE_AFTER_SUGGESTION)
     },
-    Setting(context, Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING, R.string.autospace_after_gesture_typing) {
-        SwitchPreference(it, Defaults.PREF_AUTOSPACE_AFTER_GESTURE_TYPING)
-    },
-    Setting(context, Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING, R.string.autospace_before_gesture_typing) {
-        SwitchPreference(it, Defaults.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING)
+    Setting(context, Settings.PREF_IMMEDIATE_AUTO_SPACE, R.string.immediate_auto_space, R.string.immediate_auto_space_summary) {
+        SwitchPreference(it, Defaults.PREF_IMMEDIATE_AUTO_SPACE)
     },
     Setting(context, Settings.PREF_SHIFT_REMOVES_AUTOSPACE, R.string.shift_removes_autospace, R.string.shift_removes_autospace_summary) {
         SwitchPreference(it, Defaults.PREF_SHIFT_REMOVES_AUTOSPACE)
+    },
+    Setting(context, Settings.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION, R.string.preserve_space_before_punctuation, R.string.preserve_space_before_punctuation_summary) {
+        SwitchPreference(it, Defaults.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION)
     },
     Setting(context, Settings.PREF_SHOW_SUGGESTIONS,
         R.string.prefs_show_suggestions, R.string.prefs_show_suggestions_summary
@@ -211,6 +231,31 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.bigram_prediction, R.string.bigram_prediction_summary
     ) {
         SwitchPreference(it, Defaults.PREF_BIGRAM_PREDICTIONS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS,
+        R.string.prioritize_personal_suggestions, R.string.prioritize_personal_suggestions_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS)
+    },
+    Setting(context, Settings.PREF_NEXT_WORD_BOOST_LEVEL,
+        R.string.next_word_boost_level, R.string.next_word_boost_level_summary
+    ) {
+        val items = listOf(
+            "Low (+200)" to "200",
+            "Medium (+500)" to "500",
+            "High (+1000)" to "1000"
+        )
+        ListPreference(it, items, Defaults.PREF_NEXT_WORD_BOOST_LEVEL)
+    },
+    Setting(context, Settings.PREF_NEXT_WORD_STRICT_NGRAM,
+        R.string.next_word_strict_ngram, R.string.next_word_strict_ngram_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_NEXT_WORD_STRICT_NGRAM)
+    },
+    Setting(context, Settings.PREF_FIRST_WORD_PREDICTIONS,
+        R.string.first_word_prediction, R.string.first_word_prediction_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_FIRST_WORD_PREDICTIONS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
     Setting(context, Settings.PREF_SUGGEST_PUNCTUATION, R.string.suggest_punctuation, R.string.suggest_punctuation_summary
     ) {
@@ -297,6 +342,11 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.use_apps_dict, R.string.use_apps_dict_summary
     ) { setting ->
         SwitchPreference(setting, Defaults.PREF_USE_APPS)
+    },
+    Setting(context, Settings.PREF_DISABLE_MULTI_WORD_SUGGESTIONS,
+        R.string.disable_multi_word_suggestions_title, R.string.disable_multi_word_suggestions_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_DISABLE_MULTI_WORD_SUGGESTIONS)
     },
     Setting(
         context, Settings.PREF_SUGGEST_EMOJIS, R.string.suggest_emojis, R.string.suggest_emojis_summary

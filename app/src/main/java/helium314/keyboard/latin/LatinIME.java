@@ -12,6 +12,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.AssetManager;
+import helium314.keyboard.latin.utils.LocaleUtils;
+import helium314.keyboard.latin.utils.DeviceProtectedUtils;
+import helium314.keyboard.latin.settings.Defaults;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -119,6 +123,10 @@ public class LatinIME extends InputMethodService implements
     private static final String SCHEME_PACKAGE = "package";
 
     final Settings mSettings;
+    public static volatile boolean sSettingsDirty = true;
+    private Locale mLastSettingsLocale;
+    private int mLastInputType;
+    private int mLastOrientation;
     public final KeyboardActionListener mKeyboardActionListener;
     private int mOriginalNavBarColor = 0;
     private int mOriginalNavBarFlags = 0;
@@ -535,6 +543,52 @@ public class LatinIME extends InputMethodService implements
         JniUtils.loadNativeLibrary();
     }
 
+    private String mAppliedLanguage = "";
+    private Context mWrappedContext = null;
+
+    private void updateWrappedContext() {
+        final android.content.SharedPreferences prefs = DeviceProtectedUtils.getSharedPreferences(this);
+        final String lang = prefs.getString(Settings.PREF_APP_LANGUAGE, Defaults.PREF_APP_LANGUAGE);
+        if (lang == null) return;
+        if (!lang.equals(mAppliedLanguage) || mWrappedContext == null) {
+            mAppliedLanguage = lang;
+            mWrappedContext = LocaleUtils.INSTANCE.wrapContextWithLocale(getBaseContext(), lang);
+        }
+    }
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        final android.content.SharedPreferences prefs = DeviceProtectedUtils.getSharedPreferences(newBase);
+        final String lang = prefs.getString(Settings.PREF_APP_LANGUAGE, Defaults.PREF_APP_LANGUAGE);
+        mAppliedLanguage = lang;
+        mWrappedContext = LocaleUtils.INSTANCE.wrapContextWithLocale(newBase, lang);
+        super.attachBaseContext(mWrappedContext);
+    }
+
+    @Override
+    public Resources getResources() {
+        if (mWrappedContext != null) {
+            return mWrappedContext.getResources();
+        }
+        return super.getResources();
+    }
+
+    @Override
+    public AssetManager getAssets() {
+        if (mWrappedContext != null) {
+            return mWrappedContext.getAssets();
+        }
+        return super.getAssets();
+    }
+
+    @Override
+    public Resources.Theme getTheme() {
+        if (mWrappedContext != null) {
+            return mWrappedContext.getTheme();
+        }
+        return super.getTheme();
+    }
+
     public LatinIME() {
         super();
         mSettings = Settings.getInstance();
@@ -547,6 +601,8 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onCreate() {
+        updateWrappedContext();
+        helium314.keyboard.latin.gesture.SwipeGestureEngine.initialize(this);
         mSettings.startListener();
         KeyboardIconsSet.Companion.getInstance().loadIcons(this);
         mRichImm = RichInputMethodManager.getInstance();
@@ -569,7 +625,7 @@ public class LatinIME extends InputMethodService implements
         // avoids the SecurityException thrown by the plain registerReceiver()
         // overload on API 33+ when no exported flag is set.
         ContextCompat.registerReceiver(this, mRingerModeChangeReceiver, filter,
-                ContextCompat.RECEIVER_NOT_EXPORTED);
+                ContextCompat.RECEIVER_EXPORTED);
 
         // Register to receive installation and removal of a dictionary pack.
         final IntentFilter packageFilter = new IntentFilter();
@@ -604,6 +660,21 @@ public class LatinIME extends InputMethodService implements
     private void loadSettings() {
         final Locale locale = mRichImm.getCurrentSubtypeLocale();
         final EditorInfo editorInfo = getCurrentInputEditorInfo();
+        final int inputType = editorInfo != null ? editorInfo.inputType : 0;
+        final int orientation = getResources().getConfiguration().orientation;
+
+        if (!sSettingsDirty
+                && java.util.Objects.equals(locale, mLastSettingsLocale)
+                && inputType == mLastInputType
+                && orientation == mLastOrientation) {
+            return;
+        }
+
+        sSettingsDirty = false;
+        mLastSettingsLocale = locale;
+        mLastInputType = inputType;
+        mLastOrientation = orientation;
+
         final InputAttributes inputAttributes = new InputAttributes(
                 editorInfo, isFullscreenMode(), getPackageName());
         final String currentKeyboardScript = mKeyboardSwitcher.getCurrentKeyboardScript();
@@ -639,6 +710,12 @@ public class LatinIME extends InputMethodService implements
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
             mainKeyboardView.setMainDictionaryAvailability(isMainDictionaryAvailable);
+        }
+        if (isMainDictionaryAvailable) {
+            final Keyboard keyboard = mKeyboardSwitcher.getKeyboard();
+            if (keyboard != null) {
+                mInputLogic.getSuggest().buildGestureIndexAsync(keyboard);
+            }
         }
         if (mHandler.hasPendingWaitForDictionaryLoad()) {
             mHandler.cancelWaitForDictionaryLoad();
@@ -715,20 +792,23 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
+        helium314.keyboard.latin.gesture.SwipeGestureEngine.cancelIndexing();
+        mHandler.removeCallbacksAndMessages(null);
         if (mFloatingKeyboardManager != null) {
             mFloatingKeyboardManager.destroy();
         }
         mClipboardHistoryManager.onDestroy();
         mOtpSuggestionManager.stop();
-        mDictionaryFacilitator.closeDictionaries();
+        helium314.keyboard.latin.utils.ExecutorUtils.getBackgroundExecutor(helium314.keyboard.latin.utils.ExecutorUtils.KEYBOARD).execute(() -> {
+            mDictionaryFacilitator.closeDictionaries();
+        });
         mSettings.onDestroy();
-        unregisterReceiver(mRingerModeChangeReceiver);
-        unregisterReceiver(mDictionaryPackInstallReceiver);
-        unregisterReceiver(mDictionaryDumpBroadcastReceiver);
-        unregisterReceiver(mRestartAfterDeviceUnlockReceiver);
+        try { unregisterReceiver(mRingerModeChangeReceiver); } catch (Exception e) {}
+        try { unregisterReceiver(mDictionaryPackInstallReceiver); } catch (Exception e) {}
+        try { unregisterReceiver(mDictionaryDumpBroadcastReceiver); } catch (Exception e) {}
+        try { unregisterReceiver(mRestartAfterDeviceUnlockReceiver); } catch (Exception e) {}
         mStatsUtilsManager.onDestroy(this /* context */);
         super.onDestroy();
-        mHandler.removeCallbacksAndMessages(null);
         deallocateMemory();
     }
 
@@ -740,6 +820,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onConfigurationChanged(final Configuration conf) {
+        updateWrappedContext();
         SettingsValues settingsValues = mSettings.getCurrent();
         Log.i(TAG, "onConfigurationChanged");
         SubtypeSettings.INSTANCE.reloadSystemLocales(this);
@@ -843,6 +924,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onStartInputView(final EditorInfo editorInfo, final boolean restarting) {
+        updateWrappedContext();
         mHandler.onStartInputView(editorInfo, restarting);
         mStatsUtilsManager.onStartInputView();
     }
@@ -853,6 +935,15 @@ public class LatinIME extends InputMethodService implements
         mHandler.onFinishInputView(finishingInput);
         mStatsUtilsManager.onFinishInputView();
         mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
+        // ponytail: reset text edit mode when input view finishes if persist is false
+        if (KeyboardActionListenerImpl.sPersistentTextEditModeActive) {
+            if (!Settings.getInstance().getCurrent().mPersistTextEditMode) {
+                KeyboardActionListenerImpl.sPersistentTextEditModeActive = false;
+                if (mKeyboardSwitcher != null) {
+                    mKeyboardSwitcher.hideTextEditView();
+                }
+            }
+        }
     }
 
     @Override
@@ -863,6 +954,15 @@ public class LatinIME extends InputMethodService implements
         if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
             if (!Settings.getInstance().getCurrent().mPersistFloatingKeyboard) {
                 mFloatingKeyboardManager.hide(false);
+            }
+        }
+        // ponytail: reset text edit mode when input finishes if persist is false
+        if (KeyboardActionListenerImpl.sPersistentTextEditModeActive) {
+            if (!Settings.getInstance().getCurrent().mPersistTextEditMode) {
+                KeyboardActionListenerImpl.sPersistentTextEditModeActive = false;
+                if (mKeyboardSwitcher != null) {
+                    mKeyboardSwitcher.hideTextEditView();
+                }
             }
         }
     }
@@ -926,6 +1026,7 @@ public class LatinIME extends InputMethodService implements
         super.onStartInputView(editorInfo, restarting);
         helium314.keyboard.latin.utils.ProofreadHelper.preloadModel(this);
 
+        mClipboardHistoryManager.onStartInputView();
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for
         // which we
@@ -1052,6 +1153,10 @@ public class LatinIME extends InputMethodService implements
             mainKeyboardView.closing();
             suggest.setAutoCorrectionThreshold(currentSettingsValues.mAutoCorrectionThreshold);
             switcher.reloadMainKeyboard();
+            final Keyboard keyboard = switcher.getKeyboard();
+            if (keyboard != null) {
+                suggest.buildGestureIndexAsync(keyboard);
+            }
             if (needToCallLoadKeyboardLater) {
                 // If we need to call loadKeyboard again later, we need to save its state now.
                 // The
@@ -1145,6 +1250,7 @@ public class LatinIME extends InputMethodService implements
         super.onFinishInputView(finishingInput);
         Log.i(TAG, "onFinishInputView");
         mOtpSuggestionManager.stop();
+        mClipboardHistoryManager.onFinishInputView();
         cleanupInternalStateForFinishInput();
     }
 
@@ -1494,9 +1600,19 @@ public class LatinIME extends InputMethodService implements
         final boolean switchSubtype = mSettings.getCurrent().mLanguageSwitchKeyToOtherSubtypes;
         final boolean switchIme = mSettings.getCurrent().mLanguageSwitchKeyToOtherImes;
 
+        final android.content.SharedPreferences prefs = DeviceProtectedUtils.getSharedPreferences(this);
+        final String target = prefs.getString(Settings.PREF_DIRECT_IME_SWITCH_TARGET, Defaults.PREF_DIRECT_IME_SWITCH_TARGET);
+        final boolean hasDirectTarget = target != null && !target.isEmpty();
+
         // switch IME if wanted and possible
-        if (switchIme && !switchSubtype && ImeCompat.INSTANCE.switchInputMethod(this))
-            return;
+        if (switchIme && !switchSubtype) {
+            if (hasDirectTarget) {
+                switchToUserIme();
+                return;
+            } else if (ImeCompat.INSTANCE.switchInputMethod(this)) {
+                return;
+            }
+        }
         final boolean hasMoreThanOneSubtype = mRichImm.hasMultipleEnabledSubtypesInThisIme(true);
         // switch subtype if wanted, do nothing if no other subtype is available
         if (switchSubtype && !switchIme) {
@@ -1517,11 +1633,59 @@ public class LatinIME extends InputMethodService implements
             if (nextSubtype != null) {
                 switchToSubtype(nextSubtype);
                 return;
+            } else if (hasDirectTarget) {
+                switchToUserIme();
+                return;
             } else if (ImeCompat.INSTANCE.switchInputMethod(this)) {
                 return;
             }
         }
         mSubtypeState.switchSubtype(mRichImm);
+    }
+
+    public void switchToUserIme() {
+        final android.content.SharedPreferences prefs = DeviceProtectedUtils.getSharedPreferences(this);
+        final String target = prefs.getString(Settings.PREF_DIRECT_IME_SWITCH_TARGET, Defaults.PREF_DIRECT_IME_SWITCH_TARGET);
+        if (target == null || target.isEmpty()) {
+            return;
+        }
+        final String[] parts = target.split(";");
+        if (parts.length == 0) return;
+        final String imiId = parts[0];
+        if (imiId.isEmpty()) return;
+
+        android.view.inputmethod.InputMethodInfo targetImi = null;
+        for (final android.view.inputmethod.InputMethodInfo imi : mRichImm.getInputMethodManager().getEnabledInputMethodList()) {
+            if (imi.getId().equals(imiId)) {
+                targetImi = imi;
+                break;
+            }
+        }
+        if (targetImi == null) return;
+
+        android.view.inputmethod.InputMethodSubtype targetSubtype = null;
+        if (parts.length > 1 && !parts[1].isEmpty()) {
+            try {
+                final int subtypeHash = java.lang.Integer.parseInt(parts[1]);
+                for (final android.view.inputmethod.InputMethodSubtype subtype : mRichImm.getEnabledInputMethodSubtypes(targetImi, true)) {
+                    if (subtype.hashCode() == subtypeHash) {
+                        targetSubtype = subtype;
+                        break;
+                    }
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if (targetImi.getId().equals(mRichImm.getInputMethodInfoOfThisIme().getId())) {
+            if (targetSubtype != null) {
+                switchToSubtype(targetSubtype);
+            }
+        } else if (targetSubtype != null) {
+            ImeCompat.INSTANCE.switchInputMethodAndSubtypeCompat(this, targetImi, targetSubtype);
+        } else {
+            ImeCompat.INSTANCE.switchInputMethodCompat(this, targetImi.getId());
+        }
     }
 
     // Implementation of {@link SuggestionStripView.Listener}.
@@ -1534,6 +1698,10 @@ public class LatinIME extends InputMethodService implements
     // should
     // completely replace #onCodeInput.
     public void onEvent(@NonNull final Event event) {
+        if (KeyCode.SWITCH_TO_USER_IME == event.getKeyCode()) {
+            switchToUserIme();
+            return;
+        }
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
             mRichImm.switchToShortcutIme(this);
         }
@@ -1603,15 +1771,22 @@ public class LatinIME extends InputMethodService implements
     }
 
     public void onStartBatchInput() {
+        if (!JniUtils.sHaveGestureLib) {
+            mKeyboardSwitcher.showToast(getString(R.string.load_gesture_library), true);
+            mInputLogic.onCancelBatchInput(mHandler);
+            return;
+        }
         mInputLogic.onStartBatchInput(mSettings.getCurrent(), mKeyboardSwitcher, mHandler);
         mGestureConsumer.onGestureStarted(mRichImm.getCurrentSubtypeLocale(), mKeyboardSwitcher.getKeyboard());
     }
 
     public void onUpdateBatchInput(final InputPointers batchPointers) {
+        if (!JniUtils.sHaveGestureLib) return;
         mInputLogic.onUpdateBatchInput(batchPointers);
     }
 
     public void onEndBatchInput(final InputPointers batchPointers) {
+        if (!JniUtils.sHaveGestureLib) return;
         mInputLogic.onEndBatchInput(batchPointers);
         mGestureConsumer.onGestureCompleted(batchPointers);
     }
@@ -1732,6 +1907,16 @@ public class LatinIME extends InputMethodService implements
                 emojiView.addRecentKey(suggestionInfo.mWord);
             }
         }
+
+        if (suggestionInfo.isKindOf(helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo.KIND_CORRECTION)
+                && helium314.keyboard.latin.dictionary.Dictionary.DICTIONARY_USER_TYPED.equals(
+                        suggestionInfo.mSourceDict != null ? suggestionInfo.mSourceDict.mDictType : "")) {
+            mInputLogic.getSuggest().recordAccepted(
+                    suggestionInfo.mWord,
+                    mInputLogic.getWordComposer().getComposedDataSnapshot().mInputPointers,
+                    mKeyboardSwitcher.getKeyboard()
+            );
+        }
     }
 
     /**
@@ -1788,7 +1973,11 @@ public class LatinIME extends InputMethodService implements
                 mSuggestionStripView.setToolbarVisibility(false);
             return;
         }
-        if (currentSettings.mBigramPredictionEnabled) {
+        final NgramContext ngramContext = mInputLogic.getNgramContextFromNthPreviousWordForSuggestion(
+                currentSettings.mSpacingAndPunctuations, 1);
+        final boolean isFirstWord = ngramContext.isBeginningOfSentenceContext();
+        final boolean predictionEnabled = isFirstWord ? currentSettings.mFirstWordPredictionEnabled : currentSettings.mBigramPredictionEnabled;
+        if (predictionEnabled) {
             mInputLogic.getSuggestedWords(SuggestedWords.INPUT_STYLE_PREDICTION, 0, new Suggest.OnGetSuggestedWordsCallback() {
                 @Override
                 public void onGetSuggestedWords(SuggestedWords suggestedWords) {
@@ -1844,6 +2033,11 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void removeSuggestion(final String word) {
         mDictionaryFacilitator.removeWord(word);
+        mInputLogic.getSuggest().clearNextWordSuggestionsCache();
+    }
+
+    public void reloadBlacklist() {
+        mDictionaryFacilitator.reloadBlacklist();
         mInputLogic.getSuggest().clearNextWordSuggestionsCache();
     }
 
@@ -2017,6 +2211,7 @@ public class LatinIME extends InputMethodService implements
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra("from_ime", true);
         startActivity(intent);
     }
 
@@ -2109,13 +2304,12 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
-        switch (level) {
-            case TRIM_MEMORY_RUNNING_LOW, TRIM_MEMORY_RUNNING_CRITICAL, TRIM_MEMORY_COMPLETE -> {
-                KeyboardLayoutSet.onSystemLocaleChanged(); // clears caches, nothing else
-                mKeyboardSwitcher.trimMemory();
-            }
-            // deallocateMemory always called on hiding, and should not be called when
-            // showing
+        if (level >= TRIM_MEMORY_BACKGROUND || level == TRIM_MEMORY_UI_HIDDEN) {
+            mKeyboardSwitcher.trimMemory();
+            deallocateMemory();
+        } else if (level >= TRIM_MEMORY_RUNNING_LOW) {
+            KeyboardLayoutSet.onSystemLocaleChanged();
+            mKeyboardSwitcher.trimMemory();
         }
     }
 }

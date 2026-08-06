@@ -5,6 +5,7 @@
  */
 package helium314.keyboard.latin.suggestions
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.GestureDetector
@@ -201,6 +202,96 @@ class MoreSuggestionsView @JvmOverloads constructor(
         }
         motionEvent.action = hoverAction
         onHoverEvent(motionEvent)
+    }
+
+    private val longPressHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var pendingLongPressRunnable: Runnable? = null
+    private var activeKeyForLongPress: Key? = null
+
+    private fun startLongPressTimer(key: Key) {
+        cancelLongPressTimer()
+        activeKeyForLongPress = key
+        val runnable = Runnable {
+            onLongPressKey(key)
+            cancelLongPressTimer()
+        }
+        pendingLongPressRunnable = runnable
+        longPressHandler.postDelayed(runnable, 500)
+    }
+
+    private fun cancelLongPressTimer() {
+        pendingLongPressRunnable?.let {
+            longPressHandler.removeCallbacks(it)
+        }
+        pendingLongPressRunnable = null
+        activeKeyForLongPress = null
+    }
+
+    private fun findKeyAt(x: Int, y: Int): Key? {
+        val keyboard = keyboard ?: return null
+        for (key in keyboard.sortedKeys) {
+            if (key.isOnKey(x, y)) {
+                return key
+            }
+        }
+        return null
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(me: MotionEvent): Boolean {
+        val action = me.actionMasked
+        val index = me.actionIndex
+        val x = me.getX(index).toInt()
+        val y = me.getY(index).toInt()
+
+        when (action) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val key = findKeyAt(x, y)
+                if (key != null) {
+                    startLongPressTimer(key)
+                }
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val key = findKeyAt(x, y)
+                if (key != activeKeyForLongPress) {
+                    cancelLongPressTimer()
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
+                cancelLongPressTimer()
+            }
+        }
+        return super.onTouchEvent(me)
+    }
+
+    fun onLongPressKey(key: Key) {
+        if (key !is MoreSuggestionKey) return
+        val keyboard = keyboard
+        if (keyboard !is MoreSuggestions) return
+        val suggestedWords = keyboard.mSuggestedWords
+        val index = key.mSuggestedWordIndex
+        if (index < 0 || index >= suggestedWords.size()) return
+        val word = suggestedWords.getInfo(index).word
+
+        val themeContext = helium314.keyboard.latin.utils.getPlatformDialogThemeContext(context)
+        val dialog = android.app.AlertDialog.Builder(themeContext)
+            .setMessage(context.getString(R.string.delete_confirmation, word))
+            .setPositiveButton(R.string.delete) { _, _ ->
+                listener.removeSuggestion(word)
+                dismissPopupKeysPanel()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+
+        val window = dialog.window
+        if (window != null) {
+            val layoutParams = window.attributes
+            layoutParams.token = windowToken
+            layoutParams.type = android.view.WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+            window.attributes = layoutParams
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+        }
+        dialog.show()
     }
 
     companion object {

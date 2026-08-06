@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
 import helium314.keyboard.settings.preferences.PreferenceCategory
 
+import helium314.keyboard.latin.utils.prefs
+
 @Composable
 fun SearchSettingsScreen(
     onClickBack: () -> Unit,
@@ -60,6 +62,8 @@ fun SearchSettingsScreen(
     settings: List<Any?>,
     content: @Composable (ColumnScope.() -> Unit)? = null // overrides settings if not null
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val customCount = context.prefs().getInt("custom_layouts_count", 0)
     SearchScreen(
         onClickBack = onClickBack,
         title = {
@@ -111,7 +115,7 @@ fun SearchSettingsScreen(
                                     .padding(horizontal = 16.dp, vertical = 8.dp),
                                 colors = androidx.compose.material3.CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceContainer
-                                )
+                                 )
                             ) {
                                 Column {
                                     if (titleRes != null) {
@@ -133,6 +137,11 @@ fun SearchSettingsScreen(
         filteredItems = { 
             SettingsActivity.settingsContainer.filter(it).filter { setting ->
                 val key = setting.key
+                if (key.startsWith(helium314.keyboard.latin.settings.Settings.PREF_LAYOUT_PREFIX + "CUSTOM")) {
+                    val index = key.removePrefix(helium314.keyboard.latin.settings.Settings.PREF_LAYOUT_PREFIX + "CUSTOM").toIntOrNull() ?: 0
+                    if (index > customCount) return@filter false
+                }
+                if (key == "add_custom_layout") return@filter false
                 when (helium314.keyboard.latin.BuildConfig.FLAVOR) {
                     "offlinelite" -> {
                         !key.startsWith("gemini") &&

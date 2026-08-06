@@ -19,8 +19,10 @@ import helium314.keyboard.latin.dictionary.DictionaryStats;
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion;
 import helium314.keyboard.latin.utils.SuggestionResults;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -115,6 +117,8 @@ public interface DictionaryFacilitator {
 
     void reloadBlacklist();
 
+    boolean isBlacklisted(String word);
+
     void closeDictionaries();
 
     /** main dictionaries are loaded asynchronously after resetDictionaries */
@@ -159,4 +163,17 @@ public interface DictionaryFacilitator {
     void dumpDictionaryForDebug(final String dictName);
 
     @NonNull List<DictionaryStats> getDictionaryStats(final Context context);
+
+    /**
+     * Returns all words with frequencies from the primary main dictionary, for gesture typing
+     * precomputation. Iterates the binary dictionary directly; can be slow on first call.
+     * The default returns an empty map; DictionaryFacilitatorImpl overrides this.
+     */
+    @NonNull
+    default Map<String, Integer> getAllMainDictionaryWordsWithFrequency() {
+        return Collections.emptyMap();
+    }
+
+    default void forEachMainDictionaryWord(java.util.function.BiConsumer<String, Integer> consumer) {
+    }
 }

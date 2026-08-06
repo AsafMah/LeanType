@@ -25,4 +25,18 @@ class KeySpecParserTest {
         assertEquals('c'.code, KeySpecParser.getCode("a\\|b|c"))
         assertEquals('d'.code, KeySpecParser.getCode("a\\|b|c|d"))
     }
+    @Test fun keyCodeValuesAreUnique() {
+        val duplicates = KeyCode::class.java.declaredFields
+            .filter { it.type == Int::class.javaPrimitiveType && !it.isSynthetic && it.name.matches(Regex("[A-Z][A-Z0-9_]*")) }
+            .groupBy({ it.getInt(null) }, { it.name })
+            .filterValues { it.size > 1 }
+            .mapValues { (_, names) -> names.toSet() }
+
+        assertEquals(
+            emptyMap(),
+            duplicates,
+            "Runtime KeyCode values must be unique",
+        )
+    }
+
 }

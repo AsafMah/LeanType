@@ -22,6 +22,7 @@ import helium314.keyboard.latin.databinding.OtpSuggestionBinding
 import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.ToolbarKey
+import helium314.keyboard.latin.utils.prefs
 
 /**
  * Optional, opt-in helper that surfaces one-time passcodes (OTPs) from incoming SMS as a

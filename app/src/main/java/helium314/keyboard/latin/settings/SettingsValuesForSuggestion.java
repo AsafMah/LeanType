@@ -8,14 +8,16 @@ package helium314.keyboard.latin.settings;
 
 public class SettingsValuesForSuggestion {
     public final boolean mBlockPotentiallyOffensive;
+    public final boolean mSpaceAwareGesture;
+    public final String mGestureMethod;
 
     public SettingsValuesForSuggestion(
             final boolean blockPotentiallyOffensive,
-            final boolean spaceAwareGesture
+            final boolean spaceAwareGesture,
+            final String gestureMethod
             ) {
         mBlockPotentiallyOffensive = blockPotentiallyOffensive;
         mSpaceAwareGesture = spaceAwareGesture;
+        mGestureMethod = gestureMethod;
     }
-
-    public final boolean mSpaceAwareGesture;
 }
