@@ -4165,12 +4165,12 @@ public final class InputLogic {
                     + " prevTyped='" + prevTypedWord + "'"
                     + " chosen='" + batchInputText + "'");
         }
-        // Auto-capitalize the first letter of a fresh-word gesture when the keyboard is in
-        // auto-shifted / manual-shifted / shift-locked state. The gesture-recognizer always
-        // returns lowercase, so without this fix swiping "Hello" at sentence-start types
-        // "hello". We deliberately skip this when extending an existing composing word, since
-        // those continuation gestures should append in the casing the user already chose for
-        // the start of the word.
+        // Apply presentation casing at the batch-commit boundary. Recognizers usually emit
+        // lowercase, but native/dictionary-backed candidates may preserve title casing. The
+        // gesture-start shift snapshot is authoritative: shifted modes add requested casing,
+        // while OFF removes only unrequested multi-letter title casing. We deliberately skip
+        // this when extending an existing composing word, since continuation gestures should
+        // append in the casing the user already chose for the start of the word.
         if (!extendExistingCompose && !batchInputText.isEmpty()) {
             // Use the shift mode captured at gesture-start, not the live mode — the
             // keyboard auto-clears the shifted indicator during the gesture, so a live
@@ -4182,6 +4182,12 @@ public final class InputLogic {
             } else if (shiftMode == WordComposer.CAPS_MODE_AUTO_SHIFT_LOCKED
                     || shiftMode == WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED) {
                 batchInputText = batchInputText.toUpperCase(settingsValues.mLocale);
+            } else if (shiftMode == WordComposer.CAPS_MODE_OFF
+                    && StringUtils.hasAtLeastTwoLetters(batchInputText)
+                    && StringUtils.getCapitalizationType(batchInputText)
+                            == StringUtils.CAPITALIZE_FIRST) {
+                batchInputText = StringUtils.lowercaseFirstLetterCodePoint(
+                        batchInputText, settingsValues.mLocale);
             }
         }
         // Clear so a stale value from a previous gesture can't leak into a non-gesture

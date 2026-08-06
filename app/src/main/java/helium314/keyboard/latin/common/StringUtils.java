@@ -78,6 +78,21 @@ public final class StringUtils {
     }
 
     @NonNull
+    public static String lowercaseFirstLetterCodePoint(@NonNull final String s,
+                                                        @NonNull final Locale locale) {
+        for (int index = 0; index < s.length(); index = s.offsetByCodePoints(index, 1)) {
+            final int codePoint = s.codePointAt(index);
+            if (!Character.isLetter(codePoint)) continue;
+            final int cutoff = index + Character.charCount(codePoint);
+            final String firstLetter = s.substring(index, cutoff);
+            final String lowercaseLetter = firstLetter.toLowerCase(locale);
+            if (firstLetter.equals(lowercaseLetter)) return s;
+            return s.substring(0, index) + lowercaseLetter + s.substring(cutoff);
+        }
+        return s;
+    }
+
+    @NonNull
     public static String capitalizeFirstAndDowncaseRest(@NonNull final String s,
                                                         @NonNull final Locale locale) {
         if (s.length() <= 1) {
@@ -183,6 +198,16 @@ public final class StringUtils {
             }
         }
         return new String(codePoints, 0 /* offset */, stringLength);
+    }
+
+    public static boolean hasAtLeastTwoLetters(@NonNull final String text) {
+        int letterCount = 0;
+        for (int index = 0; index < text.length(); index = text.offsetByCodePoints(index, 1)) {
+            if (Character.isLetter(text.codePointAt(index)) && ++letterCount == 2) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // This method assumes the text is not null. For the empty string, it returns CAPITALIZE_NONE.

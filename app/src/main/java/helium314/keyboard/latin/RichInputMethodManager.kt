@@ -213,10 +213,11 @@ class RichInputMethodManager private constructor() {
     }
 
     private fun initInternal(ctx: Context) {
-        if (isInitializedInternal) {
+        val newInputMethodManager = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        if (isInitializedInternal && imm === newInputMethodManager) {
             return
         }
-        imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm = newInputMethodManager
         context = ctx
         inputMethodInfoCache = InputMethodInfoCache(imm, ctx.packageName)
 

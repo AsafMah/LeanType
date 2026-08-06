@@ -153,6 +153,21 @@ class SuggestTest {
         //     todo: consider special score for case-only difference?
     }
 
+    @Test fun `lowercase words are not autocorrected to case-only capitalized candidates`() {
+        val locale = Locale.ENGLISH
+        val actual = listOf("to" to "To", "no" to "No", "meet" to "Meet").map { (typed, candidate) ->
+            shouldBeAutoCorrected(
+                typed,
+                listOf(suggestion(candidate, Int.MAX_VALUE, locale), suggestion(typed, 1500000, locale)),
+                suggestion(candidate, 200, locale),
+                suggestion(typed, 200, locale),
+                locale,
+                thresholdModest,
+            ).last()
+        }
+        assertEquals(listOf(false, false, false), actual)
+    }
+
     @Test fun `no English 'in' instead of French 'un' when typing in French`() {
         val result = shouldBeAutoCorrected(
             "un",
