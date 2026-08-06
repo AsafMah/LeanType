@@ -82,6 +82,9 @@ object Log {
 
     /** returns a copy of [logLines] */
     fun getLog(maxLines: Int = logLines.size) = synchronized(logLines) { logLines.takeLast(maxLines) }
+
+    /** clears all in-memory [logLines] */
+    fun clear() = synchronized(logLines) { logLines.clear() }
 }
 
 data class LogLine(val level: Char, val tag: String?, val message: String) {

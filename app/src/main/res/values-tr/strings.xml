@@ -444,4 +444,15 @@
     <string name="save_subtype_per_app">Her uygulama için dili hatırla</string>
     <string name="subtype_mhr">Mari (Doğu)</string>
     <string name="label_shift_key_shifted" tools:keep="@string/label_shift_key_shifted">Shift (kaydırılmış)</string>
+    <!-- Libraries Hub -->
+    <string name="libraries_hub_title">Sözlük Kütüphaneleri</string>
+    <string name="libraries_hub_summary">Hareketle yazma kütüphanesini, sözlükleri ve emoji kütüphanelerini yönetin.</string>
+    <string name="libraries_hub_gesture_title">Hareketle Yazma Kütüphanesi</string>
+    <string name="libraries_hub_dictionary_title">Ana Sözlükler</string>
+    <string name="libraries_hub_emoji_title">Emoji Kütüphaneleri</string>
+    <string name="libraries_hub_handwriting_title">El Yazısı Giriş Eklentisi</string>
+    <string name="libraries_hub_dict_guide_title">Sözlük Yükleme Kılavuzu</string>
+    <string name="libraries_hub_dict_guide_text">Yeni bir sözlük ekle:\n1. Obtain a .dict file for your language.\n2. Tap \"Manage Dictionaries\".\n3. Use the plus (+) button to import the file.</string>
+    <string name="libraries_status_active">Aktif</string>
+    <string name="libraries_status_not_installed">indirilmedi</string>
 </resources>

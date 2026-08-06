@@ -105,7 +105,7 @@ fun ColorThemePickerDialog(
     val targetScreen = if (isNight) SettingsDestination.ColorsNight else SettingsDestination.Colors
     ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,
-        cancelButtonText = stringResource(R.string.dialog_close),
+        cancelButtonText = null,
         onConfirmed = { },
         confirmButtonText = null,
         neutralButtonText = stringResource(R.string.load),

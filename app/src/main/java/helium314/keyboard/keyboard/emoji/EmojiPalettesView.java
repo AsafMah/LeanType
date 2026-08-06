@@ -235,6 +235,7 @@ public final class EmojiPalettesView extends LinearLayout
     private boolean mInSearchMode = false;
     private boolean mIsDownloadingEmojiDict = false;
     private KeyboardActionListener mOriginalActionListener;
+    private KeyboardLayoutSet mSearchKeyboardLayoutSet;
 
     private EditorInfo mEditorInfo;
 
@@ -268,10 +269,14 @@ public final class EmojiPalettesView extends LinearLayout
         // The main keyboard expands to the entire this {@link KeyboardView}.
         final int width = ResourceUtils.getKeyboardWidth(getContext(), Settings.getValues())
                 + getPaddingLeft() + getPaddingRight();
-        final int height = ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues())
-                + getPaddingTop() + getPaddingBottom();
+        if (!mInSearchMode) {
+            final int height = ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues())
+                    + getPaddingTop() + getPaddingBottom();
+            setMeasuredDimension(width, height);
+        } else {
+            setMeasuredDimension(width, getMeasuredHeight());
+        }
         mEmojiCategoryPageIndicatorView.mWidth = width;
-        setMeasuredDimension(width, height);
     }
 
     public void initialize() { // needs to be delayed for access to EmojiTabStrip, which is not a child of this
@@ -558,35 +563,100 @@ public final class EmojiPalettesView extends LinearLayout
             public void onCodeInput(int primaryCode, int x, int y, boolean isKeyRepeat) {
                 if (primaryCode == KeyCode.DELETE) {
                     Editable text = mSearchBar.getText();
-                    if (text != null && text.length() > 0)
-                        text.delete(text.length() - 1, text.length());
+                    if (text != null && text.length() > 0) {
+                        int selStart = mSearchBar.getSelectionStart();
+                        int selEnd = mSearchBar.getSelectionEnd();
+                        if (selStart >= 0 && selEnd > selStart) {
+                            text.delete(selStart, selEnd);
+                        } else if (selStart > 0) {
+                            text.delete(selStart - 1, selStart);
+                        }
+                    }
                 } else if (primaryCode == helium314.keyboard.latin.common.Constants.CODE_SPACE) {
-                    mSearchBar.append(" ");
+                    Editable text = mSearchBar.getText();
+                    int sel = mSearchBar.getSelectionStart();
+                    if (sel < 0) sel = text.length();
+                    text.insert(sel, " ");
                 } else if (primaryCode > 0) {
-                    mSearchBar.append(String.valueOf((char) primaryCode));
+                    Editable text = mSearchBar.getText();
+                    int sel = mSearchBar.getSelectionStart();
+                    if (sel < 0) sel = text.length();
+                    text.insert(sel, String.valueOf((char) primaryCode));
                 } else if (primaryCode == helium314.keyboard.latin.common.Constants.CODE_ENTER) {
                     stopSearchMode();
-                } else {
+                } else if (primaryCode == KeyCode.SYMBOL || primaryCode == KeyCode.SYMBOL_ALPHA || primaryCode == KeyCode.ALPHA) {
+                    if (mSearchKeyboardLayoutSet != null) {
+                        MainKeyboardView bottomRow = findViewById(R.id.bottom_row_keyboard);
+                        int currentElementId = bottomRow.getKeyboard().mId.mElementId;
+                        boolean isOnSymbols = currentElementId == KeyboardId.ELEMENT_SYMBOLS
+                                || currentElementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED;
+                        int targetId = isOnSymbols ? KeyboardId.ELEMENT_ALPHABET : KeyboardId.ELEMENT_SYMBOLS;
+                        bottomRow.setKeyboard(mSearchKeyboardLayoutSet.getKeyboard(targetId));
+                        bottomRow.setKeyPreviewPopupEnabled(Settings.getValues().mKeyPreviewPopupOn);
+                    }
+                } else if (primaryCode == KeyCode.SHIFT) {
+                    if (mSearchKeyboardLayoutSet != null) {
+                        MainKeyboardView bottomRow = findViewById(R.id.bottom_row_keyboard);
+                        int currentElementId = bottomRow.getKeyboard().mId.mElementId;
+                        int targetId = switch (currentElementId) {
+                            case KeyboardId.ELEMENT_SYMBOLS -> KeyboardId.ELEMENT_SYMBOLS_SHIFTED;
+                            case KeyboardId.ELEMENT_SYMBOLS_SHIFTED -> KeyboardId.ELEMENT_SYMBOLS;
+                            case KeyboardId.ELEMENT_ALPHABET -> KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED;
+                            default -> KeyboardId.ELEMENT_ALPHABET;
+                        };
+                        bottomRow.setKeyboard(mSearchKeyboardLayoutSet.getKeyboard(targetId));
+                        bottomRow.setKeyPreviewPopupEnabled(Settings.getValues().mKeyPreviewPopupOn);
+                    }
+                } else if (primaryCode == KeyCode.EMOJI) {
                     stopSearchMode();
+                } else if (primaryCode == KeyCode.CLIPBOARD) {
+                    stopSearchMode();
+                    mOriginalActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat);
+                } else if (primaryCode == KeyCode.LANGUAGE_SWITCH
+                        || primaryCode == KeyCode.CUSTOM1 || primaryCode == KeyCode.CUSTOM2
+                        || primaryCode == KeyCode.CUSTOM3 || primaryCode == KeyCode.CUSTOM4
+                        || primaryCode == KeyCode.CUSTOM5) {
+                } else {
                     mOriginalActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat);
                 }
             }
 
             @Override
             public void onPressKey(int p, int r, boolean s, HapticEvent h) {
-                mOriginalActionListener.onPressKey(p, r, s, h);
+                if (p != KeyCode.SYMBOL && p != KeyCode.ALPHA
+                        && p != KeyCode.NUMPAD && p != KeyCode.SYMBOL_ALPHA
+                        && p != KeyCode.SHIFT
+                        && p != KeyCode.EMOJI && p != KeyCode.CLIPBOARD
+                        && p != KeyCode.LANGUAGE_SWITCH
+                        && p != KeyCode.CUSTOM1 && p != KeyCode.CUSTOM2
+                        && p != KeyCode.CUSTOM3 && p != KeyCode.CUSTOM4
+                        && p != KeyCode.CUSTOM5) {
+                    mOriginalActionListener.onPressKey(p, r, s, h);
+                }
             }
 
             @Override
             public void onReleaseKey(int p, boolean w) {
                 mDeleteSwipeStartSel = -1;
                 mCurrentDeleteSwipeStart = -1;
-                mOriginalActionListener.onReleaseKey(p, w);
+                if (p != KeyCode.SYMBOL && p != KeyCode.ALPHA
+                        && p != KeyCode.NUMPAD && p != KeyCode.SYMBOL_ALPHA
+                        && p != KeyCode.SHIFT
+                        && p != KeyCode.EMOJI && p != KeyCode.CLIPBOARD
+                        && p != KeyCode.LANGUAGE_SWITCH
+                        && p != KeyCode.CUSTOM1 && p != KeyCode.CUSTOM2
+                        && p != KeyCode.CUSTOM3 && p != KeyCode.CUSTOM4
+                        && p != KeyCode.CUSTOM5) {
+                    mOriginalActionListener.onReleaseKey(p, w);
+                }
             }
 
             @Override
             public void onTextInput(String t) {
-                mSearchBar.append(t);
+                Editable text = mSearchBar.getText();
+                int sel = mSearchBar.getSelectionStart();
+                if (sel < 0) sel = text.length();
+                text.insert(sel, t);
             }
 
             @Override
@@ -719,12 +789,17 @@ public final class EmojiPalettesView extends LinearLayout
         builder.setKeyboardGeometry(ResourceUtils.getKeyboardWidth(ctx, Settings.getValues()),
                 ResourceUtils.getSecondaryKeyboardHeight(ctx.getResources(), Settings.getValues()));
 
-        KeyboardLayoutSet kls = builder.build();
-        bottomRow.setKeyboard(kls.getKeyboard(KeyboardId.ELEMENT_ALPHABET));
+        mSearchKeyboardLayoutSet = builder.build();
+        bottomRow.setKeyboard(mSearchKeyboardLayoutSet.getKeyboard(KeyboardId.ELEMENT_ALPHABET));
         bottomRow.setKeyPreviewPopupEnabled(Settings.getValues().mKeyPreviewPopupOn);
 
         // Focus
         mSearchBar.requestFocus();
+        if (isInLayout()) {
+            post(this::requestLayout);
+        } else {
+            requestLayout();
+        }
     }
 
     private void stopSearchMode() {
@@ -733,15 +808,7 @@ public final class EmojiPalettesView extends LinearLayout
             return;
         mInSearchMode = false;
 
-        // Return to alphabet keyboard directly upon closing search
-        // EXCEPTION: do not do this if we are being detached from the window,
-        // as this will corrupt the KeyboardSwitcher state and hide the toolbar.
-        if (mOriginalActionListener != null && isAttachedToWindow()) {
-            mOriginalActionListener.onCodeInput(KeyCode.ALPHA,
-                    helium314.keyboard.latin.common.Constants.NOT_A_COORDINATE,
-                    helium314.keyboard.latin.common.Constants.NOT_A_COORDINATE, false);
-        }
-
+        // 1. Reset bottom row & internal UI state first
         setupBottomRowKeyboard(null, mOriginalActionListener);
 
         // Restore UI internally
@@ -755,6 +822,23 @@ public final class EmojiPalettesView extends LinearLayout
         if (mSearchBar != null)
             mSearchBar.setText(""); // Clear text
         mSearchBar = null; // Clear reference
+        mSearchKeyboardLayoutSet = null;
+
+        // 2. Restore main action listener
+        if (mOriginalActionListener != null) {
+            PointerTracker.setKeyboardActionListener(mOriginalActionListener);
+        }
+
+        // 3. Switch to Alphabet Keyboard LAST so PointerTracker.sDrawingProxy remains mKeyboardView
+        if (isAttachedToWindow()) {
+            KeyboardSwitcher.getInstance().setAlphabetKeyboard();
+        }
+
+        if (isInLayout()) {
+            post(this::requestLayout);
+        } else {
+            requestLayout();
+        }
     }
 
     private void performSearch(String query) {

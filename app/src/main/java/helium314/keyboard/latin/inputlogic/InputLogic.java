@@ -30,6 +30,7 @@ import androidx.annotation.Nullable;
 import helium314.keyboard.event.Event;
 import helium314.keyboard.event.InputTransaction;
 import helium314.keyboard.keyboard.Keyboard;
+import helium314.keyboard.keyboard.KeyboardId;
 import helium314.keyboard.keyboard.KeyboardLayoutSet;
 import helium314.keyboard.keyboard.KeyboardSwitcher;
 import helium314.keyboard.keyboard.MainKeyboardView;
@@ -355,6 +356,10 @@ public final class InputLogic {
         resetComposingState(true);
         mInputLogicHandler.reset();
         mSpaceState = SpaceState.NONE;
+        // Ensure any pending batch edit is properly closed to prevent InputConnection issues
+        // when switching subtypes (languages). Unbalanced batch edits can cause some apps
+        // to stop accepting input.
+        mConnection.ensureBatchEditClosed();
     }
 
     /**
@@ -521,8 +526,7 @@ public final class InputLogic {
                 mSpaceState = SpaceState.PHANTOM;
             }
         }
-        // Don't allow cancellation of manual pick
-        mLastComposedWord.deactivate();
+
         mConnection.endBatchEdit();
         inputTransaction.requireShiftUpdate(InputTransaction.SHIFT_UPDATE_NOW);
         setInlineEmojiSearchAction(false);
@@ -567,15 +571,6 @@ public final class InputLogic {
         // We set this to NONE because after a cursor move, we don't want the space
         // state-related special processing to kick in.
         mSpaceState = SpaceState.NONE;
-
-        if (oldSelStart != newSelStart || oldSelEnd != newSelEnd) {
-            if (newSelStart != mLastExpandedCursorPosition) {
-                mLastExpandedText = null;
-                mLastShortcutText = null;
-                mLastExpandedCursorPosition = -1;
-                mLastExpandedCursorOffset = -1;
-            }
-        }
 
         if (oldSelStart != newSelStart || oldSelEnd != newSelEnd) {
             if (newSelStart != mLastExpandedCursorPosition) {
@@ -1733,7 +1728,8 @@ public final class InputLogic {
                 break;
             case KeyCode.SHIFT:
                 if (KeyboardSwitcher.getInstance().getKeyboard() != null
-                        && !KeyboardSwitcher.getInstance().getKeyboard().mId.isAlphabetKeyboard())
+                        && !KeyboardSwitcher.getInstance().getKeyboard().mId.isAlphabetKeyboard()
+                        && KeyboardSwitcher.getInstance().getKeyboard().mId.mElementId != KeyboardId.ELEMENT_TEXT_EDIT)
                     break; // recapitalization and follow-up code should only trigger for alphabet shift,
                            // see #1256
                 performRecapitalization(inputTransaction.getSettingsValues());
@@ -2294,6 +2290,23 @@ public final class InputLogic {
             } else {
                 mConnection.commitCodePoint(codePoint);
             }
+            if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
+                    && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
+                final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+                if (textBefore != null) {
+                    final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
+                            helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(null, textBefore.toString(), mLatinIME);
+                    if (result != null) {
+                        if (mJustRevertedExpandedShortcut != null
+                                && result.getMatchedString().equalsIgnoreCase(mJustRevertedExpandedShortcut)) {
+                            // Skip re-expanding a shortcut that was just reverted by backspace
+                        } else {
+                            mConnection.deleteTextBeforeCursor(result.getMatchedString().length());
+                            commitExpandedText(result.getMatchedString(), result.getExpandedText());
+                        }
+                    }
+                }
+            }
         }
         inputTransaction.setRequiresUpdateSuggestions();
     }
@@ -2657,7 +2670,7 @@ public final class InputLogic {
                 if (textBefore != null && textBefore.toString().equals(expectedBefore)
                         && textAfter != null && textAfter.toString().equals(expectedAfter)) {
                     mJustRevertedExpandedShortcut = mLastShortcutText;
-                    mConnection.setSelection(expectedCursor - beforeLen, expectedCursor + afterLen);
+                    mConnection.deleteSurroundingText(beforeLen, afterLen);
                     mConnection.commitText(mLastShortcutText, 1);
                     mLastExpandedText = null;
                     mLastShortcutText = null;
@@ -2740,6 +2753,10 @@ public final class InputLogic {
             updateInlineEmojiSearch();
             inputTransaction.setRequiresUpdateSuggestions();
         } else {
+            if (mJustRevertedExpandedShortcut != null) {
+                mLastComposedWord = LastComposedWord.NOT_A_COMPOSED_WORD;
+                mJustRevertedExpandedShortcut = null;
+            }
             if (mLastComposedWord.canRevertCommit()
                     && inputTransaction.getSettingsValues().mBackspaceRevertsAutocorrect) {
                 final String lastComposedWord = mLastComposedWord.mTypedWord;
@@ -3185,7 +3202,8 @@ public final class InputLogic {
      * @param settingsValues The current settings values.
      */
     private void performRecapitalization(final SettingsValues settingsValues) {
-        if (!mConnection.hasSelection() || !mRecapitalizeStatus.isEnabled()) {
+        mRecapitalizeStatus.enable();
+        if (!mConnection.hasSelection()) {
             return; // No selection or recapitalize is disabled for now
         }
         final int selectionStart = mConnection.getExpectedSelectionStart();
@@ -3669,6 +3687,10 @@ public final class InputLogic {
      * @return a caps mode from TextUtils.CAP_MODE_* or
      *         Constants.TextUtils.CAP_MODE_OFF.
      */
+    public boolean isComposingWord() {
+        return mWordComposer != null && mWordComposer.isComposingWord();
+    }
+
     public int getCurrentAutoCapsState(final SettingsValues settingsValues) {
         final EditorInfo ei = getCurrentInputEditorInfo();
         if (ei == null)
@@ -4807,15 +4829,14 @@ public final class InputLogic {
             return null;
         }
 
-        if (Character.isWhitespace(text.codePointAt(markerIndex + 1))) {
-            return null;
+        var searchString = text.substring(markerIndex + 1);
+        for (int i = 0; i < searchString.length(); i++) {
+            if (Character.isWhitespace(searchString.charAt(i))) {
+                return null;
+            }
         }
 
-        if (text.indexOf('\n', markerIndex + 2) >= 0) {
-            return null;
-        }
-
-        return text.substring(markerIndex + 1);
+        return searchString;
     }
 
     // public for testing

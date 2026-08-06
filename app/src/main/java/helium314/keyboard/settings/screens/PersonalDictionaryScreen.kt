@@ -319,7 +319,7 @@ private fun getAll(locale: Locale?, context: Context): List<Word> {
         cursor.moveToNext()
     }
     cursor.close()
-    return result
+    return result.distinct()
 }
 
 private fun createCursor(locale: Locale?, context: Context): Cursor? {

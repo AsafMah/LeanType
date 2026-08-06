@@ -66,7 +66,7 @@ fun TextCorrectionScreen(
         if (autocorrectEnabled) Settings.PREF_MORE_AUTO_CORRECTION else null,
         if (autocorrectEnabled) Settings.PREF_AUTOCORRECT_SHORTCUTS else null,
         if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_THRESHOLD else null,
-        if (autocorrectEnabled) Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT else null,
+        if (suggestionsEnabled || autocorrectEnabled) Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT else null,
         Settings.PREF_AUTO_CAP,
         Settings.PREF_FORCE_AUTO_CAPS,
         R.string.settings_category_space,

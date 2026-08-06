@@ -50,7 +50,7 @@ fun ToolbarKeysCustomizer(
     var showDeletePrefConfirmDialog by rememberSaveable { mutableStateOf(false) }
     ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,
-        cancelButtonText = stringResource(R.string.dialog_close),
+        cancelButtonText = null,
         confirmButtonText = null,
         onConfirmed = { },
         neutralButtonText = if (readCustomKeyCodes(prefs).isNotEmpty()) stringResource(R.string.button_default) else null,

@@ -455,6 +455,7 @@ fun DictionaryScreen(
                     .setType("application/octet-stream")
                 dictPicker.launch(intent)
             },
+            confirmButtonText = stringResource(R.string.load_gesture_library_button_load),
             title = { Text(stringResource(R.string.add_new_dictionary_title)) },
             content = {
                 val link = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_URL)

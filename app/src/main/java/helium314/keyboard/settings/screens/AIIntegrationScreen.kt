@@ -58,6 +58,7 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
     val items = buildList {
         // Always show provider selection
         add(SettingsWithoutKey.AI_PROVIDER)
+        add(SettingsWithoutKey.TRANSLATION_ENGINE)
         // Custom AI Keys are only shown in the standard flavor (guaranteed by caller)
         add(SettingsWithoutKey.CUSTOM_AI_KEYS)
 

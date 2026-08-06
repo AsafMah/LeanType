@@ -67,44 +67,47 @@ object ProofreadHelper {
         apiCall: suspend (ProofreadService) -> Result<String>,
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit,
-        allowEmptyInput: Boolean = false
+        allowEmptyInput: Boolean = false,
+        skipApiKeyCheck: Boolean = false
     ) {
         val service = ProofreadService(context)
 
-        // Check if API key/token is configured based on provider
-        val provider = service.getProvider()
-        when (provider) {
-            ProofreadService.AIProvider.GEMINI -> {
-                if (!service.hasApiKey()) {
-                    mainHandler.post {
-                        KeyboardSwitcher.getInstance().showToast(
-                            context.getString(R.string.proofread_no_api_key),
-                            true
-                        )
+        // Check if API key/token is configured based on provider (unless plugin handles operation)
+        if (!skipApiKeyCheck) {
+            val provider = service.getProvider()
+            when (provider) {
+                ProofreadService.AIProvider.GEMINI -> {
+                    if (!service.hasApiKey()) {
+                        mainHandler.post {
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(R.string.proofread_no_api_key),
+                                true
+                            )
+                        }
+                        return
                     }
-                    return
                 }
-            }
-            ProofreadService.AIProvider.GROQ -> {
-                if (service.getGroqToken() == null) {
-                    mainHandler.post {
-                        KeyboardSwitcher.getInstance().showToast(
-                            context.getString(R.string.huggingface_no_token),
-                            true
-                        )
+                ProofreadService.AIProvider.GROQ -> {
+                    if (service.getGroqToken() == null) {
+                        mainHandler.post {
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(R.string.huggingface_no_token),
+                                true
+                            )
+                        }
+                        return
                     }
-                    return
                 }
-            }
-            ProofreadService.AIProvider.OPENAI -> {
-                if (service.getHuggingFaceToken() == null) {
-                    mainHandler.post {
-                        KeyboardSwitcher.getInstance().showToast(
-                            context.getString(R.string.huggingface_no_token),
-                            true
-                        )
+                ProofreadService.AIProvider.OPENAI -> {
+                    if (service.getHuggingFaceToken() == null) {
+                        mainHandler.post {
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(R.string.huggingface_no_token),
+                                true
+                            )
+                        }
+                        return
                     }
-                    return
                 }
             }
         }
@@ -224,12 +227,41 @@ object ProofreadHelper {
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
     ) {
+        val translationMethod = context.prefs().getString("pref_translation_method", "auto") ?: "auto"
+        val hasPlugin = helium314.keyboard.latin.translation.TranslationLoader.hasPlugin(context)
+        val usePlugin = when (translationMethod) {
+            "plugin" -> hasPlugin
+            "ai" -> false
+            else -> hasPlugin
+        }
         performAsyncOperation(
             context = context,
             text = text,
             noTextErrorResId = R.string.translate_no_text,
             errorResId = R.string.translate_error,
-            apiCall = { service -> service.translate(text) },
+            skipApiKeyCheck = usePlugin,
+            apiCall = { service ->
+                val pluginProvider = if (usePlugin) helium314.keyboard.latin.translation.TranslationLoader.getProvider(context) else null
+                if (pluginProvider != null && pluginProvider.isAvailable()) {
+                    try {
+                        val targetLang = service.getTargetLanguage()
+                        Log.i("ProofreadHelper", "Translating via Translation Plugin (target: $targetLang)")
+                        val result = pluginProvider.translate(text, targetLang)
+                        if (result.isNotBlank()) {
+                            Result.success(result)
+                        } else {
+                            Log.w("ProofreadHelper", "Plugin returned blank, falling back to AI")
+                            service.translate(text)
+                        }
+                    } catch (e: Throwable) {
+                        Log.e("ProofreadHelper", "Plugin translation failed, falling back to built-in AI", e)
+                        service.translate(text)
+                    }
+                } else {
+                    Log.i("ProofreadHelper", "Translating via built-in AI service")
+                    service.translate(text)
+                }
+            },
             onSuccess = onSuccess,
             onError = onError
         )
