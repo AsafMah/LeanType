@@ -1,0 +1,9 @@
+Merges upstream LeanType v4.0.3-v4.0.8.
+
+- Foldable/screen-profile detection with split-keyboard default on large screens.
+- Physical-keyboard suggestion shortcuts.
+- Translation plugin and engine selector on the AI Integration screen.
+- Settings search now indexes every screen, including two-thumb typing.
+- Floating keyboard drag-to-resize with persisted size.
+- Key-gap narrowness scale and auto-spanning toolbar keys.
+- Text Expander regex fixes for prefixed and capture-group shortcuts.
