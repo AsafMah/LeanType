@@ -66,14 +66,14 @@ def check_default_values_diff():
 def read_dicts_readme() -> list[str]:
     dicts_readme_file = "../dictionaries/README.md"
     if os.path.isfile(dicts_readme_file):
-        f = open(dicts_readme_file)
+        f = open(dicts_readme_file, encoding="utf-8")
         lines = f.readlines()
         f.close()
         return lines
     readme_url = "https://codeberg.org/Helium314/aosp-dictionaries/raw/branch/main/README.md"
     tmp_readme = "dicts_readme_tmp.md"
     urlretrieve(readme_url, tmp_readme)
-    f = open(tmp_readme)
+    f = open(tmp_readme, encoding="utf-8")
     lines = f.readlines()
     f.close()
     os.remove(tmp_readme)

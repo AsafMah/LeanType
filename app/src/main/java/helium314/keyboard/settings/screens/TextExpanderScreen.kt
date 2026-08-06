@@ -336,14 +336,6 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                         onCheckedChange = { isBackspaceRevertsEnabled = it }
                     )
 
-                    SwitchPreference(
-                        name = "Expand immediately",
-                        key = TextExpanderUtils.PREF_IMMEDIATE,
-                        default = false,
-                        description = "Expand shortcuts immediately without pressing space.",
-                        enabled = isExpanderEnabled,
-                        onCheckedChange = { isImmediateEnabled = it }
-                    )
 
                     // global prefix config removed
 

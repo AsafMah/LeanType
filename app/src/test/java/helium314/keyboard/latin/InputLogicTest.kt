@@ -74,6 +74,7 @@ class InputLogicTest {
     private val composingReader = RichInputConnection::class.java.getDeclaredField("mComposingText").apply { isAccessible = true }
     private val connectionComposingText get() = (composingReader.get(connection) as CharSequence).toString()
     private val combiningGraceExpired = InputLogic::class.java.getDeclaredMethod("onCombiningGraceExpired").apply { isAccessible = true }
+    private val gestureShiftMode = InputLogic::class.java.getDeclaredField("mShiftModeAtGestureStart").apply { isAccessible = true }
 
     @BeforeTest
     fun setUp() {
@@ -675,6 +676,29 @@ class InputLogicTest {
         // The word stays open and the tap appends: "deal", not "dea l".
         assertEquals("deal", composingText)
         assertEquals("deal", textBeforeCursor)
+    }
+
+    @Test fun unshiftedGestureDoesNotPromoteTitleCaseCandidates() {
+        val actual = listOf("To", "No", "Meet", "I", "RJ", "iPhone").map { candidate ->
+            reset()
+            setText("x ") // mid-sentence: keyboard caps mode is off
+            gestureInput(candidate)
+            textBeforeCursor.removePrefix("x ")
+        }
+        assertEquals(listOf("to", "no", "meet", "I", "RJ", "iPhone"), actual)
+    }
+
+    @Test fun gesturePresentationCasingStillFollowsCapturedShiftMode() {
+        fun committed(candidate: String, shiftMode: Int): String {
+            reset()
+            setText("x ")
+            gestureShiftMode.setInt(inputLogic, shiftMode)
+            glideTypingInput(candidate)
+            return textBeforeCursor.removePrefix("x ")
+        }
+
+        assertEquals("Meet", committed("meet", WordComposer.CAPS_MODE_AUTO_SHIFTED))
+        assertEquals("MEET", committed("Meet", WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED))
     }
 
     // Live-converge OFF (default): a tap after a swipe appends literally to the recognized
