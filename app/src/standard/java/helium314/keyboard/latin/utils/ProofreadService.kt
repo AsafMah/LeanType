@@ -737,17 +737,29 @@ Text to proofread:
             return cleaned
         }
 
-        private fun getTranslatePrompt(targetLanguage: String) = """You are an expert translator. Translate the following text to $targetLanguage.
+        private fun getTranslatePrompt(targetLanguage: String): String {
+            val langName = try {
+                val clean = targetLanguage.trim()
+                if (clean.length in 2..3 && clean.all { it.isLetter() }) {
+                    val display = java.util.Locale.forLanguageTag(clean).getDisplayLanguage(java.util.Locale.ENGLISH)
+                    if (display.isNotBlank() && !display.equals(clean, ignoreCase = true)) display else targetLanguage
+                } else {
+                    targetLanguage
+                }
+            } catch (e: Throwable) { targetLanguage }
+
+            return """You are an expert translator. Translate the following text to $langName.
 
 STRICT RULES:
 1. Translate naturally and fluently - not word-for-word
 2. Preserve the original meaning, tone, and intent
-3. If the text is already in $targetLanguage, return it unchanged
+3. If the text is already in $langName, return it unchanged
 4. Return ONLY the translated text with no explanations or notes
 5. Preserve formatting, line breaks, and emojis
-6. For names and proper nouns, keep them as-is unless there's a common equivalent in $targetLanguage
+6. For names and proper nouns, keep them as-is unless there's a common equivalent in $langName
 
 Text to translate:
 """
+        }
     }
 }

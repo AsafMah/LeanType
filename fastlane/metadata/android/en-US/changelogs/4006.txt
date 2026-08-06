@@ -1,0 +1,9 @@
+- Moved App Language setting to Languages and layout with visual icon support.
+- Fixed IME window insets, navigation bar padding, and minimize keyboard button for non-default app languages.
+- Eliminated activity recreation UI freeze on app language changes with instant in-place resource refresh.
+- Fixed process-wide locale mutation to preserve next-word suggestions and recapitalization.
+- Resolved key popup number hint disappearance across field and keyboard switches.
+- Added in-memory caching, pre-compiled Regex, and 2,000 char clipboard truncation to Text Expander.
+- Added immediate Text Expander support for non-composing symbols (e.g. ∆), emojis, and math signs.
+- Fixed backspace text expansion revert and prevented fragment insertion on 2nd backspace.
+- Fixed visibility condition for "Backspace reverts autocorrect" preference toggle.

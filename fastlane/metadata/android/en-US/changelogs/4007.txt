@@ -1,0 +1,7 @@
+- Enabled Translation Plugin UI support on standard flavor.
+- Added Translation Engine selector and target language deletion dialogs.
+- Resolved ISO language tags to localized display names for AI.
+- Fixed persistent custom navigation bar color in Firefox and input restarts.
+- Fixed oversized/stretched pinned toolbar keys in landscape mode.
+- Removed confirmation dialog when long-pressing word suggestions in favor of direct removal and toast.
+- Added input connection safety checks in RichInputConnection.

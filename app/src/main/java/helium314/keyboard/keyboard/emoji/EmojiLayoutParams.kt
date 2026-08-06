@@ -25,14 +25,23 @@ internal class EmojiLayoutParams(res: Resources) {
         val defaultKeyboardHeight = ResourceUtils.getSecondaryKeyboardHeight(res, sv)
 
         val keyVerticalGap = if (sv.mNarrowKeyGaps) {
-            val verticalGapNarrow = res.getFraction(R.fraction.config_key_vertical_gap_holo_narrow,
-                defaultKeyboardHeight, defaultKeyboardHeight)
-            when (sv.mNarrowKeyGapsLevel) {
-                2 -> (verticalGapNarrow * 0.75f).toInt()
-                3 -> (verticalGapNarrow * 0.5f).toInt()
-                4 -> (verticalGapNarrow * 0.25f).toInt()
-                5 -> 0
-                else -> verticalGapNarrow.toInt()
+            val level = sv.mNarrowKeyGapsLevel
+            val hasBorders = sv.mThemeKeyBorders
+            if (level <= 0) {
+                res.getFraction(R.fraction.config_key_vertical_gap_holo,
+                    defaultKeyboardHeight, defaultKeyboardHeight).toInt()
+            } else if (level == 1) {
+                val verticalGapNarrow = res.getFraction(R.fraction.config_key_vertical_gap_holo_narrow,
+                    defaultKeyboardHeight, defaultKeyboardHeight)
+                verticalGapNarrow.toInt()
+            } else {
+                val verticalGapNarrow = res.getFraction(R.fraction.config_key_vertical_gap_holo_narrow,
+                    defaultKeyboardHeight, defaultKeyboardHeight)
+                var factor = ((10 - level).coerceIn(0, 9)) / 9f
+                if (!hasBorders && factor < 0.1f) {
+                    factor = 0.1f
+                }
+                (verticalGapNarrow * factor).toInt()
             }
         } else {
             res.getFraction(R.fraction.config_key_vertical_gap_holo,

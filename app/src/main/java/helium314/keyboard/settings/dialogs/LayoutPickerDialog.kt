@@ -84,7 +84,7 @@ fun LayoutPickerDialog(
     }
     ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,
-        cancelButtonText = stringResource(R.string.dialog_close),
+        cancelButtonText = null,
         onConfirmed = { },
         confirmButtonText = null,
         neutralButtonText = stringResource(R.string.button_load_custom),

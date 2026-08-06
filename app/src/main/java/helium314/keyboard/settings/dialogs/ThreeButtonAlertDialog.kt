@@ -43,67 +43,25 @@ fun ThreeButtonAlertDialogContent(
     onNeutral: () -> Unit = { },
     checkOk: () -> Boolean = { true },
     confirmButtonText: String? = stringResource(android.R.string.ok),
-    cancelButtonText: String = stringResource(android.R.string.cancel),
+    cancelButtonText: String? = null,
     neutralButtonText: String? = null,
 ) {
-    Box(
-        modifier = modifier.widthIn(min = 280.dp, max = 560.dp),
-        propagateMinConstraints = true
-    ) {
-        Surface(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp,
-            contentColor = contentColorFor(MaterialTheme.colorScheme.surface),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                icon?.let {
-                    Box(
-                        Modifier
-                            .padding(bottom = 16.dp)
-                            .align(androidx.compose.ui.Alignment.CenterHorizontally)
-                    ) {
-                        CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.primary) {
-                            icon()
-                        }
-                    }
-                }
-                title?.let {
-                    CompositionLocalProvider(
-                        LocalTextStyle provides MaterialTheme.typography.headlineSmall,
-                        androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.primary
-                    ) {
-                        Box(Modifier.padding(bottom = 16.dp)) {
-                            title()
-                        }
-                    }
-                }
-                content?.let {
-                    CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.bodyMedium) {
-                        if (scrollContent) {
-                            val scrollState = rememberScrollState()
-                            Box(Modifier
-                                .weight(weight = 1f, fill = false)
-                                .padding(bottom = 24.dp)
-                                .verticalScroll(scrollState)
-                            ) {
-                                content()
-                            }
-                        } else {
-                            Box(Modifier.weight(weight = 1f, fill = false).padding(bottom = 24.dp)) {
-                                content()
-                            }
-                        }
-                    }
-                }
+    PreferenceDialogContent(
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        titleComposable = title,
+        icon = icon,
+        showCloseButton = true,
+        scrollContent = scrollContent,
+        content = content,
+        buttons = {
+            if (neutralButtonText != null || confirmButtonText != null || cancelButtonText != null) {
                 Row {
                     if (neutralButtonText != null)
-                        TextButton(
-                            onClick = onNeutral
-                        ) { Text(neutralButtonText) }
+                        TextButton(onClick = onNeutral) { Text(neutralButtonText) }
                     Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onDismissRequest) { Text(cancelButtonText) }
+                    if (cancelButtonText != null)
+                        TextButton(onClick = onDismissRequest) { Text(cancelButtonText) }
                     if (confirmButtonText != null)
                         TextButton(
                             enabled = checkOk(),
@@ -112,7 +70,7 @@ fun ThreeButtonAlertDialogContent(
                 }
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -127,7 +85,7 @@ fun ThreeButtonAlertDialog(
     onNeutral: () -> Unit = { },
     checkOk: () -> Boolean = { true },
     confirmButtonText: String? = stringResource(android.R.string.ok),
-    cancelButtonText: String = stringResource(android.R.string.cancel),
+    cancelButtonText: String? = null,
     neutralButtonText: String? = null,
     reducePadding: Boolean = false,
     properties: DialogProperties = DialogProperties()

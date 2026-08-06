@@ -46,7 +46,7 @@ class ClipboardDao private constructor(private val db: Database) {
             null,
             null,
             null,
-            "$COLUMN_PINNED, $COLUMN_TIMESTAMP DESC" // was only relevant in the initial approach of using a cursor instead of a cache
+            "$COLUMN_TIMESTAMP DESC"
         ).use {
             while (it.moveToNext()) {
                 val text = it.getString(3) ?: ""
@@ -189,7 +189,6 @@ class ClipboardDao private constructor(private val db: Database) {
     fun togglePinned(id: Long) {
         val entry = cache.first { it.id == id }
         entry.isPinned = !entry.isPinned
-        entry.timeStamp = System.currentTimeMillis()
         if (listener != null) {
             val oldPos = cache.indexOf(entry)
             cache.sort()
@@ -198,9 +197,8 @@ class ClipboardDao private constructor(private val db: Database) {
         } else {
             cache.sort()
         }
-        val cv = ContentValues(2)
+        val cv = ContentValues(1)
         cv.put(COLUMN_PINNED, entry.isPinned)
-        cv.put(COLUMN_TIMESTAMP, entry.timeStamp)
         db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null)
     }
 

@@ -240,36 +240,39 @@ public class KeyboardParams {
             mDefaultAbsoluteKeyWidth = (int) (mDefaultKeyWidth * mBaseWidth);
             mAbsolutePopupKeyWidth = (int) (alphaSymbolKeyWidth * mBaseWidth);
 
+            float horizontalGapStandard = keyboardAttr.getFraction(
+                    R.styleable.Keyboard_horizontalGap, 1, 1, 0.03f);
+            float verticalGapStandard = keyboardAttr.getFraction(
+                    R.styleable.Keyboard_verticalGap, 1, 1, 0.03f);
+
             if (Settings.getValues().mNarrowKeyGaps) {
                 float horizontalGapNarrow = keyboardAttr.getFraction(
-                        R.styleable.Keyboard_horizontalGapNarrow, 1, 1, 0);
+                        R.styleable.Keyboard_horizontalGapNarrow, 1, 1, 0.015f);
                 float verticalGapNarrow = keyboardAttr.getFraction(
-                        R.styleable.Keyboard_verticalGapNarrow, 1, 1, 0);
+                        R.styleable.Keyboard_verticalGapNarrow, 1, 1, 0.015f);
+                if (horizontalGapNarrow <= 0) horizontalGapNarrow = 0.015f;
+                if (verticalGapNarrow <= 0) verticalGapNarrow = 0.015f;
+
                 int level = Settings.getValues().mNarrowKeyGapsLevel;
-                if (level == 2) {
-                    mRelativeHorizontalGap = horizontalGapNarrow * 0.75f;
-                    mRelativeVerticalGap = verticalGapNarrow * 0.75f;
-                } else if (level == 3) {
-                    mRelativeHorizontalGap = horizontalGapNarrow * 0.5f;
-                    mRelativeVerticalGap = verticalGapNarrow * 0.5f;
-                } else if (level == 4) {
-                    mRelativeHorizontalGap = horizontalGapNarrow * 0.25f;
-                    mRelativeVerticalGap = verticalGapNarrow * 0.25f;
-                } else if (level == 5) {
-                    mRelativeHorizontalGap = 0f;
-                    mRelativeVerticalGap = 0f;
-                } else {
+                boolean hasBorders = Settings.getValues().mThemeKeyBorders;
+
+                if (level <= 0) {
+                    mRelativeHorizontalGap = horizontalGapStandard;
+                    mRelativeVerticalGap = verticalGapStandard;
+                } else if (level == 1) {
                     mRelativeHorizontalGap = horizontalGapNarrow;
                     mRelativeVerticalGap = verticalGapNarrow;
+                } else {
+                    float factor = Math.max(0f, Math.min(1f, (10 - level) / 9.0f));
+                    if (!hasBorders && factor < 0.1f) {
+                        factor = 0.1f; // Visual anti-overlap margin for borderless key labels
+                    }
+                    mRelativeHorizontalGap = horizontalGapNarrow * factor;
+                    mRelativeVerticalGap = verticalGapNarrow * factor;
                 }
             } else {
-                mRelativeHorizontalGap = keyboardAttr.getFraction(
-                        R.styleable.Keyboard_horizontalGap, 1, 1, 0);
-                mRelativeVerticalGap = keyboardAttr.getFraction(
-                        R.styleable.Keyboard_verticalGap, 1, 1, 0);
-                // TODO: Fix keyboard geometry calculation clearer. Historically vertical gap between
-                //  rows are determined based on the entire keyboard height including top and bottom
-                //  paddings.
+                mRelativeHorizontalGap = horizontalGapStandard;
+                mRelativeVerticalGap = verticalGapStandard;
             }
             mHorizontalGap = (int) (mRelativeHorizontalGap * width);
             mVerticalGap = (int) (mRelativeVerticalGap * height);

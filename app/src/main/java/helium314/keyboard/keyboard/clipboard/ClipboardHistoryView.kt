@@ -7,7 +7,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.ImageButton
 import android.widget.LinearLayout
@@ -202,6 +204,10 @@ class ClipboardHistoryView @JvmOverloads constructor(
         }
 
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val clipboardStripScrollView = KeyboardSwitcher.getInstance().clipboardStripScrollView
+        if (clipboardStripScrollView != null) {
+            colors.setBackground(clipboardStripScrollView, ColorType.STRIP_BACKGROUND)
+        }
         toolbarKeys.forEach {
             clipboardStrip.addView(it)
             val tag = it.tag
@@ -223,6 +229,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
             it.setBackgroundResource(R.drawable.toolbar_key_background)
             colors.setColor(it.background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
         }
+        applyClipboardToolbarKeyLayoutParams()
+        clipboardStrip.post { applyClipboardToolbarKeyLayoutParams() }
     }
 
     private lateinit var searchBarTextView: TextView
@@ -278,6 +286,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
              clipboardStrip.addView(it) 
              // Restore state (enabled/disabled handling if needed)
         }
+        applyClipboardToolbarKeyLayoutParams()
+        clipboardStrip.post { applyClipboardToolbarKeyLayoutParams() }
         
         // Keep the filter if we have query?
         // User said: "redirected to the clipboard with filtered items"
@@ -416,12 +426,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
     }
 
     private fun setupToolbarKeys() {
-        // set layout params
-        val toolbarKeyLayoutParams = LayoutParams(
-            resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width), 
-            resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
-        ).apply { gravity = android.view.Gravity.CENTER_VERTICAL }
-        toolbarKeys.forEach { it.layoutParams = toolbarKeyLayoutParams }
+        applyClipboardToolbarKeyLayoutParams()
+        KeyboardSwitcher.getInstance().clipboardStrip?.post { applyClipboardToolbarKeyLayoutParams() }
     }
 
     private fun setupBottomRowKeyboard(editorInfo: EditorInfo, listener: KeyboardActionListener) {
@@ -481,6 +487,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         initialize()
         setupToolbarKeys()
         historyManager.prepareClipboardHistory()
+        historyManager.sortHistoryEntries()
         historyManager.setHistoryChangeListener(this)
         clipboardAdapter.clipboardHistoryManager = historyManager
         
@@ -744,6 +751,11 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
         setToolbarButtonsActivatedStateOnPrefChange(KeyboardSwitcher.getInstance().clipboardStrip, key)
 
+        if (key == Settings.PREF_AUTO_SPAN_TOOLBAR_KEYS || key == Settings.PREF_CLIPBOARD_TOOLBAR_KEYS) {
+            applyClipboardToolbarKeyLayoutParams()
+            KeyboardSwitcher.getInstance().clipboardStrip?.post { applyClipboardToolbarKeyLayoutParams() }
+        }
+
         if (::clipboardHistoryManager.isInitialized &&
             (key == Settings.PREF_CLIPBOARD_HISTORY_PINNED_FIRST || key == Settings.PREF_CLIPBOARD_FOLD_PINNED)) {
             // Ensure settings are reloaded first
@@ -751,6 +763,42 @@ class ClipboardHistoryView @JvmOverloads constructor(
             clipboardHistoryManager.sortHistoryEntries()
             confirmationHandler.post {
                 clipboardAdapter.refresh()
+            }
+        }
+    }
+
+    private fun applyClipboardToolbarKeyLayoutParams() {
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip ?: return
+        val count = clipboardStrip.childCount
+        if (count == 0) return
+        val parentView = (clipboardStrip.parent as? View)
+        val containerWidth = parentView?.width?.takeIf { it > 0 }
+            ?: parentView?.measuredWidth?.takeIf { it > 0 }
+            ?: clipboardStrip.width.takeIf { it > 0 }
+            ?: clipboardStrip.measuredWidth.takeIf { it > 0 }
+            ?: context.resources.displayMetrics.widthPixels
+        val singleKeyWidth = kotlin.math.min(
+            context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
+            context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        )
+        val totalKeysWidth = count * singleKeyWidth
+
+        val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
+        val useEqualSpacing = isAutoSpan && containerWidth > 0 && totalKeysWidth <= containerWidth
+
+        clipboardStrip.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else Gravity.END
+
+        val toolbarKeyLayoutParams = LinearLayout.LayoutParams(
+            singleKeyWidth,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+
+        for (i in 0 until count) {
+            val child = clipboardStrip.getChildAt(i) ?: continue
+            child.layoutParams = if (useEqualSpacing) {
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+            } else {
+                toolbarKeyLayoutParams
             }
         }
     }

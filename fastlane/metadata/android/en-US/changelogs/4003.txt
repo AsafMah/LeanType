@@ -1,0 +1,7 @@
+- Fixed custom emoji font rendering in emoji search results.
+- Added preference toggle and clipboard toolbar support for auto-spanning toolbar keys.
+- Smoothed transitions between keyboard and clipboard in Split Toolbar mode.
+- Fixed SettingsContainer exception logging to print exact setting key names instead of object hashcodes.
+- Fixed word list duplication in Personal Dictionary UI.
+- Fixed duplicate item keys in Settings Search LazyColumn.
+- CI pipeline improvements for beta release triggers.

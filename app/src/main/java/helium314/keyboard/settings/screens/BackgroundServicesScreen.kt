@@ -225,3 +225,91 @@ private fun CompactServiceCard(
         }
     }
 }
+
+fun createBackgroundServicesSettings(context: android.content.Context): List<helium314.keyboard.settings.Setting> = listOf(
+    helium314.keyboard.settings.Setting(
+        key = Settings.PREF_ENABLE_SPELL_CHECKER_SERVICE,
+        title = "Spell Checker Service",
+        description = "System spellchecker & dictionary cache."
+    ) { setting ->
+        var enabled by remember { mutableStateOf(context.prefs().getBoolean(setting.key, Defaults.PREF_ENABLE_SPELL_CHECKER_SERVICE)) }
+        helium314.keyboard.settings.preferences.SwitchPreference(
+            name = setting.title,
+            key = setting.key,
+            default = Defaults.PREF_ENABLE_SPELL_CHECKER_SERVICE,
+            description = setting.description,
+            onCheckedChange = {
+                enabled = it
+                context.prefs().edit().putBoolean(setting.key, it).apply()
+            }
+        )
+    },
+    helium314.keyboard.settings.Setting(
+        key = Settings.PREF_USE_CONTACTS,
+        title = "Contacts Observer",
+        description = "Monitors contact changes for name suggestions."
+    ) { setting ->
+        var enabled by remember { mutableStateOf(context.prefs().getBoolean(setting.key, Defaults.PREF_USE_CONTACTS)) }
+        helium314.keyboard.settings.preferences.SwitchPreference(
+            name = setting.title,
+            key = setting.key,
+            default = Defaults.PREF_USE_CONTACTS,
+            description = setting.description,
+            onCheckedChange = {
+                enabled = it
+                context.prefs().edit().putBoolean(setting.key, it).apply()
+            }
+        )
+    },
+    helium314.keyboard.settings.Setting(
+        key = Settings.PREF_ENABLE_CLIPBOARD_LISTENER,
+        title = "Clipboard Listener",
+        description = "Listens to system primary clip changes."
+    ) { setting ->
+        var enabled by remember { mutableStateOf(context.prefs().getBoolean(setting.key, Defaults.PREF_ENABLE_CLIPBOARD_LISTENER)) }
+        helium314.keyboard.settings.preferences.SwitchPreference(
+            name = setting.title,
+            key = setting.key,
+            default = Defaults.PREF_ENABLE_CLIPBOARD_LISTENER,
+            description = setting.description,
+            onCheckedChange = {
+                enabled = it
+                context.prefs().edit().putBoolean(setting.key, it).apply()
+            }
+        )
+    },
+    helium314.keyboard.settings.Setting(
+        key = Settings.PREF_AUTO_READ_OTP,
+        title = "SMS OTP Reader",
+        description = "Reads SMS to suggest OTP passcodes."
+    ) { setting ->
+        var enabled by remember { mutableStateOf(context.prefs().getBoolean(setting.key, Defaults.PREF_AUTO_READ_OTP)) }
+        helium314.keyboard.settings.preferences.SwitchPreference(
+            name = setting.title,
+            key = setting.key,
+            default = Defaults.PREF_AUTO_READ_OTP,
+            description = setting.description,
+            onCheckedChange = {
+                enabled = it
+                context.prefs().edit().putBoolean(setting.key, it).apply()
+            }
+        )
+    },
+    helium314.keyboard.settings.Setting(
+        key = Settings.PREF_USE_APPS,
+        title = "App Launcher Sync",
+        description = "Monitors app installs for app name suggestions."
+    ) { setting ->
+        var enabled by remember { mutableStateOf(context.prefs().getBoolean(setting.key, Defaults.PREF_USE_APPS)) }
+        helium314.keyboard.settings.preferences.SwitchPreference(
+            name = setting.title,
+            key = setting.key,
+            default = Defaults.PREF_USE_APPS,
+            description = setting.description,
+            onCheckedChange = {
+                enabled = it
+                context.prefs().edit().putBoolean(setting.key, it).apply()
+            }
+        )
+    }
+)

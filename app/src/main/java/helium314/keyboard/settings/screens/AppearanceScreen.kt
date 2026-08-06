@@ -74,10 +74,8 @@ fun AppearanceScreen(
         if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE)
             || prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD, Defaults.PREF_ENABLE_SPLIT_KEYBOARD))
             Settings.PREF_SPLIT_SPACER_SCALE_PREFIX else null,
-        if (prefs.getBoolean(Settings.PREF_THEME_KEY_BORDERS, Defaults.PREF_THEME_KEY_BORDERS))
-            Settings.PREF_NARROW_KEY_GAPS else null,
-        if (prefs.getBoolean(Settings.PREF_THEME_KEY_BORDERS, Defaults.PREF_THEME_KEY_BORDERS)
-            && prefs.getBoolean(Settings.PREF_NARROW_KEY_GAPS, Defaults.PREF_NARROW_KEY_GAPS))
+        Settings.PREF_NARROW_KEY_GAPS,
+        if (prefs.getBoolean(Settings.PREF_NARROW_KEY_GAPS, Defaults.PREF_NARROW_KEY_GAPS))
             Settings.PREF_NARROW_KEY_GAPS_LEVEL else null,
         Settings.PREF_KEYBOARD_HEIGHT_SCALE_PREFIX,
         Settings.PREF_BOTTOM_PADDING_SCALE_PREFIX,
@@ -233,18 +231,9 @@ fun createAppearanceSettings(context: Context) = listOf(
             name = setting.title,
             key = setting.key,
             default = Defaults.PREF_NARROW_KEY_GAPS_LEVEL,
-            range = 1f..5f,
+            range = 0f..10f,
             stepSize = 1,
-            description = { level ->
-                when (level) {
-                    1 -> stringResource(R.string.narrowness_level_low)
-                    2 -> stringResource(R.string.narrowness_level_medium_low)
-                    3 -> stringResource(R.string.narrowness_level_medium)
-                    4 -> stringResource(R.string.narrowness_level_medium_high)
-                    5 -> stringResource(R.string.narrowness_level_high)
-                    else -> level.toString()
-                }
-            }
+            description = { level -> if (level.toInt() == 0) "0 (Standard)" else level.toInt().toString() }
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
     Setting(context, Settings.PREF_KEYBOARD_HEIGHT_SCALE_PREFIX, R.string.prefs_keyboard_height_scale) { setting ->

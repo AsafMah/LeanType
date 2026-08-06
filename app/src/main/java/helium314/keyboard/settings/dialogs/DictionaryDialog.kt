@@ -71,7 +71,7 @@ fun DictionaryDialog(
         onDismissRequest = onDismissRequest,
         onConfirmed = {},
         confirmButtonText = null,
-        cancelButtonText = stringResource(R.string.dialog_close),
+        cancelButtonText = null,
         title = { Text(locale.localizedDisplayName(LocalResources.current)) },
         content = {
             Column {

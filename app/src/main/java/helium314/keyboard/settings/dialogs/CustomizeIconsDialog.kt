@@ -81,7 +81,7 @@ fun CustomizeIconsDialog(
         onDismissRequest = onDismissRequest,
         onConfirmed = { },
         confirmButtonText = null,
-        cancelButtonText = stringResource(R.string.dialog_close),
+        cancelButtonText = null,
         neutralButtonText = if (prefs.contains(prefKey)) stringResource(R.string.button_default) else null,
         onNeutral = { showDeletePrefConfirmDialog = true },
         title = { Text(stringResource(R.string.customize_icons)) },

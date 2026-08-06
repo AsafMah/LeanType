@@ -55,7 +55,6 @@ fun MainSettingsScreen(
     onClickAdvanced: () -> Unit,
     onClickAppearance: () -> Unit,
     onClickLanguage: () -> Unit,
-    onClickLayouts: () -> Unit,
     onClickGesture: () -> Unit,
     onClickLibraries: () -> Unit,
     onClickDictionaries: () -> Unit,
@@ -169,7 +168,7 @@ fun MainSettingsScreen(
                     }
                 }
 
-                // Group 2: Typing (Gesture, Correction, Secondary Layouts, Dictionaries)
+                // Group 2: Typing (Gesture, Correction, Dictionaries)
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -198,11 +197,6 @@ fun MainSettingsScreen(
                             name = stringResource(R.string.settings_screen_correction),
                             onClick = onClickTextCorrection,
                             icon = R.drawable.ic_settings_correction
-                        ) { NextScreenIcon() }
-                        Preference(
-                            name = stringResource(R.string.settings_screen_secondary_layouts),
-                            onClick = onClickLayouts,
-                            icon = R.drawable.ic_ime_switcher
                         ) { NextScreenIcon() }
                         Preference(
                             name = "Text Expander",
@@ -245,7 +239,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
         }
     }
 }

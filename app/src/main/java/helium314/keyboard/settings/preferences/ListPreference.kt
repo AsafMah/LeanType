@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.edit
+import androidx.annotation.DrawableRes
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.dialogs.ListPickerDialog
@@ -19,6 +20,7 @@ fun <T: Any> ListPreference(
     setting: Setting,
     items: List<Pair<String, T>>,
     default: T,
+    @DrawableRes icon: Int? = null,
     onChanged: (T) -> Unit = { }
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
@@ -27,7 +29,8 @@ fun <T: Any> ListPreference(
     Preference(
         name = setting.title,
         description = selected?.first,
-        onClick = { showDialog = true }
+        onClick = { showDialog = true },
+        icon = icon
     )
     if (showDialog) {
         ListPickerDialog(
@@ -35,6 +38,7 @@ fun <T: Any> ListPreference(
             items = items,
             onItemSelected = {
                 if (it == selected) return@ListPickerDialog
+                showDialog = false
                 putPrefOfType(prefs, setting.key, it.second)
                 onChanged(it.second)
             },

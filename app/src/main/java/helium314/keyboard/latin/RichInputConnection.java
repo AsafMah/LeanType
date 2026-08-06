@@ -215,11 +215,8 @@ public final class RichInputConnection implements PrivateCommandPerformer {
             if (isConnected()) {
                 mIC.beginBatchEdit();
             }
-        } else {
-            if (DBG) {
-                throw new RuntimeException("Nest level too deep");
-            }
-            Log.e(TAG, "Nest level too deep : " + mNestLevel);
+        } else if (mNestLevel > 10) {
+            Log.w(TAG, "Nest level unusually high : " + mNestLevel);
         }
         if (DEBUG_BATCH_NESTING)
             checkBatchEdit();
@@ -235,6 +232,13 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         }
         if (DEBUG_PREVIOUS_TEXT)
             checkConsistencyForDebug();
+    }
+
+    public void ensureBatchEditClosed() {
+        if (mNestLevel > 0 && isConnected()) {
+            mIC.endBatchEdit();
+        }
+        mNestLevel = 0;
     }
 
     /**
@@ -302,6 +306,9 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         // always empty, but looks like things still work normally
         mComposingText.setLength(0);
         mIC = mParent.getCurrentInputConnection();
+        if (!isConnected()) {
+            return false;
+        }
         // Call upon the inputconnection directly since our own method is using the
         // cache, and
         // we want to refresh it.
@@ -315,7 +322,7 @@ public final class RichInputConnection implements PrivateCommandPerformer {
             // framework bug... Fall back to ground state and return false.
             mExpectedSelStart = INVALID_CURSOR_POSITION;
             mExpectedSelEnd = INVALID_CURSOR_POSITION;
-            Log.e(TAG, "Unable to connect to the editor to retrieve text.");
+            Log.w(TAG, "Unable to connect to the editor to retrieve text.");
             return false;
         }
         mCommittedTextBeforeComposingText.append(textBeforeCursor);

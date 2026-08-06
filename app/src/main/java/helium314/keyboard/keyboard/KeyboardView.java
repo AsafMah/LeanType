@@ -205,7 +205,11 @@ public class KeyboardView extends View {
         mKeyDrawParams.updateParams(scaledKeyHeight, mKeyVisualAttributes);
         mKeyDrawParams.updateParams(scaledKeyHeight, keyboard.mKeyVisualAttributes);
         invalidateAllKeys();
-        requestLayout();
+        if (isInLayout()) {
+            post(this::requestLayout);
+        } else {
+            requestLayout();
+        }
         if (mKeyboard.mId.mElementId == KeyboardId.ELEMENT_EMOJI_CATEGORY10) {
             mFontSizeMultiplier = Settings.getValues().mFontSizeMultiplierEmoji * 0.55f;
         } else {

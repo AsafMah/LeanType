@@ -50,7 +50,9 @@ public class SettingsValues {
         public final Locale mLocale;
         public final String mCurrentKeyboardScript;
         public final boolean mHasHardwareKeyboard;
+        public final String mPhysicalKeyboardSuggestionShortcuts;
         public final int mDisplayOrientation;
+        public final helium314.keyboard.latin.utils.ScreenProfile mScreenProfile;
         // From preferences
         public final boolean mAutoCap;
         public final boolean mVibrateOn;
@@ -109,6 +111,7 @@ public class SettingsValues {
         public final float mOneHandedModeScale;
         public final boolean mNarrowKeyGaps;
         public final int mNarrowKeyGapsLevel;
+        public final boolean mThemeKeyBorders;
         public final String mShowMorePopupKeys;
         public final List<String> mPopupKeyTypes;
         public final List<String> mPopupKeyLabelSources;
@@ -180,6 +183,7 @@ public class SettingsValues {
         public final ToolbarMode mToolbarMode;
         public final boolean mToolbarHidingGlobal;
         public final boolean mSplitToolbar;
+        public final boolean mAutoSpanToolbarKeys;
         public final boolean mShowDownloadButtonInToolbar;
         public final boolean mAutoShowToolbar;
         public final boolean mAutoShowToolbarOnSelect;
@@ -243,6 +247,7 @@ public class SettingsValues {
                 mLocale = ConfigurationCompatKt.locale(res.getConfiguration());
                 mCurrentKeyboardScript = currentKeyboardScript;
                 mDisplayOrientation = res.getConfiguration().orientation;
+                mScreenProfile = helium314.keyboard.latin.utils.ScreenProfileProvider.getScreenProfile(context, res.getConfiguration());
                 final InputMethodSubtype selectedSubtype = SubtypeSettings.INSTANCE.getSelectedSubtype(prefs);
 
                 // Store the input attributes
@@ -250,9 +255,11 @@ public class SettingsValues {
 
                 // Get the settings preferences
                 mToolbarMode = Settings.readToolbarMode(prefs);
+                mPhysicalKeyboardSuggestionShortcuts = prefs.getString(Settings.PREF_PHYSICAL_KEYBOARD_SUGGESTION_SHORTCUTS, Defaults.PREF_PHYSICAL_KEYBOARD_SUGGESTION_SHORTCUTS);
                 mToolbarHidingGlobal = prefs.getBoolean(Settings.PREF_TOOLBAR_HIDING_GLOBAL,
                                 Defaults.PREF_TOOLBAR_HIDING_GLOBAL);
                 mSplitToolbar = prefs.getBoolean(Settings.PREF_SPLIT_TOOLBAR, Defaults.PREF_SPLIT_TOOLBAR);
+                mAutoSpanToolbarKeys = prefs.getBoolean(Settings.PREF_AUTO_SPAN_TOOLBAR_KEYS, Defaults.PREF_AUTO_SPAN_TOOLBAR_KEYS);
                 mShowDownloadButtonInToolbar = prefs.getBoolean(Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR,
                                 Defaults.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR);
                 mAutoCap = prefs.getBoolean(Settings.PREF_AUTO_CAP, Defaults.PREF_AUTO_CAP)
@@ -373,7 +380,7 @@ public class SettingsValues {
                 final boolean isLandscape = mDisplayOrientation == Configuration.ORIENTATION_LANDSCAPE;
                 final float displayWidthDp = TypedValueCompat.pxToDp(res.getDisplayMetrics().widthPixels,
                                 res.getDisplayMetrics());
-                mIsSplitKeyboardEnabled = Settings.readSplitKeyboardEnabled(prefs, isLandscape);
+                mIsSplitKeyboardEnabled = Settings.readSplitKeyboardEnabled(prefs, isLandscape, mScreenProfile);
                 // determine spacerWidth from display width and scale setting
                 mSplitKeyboardSpacerRelativeWidth = mIsSplitKeyboardEnabled
                                 ? Math.min(Math.max((displayWidthDp - 600) / 600f + 0.15f, 0.15f), 0.35f)
@@ -486,7 +493,7 @@ public class SettingsValues {
                 mIncognitoModeEnabled = prefs.getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE,
                                 Defaults.PREF_ALWAYS_INCOGNITO_MODE) || mInputAttributes.mNoLearning
                                 || mInputAttributes.mIsPasswordField;
-                mKeyboardHeightScale = Settings.readHeightScale(prefs, isLandscape);
+                mKeyboardHeightScale = Settings.readHeightScale(prefs, isLandscape, mScreenProfile);
                 mSpaceSwipeHorizontal = Settings.readHorizontalSpaceSwipe(prefs);
                 mSpaceSwipeVertical = Settings.readVerticalSpaceSwipe(prefs);
                 mLanguageSwipeDistance = prefs.getInt(Settings.PREF_LANGUAGE_SWIPE_DISTANCE,
@@ -559,6 +566,7 @@ public class SettingsValues {
                 mCustomNavBarColor = prefs.getBoolean(Settings.PREF_NAVBAR_COLOR, Defaults.PREF_NAVBAR_COLOR);
                 mNarrowKeyGaps = prefs.getBoolean(Settings.PREF_NARROW_KEY_GAPS, Defaults.PREF_NARROW_KEY_GAPS);
                 mNarrowKeyGapsLevel = prefs.getInt(Settings.PREF_NARROW_KEY_GAPS_LEVEL, Defaults.PREF_NARROW_KEY_GAPS_LEVEL);
+                mThemeKeyBorders = prefs.getBoolean(Settings.PREF_THEME_KEY_BORDERS, Defaults.PREF_THEME_KEY_BORDERS);
                 mSettingsValuesForSuggestion = new SettingsValuesForSuggestion(
                                 mBlockPotentiallyOffensive,
                                 prefs.getBoolean(Settings.PREF_GESTURE_SPACE_AWARE, Defaults.PREF_GESTURE_SPACE_AWARE),
