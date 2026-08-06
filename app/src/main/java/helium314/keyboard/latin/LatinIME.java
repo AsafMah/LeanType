@@ -31,6 +31,9 @@ import android.util.Printer;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InlineSuggestion;
@@ -79,6 +82,7 @@ import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LeakGuardHandlerWrapper;
 import helium314.keyboard.latin.utils.Log;
 import helium314.keyboard.latin.utils.RecapitalizeMode;
+import helium314.keyboard.latin.utils.ScreenProfileProvider;
 import helium314.keyboard.latin.utils.StatsUtils;
 import helium314.keyboard.latin.utils.StatsUtilsManager;
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils;
@@ -130,6 +134,7 @@ public class LatinIME extends InputMethodService implements
     public final KeyboardActionListener mKeyboardActionListener;
     private int mOriginalNavBarColor = 0;
     private int mOriginalNavBarFlags = 0;
+    private boolean mOriginalNavBarSaved = false;
 
     // UIHandler is needed when creating InputLogic
     public final UIHandler mHandler = new UIHandler(this);
@@ -544,49 +549,14 @@ public class LatinIME extends InputMethodService implements
     }
 
     private String mAppliedLanguage = "";
-    private Context mWrappedContext = null;
-
-    private void updateWrappedContext() {
-        final android.content.SharedPreferences prefs = DeviceProtectedUtils.getSharedPreferences(this);
-        final String lang = prefs.getString(Settings.PREF_APP_LANGUAGE, Defaults.PREF_APP_LANGUAGE);
-        if (lang == null) return;
-        if (!lang.equals(mAppliedLanguage) || mWrappedContext == null) {
-            mAppliedLanguage = lang;
-            mWrappedContext = LocaleUtils.INSTANCE.wrapContextWithLocale(getBaseContext(), lang);
-        }
-    }
 
     @Override
     protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(newBase);
         final android.content.SharedPreferences prefs = DeviceProtectedUtils.getSharedPreferences(newBase);
         final String lang = prefs.getString(Settings.PREF_APP_LANGUAGE, Defaults.PREF_APP_LANGUAGE);
-        mAppliedLanguage = lang;
-        mWrappedContext = LocaleUtils.INSTANCE.wrapContextWithLocale(newBase, lang);
-        super.attachBaseContext(mWrappedContext);
-    }
-
-    @Override
-    public Resources getResources() {
-        if (mWrappedContext != null) {
-            return mWrappedContext.getResources();
-        }
-        return super.getResources();
-    }
-
-    @Override
-    public AssetManager getAssets() {
-        if (mWrappedContext != null) {
-            return mWrappedContext.getAssets();
-        }
-        return super.getAssets();
-    }
-
-    @Override
-    public Resources.Theme getTheme() {
-        if (mWrappedContext != null) {
-            return mWrappedContext.getTheme();
-        }
-        return super.getTheme();
+        mAppliedLanguage = lang != null ? lang : Defaults.PREF_APP_LANGUAGE;
+        LocaleUtils.INSTANCE.applyAppLanguageToResources(this, mAppliedLanguage);
     }
 
     public LatinIME() {
@@ -601,7 +571,6 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onCreate() {
-        updateWrappedContext();
         helium314.keyboard.latin.gesture.SwipeGestureEngine.initialize(this);
         mSettings.startListener();
         KeyboardIconsSet.Companion.getInstance().loadIcons(this);
@@ -686,7 +655,11 @@ public class LatinIME extends InputMethodService implements
         // been displayed. Opening dictionaries never affects responsivity as
         // dictionaries are
         // asynchronously loaded.
-        if (!mHandler.hasPendingReopenDictionaries()) {
+        final android.content.SharedPreferences prefs = DeviceProtectedUtils.getSharedPreferences(this);
+        if (prefs.getBoolean("pref_gesture_lib_just_installed", false)) {
+            prefs.edit().remove("pref_gesture_lib_just_installed").apply();
+            resetSuggestMainDict();
+        } else if (!mHandler.hasPendingReopenDictionaries()) {
             resetDictionaryFacilitatorIfNecessary();
         }
         refreshPersonalizationDictionarySession(currentSettingsValues);
@@ -820,7 +793,19 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onConfigurationChanged(final Configuration conf) {
-        updateWrappedContext();
+        super.onConfigurationChanged(conf);
+        ScreenProfileProvider.invalidateCache();
+        loadSettings();
+        final android.content.SharedPreferences prefs = DeviceProtectedUtils.getSharedPreferences(this);
+        final String lang = prefs.getString(Settings.PREF_APP_LANGUAGE, Defaults.PREF_APP_LANGUAGE);
+        if (lang != null && !lang.isEmpty() && !"system".equals(lang)) {
+            final java.util.Locale locale = LocaleUtils.INSTANCE.parseLocale(lang);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                conf.setLocales(new android.os.LocaleList(locale));
+            } else {
+                conf.locale = locale;
+            }
+        }
         SettingsValues settingsValues = mSettings.getCurrent();
         Log.i(TAG, "onConfigurationChanged");
         SubtypeSettings.INSTANCE.reloadSystemLocales(this);
@@ -829,26 +814,13 @@ public class LatinIME extends InputMethodService implements
             mInputLogic.onOrientationChange(mSettings.getCurrent());
         }
         if (settingsValues.mHasHardwareKeyboard != Settings.readHasHardwareKeyboard(conf)) {
-            // If the state of having a hardware keyboard changed, then we want to reload
-            // the
-            // settings to adjust for that.
-            // TODO: we should probably do this unconditionally here, rather than only when
-            // we
-            // have a change in hardware keyboard configuration.
-            loadSettings();
             if (isImeSuppressedByHardwareKeyboard()) {
-                // We call cleanupInternalStateForFinishInput() because it's the right thing to
-                // do;
-                // however, it seems at the moment the framework is passing us a seemingly valid
-                // but actually non-functional InputConnection object. So if this bug ever gets
-                // fixed we'll be able to remove the composition, but until it is this code is
-                // actually not doing much.
                 cleanupInternalStateForFinishInput();
             }
         }
         // KeyboardSwitcher will check by itself if theme update is necessary
         mKeyboardSwitcher.updateKeyboardTheme(KtxKt.getDisplayContext(this));
-        super.onConfigurationChanged(conf);
+        mKeyboardSwitcher.onConfigurationChanged(conf);
     }
 
     @Override
@@ -924,7 +896,6 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onStartInputView(final EditorInfo editorInfo, final boolean restarting) {
-        updateWrappedContext();
         mHandler.onStartInputView(editorInfo, restarting);
         mStatsUtilsManager.onStartInputView();
     }
@@ -1206,6 +1177,10 @@ public class LatinIME extends InputMethodService implements
             requestHideSelf(0);
         }
 
+        if (isInputViewShown()) {
+            setNavigationBarColor();
+        }
+
         if (TRACE)
             Debug.startMethodTracing("/data/trace/latinime");
 
@@ -1233,6 +1208,7 @@ public class LatinIME extends InputMethodService implements
             mainKeyboardView.closing();
         }
         clearNavigationBarColor();
+        mOriginalNavBarSaved = false;
     }
 
     void onFinishInputInternal() {
@@ -2252,21 +2228,34 @@ public class LatinIME extends InputMethodService implements
         final SettingsValues settingsValues = mSettings.getCurrent();
         if (!settingsValues.mCustomNavBarColor)
             return;
-        final int color = settingsValues.mColors.get(ColorType.NAVIGATION_BAR);
         final Window window = getWindow().getWindow();
         if (window == null)
             return;
-        mOriginalNavBarColor = window.getNavigationBarColor();
+
+        if (!mOriginalNavBarSaved) {
+            mOriginalNavBarColor = window.getNavigationBarColor();
+            mOriginalNavBarFlags = window.getDecorView().getSystemUiVisibility();
+            mOriginalNavBarSaved = true;
+        }
+
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+
+        final int color = settingsValues.mColors.get(ColorType.NAVIGATION_BAR);
         window.setNavigationBarColor(color);
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
-            return;
         final View view = window.getDecorView();
-        mOriginalNavBarFlags = view.getSystemUiVisibility();
-        if (ColorUtilKt.isBrightColor(color)) {
-            view.setSystemUiVisibility(mOriginalNavBarFlags | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        } else {
-            view.setSystemUiVisibility(mOriginalNavBarFlags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        final WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, view);
+        if (controller != null) {
+            controller.setAppearanceLightNavigationBars(ColorUtilKt.isBrightColor(color));
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            int flags = view.getSystemUiVisibility();
+            if (ColorUtilKt.isBrightColor(color)) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            } else {
+                flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            }
+            view.setSystemUiVisibility(flags);
         }
     }
 
@@ -2281,10 +2270,14 @@ public class LatinIME extends InputMethodService implements
         }
         window.setNavigationBarColor(mOriginalNavBarColor);
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
-            return;
         final View view = window.getDecorView();
-        view.setSystemUiVisibility(mOriginalNavBarFlags);
+        final WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, view);
+        if (controller != null) {
+            controller.setAppearanceLightNavigationBars((mOriginalNavBarFlags & View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR) != 0);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            view.setSystemUiVisibility(mOriginalNavBarFlags);
+        }
+        mOriginalNavBarSaved = false;
     }
 
     // On HUAWEI devices with Android 12: a white bar may appear in landscape mode

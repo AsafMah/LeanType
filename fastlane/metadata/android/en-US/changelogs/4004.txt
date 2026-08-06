@@ -1,0 +1,7 @@
+- Instant icon reloading when custom icon or icon style preferences change.
+- Enhanced emoji search with dynamic height, cursor-aware insertion, and key navigation fixes.
+- Added MediaStore screenshot auto-detection, immediate suggestions, and deletion persistence in Clipboard.
+- Auto-enable gesture input upon library installation and simplified gesture manager UI.
+- Updated shift state after swipe deletion and fixed split toolbar visibility controls.
+- Auto-persisted default language subtypes and sub-locale dictionary fallback fixes.
+- Stability improvements and initialization guards in Settings and JNI.

@@ -45,8 +45,36 @@ object TextExpanderUtils {
         val matchedString: String
     )
 
+    private data class CompiledShortcut(
+        val key: String,
+        val cleanKey: String,
+        val isRegex: Boolean,
+        val regex: Regex?,
+        val entry: ShortcutEntry
+    )
+
+    @Volatile
+    private var cachedJsonStr: String? = null
+
+    @Volatile
+    private var cachedShortcutsMap: Map<String, ShortcutEntry>? = null
+
+    @Volatile
+    private var cachedCompiledList: List<CompiledShortcut>? = null
+
+    fun clearCache() {
+        cachedJsonStr = null
+        cachedShortcutsMap = null
+        cachedCompiledList = null
+    }
+
     fun getShortcuts(context: Context): Map<String, ShortcutEntry> {
         val jsonStr = context.prefs().getString(PREF_DATA, "{}") ?: "{}"
+        val currentJson = cachedJsonStr
+        val currentMap = cachedShortcutsMap
+        if (currentJson != null && currentJson == jsonStr && currentMap != null) {
+            return currentMap
+        }
         val map = mutableMapOf<String, ShortcutEntry>()
         try {
             val json = JSONObject(jsonStr)
@@ -65,6 +93,21 @@ object TextExpanderUtils {
         } catch (e: java.lang.Exception) {
             // fallback
         }
+        val compiled = map.map { (key, entry) ->
+            val isRegex = key.startsWith(REGEX_PREFIX)
+            val cleanKey = if (isRegex) key.substring(REGEX_PREFIX.length) else key
+            val regex = if (isRegex) {
+                try {
+                    Regex(cleanKey, RegexOption.IGNORE_CASE)
+                } catch (e: Exception) {
+                    null
+                }
+            } else null
+            CompiledShortcut(key, cleanKey, isRegex, regex, entry)
+        }
+        cachedJsonStr = jsonStr
+        cachedShortcutsMap = map
+        cachedCompiledList = compiled
         return map
     }
 
@@ -77,7 +120,9 @@ object TextExpanderUtils {
                 obj.put("prefix", entry.prefix)
                 json.put(key, obj)
             }
-            context.prefs().edit().putString(PREF_DATA, json.toString()).apply()
+            val jsonStr = json.toString()
+            context.prefs().edit().putString(PREF_DATA, jsonStr).apply()
+            clearCache()
         } catch (e: java.lang.Exception) {
             // fail silently
         }
@@ -100,10 +145,11 @@ object TextExpanderUtils {
 
         // Resolve %clipboard%
         if (result.contains("%clipboard%")) {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             val clipText = try {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                 if (clipboard?.hasPrimaryClip() == true) {
-                    clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                    val rawText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                    if (rawText.length > 2000) rawText.substring(0, 2000) else rawText
                 } else ""
             } catch (e: Exception) {
                 ""
@@ -143,9 +189,13 @@ object TextExpanderUtils {
 
         // Resolve %battery%
         if (result.contains("%battery%")) {
-            val bm = context.getSystemService(Context.BATTERY_SERVICE) as? android.os.BatteryManager
-            val level = bm?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
-            val batteryStr = if (level != -1) "$level%" else ""
+            val batteryStr = try {
+                val bm = context.getSystemService(Context.BATTERY_SERVICE) as? android.os.BatteryManager
+                val level = bm?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
+                if (level != -1) "$level%" else ""
+            } catch (e: Exception) {
+                ""
+            }
             result = result.replace("%battery%", batteryStr)
         }
 
@@ -231,32 +281,47 @@ object TextExpanderUtils {
         }
 
     fun getExpandedWordForTyped(word: String?, textBeforeCursor: String?, context: Context): ExpandedResult? {
-        if (word == null || textBeforeCursor == null || !isEnabled(context)) return null
-        val shortcuts = getShortcuts(context)
+        if (textBeforeCursor == null || !isEnabled(context)) return null
+        getShortcuts(context)
+        val compiledList = cachedCompiledList ?: return null
 
-        for ((key, entry) in shortcuts) {
-            val isRegex = key.startsWith(REGEX_PREFIX)
-            val cleanKey = if (isRegex) key.substring(REGEX_PREFIX.length) else key
+        for (item in compiledList) {
+            val entry = item.entry
 
-            if (isRegex) {
+            if (item.isRegex) {
+                val regex = item.regex ?: continue
                 val prefix = entry.prefix
-                val patternStr = cleanKey
-                try {
-                    val regex = Regex(patternStr, RegexOption.IGNORE_CASE)
+                if (word != null) {
                     val expectedSuffix = prefix + word
                     if (textBeforeCursor.endsWith(expectedSuffix, ignoreCase = true)) {
-                        if (regex.matches(expectedSuffix)) {
-                            val replaced = regex.replace(expectedSuffix, entry.template)
-                            return ExpandedResult(expand(replaced, context), prefix.length, expectedSuffix)
+                        try {
+                            if (regex.matches(expectedSuffix)) {
+                                val replaced = regex.replace(expectedSuffix, entry.template)
+                                return ExpandedResult(expand(replaced, context), prefix.length, expectedSuffix)
+                            }
+                        } catch (e: java.lang.Exception) {
+                            // ignore
                         }
+                    }
+                }
+                try {
+                    val match = regex.findAll(textBeforeCursor).lastOrNull { it.range.last == textBeforeCursor.length - 1 }
+                    if (match != null && match.value.isNotEmpty()) {
+                        val matchedString = match.value
+                        val replaced = regex.replace(matchedString, entry.template)
+                        val extraPrefix = if (word != null && matchedString.endsWith(word, ignoreCase = true)) {
+                            matchedString.length - word.length
+                        } else 0
+                        val effectivePrefixLength = maxOf(prefix.length, extraPrefix)
+                        return ExpandedResult(expand(replaced, context), effectivePrefixLength, matchedString)
                     }
                 } catch (e: java.lang.Exception) {
                     // ignore
                 }
             } else {
                 val prefix = entry.prefix
-                val expectedSuffix = cleanKey
-                if (expectedSuffix.equals(prefix + word, ignoreCase = true)) {
+                val expectedSuffix = item.cleanKey
+                if (word == null || expectedSuffix.equals(prefix + word, ignoreCase = true)) {
                     if (textBeforeCursor.endsWith(expectedSuffix, ignoreCase = true)) {
                         return ExpandedResult(expand(entry.template, context), prefix.length, expectedSuffix)
                     }

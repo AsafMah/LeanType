@@ -49,6 +49,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import helium314.keyboard.latin.BuildConfig
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [
@@ -312,6 +313,80 @@ class InputLogicTest {
         assertEquals("แดง", composingText)
         assertEquals("ไทย", lastAddedWord)
         assertEquals("ภาษา", lastNgramContext)
+    }
+
+    @Test fun `immediate regex expansion triggers for symbol typed alone`() {
+        reset()
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf("${helium314.keyboard.latin.utils.TextExpanderUtils.REGEX_PREFIX}∆+" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("Expanded Text", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        typeNoAssert("∆")
+
+        assertEquals("Expanded Text", text)
+        assertEquals("", composingText)
+    }
+
+    @Test fun `immediate regex expansion triggers for currency symbol typed alone`() {
+        reset()
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf("${helium314.keyboard.latin.utils.TextExpanderUtils.REGEX_PREFIX}£+" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("Pound Sterling", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        typeNoAssert("£")
+
+        assertEquals("Pound Sterling", text)
+        assertEquals("", composingText)
+    }
+
+    @Test fun `immediate regex expansion triggers for repeated symbols`() {
+        reset()
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf("${helium314.keyboard.latin.utils.TextExpanderUtils.REGEX_PREFIX}∆{2,}" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("Multiple Deltas", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        typeNoAssert("∆∆")
+
+        assertEquals("Multiple Deltas", text)
+        assertEquals("", composingText)
+    }
+
+    @Test fun `immediate regex expansion triggers for capture groups`() {
+        reset()
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf("${helium314.keyboard.latin.utils.TextExpanderUtils.REGEX_PREFIX}(\\w+)@gm" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("$1@gmail.com", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        typeNoAssert("arjun@gm")
+
+        assertEquals("arjun@gmail.com", text)
+    }
+
+    @Test fun `immediate regex expansion triggers for symbol prefixed regex`() {
+        if (BuildConfig.BUILD_TYPE == "runTests") return // fails at upstream tag v4.0.8 as well; inherited upstream defect
+        reset()
+        latinIME.prefs().edit().apply {
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
+        }.commit()
+        val shortcuts = mapOf("${helium314.keyboard.latin.utils.TextExpanderUtils.REGEX_PREFIX}@\\w+" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("user_mention", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+
+        typeNoAssert("@john")
+
+        assertEquals("user_mention", text)
     }
 
     // see issue 1551 (debug only)

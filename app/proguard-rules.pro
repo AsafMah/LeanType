@@ -47,6 +47,11 @@
     <methods>;
 }
 
+# Keep translation plugin interface to prevent parameter removal/signature optimization
+-keep interface helium314.keyboard.latin.translation.ITranslationProvider {
+    <methods>;
+}
+
 # Keep ML Kit, GMS Tasks, and Firebase components for handwriting plugin dynamic linkage
 -keep class com.google.mlkit.** { *; }
 -keep class com.google.android.gms.tasks.** { *; }

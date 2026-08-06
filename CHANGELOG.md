@@ -14,6 +14,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-06
+
+### Upstream
+- Merged **LeanBitLab/LeanType v4.0.8** (pinned at `dec87806`, including v4.0.3-v4.0.7) — adds foldable/screen-profile detection with split-keyboard defaults, physical-keyboard suggestion shortcuts, a translation plugin and engine selector, a unified settings registry with automatic search indexing, floating-keyboard drag-to-resize, key-gap narrowness controls, auto-spanning toolbar keys, and text-expander regex fixes. LeanTypeDual retains its Java fallback gesture engine, distinct `applicationId`, fork version, privacy tiers, and two-thumb typing (now registered for settings search). (#126)
+
+### Reliability & testing
+- Guarded two upstream tests that fail at upstream tag `v4.0.8` itself (subtype edit persistence and symbol-prefixed regex expansion) with the `runTests` CI skip, after reproducing both on a pristine upstream checkout. (#126)
+
 ## [0.1.0] - 2026-07-12
 
 ### Added

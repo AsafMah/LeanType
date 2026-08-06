@@ -63,7 +63,8 @@ object SubtypeSettings {
         if (newSubtype !in enabledSubtypes) {
             enabledSubtypes.add(newSubtype)
             enabledSubtypes.sortBy { it.locale().toLanguageTag() } // for consistent order
-            RichInputMethodManager.getInstance().refreshSubtypeCaches()
+            if (RichInputMethodManager.isInitialized())
+                RichInputMethodManager.getInstance().refreshSubtypeCaches()
         }
     }
 
@@ -90,7 +91,7 @@ object SubtypeSettings {
             }
         }
         if (!enabledSubtypes.remove(subtype)) reloadEnabledSubtypes(context)
-        else RichInputMethodManager.getInstance().refreshSubtypeCaches()
+        else if (RichInputMethodManager.isInitialized()) RichInputMethodManager.getInstance().refreshSubtypeCaches()
         return true
     }
 
@@ -218,6 +219,11 @@ object SubtypeSettings {
         loadResourceSubtypes(context.resources)
         loadAdditionalSubtypes(context.prefs())
         loadEnabledSubtypes(context)
+
+        if (enabledSubtypes.isEmpty()) {
+            val defaults = getDefaultEnabledSubtypes()
+            defaults.forEach { addEnabledSubtype(context.prefs(), it) }
+        }
     }
 
     @Suppress("SameReturnValue")

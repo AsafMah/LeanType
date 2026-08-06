@@ -291,18 +291,16 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
             }
             baseKeys[0] = numberRowCopy
         } else if (!params.mId.mNumberRowEnabled && params.mId.isAlphabetKeyboard && !hasBuiltInNumbers()) {
-            if (baseKeys[0].any { it.popup.main != null || !it.popup.relevant.isNullOrEmpty() } // first row of baseKeys has any layout popup key
+            val hideNumberHintsOnTopRow = baseKeys[0].any { it.popup.main != null || !it.popup.relevant.isNullOrEmpty() } // first row of baseKeys has any layout popup key
                 && params.mPopupKeyLabelSources.let {
                     val layout = it.indexOf(POPUP_KEYS_LAYOUT)
                     val number = it.indexOf(POPUP_KEYS_NUMBER)
                     layout != -1 && layout < number // layout before number label
                 }
-            ) {
-                // remove number from labels, to avoid awkward mix of numbers and others caused by layout popup keys
-                params.mPopupKeyLabelSources.remove(POPUP_KEYS_NUMBER)
+            if (!hideNumberHintsOnTopRow) {
+                // add number to the first row
+                baseKeys.first().forEachIndexed { index, keyData -> keyData.popup.numberLabel = numberRow.getOrNull(index)?.label }
             }
-            // add number to the first first row
-            baseKeys.first().forEachIndexed { index, keyData -> keyData.popup.numberLabel = numberRow.getOrNull(index)?.label }
         }
     }
 

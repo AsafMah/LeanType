@@ -4,11 +4,26 @@ package helium314.keyboard.settings.preferences
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Build
-import android.widget.Toast
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,34 +34,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import helium314.keyboard.latin.R
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.edit
 import helium314.keyboard.latin.BuildConfig
+import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ChecksumCalculator
 import helium314.keyboard.latin.utils.GestureLibraryDownloader
 import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.protectedPrefs
-import helium314.keyboard.settings.Setting
+import helium314.keyboard.settings.FeedbackManager
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.filePicker
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
-import androidx.core.content.edit
-import helium314.keyboard.settings.FeedbackManager
-
-import androidx.annotation.DrawableRes
 
 @SuppressLint("ApplySharedPref")
 @Composable
 fun LoadGestureLibPreference(
     title: String,
-    summary: String? = null,
+    summary: String? = if (JniUtils.sHaveNativeGestureLib) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed),
     @DrawableRes icon: Int? = null,
     restartOnSuccess: Boolean = true,
     onSuccess: (() -> Unit)? = null,
@@ -58,30 +73,39 @@ fun LoadGestureLibPreference(
     val abi = Build.SUPPORTED_ABIS[0]
     val libFile = File(ctx.filesDir?.absolutePath + File.separator + JniUtils.JNI_LIB_IMPORT_FILE_NAME)
     val scope = rememberCoroutineScope()
-    
+
     fun renameToLibFileAndRestart(file: File, checksum: String) {
         libFile.setWritable(true)
         libFile.delete()
-        // store checksum in default preferences (see JniUtils)
-        prefs.edit(commit = true) { putString(Settings.PREF_LIBRARY_CHECKSUM, checksum) }
+        prefs.edit(commit = true) {
+            putString(Settings.PREF_LIBRARY_CHECKSUM, checksum)
+            putBoolean("pref_gesture_lib_just_installed", true)
+            putBoolean(Settings.PREF_GESTURE_INPUT, true)
+        }
         file.copyTo(libFile)
         libFile.setReadOnly()
         file.delete()
+        try {
+            ctx.sendBroadcast(Intent(helium314.keyboard.dictionarypack.DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION))
+        } catch (e: Exception) { }
         onSuccess?.invoke()
         isDownloading = false
         showDialog = false
         if (restartOnSuccess) {
-            Runtime.getRuntime().exit(0) // exit will restart the app, so library will be loaded
+            scope.launch {
+                FeedbackManager.message(ctx, "Gesture library loaded. Restarting...")
+                delay(3000)
+                Runtime.getRuntime().exit(0)
+            }
         }
     }
-    
+
     fun startDownload() {
         isDownloading = true
         scope.launch {
             GestureLibraryDownloader.downloadLibrary(ctx).fold(
                 onSuccess = { downloadedFile ->
                     val checksum = ChecksumCalculator.checksum(downloadedFile) ?: ""
-                    FeedbackManager.message(ctx, R.string.load_gesture_library_download_success)
                     renameToLibFileAndRestart(downloadedFile, checksum)
                 },
                 onFailure = { error ->
@@ -92,7 +116,7 @@ fun LoadGestureLibPreference(
             )
         }
     }
-    
+
     var tempFilePath: String? by rememberSaveable { mutableStateOf(null) }
     val launcher = filePicker { uri ->
         val tmpfile = File(ctx.filesDir.absolutePath + File.separator + "tmplib")
@@ -102,7 +126,7 @@ fun LoadGestureLibPreference(
             val inputStream = FileInputStream(otherTemporaryFile)
             val outputStream = FileOutputStream(tmpfile)
             outputStream.use {
-                tmpfile.setReadOnly() // as per recommendations in https://developer.android.com/about/versions/14/behavior-changes-14#safer-dynamic-code-loading
+                tmpfile.setReadOnly()
                 FileUtils.copyStreamToOtherStream(inputStream, it)
             }
             otherTemporaryFile.delete()
@@ -115,70 +139,105 @@ fun LoadGestureLibPreference(
             }
         } catch (e: IOException) {
             tmpfile.delete()
-            // should inform user, but probably the issues will only come when reading the library
         }
     }
-    
+
     Preference(
         name = title,
         description = summary,
         icon = icon,
         onClick = { showDialog = true }
     )
-    
+
     if (showDialog) {
-        ConfirmationDialog(
+        val isInstalled = libFile.exists() || JniUtils.sHaveNativeGestureLib
+        helium314.keyboard.settings.dialogs.PreferenceDialog(
             onDismissRequest = { if (!isDownloading) showDialog = false },
-            onConfirmed = {
-                if (!isDownloading) {
-                    // Download is the primary action
-                    if (helium314.keyboard.latin.BuildConfig.FLAVOR != "offline") {
-                         startDownload()
-                    }
-                }
-            },
-            confirmButtonText = if (helium314.keyboard.latin.BuildConfig.FLAVOR == "offline") "" else if (isDownloading) 
-                stringResource(R.string.load_gesture_library_downloading) 
-            else 
-                stringResource(R.string.load_gesture_library_button_download),
-            title = { Text(stringResource(R.string.load_gesture_library)) },
-            content = { 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(stringResource(R.string.load_gesture_library_message, abi))
-                    if (isDownloading) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        CircularProgressIndicator()
-                    }
-                }
-            },
-            // Use neutral button for either Delete (if library exists) or Load from file (if not)
-            neutralButtonText = when {
-                BuildConfig.FLAVOR == "offline" && !libFile.exists() -> stringResource(R.string.load_gesture_library_button_load) // Only allow load if offline and not exists
-                isDownloading -> null
-                libFile.exists() -> stringResource(R.string.load_gesture_library_button_delete)
-                else -> stringResource(R.string.load_gesture_library_button_load)
-            },
-            onNeutral = {
-                if (libFile.exists()) {
-                    // Delete the library
-                    libFile.delete()
-                    prefs.edit(commit = true) { remove(Settings.PREF_LIBRARY_CHECKSUM) }
-                    onSuccess?.invoke()
-                    if (restartOnSuccess) {
-                        Runtime.getRuntime().exit(0)
+            title = stringResource(R.string.load_gesture_library),
+            showCloseButton = !isDownloading,
+            buttons = {
+                if (isDownloading) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = stringResource(R.string.load_gesture_library_downloading),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 } else {
-                    // Load from file
-                    showDialog = false
-                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                        .addCategory(Intent.CATEGORY_OPENABLE)
-                        .setType("application/octet-stream")
-                    launcher.launch(intent)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (!isInstalled && BuildConfig.FLAVOR != "offline") {
+                            Button(
+                                onClick = { startDownload() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.load_gesture_library_button_download))
+                            }
+                        }
+
+                        if (!isInstalled) {
+                            OutlinedButton(
+                                onClick = {
+                                    showDialog = false
+                                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                        .addCategory(Intent.CATEGORY_OPENABLE)
+                                        .setType("application/octet-stream")
+                                    launcher.launch(intent)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.load_gesture_library_button_load))
+                            }
+                        }
+
+                        if (isInstalled) {
+                            Button(
+                                onClick = {
+                                    libFile.delete()
+                                    prefs.edit(commit = true) { remove(Settings.PREF_LIBRARY_CHECKSUM) }
+                                    onSuccess?.invoke()
+                                    showDialog = false
+                                    if (restartOnSuccess) {
+                                        scope.launch {
+                                            FeedbackManager.message(ctx, "Gesture library removed. Restarting...")
+                                            delay(3000)
+                                            Runtime.getRuntime().exit(0)
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.load_gesture_library_button_delete))
+                            }
+                        }
+                    }
                 }
             }
-        )
+        ) {
+            Text(
+                text = stringResource(R.string.load_gesture_library_message, abi),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
-    
+
     if (tempFilePath != null)
         ConfirmationDialog(
             onDismissRequest = {
