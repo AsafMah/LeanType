@@ -66,7 +66,9 @@ class ClipboardAdapter(
             return
         }
 
-        val isFoldEnabled = Settings.getValues().mClipboardFoldPinned
+        val isFoldEnabled = Settings.getInstance()?.readClipboardFoldPinned()
+            ?: Settings.getValues()?.mClipboardFoldPinned
+            ?: false
         if (isFoldEnabled) {
             val pinnedClips = allClips.filter { it.isPinned }
             val unpinnedClips = allClips.filter { !it.isPinned }

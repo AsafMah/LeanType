@@ -52,6 +52,7 @@ node_modules/
 .venv/
 
 # AI Assistants & Context
+.opencode/
 .aider*
 .superpowers/
 .qwen/

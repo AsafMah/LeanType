@@ -69,8 +69,9 @@ fun ToolbarScreen(
         || !prefs.getBoolean(Settings.PREF_TOOLBAR_HIDING_GLOBAL, Defaults.PREF_TOOLBAR_HIDING_GLOBAL)
     val isSplitToolbar = prefs.getBoolean(Settings.PREF_SPLIT_TOOLBAR, Defaults.PREF_SPLIT_TOOLBAR)
     val items = listOf(
-        Settings.PREF_TOOLBAR_MODE,
+        if (!isSplitToolbar) Settings.PREF_TOOLBAR_MODE else null,
         Settings.PREF_SPLIT_TOOLBAR,
+        Settings.PREF_AUTO_SPAN_TOOLBAR_KEYS,
         if (toolbarMode == ToolbarMode.HIDDEN) Settings.PREF_TOOLBAR_HIDING_GLOBAL else null,
         Settings.PREF_TOOLBAR_KEYS,
         if (!isSplitToolbar) Settings.PREF_PINNED_TOOLBAR_KEYS else null,
@@ -120,6 +121,11 @@ fun createToolbarSettings(context: Context): List<Setting> {
         },
         Setting(context, Settings.PREF_TOOLBAR_HIDING_GLOBAL, R.string.toolbar_hiding_global) {
             SwitchPreference(it, Defaults.PREF_TOOLBAR_HIDING_GLOBAL) {
+                KeyboardSwitcher.getInstance().setThemeNeedsReload()
+            }
+        },
+        Setting(context, Settings.PREF_AUTO_SPAN_TOOLBAR_KEYS, R.string.auto_span_toolbar_keys, R.string.auto_span_toolbar_keys_summary) {
+            SwitchPreference(it, Defaults.PREF_AUTO_SPAN_TOOLBAR_KEYS) {
                 KeyboardSwitcher.getInstance().setThemeNeedsReload()
             }
         },
@@ -197,6 +203,12 @@ fun createToolbarSettings(context: Context): List<Setting> {
             val prefs = LocalContext.current.prefs()
             SwitchPreference(it, Defaults.PREF_SPLIT_TOOLBAR) { isEnabled ->
                 if (isEnabled) {
+                    val currentMode = Settings.readToolbarMode(prefs)
+                    if (currentMode == ToolbarMode.TOOLBAR_KEYS || currentMode == ToolbarMode.SUGGESTION_STRIP) {
+                        prefs.edit {
+                            putString(Settings.PREF_TOOLBAR_MODE, ToolbarMode.EXPANDABLE.name)
+                        }
+                    }
                     prefs.edit {
                         putBoolean(Settings.PREF_AUTO_SHOW_TOOLBAR, false)
                         putBoolean(Settings.PREF_AUTO_HIDE_TOOLBAR, false)

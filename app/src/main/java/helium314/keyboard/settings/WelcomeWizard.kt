@@ -112,7 +112,7 @@ fun WelcomeWizard(
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            if (JniUtils.sHaveGestureLib && step == 0) {
+            if (JniUtils.sHaveNativeGestureLib && step == 0) {
                 Text(
                     stringResource(R.string.setup_welcome_additional_description),
                     style = MaterialTheme.typography.bodyLarge,
@@ -236,6 +236,15 @@ fun WelcomeWizard(
                             Settings.PREF_GESTURE_METHOD,
                             Defaults.PREF_GESTURE_METHOD,
                         ) ?: Defaults.PREF_GESTURE_METHOD)
+                    }
+
+                    LaunchedEffect(Unit) {
+                        if (SubtypeSettings.getEnabledSubtypes(false).isEmpty()) {
+                            enabledSubtypes.forEach { subtype ->
+                                SubtypeSettings.addEnabledSubtype(ctx.prefs(), subtype)
+                            }
+                            enabledSubtypes = SubtypeSettings.getEnabledSubtypes(true)
+                        }
                     }
 
                     Step(
@@ -388,6 +397,38 @@ fun WelcomeWizard(
                                     Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.align(Alignment.CenterEnd).padding(end = 16.dp), tint = MaterialTheme.colorScheme.primary)
                                 }
                             }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        var gestureEnabled by remember {
+                            mutableStateOf(ctx.prefs().getBoolean(Settings.PREF_GESTURE_INPUT, helium314.keyboard.latin.settings.Defaults.PREF_GESTURE_INPUT))
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Enable Gesture Typing",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Slide across keys to type words",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
+                            androidx.compose.material3.Switch(
+                                checked = gestureEnabled,
+                                onCheckedChange = { checked ->
+                                    gestureEnabled = checked
+                                    ctx.prefs().edit().putBoolean(Settings.PREF_GESTURE_INPUT, checked).apply()
+                                }
+                            )
                         }
                     }
                 } else if (step == 5) {
@@ -563,6 +604,11 @@ fun WelcomeWizard(
                         stringResource(R.string.setup_finish_action),
                         painterResource(R.drawable.ic_setup_check),
                         {
+                            if (SubtypeSettings.getEnabledSubtypes(false).isEmpty()) {
+                                SubtypeSettings.getEnabledSubtypes(true).forEach { subtype ->
+                                    SubtypeSettings.addEnabledSubtype(ctx.prefs(), subtype)
+                                }
+                            }
                             finish()
                             if (requiresRestart) {
                                 Runtime.getRuntime().exit(0)

@@ -37,6 +37,7 @@ class EmojiSearchAdapter(
             minimumWidth = (44 * density).toInt()
             textSize = 22f // Emoji size
             setTextColor(Settings.getValues().mColors.get(helium314.keyboard.latin.common.ColorType.KEY_TEXT))
+            Settings.getInstance().customEmojiTypeface?.let { typeface = it }
         }
         return ViewHolder(textView)
     }
@@ -44,6 +45,7 @@ class EmojiSearchAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val emoji = emojis[position]
         holder.textView.text = emoji
+        Settings.getInstance().customEmojiTypeface?.let { holder.textView.typeface = it }
         holder.textView.setOnClickListener { onEmojiClicked(emoji) }
     }
 

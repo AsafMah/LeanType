@@ -741,3 +741,58 @@ private fun PlaceholderChip(tag: String, desc: String) {
         }
     }
 }
+
+fun createTextExpanderSettings(context: Context): List<helium314.keyboard.settings.Setting> = listOf(
+    helium314.keyboard.settings.Setting(
+        key = TextExpanderUtils.PREF_ENABLED,
+        title = "Enable Text Expander",
+        description = "Auto-expand shortcuts on space or punctuation natively and securely."
+    ) { setting ->
+        var isEnabled by remember { mutableStateOf(TextExpanderUtils.isEnabled(context)) }
+        SwitchPreference(
+            name = setting.title,
+            key = setting.key,
+            default = false,
+            description = setting.description,
+            onCheckedChange = {
+                isEnabled = it
+                context.prefs().edit { putBoolean(TextExpanderUtils.PREF_ENABLED, it) }
+                TextExpanderUtils.clearCache()
+            }
+        )
+    },
+    helium314.keyboard.settings.Setting(
+        key = TextExpanderUtils.PREF_IMMEDIATE,
+        title = "Expand immediately",
+        description = "Expand shortcuts immediately without pressing space."
+    ) { setting ->
+        var isImmediate by remember { mutableStateOf(TextExpanderUtils.isImmediateEnabled(context)) }
+        SwitchPreference(
+            name = setting.title,
+            key = setting.key,
+            default = false,
+            description = setting.description,
+            onCheckedChange = {
+                isImmediate = it
+                context.prefs().edit { putBoolean(TextExpanderUtils.PREF_IMMEDIATE, it) }
+            }
+        )
+    },
+    helium314.keyboard.settings.Setting(
+        key = TextExpanderUtils.PREF_BACKSPACE_REVERTS,
+        title = "Backspace reverts expansion",
+        description = "Pressing backspace right after an expansion reverts it back to the typed shortcut."
+    ) { setting ->
+        var isReverts by remember { mutableStateOf(TextExpanderUtils.isBackspaceRevertsEnabled(context)) }
+        SwitchPreference(
+            name = setting.title,
+            key = setting.key,
+            default = false,
+            description = setting.description,
+            onCheckedChange = {
+                isReverts = it
+                context.prefs().edit { putBoolean(TextExpanderUtils.PREF_BACKSPACE_REVERTS, it) }
+            }
+        )
+    }
+)

@@ -74,7 +74,7 @@ public final class InputAttributes {
                         + " imeOptions=0x%08x", mInputType, editorInfo.imeOptions));
             }
             mShouldShowSuggestions = false;
-            mMayOverrideShowingSuggestions = !mIsPasswordField;
+            mMayOverrideShowingSuggestions = false;
             mInputTypeShouldAutoCorrect = false;
             mApplicationSpecifiedCompletionOn = false;
             mShouldInsertSpacesAutomatically = false;

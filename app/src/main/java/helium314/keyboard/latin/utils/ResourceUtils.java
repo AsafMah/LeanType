@@ -41,6 +41,16 @@ public final class ResourceUtils {
         return sFloatingKeyboardWidthOverride;
     }
 
+    private static float sFloatingKeyboardScaleOverride = 0.0f;
+
+    public static void setFloatingKeyboardScale(float scale) {
+        sFloatingKeyboardScaleOverride = scale;
+    }
+
+    public static float getFloatingKeyboardScale() {
+        return sFloatingKeyboardScaleOverride;
+    }
+
     private ResourceUtils() {
         // This utility class is not publicly instantiable.
     }
@@ -84,8 +94,12 @@ public final class ResourceUtils {
 
     public static int getKeyboardHeight(final Resources res, final SettingsValues settingsValues) {
         final int defaultKeyboardHeight = getDefaultKeyboardHeight(res, settingsValues.mShowsNumberRow);
+        float scale = settingsValues.mKeyboardHeightScale;
+        if (sFloatingKeyboardScaleOverride > 0.0f) {
+            scale *= sFloatingKeyboardScaleOverride;
+        }
         // mKeyboardHeightScale Ranges from [.5,1.5], from xml/prefs_screen_appearance.xml
-        return (int)(defaultKeyboardHeight * settingsValues.mKeyboardHeightScale);
+        return (int)(defaultKeyboardHeight * scale);
     }
 
     public static int getDefaultKeyboardHeight(final Resources res, final boolean showsNumberRow) {

@@ -693,6 +693,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
             for (info in dictionarySuggestions) {
                 val word = info.word
+                if (!Settings.getValues().mSuggestEmojis && (info.isEmoji || info.mSourceDict?.mDictType == Dictionary.TYPE_EMOJI))
+                    continue
                 if (isBlacklisted(word) || SupportedEmojis.isUnsupported(word)) // don't add blacklisted words and unsupported emojis
                     continue
                 if (checkForGarbage

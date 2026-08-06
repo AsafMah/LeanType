@@ -132,6 +132,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             else mDictionaryFacilitator.getSuggestionResults(wordComposer.composedDataSnapshot, ngramContext, keyboard,
                 settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyleIfNotPrediction)
         filterMultiWordSuggestions(suggestionResults, Settings.getValues().mDisableMultiWordSuggestions)
+        if (!Settings.getValues().mSuggestEmojis) {
+            suggestionResults.removeAll { it.isEmoji || it.mSourceDict?.mDictType == Dictionary.TYPE_EMOJI }
+        }
         val trailingSingleQuotesCount = StringUtils.getTrailingSingleQuotesCount(typedWordString)
         val suggestionsContainer = getTransformedSuggestedWordInfoList(wordComposer, suggestionResults,
             trailingSingleQuotesCount, mDictionaryFacilitator.mainLocale, keyboard)
@@ -408,6 +411,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             )
         }
         filterMultiWordSuggestions(suggestionResults, Settings.getValues().mDisableMultiWordSuggestions)
+        if (!Settings.getValues().mSuggestEmojis) {
+            suggestionResults.removeAll { it.isEmoji || it.mSourceDict?.mDictType == Dictionary.TYPE_EMOJI }
+        }
         replaceSingleLetterFirstSuggestion(suggestionResults)
         adjustToTooSuggestions(suggestionResults, pointers, keyboard)
 

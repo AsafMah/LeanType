@@ -24,38 +24,37 @@ class ClipboardLayoutParams(ctx: Context) {
         val defaultKeyboardHeight = ResourceUtils.getSecondaryKeyboardHeight(res, sv)
         val defaultKeyboardWidth = ResourceUtils.getKeyboardWidth(ctx, sv)
 
+        val verticalGapStandard = res.getFraction(R.fraction.config_key_vertical_gap_holo,
+            defaultKeyboardHeight, defaultKeyboardHeight)
+        val horizontalGapStandard = res.getFraction(R.fraction.config_key_horizontal_gap_holo,
+            defaultKeyboardWidth, defaultKeyboardWidth)
+
         if (sv.mNarrowKeyGaps) {
             val verticalGapNarrow = res.getFraction(R.fraction.config_key_vertical_gap_holo_narrow,
                 defaultKeyboardHeight, defaultKeyboardHeight)
             val horizontalGapNarrow = res.getFraction(R.fraction.config_key_horizontal_gap_holo_narrow,
                 defaultKeyboardWidth, defaultKeyboardWidth)
-            when (sv.mNarrowKeyGapsLevel) {
-                2 -> {
-                    keyVerticalGap = (verticalGapNarrow * 0.75f).toInt()
-                    keyHorizontalGap = (horizontalGapNarrow * 0.75f).toInt()
+
+            val level = sv.mNarrowKeyGapsLevel
+            val hasBorders = sv.mThemeKeyBorders
+
+            if (level <= 0) {
+                keyVerticalGap = verticalGapStandard.toInt()
+                keyHorizontalGap = horizontalGapStandard.toInt()
+            } else if (level == 1) {
+                keyVerticalGap = verticalGapNarrow.toInt()
+                keyHorizontalGap = horizontalGapNarrow.toInt()
+            } else {
+                var factor = ((10 - level).coerceIn(0, 9)) / 9f
+                if (!hasBorders && factor < 0.1f) {
+                    factor = 0.1f
                 }
-                3 -> {
-                    keyVerticalGap = (verticalGapNarrow * 0.5f).toInt()
-                    keyHorizontalGap = (horizontalGapNarrow * 0.5f).toInt()
-                }
-                4 -> {
-                    keyVerticalGap = (verticalGapNarrow * 0.25f).toInt()
-                    keyHorizontalGap = (horizontalGapNarrow * 0.25f).toInt()
-                }
-                5 -> {
-                    keyVerticalGap = 0
-                    keyHorizontalGap = 0
-                }
-                else -> {
-                    keyVerticalGap = verticalGapNarrow.toInt()
-                    keyHorizontalGap = horizontalGapNarrow.toInt()
-                }
+                keyVerticalGap = (verticalGapNarrow * factor).toInt()
+                keyHorizontalGap = (horizontalGapNarrow * factor).toInt()
             }
         } else {
-            keyVerticalGap = res.getFraction(R.fraction.config_key_vertical_gap_holo,
-                defaultKeyboardHeight, defaultKeyboardHeight).toInt()
-            keyHorizontalGap = res.getFraction(R.fraction.config_key_horizontal_gap_holo,
-                defaultKeyboardWidth, defaultKeyboardWidth).toInt()
+            keyVerticalGap = verticalGapStandard.toInt()
+            keyHorizontalGap = horizontalGapStandard.toInt()
         }
         val bottomPadding = (res.getFraction(R.fraction.config_keyboard_bottom_padding_holo,
                 defaultKeyboardHeight, defaultKeyboardHeight) * sv.mBottomPaddingScale).toInt()

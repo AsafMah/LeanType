@@ -93,7 +93,7 @@ fun NewDictionaryDialog(
                 val newDictBroadcast = Intent(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION)
                 ctx.sendBroadcast(newDictBroadcast)
             },
-            confirmButtonText = stringResource(if (dictFile.exists()) R.string.replace_dictionary else android.R.string.ok),
+            confirmButtonText = stringResource(if (dictFile.exists()) R.string.replace_dictionary else R.string.load_gesture_library_button_load),
             title = { Text(stringResource(R.string.add_new_dictionary_title)) },
             content = {
                 Column {

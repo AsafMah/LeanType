@@ -1,0 +1,5 @@
+- Floating keyboard 2D drag-to-resize with live preview and top-left header bar corner anchoring.
+- Decoupled key gap narrowness from key borders with a unified 0-10 numeric scale.
+- Reorganized secondary layouts under Languages & Layouts and standardized preference dialog UI.
+- Added functional key support for Text Editing Mode.
+- Performance optimization for layout passes and forced batch edit cleanup on input finish.

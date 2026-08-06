@@ -83,7 +83,6 @@ fun SettingsNavHost(
                 onClickAdvanced = { navController.navigate(SettingsDestination.Advanced) },
                 onClickAppearance = { navController.navigate(SettingsDestination.Appearance) },
                 onClickLanguage = { navController.navigate(SettingsDestination.Languages) },
-                onClickLayouts = { navController.navigate(SettingsDestination.Layouts) },
                 onClickDictionaries = { navController.navigate(SettingsDestination.Dictionaries) },
                 onClickAIIntegration = { navController.navigate(SettingsDestination.AIIntegration) },
                 onClickGesture = { navController.navigate(SettingsDestination.GestureTyping) },
@@ -157,6 +156,9 @@ fun SettingsNavHost(
         composable(SettingsDestination.Languages) {
             LanguageScreen(onClickBack = ::goBack)
         }
+        composable(SettingsDestination.LanguagesList) {
+            helium314.keyboard.settings.screens.LanguagesListScreen(onClickBack = ::goBack)
+        }
         composable(SettingsDestination.Dictionaries) {
             DictionaryScreen(onClickBack = ::goBack)
         }
@@ -205,6 +207,7 @@ object SettingsDestination {
     const val PersonalDictionary = "personal_dictionary/"
     const val BlockedWords = "blocked_words"
     const val Languages = "languages"
+    const val LanguagesList = "languages_list"
     const val Subtype = "subtype/"
     const val Layouts = "layouts"
     const val Dictionaries = "dictionaries"

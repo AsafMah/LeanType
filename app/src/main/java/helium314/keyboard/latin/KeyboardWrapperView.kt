@@ -38,14 +38,14 @@ class KeyboardWrapperView @JvmOverloads constructor(
         set(enabled) {
             field = enabled
             updateViewsVisibility()
-            requestLayout()
+            if (isInLayout) post { requestLayout() } else requestLayout()
         }
 
     var oneHandedGravity = Gravity.NO_GRAVITY
         set(value) {
             field = value
             updateSwitchButtonSide()
-            requestLayout()
+            if (isInLayout) post { requestLayout() } else requestLayout()
         }
 
 
@@ -66,18 +66,6 @@ class KeyboardWrapperView @JvmOverloads constructor(
 
         stopOneHandedModeBtn.setOnClickListener(this)
         switchOneHandedModeBtn.setOnClickListener(this)
-
-        fun setupVisualFeedback(btn: View) {
-            btn.setOnTouchListener { v, event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> v.alpha = 0.5f
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> v.alpha = 1.0f
-                }
-                false
-            }
-        }
-        setupVisualFeedback(stopOneHandedModeBtn)
-        setupVisualFeedback(switchOneHandedModeBtn)
 
         var x = 0f
         resizeOneHandedModeBtn.setOnTouchListener { _, motionEvent ->
