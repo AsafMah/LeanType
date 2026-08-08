@@ -5,8 +5,8 @@
 
 ### ✨ New Features & Enhancements
 - **Full Localization & Translation Pipeline**:
-  - Extracted all Text Expander UI components into string resources, enabling 100% translation support across 50+ supported languages.
-  - Added comprehensive Turkish (`values-tr`) translation coverage (281+ missing string resources localized).
+  - Extracted all Text Expander UI components into string resources, enabling 100% translation support across all app languages.
+  - Added complete (100% gap-free) localizations for 10 major languages: **Arabic (`ar`)**, **German (`de`)**, **Greek (`el`)**, **Spanish US (`es-rUS`)**, **French (`fr`)**, **Italian (`it`)**, **Malayalam (`ml`)**, **Portuguese (`pt`)**, **Russian (`ru`)**, **Turkish (`tr`)**, and **Urdu (`ur`)**.
   - Added reusable localization gap analysis and translation application tools in `Pdoc/scripts/`.
 - **Text Expander UI Usability**: Added vertical scrolling support to the shortcut creation and edit dialogs on smaller displays.
 

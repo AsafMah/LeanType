@@ -2,5 +2,5 @@
 - Fixed duplicate character/line entry during composing text editor actions (#380).
 - Fixed physical keyboard suggestion selection when strip is collapsed (#397).
 - Fixed Text Expander dialog scrolling on smaller screens (#401).
-- Extracted Text Expander strings to XML resources and added full Turkish localization (281+ keys).
+- Extracted Text Expander strings and added 100% full localizations for Arabic, German, Greek, Spanish, French, Italian, Malayalam, Portuguese, Russian, Turkish, and Urdu.
 - Resolved all unit test failures for 100% test suite reliability.
