@@ -39,7 +39,7 @@
     <string name="prefs_block_potentially_offensive_title">"Blocage des termes choquants"</string>
     <string name="prefs_block_potentially_offensive_summary">"Ne suggère pas de mots potentiellement offensants"</string>
     <string name="autocorrect">"Correction automatique"</string>
-    <string name="auto_correction_summary">"Corrige automatiquement l\'orthographe lors d'un appui sur la barre d\'espace ou un signe de ponctuation"</string>
+    <string name="auto_correction_summary">"Corrige automatiquement l\'orthographe lors d\'un appui sur la barre d\'espace ou un signe de ponctuation"</string>
     <string name="more_autocorrect">Correction automatique avancée</string>
     <string name="more_autocorrect_summary">La correction automatique fonctionne même si le champ de saisie ne le demande pas explicitement</string>
     <string name="auto_correction_threshold_mode_off">"Désactiver"</string>
@@ -494,4 +494,438 @@ Nouveau dictionnaire:
     <string name="gesture_data_please_switch_keyboard">Veuillez passer à %s</string>
     <string name="gesture_data_share_limit">Pour éviter de dépasser les limites de taille, seuls les %s premiers mots seront exportés</string>
     <string name="gesture_data_links">Informations sur la collecte de données gestuelles sur :</string>
+
+    <string name="ime_name">LeanType</string>
+    <string name="settings_category_configuration">Configuration</string>
+    <string name="settings_category_visuals">Visuels &amp; Aperçu</string>
+    <string name="settings_category_behavior">Comportement</string>
+    <string name="settings_category_gestures_advanced">Gestes avancés</string>
+    <string name="settings_category_touchpad">Pavé tactile</string>
+    <string name="edit_blocked_words">Mots bloqués</string>
+    <string name="blocked_words_summary">Gérer les mots bloqués des suggestions</string>
+    <string name="add_blocked_word">Bloquer un mot</string>
+    <string name="blocked_word_already_present">Ce mot est déjà bloqué</string>
+    <string name="clear_all_blocked_words_confirmation">Êtes-vous sûr de vouloir débloquer tous les mots ?</string>
+    <string name="auto_correction_trigger">Correction automatique sur</string>
+    <string name="auto_correction_trigger_both">Barre d\'espace et ponctuation</string>
+    <string name="auto_correction_trigger_space">Barre d\'espace uniquement</string>
+    <string name="auto_correction_trigger_punctuation">Ponctuation uniquement</string>
+    <string name="prefs_physical_keyboard_suggestion_shortcuts">Raccourcis de suggestions du clavier physique</string>
+    <string name="prefs_physical_keyboard_suggestion_shortcuts_summary">Sélectionner les suggestions à l\'aide de raccourcis clavier et afficher des badges numériques</string>
+    <string name="physical_keyboard_shortcut_disabled">Désactivé</string>
+    <string name="physical_keyboard_shortcut_alt">Alt + Chiffre (Alt+1, Alt+2, Alt+3)</string>
+    <string name="physical_keyboard_shortcut_ctrl">Ctrl + Chiffre (Ctrl+1, Ctrl+2, Ctrl+3)</string>
+    <string name="physical_keyboard_shortcut_number">Touche numérique (1, 2, 3 pendant la composition)</string>
+    <string name="large_screen_layout_note">Les paramètres de cet écran s\'appliquent à la disposition grand écran</string>
+    <string name="prioritize_personal_suggestions">Prioriser les mots personnels et appris</string>
+    <string name="prioritize_personal_suggestions_summary">Donner une priorité de score plus élevée au dictionnaire personnel et aux mots appris lors de la prédiction du mot suivant</string>
+    <string name="next_word_boost_level">Niveau de boost des mots appris</string>
+    <string name="next_word_boost_level_summary">Définir la force du boost de priorité de score pour les entrées du dictionnaire personnel et appris</string>
+    <string name="next_word_strict_ngram">Exiger la correspondance de contexte pour les mots appris</string>
+    <string name="next_word_strict_ngram_summary">Ne suggérer les mots appris que lorsque le contexte du mot précédent correspond</string>
+    <string name="immediate_auto_space">Espace automatique immédiat</string>
+    <string name="immediate_auto_space_summary">Insérer un espace instantanément lors de la sélection d\'une suggestion pour éviter un délai sur la prochaine lettre tapée</string>
+    <string name="first_word_prediction">Suggestions du premier mot</string>
+    <string name="first_word_prediction_summary">Afficher des suggestions lorsqu\'il n\'y a pas de saisie au début d\'une phrase</string>
+    <string name="suggest_screenshots">Suggérer des captures d\'écran récentes</string>
+    <string name="suggest_screenshots_summary">Afficher les captures d\'écran récentes comme suggestion</string>
+    <string name="auto_read_otp">Lecture automatique des OTP depuis les SMS</string>
+    <string name="auto_read_otp_summary">Afficher le code d\'un SMS entrant comme suggestion que vous pouvez toucher pour insérer</string>
+    <string name="spoken_otp_suggestion">Rejeter la suggestion OTP</string>
+    <string name="compress_screenshots">Compresser les suggestions de captures d\'écran</string>
+    <string name="compress_screenshots_summary">Réduire la qualité et la taille des suggestions de captures pour économiser de l\'espace</string>
+    <string name="clipboard_fold_pinned">Plier les éléments épinglés par défaut</string>
+    <string name="clear_clipboard_icon">Icône de suppression du presse-papiers</string>
+    <string name="clear_clipboard_icon_summary">Sélectionner le style d\'icône pour le bouton de suppression du presse-papiers</string>
+    <string name="clear_clipboard_icon_bin">Corbeille</string>
+    <string name="clear_clipboard_icon_sweep">Balayer / Tout effacer</string>
+    <string name="clear_clipboard_icon_sweep_slanted">Lignes inclinées</string>
+    <string name="clear_clipboard_icon_clipboard_slash">Presse-papiers avec barre oblique</string>
+    <string name="clear_clipboard_icon_legacy">Presse-papiers classique</string>
+    <string name="clipboard_pinned">Épinglé</string>
+    <string name="clipboard_search_hint">Rechercher dans le presse-papiers...</string>
+    <string name="clipboard_empty_text">Aucun élément trouvé</string>
+    <string name="clipboard_item_deleted">Élément supprimé</string>
+    <string name="clipboard_no_search_results">Aucun résultat trouvé</string>
+    <string name="clipboard_clear_all_confirmation">Êtes-vous sûr de vouloir effacer tout l\'historique ?</string>
+    <string name="clear_all">Tout effacer</string>
+    <string name="gesture_method">Méthode de saisie gestuelle</string>
+    <string name="gesture_method_summary">Choisir l\'algorithme de saisie par balayage</string>
+    <string name="gesture_method_native">Bibliothèque native (nécessite swypelib)</string>
+    <string name="gesture_method_fallback">Moteur de secours (Java pur)</string>
+    <string name="load_gesture_library_button_download">Télécharger la bibliothèque</string>
+    <string name="load_gesture_library_downloading">Téléchargement de la bibliothèque gestuelle…</string>
+    <string name="load_gesture_library_download_success">Téléchargement terminé ! Redémarrage…</string>
+    <string name="load_gesture_library_download_failed">Échec du téléchargement : %s</string>
+    <string name="load_handwriting_plugin">Charger le plugin d\'écriture manuscrite</string>
+    <string name="load_handwriting_plugin_summary">Fournir un plugin APK pour activer la saisie manuscrite</string>
+    <string name="load_handwriting_plugin_message">Fournissez un APK de plugin d\'écriture manuscrite.\n\nAvertissement : le chargement de code externe peut présenter un risque de sécurité. Utilisez uniquement un plugin provenant d\'une source de confiance.</string>
+    <string name="load_handwriting_plugin_button_load">Charger le plugin APK</string>
+    <string name="load_handwriting_plugin_button_delete">Supprimer le plugin</string>
+    <string name="load_handwriting_plugin_success">Plugin d\'écriture manuscrite importé avec succès</string>
+    <string name="load_handwriting_plugin_failed">Échec du chargement du plugin APK d\'écriture manuscrite</string>
+    <string name="load_translation_plugin">Charger le plugin de traduction</string>
+    <string name="load_translation_plugin_summary">Fournir un plugin APK pour activer le moteur de traduction</string>
+    <string name="load_translation_plugin_button_delete">Supprimer le plugin</string>
+    <string name="load_translation_plugin_success">Plugin de traduction importé avec succès</string>
+    <string name="load_translation_plugin_failed">Échec du chargement du plugin APK de traduction</string>
+    <string name="handwriting">Écriture manuscrite</string>
+    <string name="delete_handwriting_model">Supprimer le modèle téléchargé</string>
+    <string name="handwriting_model_deleted">Modèle d\'écriture manuscrite supprimé</string>
+    <string name="handwriting_plugin_required">Plugin d\'écriture manuscrite requis</string>
+    <string name="handwriting_plugin_summary_text">Veuillez charger la bibliothèque du plugin d\'écriture manuscrite pour activer la reconnaissance de dessin.</string>
+    <string name="handwriting_plugin_load_button">Charger le plugin</string>
+    <string name="autospace_after_emoji">Espace automatique après un emoji</string>
+    <string name="autospace_after_emoji_summary">Insérer automatiquement un espace après un emoji lors de la saisie d\'un nouveau mot</string>
+    <string name="preserve_space_before_punctuation">Conserver l\'espace avant la ponctuation</string>
+    <string name="preserve_space_before_punctuation_summary">Ne pas supprimer automatiquement l\'espace avant les signes de ponctuation : ]}):;!?,.</string>
+    <string name="touchpad">Pavé tactile</string>
+    <string name="text_edit">Édition de texte</string>
+    <string name="select_mode">Mode sélection</string>
+    <string name="touchpad_fullscreen">Pavé tactile plein écran</string>
+    <string name="touchpad_fullscreen_summary">Masquer la barre de suggestions et la barre d\'outils lorsque le mode pavé tactile est actif</string>
+    <string name="languages_title">Langues</string>
+    <string name="compact_number_row_in_symbols">Rangée de chiffres compacte dans les symboles</string>
+    <string name="compact_number_row_in_symbols_summary">Remplacer la première rangée de symboles au lieu d\'ajouter une rangée séparée</string>
+    <string name="popup_keys_language">@string/subtype_locale</string>
+    <string name="paste">@android:string/paste</string>
+    <string name="copy">@android:string/copy</string>
+    <string name="cut">@android:string/cut</string>
+    <string name="clipboard_search">Recherche dans le presse-papiers</string>
+    <string name="download">Télécharger</string>
+    <string name="downloading">Téléchargement…</string>
+    <string name="download_failed">Échec du téléchargement</string>
+    <string name="installed">Installé</string>
+    <string name="numpad">@string/layout_numpad</string>
+    <string name="select_all">@android:string/selectAll</string>
+    <string name="floating">Flottant</string>
+    <string name="proofread">Relire</string>
+    <string name="proofread_loading">Relecture en cours…</string>
+    <string name="proofread_success">Texte relu</string>
+    <string name="proofread_error">Échec de la relecture : %s</string>
+    <string name="proofread_no_text">Aucun texte à relire</string>
+    <string name="proofread_no_api_key">Clé API Gemini non définie. Accédez à Paramètres → Intégration AI.</string>
+    <string name="gemini_api_key_title">Clé API Gemini</string>
+    <string name="gemini_api_key_summary">Entrez votre clé API Google Gemini pour la relecture</string>
+    <string name="gemini_api_key_hint">Entrez la clé API</string>
+    <string name="get_api_key">Obtenir une clé API</string>
+    <string name="gemini_model_title">Modèle Gemini</string>
+    <string name="gemini_model_summary">Sélectionnez le modèle AI pour la relecture</string>
+    <string name="gemini_test_api_key">Tester la clé API</string>
+    <string name="gemini_api_key_valid">La clé API est valide !</string>
+    <string name="gemini_api_key_invalid">Le test de la clé API a échoué : %s</string>
+    <string name="gemini_testing_api_key">Test de la clé API en cours…</string>
+    <string name="disable_network_title">Désactiver tout accès réseau</string>
+    <string name="disable_network_summary">Verrou interne : bloque toutes les requêtes réseau de cette application. Pour révoquer complètement l\'autorisation, utilisez les paramètres d\'informations sur l\'application du système.</string>
+    <string name="open_app_info">Ouvrir les infos de l\'application système</string>
+    <string name="open_app_info_summary">Gérer les autorisations et l\'utilisation de la batterie dans les paramètres Android</string>
+    <string name="gemini_network_disabled">L\'accès réseau est désactivé dans les paramètres de LeanType</string>
+    <string name="ai_provider_title">Fournisseur AI</string>
+    <string name="ai_provider_summary">Sélectionnez le service AI pour la relecture</string>
+    <string name="ai_provider_gemini">Google Gemini</string>
+    <string name="split_toolbar">Barre d\'outils divisée</string>
+    <string name="split_toolbar_summary">Séparer les suggestions de la barre d\'outils</string>
+    <string name="auto_span_toolbar_keys">Étendre automatiquement les touches de la barre d\'outils</string>
+    <string name="auto_span_toolbar_keys_summary">Étendre les touches de la barre d\'outils pour remplir l\'espace libre disponible</string>
+    <string name="show_download_button_in_toolbar">Afficher le bouton de téléchargement dans la barre d\'outils</string>
+    <string name="show_download_button_in_toolbar_summary">Afficher l\'icône de téléchargement du dictionnaire dans la barre de suggestions lorsque le dictionnaire principal est manquant</string>
+    <string name="ai_provider_huggingface">Groq</string>
+    <string name="ai_provider_openai">Compatible HF/OpenAI</string>
+    <string name="huggingface_token_title">Jeton API</string>
+    <string name="huggingface_token_summary">Entrez votre clé API HuggingFace ou compatible OpenAI</string>
+    <string name="groq_token_title">Jeton API</string>
+    <string name="groq_token_summary">Entrez votre clé API Groq</string>
+    <string name="groq_token_hint">Entrez la clé API</string>
+    <string name="huggingface_token_hint">Entrez la clé API</string>
+    <string name="get_groq_key">Obtenir une clé Groq</string>
+    <string name="get_huggingface_key">Obtenir un jeton API</string>
+    <string name="huggingface_no_token">Jeton API non défini. Accédez à Paramètres → Intégration AI.</string>
+    <string name="huggingface_model_title">Modèle</string>
+    <string name="huggingface_model_summary">Sélectionnez le modèle Groq</string>
+    <string name="huggingface_model_hint">nom-du-modèle</string>
+    <string name="huggingface_no_model">Aucun modèle configuré. Accédez à Paramètres → Intégration AI.</string>
+    <string name="huggingface_endpoint_title">Point de terminaison API</string>
+    <string name="huggingface_endpoint_summary">URL du point de terminaison API</string>
+    <string name="huggingface_endpoint_hint">https://api.groq.com/openai/v1/chat/completions</string>
+    <string name="insecure_connection_blocked">Connexion HTTP non sécurisée bloquée. Activez \'Autoriser les connexions non sécurisées\' dans les paramètres AI.</string>
+    <string name="ai_allow_insecure_connections_title">Autoriser les connexions non sécurisées</string>
+    <string name="ai_allow_insecure_connections_summary">Autoriser les connexions HTTP et ignorer les erreurs de certificat SSL. Avertissement : expose la saisie à l\'écoute du réseau local.</string>
+    <string name="backup_category_layouts">Dispositions</string>
+    <string name="backup_category_theme">Thème &amp; Fonds personnalisés</string>
+    <string name="backup_category_dictionary">Dictionnaires &amp; Historique de frappe</string>
+    <string name="backup_category_clipboard">Historique du presse-papiers</string>
+    <string name="backup_category_general">Paramètres généraux</string>
+    <string name="backup_select_items">Sélectionnez les éléments à inclure :</string>
+    <string name="config_gemini_models_endpoint">https://generativelanguage.googleapis.com/v1beta/models?key=%1$s</string>
+    <string name="config_groq_models_endpoint">https://api.groq.com/openai/v1/models</string>
+    <string name="config_default_hf_endpoint">https://api.openai.com/v1/chat/completions</string>
+    <string name="config_groq_chat_endpoint">https://api.groq.com/openai/v1/chat/completions</string>
+    <string name="offline_keep_model_loaded_title">Garder le modèle chargé</string>
+    <string name="offline_keep_model_loaded_summary">Conserver le modèle AI hors ligne en mémoire pour éviter le délai de rechargement (utilise plus de RAM)</string>
+    <string name="translate">Traduire</string>
+    <string name="translate_loading">Traduction en cours…</string>
+    <string name="translate_success">Texte traduit</string>
+    <string name="translate_error">Échec de la traduction : %s</string>
+    <string name="translate_no_text">Aucun texte à traduire</string>
+    <string name="translate_target_language_title">Langue cible de la traduction</string>
+    <string name="translate_target_language_summary">Sélectionnez la langue vers laquelle traduire</string>
+    <string name="translate_model_title">Modèle de traduction</string>
+    <string name="translate_model_summary">Sélectionnez le modèle AI pour la traduction. Laissez vide pour utiliser le modèle de relecture.</string>
+    <string name="translation_engine_title">Moteur de traduction</string>
+    <string name="translation_engine_summary">Sélectionnez le backend pour la traduction (Plugin ou AI)</string>
+    <string-array name="translate_language_names">
+  <item>Anglais</item>
+  <item>Espagnol</item>
+  <item>Français</item>
+  <item>Allemand</item>
+  <item>Italien</item>
+  <item>Portugais</item>
+  <item>Chinois (simplifié)</item>
+  <item>Chinois (traditionnel)</item>
+  <item>Japonais</item>
+  <item>Coréen</item>
+  <item>Arabe</item>
+  <item>Russe</item>
+  <item>Hindi</item>
+  <item>Bengali</item>
+  <item>Indonésien</item>
+  <item>Néerlandais</item>
+  <item>Turc</item>
+  <item>Polonais</item>
+  <item>Ukrainien</item>
+  <item>Suédois</item>
+  <item>Danois</item>
+  <item>Norvégien</item>
+  <item>Finnois</item>
+  <item>Grec</item>
+  <item>Hébreu</item>
+  <item>Thaï</item>
+  <item>Vietnamien</item>
+  <item>Tamoul</item>
+  <item>Télougou</item>
+  <item>Marathi</item>
+  <item>Gujarati</item>
+  <item>Kannada</item>
+  <item>Malayalam</item>
+  <item>Ourdou</item>
+  <item>Persan (Farsi)</item>
+  <item>Swahili</item>
+  <item>Roumain</item>
+  <item>Tchèque</item>
+  <item>Hongrois</item>
+  <item>Philippin (Tagalog)</item>
+  <item>Malais</item>
+  <item>Serbe</item>
+  <item>Croate</item>
+  <item>Bulgare</item>
+  <item>Slovaque</item>
+  <item>Slovène</item>
+  <item>Lituanien</item>
+  <item>Letton</item>
+  <item>Estonien</item>
+  <item>Catalan</item>
+  <item>Basque</item>
+</string-array>
+    <string-array name="translate_language_codes">
+  <item>Anglais</item>
+  <item>Espagnol</item>
+  <item>Français</item>
+  <item>Allemand</item>
+  <item>Italien</item>
+  <item>Portugais</item>
+  <item>Chinois (simplifié)</item>
+  <item>Chinois (traditionnel)</item>
+  <item>Japonais</item>
+  <item>Coréen</item>
+  <item>Arabe</item>
+  <item>Russe</item>
+  <item>Hindi</item>
+  <item>Bengali</item>
+  <item>Indonésien</item>
+  <item>Néerlandais</item>
+  <item>Turc</item>
+  <item>Polonais</item>
+  <item>Ukrainien</item>
+  <item>Suédois</item>
+  <item>Danois</item>
+  <item>Norvégien</item>
+  <item>Finnois</item>
+  <item>Grec</item>
+  <item>Hébreu</item>
+  <item>Thaï</item>
+  <item>Vietnamien</item>
+  <item>Tamoul</item>
+  <item>Télougou</item>
+  <item>Marathi</item>
+  <item>Gujarati</item>
+  <item>Kannada</item>
+  <item>Malayalam</item>
+  <item>Ourdou</item>
+  <item>Persan (Farsi)</item>
+  <item>Swahili</item>
+  <item>Roumain</item>
+  <item>Tchèque</item>
+  <item>Hongrois</item>
+  <item>Philippin (Tagalog)</item>
+  <item>Malais</item>
+  <item>Serbe</item>
+  <item>Croate</item>
+  <item>Bulgare</item>
+  <item>Slovaque</item>
+  <item>Slovène</item>
+  <item>Lituanien</item>
+  <item>Letton</item>
+  <item>Estonien</item>
+  <item>Catalan</item>
+  <item>Basque</item>
+</string-array>
+    <string name="toolbar_long_press_hint">Afficher les points d\'indice d\'appui long</string>
+    <string name="toolbar_long_press_hint_summary">Afficher des points sur les touches de la barre d\'outils ayant une action d\'appui long</string>
+    <string name="prefs_narrow_key_gaps_level">Niveau d\'étroitesse</string>
+    <string name="narrowness_level_low">Le plus petit</string>
+    <string name="narrowness_level_medium_low">Petit</string>
+    <string name="narrowness_level_medium">Moyen</string>
+    <string name="narrowness_level_medium_high">Grand</string>
+    <string name="narrowness_level_high">Le plus grand</string>
+    <string name="prefs_use_system_emoji">Utiliser la police d\'emoji système</string>
+    <string name="prefs_use_system_emoji_summary">Utiliser la police d\'emoji système dans les paramètres et la recherche (redémarre l\'application)</string>
+    <string name="add_custom_layout">Ajouter une disposition personnalisée</string>
+    <string name="layout_custom1">Disposition personnalisée 1</string>
+    <string name="layout_custom2">Disposition personnalisée 2</string>
+    <string name="layout_custom3">Disposition personnalisée 3</string>
+    <string name="layout_custom4">Disposition personnalisée 4</string>
+    <string name="layout_custom5">Disposition personnalisée 5</string>
+    <string name="prefs_keypress_vibration_amplitude_settings">Force de vibration à la frappe</string>
+    <string name="user_dict_clear_all_confirmation">Êtes-vous sûr de vouloir effacer tous les mots de ce dictionnaire ?</string>
+    <string name="theme_name_mint_and_pink">Menthe et rose</string>
+    <string name="theme_name_leanbitlab_light">LeanBitLab Light</string>
+    <string name="theme_name_leanbitlab_dark">LeanBitLab Dark</string>
+    <string name="about_sponsor_link">Sponsoriser le projet</string>
+    <string name="about_sponsor_link_description">Soutenir le développement de LeanType</string>
+    <string name="sponsor_dialog_title">Sponsoriser ce projet</string>
+    <string name="sponsor_dialog_message">Ce projet est entièrement piloté par la communauté et repose sur des dons pour maintenir le développement. Si vous trouvez ce clavier utile, merci d\'envisager de le sponsoriser !</string>
+    <string name="sponsor_dialog_never_show_again">Ne plus montrer</string>
+    <string name="sponsor_dialog_sponsor">Sponsoriser</string>
+    <string name="sponsor_dialog_not_now">Pas maintenant</string>
+    <string name="about_features_link">Aller à FEATURES.md</string>
+    <string name="about_features_link_description">Liste des principales fonctionnalités et manuel du clavier</string>
+    <string name="libraries_hub_title">Bibliothèques</string>
+    <string name="libraries_hub_summary">Gérer la bibliothèque de saisie gestuelle, les dictionnaires et les bibliothèques d\'emoji.</string>
+    <string name="libraries_hub_gesture_title">Bibliothèque de saisie gestuelle</string>
+    <string name="libraries_hub_dictionary_title">Dictionnaires principaux</string>
+    <string name="libraries_hub_emoji_title">Bibliothèques d\'emoji</string>
+    <string name="libraries_hub_handwriting_title">Plugin de saisie manuscrite</string>
+    <string name="libraries_hub_dict_guide_title">Guide de chargement de dictionnaire</string>
+    <string name="libraries_hub_dict_guide_text">Pour ajouter un nouveau dictionnaire :\n1. Obtenez un fichier .dict pour votre langue.\n2. Appuyez sur \"Gérer les dictionnaires\".\n3. Utilisez le bouton plus (+) pour importer le fichier.</string>
+    <string name="libraries_status_active">Actif</string>
+    <string name="libraries_status_not_installed">Non installé</string>
+    <string name="log_options_title">Options de journal</string>
+    <string name="save_log_to_file">Enregistrer dans un fichier</string>
+    <string name="clear_log">Effacer le journal</string>
+    <string name="share_log">Partager le journal</string>
+    <string name="log_cleared">Journal effacé</string>
+    <string name="direct_ime_switch_title">IME cible de commutation directe</string>
+    <string name="direct_ime_switch_summary">Méthode de saisie vers laquelle basculer directement lors de l\'utilisation de l\'option de code de touche personnalisée</string>
+    <string name="direct_ime_switch_none">Aucun</string>
+    <string name="app_language_title">Langue de l\'application</string>
+    <string name="app_language_summary">Modifier la langue de l\'écran des paramètres et de l\'interface du clavier</string>
+    <string name="app_language_system">Valeur système par défaut</string>
+    <string name="settings_screen_ai_integration">Intégration AI</string>
+    <string name="custom_ai_keys_title">Touches AI personnalisées</string>
+    <string name="custom_ai_keys_summary">Personnalisez les touches numérotées de la barre d\'outils avec vos propres invites</string>
+    <string name="label_language_switch_key">@string/show_language_switch_key</string>
+    <string name="space_swipe_touchpad_mode_entry">Mode pavé tactile</string>
+    <string name="touchpad_sensitivity">Sensibilité du pavé tactile</string>
+    <string name="force_auto_caps_title">Forcer la capitalisation automatique</string>
+    <string name="force_auto_caps_summary">Forcer la mise en majuscule des phrases sur tous les champs de texte sauf les mots de passe</string>
+    <string name="toolbar_only_with_hw_keyboard">Afficher uniquement la barre d\'outils avec le clavier physique</string>
+    <string name="toolbar_only_with_hw_keyboard_summary">Vous devez toujours activer l\'affichage du clavier virtuel dans les paramètres système</string>
+    <string name="auto_show_toolbar_open">Afficher automatiquement la barre d\'outils à l\'ouverture</string>
+    <string name="auto_show_toolbar_select">Afficher automatiquement la barre d\'outils lors de la sélection</string>
+    <string name="auto_show_toolbar_select_summary">Afficher la barre d\'outils lors de la sélection de texte</string>
+    <string name="toolbar_swipe_down_dismiss">Balayer vers le bas pour fermer</string>
+    <string name="toolbar_swipe_down_dismiss_summary">Balayer vers le bas sur la barre d\'outils pour masquer le clavier</string>
+    <string name="auto_hide_pinned_keys">Masquer automatiquement les touches épinglées</string>
+    <string name="auto_hide_pinned_keys_summary">Masquer les touches épinglées lorsque la barre d\'outils est développée</string>
+    <string name="remember_toolbar_state">Mémoriser l\'état de la barre d\'outils</string>
+    <string name="remember_toolbar_state_summary">Conserver la barre d\'outils développée ou réduite entre les sessions et pendant la frappe</string>
+    <string name="close_translate_language_selector">Fermer le sélecteur de langue</string>
+    <string name="offline_model_title">Modèle hors ligne</string>
+    <string name="offline_model_summary">Gérer le LLM local</string>
+    <string name="offline_max_tokens_title">Jetons max de l\'AI hors ligne</string>
+    <string name="offline_max_tokens_summary">Longueur maximale de la correction générée</string>
+    <string name="offline_max_tokens_custom_option">Personnalisé…</string>
+    <string name="offline_max_tokens_custom_desc">Personnalisé (%1$d jetons)</string>
+    <string name="offline_temp_title">Température</string>
+    <string name="offline_temp_summary">Contrôle l\'aléatoire : plus bas signifie plus concentré et déterministe</string>
+    <string name="offline_top_p_title">Top-P (Nucleus Sampling)</string>
+    <string name="offline_top_p_summary">Contrôle la diversité du vocabulaire : plus bas coupe les options moins probables</string>
+    <string name="offline_top_k_title">Top-K</string>
+    <string name="offline_top_k_summary">Limite les choix aux K jetons les plus probables</string>
+    <string name="offline_min_p_title">Min-P</string>
+    <string name="offline_min_p_summary">Seuil de probabilité minimum par rapport au jeton le plus probable</string>
+    <string name="offline_show_thinking_title">Afficher la réflexion</string>
+    <string name="offline_show_thinking_summary">Afficher le processus de raisonnement et les jetons de réflexion interne si le modèle les génère</string>
+    <string-array name="offline_max_tokens_entries">
+  <item>Ultra rapide (12 jetons)</item>
+  <item>Rapide (20 jetons)</item>
+  <item>Équilibré (32 jetons)</item>
+  <item>Précis (64 jetons)</item>
+  <item>Profond (128 jetons)</item>
+</string-array>
+    <string-array name="offline_max_tokens_values">
+  <item>12</item>
+  <item>20</item>
+  <item>32</item>
+  <item>64</item>
+  <item>128</item>
+</string-array>
+    <string name="image_pasting_not_supported">Cette application ne prend pas en charge le collage d\'images</string>
+    <string name="clear_emoji_history_title">Effacer l\'historique des emojis</string>
+    <string name="clear_emoji_history_message">Êtes-vous sûr de vouloir effacer vos emojis récemment utilisés ?</string>
+    <string name="floating_keyboard_drag_handle">Faites glisser pour déplacer le clavier</string>
+    <string name="floating_keyboard_resize_handle">Faites glisser pour redimensionner le clavier</string>
+    <string name="persist_floating_keyboard_title">Maintenir le clavier flottant</string>
+    <string name="persist_floating_keyboard_summary">Ne pas masquer le clavier flottant lorsque la saisie se termine</string>
+    <string name="persist_text_edit_mode_title">Maintenir le mode édition de texte</string>
+    <string name="persist_text_edit_mode_summary">Ne pas quitter le mode édition de texte lorsque la saisie se termine</string>
+    <string name="disable_multi_word_suggestions_title">Désactiver les suggestions de plusieurs mots</string>
+    <string name="disable_multi_word_suggestions_summary">Empêcher les suggestions composées de plusieurs mots combinés (recommandé pour le turc)</string>
+    <string name="upgrade">Mettre à niveau</string>
+    <string name="dictionary_update_available">Mise à jour disponible</string>
+    <string name="dictionary_source_title">Dépôt de dictionnaires</string>
+    <string name="dictionary_source_summary">Parcourir ou télécharger des dictionnaires directement dans votre navigateur</string>
+    <string name="text_expander_title">Expanseur de texte</string>
+    <string name="text_expander_enable_title">Activer l\'expanseur de texte</string>
+    <string name="text_expander_enable_summary">Étendre automatiquement les raccourcis lors d\'un espace ou d\'une ponctuation de manière native et sécurisée.</string>
+    <string name="text_expander_immediate_title">Étendre immédiatement</string>
+    <string name="text_expander_immediate_summary">Étendre les raccourcis immédiatement sans appuyer sur la barre d\'espace.</string>
+    <string name="text_expander_backspace_undo_title">Retour arrière annule l\'expansion</string>
+    <string name="text_expander_backspace_undo_summary">Revenir du texte étendu au raccourci lors du retour arrière.</string>
+    <string name="text_expander_custom_shortcuts_title">Raccourcis personnalisés</string>
+    <string name="text_expander_add_shortcut">Ajouter un raccourci</string>
+    <string name="text_expander_edit_shortcut">Modifier le raccourci</string>
+    <string name="text_expander_quick_guide">💡 Guide rapide des fonctionnalités</string>
+    <string name="text_expander_template_placeholders_title">Espaces réservés de modèle pris en charge :</string>
+    <string name="text_expander_prefix_title">Préfixe (facultatif)</string>
+    <string name="text_expander_shortcut_title">Raccourci (par ex. \'brb\')</string>
+    <string name="text_expander_regex_pattern_title">Motif Regex</string>
+    <string name="text_expander_regex_title">Expression régulière</string>
+    <string name="text_expander_regex_invalid">⚠️ Motif d\'expression régulière non valide</string>
+    <string name="text_expander_template_title">Expansion du modèle</string>
+    <string name="text_expander_template_hint">Je reviens tout de suite ! ou Mon email est %clipboard%</string>
+    <string name="text_expander_quick_placeholders_title">Espaces réservés rapides (appuyez pour insérer au curseur) :</string>
+    <string name="text_expander_save">Enregistrer</string>
+    <string name="text_expander_add">Ajouter</string>
+    <string name="text_expander_delete">Supprimer</string>
+    <string name="custom_ai_keys_what_are_keywords">Que sont les mots-clés ?</string>
+    <string name="custom_ai_keys_keywords_description">Les mots-clés (comme #proofread ou #summarize) agissent comme des instructions rapides pour l\'AI. Sélectionnez-les lors de la configuration d\'une touche pour définir son comportement. Vous devez également ajouter votre propre invite personnalisée pour créer la touche.</string>
+    <string name="custom_ai_keys_show_tags_title">Afficher les étiquettes sur le clavier</string>
+    <string name="custom_ai_keys_show_tags_summary">Lorsque cette option est activée, les étiquettes personnalisées s\'affichent sous forme de capsules thématiques dans la barre d\'outils du clavier au lieu de l\'icône AI par défaut.</string>
+    <string name="custom_ai_keys_not_configured">Non configuré</string>
+    <string name="custom_ai_keys_configure_title">Configurer la touche %1$d</string>
+    <string name="custom_ai_keys_config_instruction">Sélectionnez des mots-clés pour définir le comportement et combinez-les avec vos instructions personnalisées.\n\nExemple : Choisissez #editor et tapez "Traduire en français" pour créer une touche de traduction spécialisée.\n\nRemarque : Vous devez fournir à la fois une invite personnalisée et sélectionner au moins un mot-clé pour enregistrer.</string>
+    <string name="custom_ai_keys_prompt_label">Invite personnalisée pour la touche %1$d</string>
+    <string name="custom_ai_keys_tag_label">Étiquette / Libellé (par ex. \'Français\', \'Grammaire\', \'Réécrire\')</string>
+    <string name="custom_ai_keys_selected_functions">Fonctions des mots-clés sélectionnés :</string>
 </resources>
