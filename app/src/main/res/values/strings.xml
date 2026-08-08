@@ -1380,4 +1380,41 @@ New dictionary:
     <string name="dictionary_update_available">Update available</string>
     <string name="dictionary_source_title">Dictionary repository</string>
     <string name="dictionary_source_summary">Browse or download dictionaries directly in your browser</string>
+
+    <!-- Text Expander -->
+    <string name="text_expander_title">Text Expander</string>
+    <string name="text_expander_enable_title">Enable Text Expander</string>
+    <string name="text_expander_enable_summary">Auto-expand shortcuts on space or punctuation natively and securely.</string>
+    <string name="text_expander_immediate_title">Expand immediately</string>
+    <string name="text_expander_immediate_summary">Expand shortcuts immediately without pressing space.</string>
+    <string name="text_expander_backspace_undo_title">Backspace undoes expansion</string>
+    <string name="text_expander_backspace_undo_summary">Revert expanded text back to shortcut on backspace.</string>
+    <string name="text_expander_custom_shortcuts_title">Custom Shortcuts</string>
+    <string name="text_expander_add_shortcut">Add Shortcut</string>
+    <string name="text_expander_edit_shortcut">Edit Shortcut</string>
+    <string name="text_expander_quick_guide">💡 Quick Feature Guide</string>
+    <string name="text_expander_template_placeholders_title">Supported Template Placeholders:</string>
+    <string name="text_expander_prefix_title">Prefix (optional)</string>
+    <string name="text_expander_shortcut_title">Shortcut (e.g. \'brb\')</string>
+    <string name="text_expander_regex_pattern_title">Regex Pattern</string>
+    <string name="text_expander_regex_title">Regular Expression</string>
+    <string name="text_expander_regex_invalid">⚠️ Invalid regular expression pattern</string>
+    <string name="text_expander_template_title">Template Expansion</string>
+    <string name="text_expander_template_hint">Be right back! or My email is %clipboard%</string>
+    <string name="text_expander_quick_placeholders_title">Quick Placeholders (tap to insert at cursor):</string>
+    <string name="text_expander_save">Save</string>
+    <string name="text_expander_add">Add</string>
+    <string name="text_expander_delete">Delete</string>
+
+    <!-- Custom AI Keys Screen -->
+    <string name="custom_ai_keys_what_are_keywords">What are Keywords?</string>
+    <string name="custom_ai_keys_keywords_description">Keywords (like #proofread or #summarize) act as quick instructions for the AI. Select them when configuring a key to define its behavior. You must also add your own custom prompt to create the key.</string>
+    <string name="custom_ai_keys_show_tags_title">Show tags on keyboard</string>
+    <string name="custom_ai_keys_show_tags_summary">When enabled, custom tags will show as themed capsules on the keyboard toolbar instead of the default AI icon.</string>
+    <string name="custom_ai_keys_not_configured">Not configured</string>
+    <string name="custom_ai_keys_configure_title">Configure Key %1$d</string>
+    <string name="custom_ai_keys_config_instruction">Select keywords to define behavior, and combine them with your custom instructions.\n\nExample: Choose #editor and type "Translate to French" to create a specialized translation key.\n\nNote: You must provide both a custom prompt and select at least one keyword to save.</string>
+    <string name="custom_ai_keys_prompt_label">Custom Prompt for Key %1$d</string>
+    <string name="custom_ai_keys_tag_label">Tag / Label (e.g. \'French\', \'Grammar\', \'Rewrite\')</string>
+    <string name="custom_ai_keys_selected_functions">Selected Keyword Functions:</string>
 </resources>

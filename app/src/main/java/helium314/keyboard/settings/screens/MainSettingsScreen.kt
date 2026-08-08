@@ -188,7 +188,7 @@ fun MainSettingsScreen(
                             icon = R.drawable.ic_settings_correction
                         ) { NextScreenIcon() }
                         Preference(
-                            name = "Text Expander",
+                            name = stringResource(R.string.text_expander_title),
                             onClick = { helium314.keyboard.settings.SettingsDestination.navigateTo(helium314.keyboard.settings.SettingsDestination.TextExpander) },
                             icon = R.drawable.ic_edit
                         ) { NextScreenIcon() }

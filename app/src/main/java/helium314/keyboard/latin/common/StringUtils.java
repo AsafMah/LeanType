@@ -500,7 +500,7 @@ public final class StringUtils {
         return (0x200D <= c && c <= 0x2BFF) // unicode blocks from General Punctuation to Miscellaneous Symbols and Arrows
                 || (0x1F000 <= c && c <= 0x1FAFF) // unicode blocks from Mahjong Tiles to Symbols and Pictographs Extended-A
                 || (0xE0000 <= c && c <= 0xE007F) // unicode block Tags
-                || c == 0xFE0F; // variation selector emoji with color
+                || c == 0xFE0F || c == 0x00A9 || c == 0x00AE || c == '#' || c == '*' || ('0' <= c && c <= '9'); // variation selector emoji with color and keycap/symbol bases
     }
 
     public static boolean isLowerCaseAscii(final String s) {

@@ -61,13 +61,23 @@ fun hasLetterBeforeLastSpaceBeforeCursor(text: CharSequence): Boolean {
     return false
 }
 
+private fun isEmojiSequenceEnd(text: String, lastCodepoint: Int): Boolean {
+    if (lastCodepoint == 0x200D || lastCodepoint == 0xFE0F || lastCodepoint in 0x1F3FB..0x1F3FF) {
+        val len = Character.charCount(lastCodepoint)
+        if (text.length <= len) return false
+        val prevCp = text.codePointBefore(text.length - len)
+        return mightBeEmoji(prevCp)
+    }
+    return mightBeEmoji(lastCodepoint)
+}
+
 /** get the complete emoji at end of [text], considering that emojis can be joined with ZWJ resulting in different emojis */
 fun getFullEmojiAtEnd(text: CharSequence): String {
     val s = text.toString()
     var offset = s.length
     if (offset == 0) return ""
     val lastCodepoint = s.codePointBefore(offset)
-    if (!mightBeEmoji(lastCodepoint)) return ""
+    if (!isEmojiSequenceEnd(s, lastCodepoint)) return ""
 
     while (offset > 0) {
         val codepoint = s.codePointBefore(offset)
@@ -86,10 +96,10 @@ fun getFullEmojiAtEnd(text: CharSequence): String {
         }
 
         if (codepoint in 0x1F3FB..0x1F3FF) {
-            // Skin tones are not added with ZWJ, but just appended. This is not nice as they can be emojis on their own,
-            // but that's how it is done. Assume that an emoji before the skin tone will get merged (usually correct in practice)
+            // Skin tones are not added with ZWJ, but just appended.
+            // Assume that an emoji before the skin tone will get merged
             val codepointBefore = s.codePointBefore(offset)
-            if (isEmoji(codepointBefore)) {
+            if (mightBeEmoji(codepointBefore)) {
                 offset -= Character.charCount(codepointBefore)
                 continue
             }
@@ -100,7 +110,7 @@ fun getFullEmojiAtEnd(text: CharSequence): String {
     }
     val result = s.substring(offset)
     if (isEmoji(result)) return result
-    return s.substring(s.length - Character.charCount(lastCodepoint))
+    return if (offset == 0) result else s.substring(s.length - Character.charCount(lastCodepoint))
 }
 
 /**

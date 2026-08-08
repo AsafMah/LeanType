@@ -52,6 +52,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -101,7 +102,7 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
             onClickBack = onClickBack,
             title = {
                 Text(
-                    text = "Text Expander",
+                    text = stringResource(R.string.text_expander_title),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -179,7 +180,7 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
-                                        text = "💡 Quick Feature Guide",
+                                        text = stringResource(R.string.text_expander_quick_guide),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
@@ -274,7 +275,7 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                                     
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text(
-                                            text = "Supported Template Placeholders:",
+                                            text = stringResource(R.string.text_expander_template_placeholders_title),
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
@@ -311,27 +312,27 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
 
                     // 1. Master Switch Toggle
                     SwitchPreference(
-                        name = "Enable Text Expander",
+                        name = stringResource(R.string.text_expander_enable_title),
                         key = TextExpanderUtils.PREF_ENABLED,
                         default = false,
-                        description = "Auto-expand shortcuts on space or punctuation natively and securely.",
+                        description = stringResource(R.string.text_expander_enable_summary),
                         onCheckedChange = { isExpanderEnabled = it }
                     )
 
                     SwitchPreference(
-                        name = "Expand immediately",
+                        name = stringResource(R.string.text_expander_immediate_title),
                         key = TextExpanderUtils.PREF_IMMEDIATE,
                         default = false,
-                        description = "Expand shortcuts immediately without pressing space.",
+                        description = stringResource(R.string.text_expander_immediate_summary),
                         enabled = isExpanderEnabled,
                         onCheckedChange = { isImmediateEnabled = it }
                     )
 
                     SwitchPreference(
-                        name = "Backspace undoes expansion",
+                        name = stringResource(R.string.text_expander_backspace_undo_title),
                         key = TextExpanderUtils.PREF_BACKSPACE_REVERTS,
                         default = false,
-                        description = "Revert expanded text back to shortcut on backspace.",
+                        description = stringResource(R.string.text_expander_backspace_undo_summary),
                         enabled = isExpanderEnabled,
                         onCheckedChange = { isBackspaceRevertsEnabled = it }
                     )
@@ -340,7 +341,7 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
 
                     // 3. Section Title / Header for shortcuts
                     Text(
-                        text = "Custom Shortcuts",
+                        text = stringResource(R.string.text_expander_custom_shortcuts_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 8.dp)
@@ -434,8 +435,8 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                     editingIsRegex = false
                     showAddDialog = true
                 },
-                text = { Text("Add Shortcut") },
-                icon = { Icon(painter = painterResource(R.drawable.ic_edit), "Add Shortcut") },
+                text = { Text(stringResource(R.string.text_expander_add_shortcut)) },
+                icon = { Icon(painter = painterResource(R.drawable.ic_edit), stringResource(R.string.text_expander_add_shortcut)) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(all = 16.dp)
@@ -470,8 +471,8 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                 showAddDialog = false
             },
             checkOk = { editingShortcut.trim().isNotEmpty() && editingTemplate.text.isNotEmpty() && isRegexValid },
-            confirmButtonText = if (isEditMode) "Save" else "Add",
-            neutralButtonText = if (isEditMode) "Delete" else null,
+            confirmButtonText = if (isEditMode) stringResource(R.string.text_expander_save) else stringResource(R.string.text_expander_add),
+            neutralButtonText = if (isEditMode) stringResource(R.string.text_expander_delete) else null,
             onNeutral = {
                 if (isEditMode) {
                     val updated = shortcutsMap.toMutableMap()
@@ -482,13 +483,16 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                 showAddDialog = false
             },
             title = {
-                Text(text = if (isEditMode) "Edit Shortcut" else "Add Shortcut")
+                Text(text = if (isEditMode) stringResource(R.string.text_expander_edit_shortcut) else stringResource(R.string.text_expander_add_shortcut))
             },
             content = {
                 LaunchedEffect(Unit) {
                     focusRequester.requestFocus()
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -498,14 +502,14 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                             onValueChange = { editingPrefix = it.replace(" ", "") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            label = { Text("Prefix (optional)") }
+                            label = { Text(stringResource(R.string.text_expander_prefix_title)) }
                         )
                         TextField(
                             value = editingShortcut,
                             onValueChange = { editingShortcut = if (editingIsRegex) it else it.replace(" ", "") },
                             modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                             singleLine = true,
-                            label = { Text(if (editingIsRegex) "Regex Pattern" else "Shortcut (e.g. 'brb')") }
+                            label = { Text(if (editingIsRegex) stringResource(R.string.text_expander_regex_pattern_title) else stringResource(R.string.text_expander_shortcut_title)) }
                         )
                     }
 
@@ -515,7 +519,7 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Regular Expression",
+                            text = stringResource(R.string.text_expander_regex_title),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         androidx.compose.material3.Switch(
@@ -531,7 +535,7 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
 
                     if (editingIsRegex && !isRegexValid) {
                         Text(
-                            text = "⚠️ Invalid regular expression pattern",
+                            text = stringResource(R.string.text_expander_regex_invalid),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -543,12 +547,12 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(120.dp),
-                        label = { Text("Template Expansion") },
-                        placeholder = { Text("Be right back! or My email is %clipboard%") }
+                        label = { Text(stringResource(R.string.text_expander_template_title)) },
+                        placeholder = { Text(stringResource(R.string.text_expander_template_hint)) }
                     )
 
                     Text(
-                        text = "Quick Placeholders (tap to insert at cursor):",
+                        text = stringResource(R.string.text_expander_quick_placeholders_title),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.SemiBold,

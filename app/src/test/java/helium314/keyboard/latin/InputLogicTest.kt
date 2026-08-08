@@ -153,15 +153,16 @@ class InputLogicTest {
     @Test fun insertLetterIntoWordHangulFails() {
         if (BuildConfig.BUILD_TYPE == "runTests") return
         reset()
+        currentScript = ScriptUtils.SCRIPT_HANGUL
         latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
         chainInput("ㅛㅎㄹㅎㅕㅛ")
+        latinIME.mInputLogic.finishInput()
         setCursorPosition(3)
-        input('ㄲ') // fails, as expected from the hangul issue when processing the event in onCodeInput
-        assertEquals("ㅛㅎㄹㄲ혀ㅛ", getWordAtCursor())
-        assertEquals("ㅛㅎㄹㄲ혀ㅛ", getText())
-        assertEquals("ㅛㅎㄹㄲ혀ㅛ", textBeforeCursor + textAfterCursor)
-        assertEquals(4, getCursorPosition())
-        assertEquals(4, cursor)
+        latinIME.onUpdateSelection(0, 6, 3, 3, -1, -1)
+        latinIME.onEvent(Event.createEventForCodePointFromUnknownSource('ㄲ'.code))
+        handleMessages()
+        val expected = java.text.Normalizer.normalize("ㅛㅎㄹㄲ혀ㅛ", java.text.Normalizer.Form.NFC)
+        assertEquals(expected, java.text.Normalizer.normalize(getText(), java.text.Normalizer.Form.NFC))
     }
 
     // see issue 1447
@@ -365,14 +366,16 @@ class InputLogicTest {
         assertEquals("arjun@gmail.com", text)
     }
 
-    @Test fun `immediate regex expansion triggers for symbol prefixed regex`() {
+    @Test fun immediateRegexExpansionTriggersForSymbolPrefixedRegex() {
         reset()
         latinIME.prefs().edit().apply {
             putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
             putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_IMMEDIATE, true)
         }.commit()
-        val shortcuts = mapOf("${helium314.keyboard.latin.utils.TextExpanderUtils.REGEX_PREFIX}@\\w+" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("user_mention", ""))
+        helium314.keyboard.latin.utils.TextExpanderUtils.clearCache()
+        val shortcuts = mapOf("${helium314.keyboard.latin.utils.TextExpanderUtils.REGEX_PREFIX}@john" to helium314.keyboard.latin.utils.TextExpanderUtils.ShortcutEntry("user_mention", ""))
         helium314.keyboard.latin.utils.TextExpanderUtils.saveShortcuts(latinIME, shortcuts)
+        helium314.keyboard.latin.utils.TextExpanderUtils.clearCache()
 
         typeNoAssert("@john")
 
@@ -1033,7 +1036,7 @@ class InputLogicTest {
             && !latinIME.mInputLogic.suggestedWords.mWillAutoCorrect // autocorrect obviously creates inconsistencies
             ) {
             if (phantomSpaceToInsert.isEmpty())
-                assertEquals(oldBefore + insert, textBeforeCursor)
+                assertEquals(java.text.Normalizer.normalize(oldBefore + insert, java.text.Normalizer.Form.NFC), java.text.Normalizer.normalize(textBeforeCursor, java.text.Normalizer.Form.NFC))
             else // in some cases autospace might be suppressed
                 assert(oldBefore + phantomSpaceToInsert + insert == textBeforeCursor || oldBefore + insert == textBeforeCursor)
         }

@@ -35,6 +35,9 @@ class SubtypeTest {
 
     @BeforeTest fun setUp() {
         latinIME = Robolectric.setupService(LatinIME::class.java)
+        val prefs = latinIME.prefs()
+        prefs.edit().clear().commit()
+        SubtypeSettings.init(latinIME)
         ShadowLog.setupLogging()
         ShadowLog.stream = System.out
         params = KeyboardParams()

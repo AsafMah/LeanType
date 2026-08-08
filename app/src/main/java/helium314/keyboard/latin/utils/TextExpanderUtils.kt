@@ -121,7 +121,7 @@ object TextExpanderUtils {
                 json.put(key, obj)
             }
             val jsonStr = json.toString()
-            context.prefs().edit().putString(PREF_DATA, jsonStr).apply()
+            context.prefs().edit().putString(PREF_DATA, jsonStr).commit()
             clearCache()
         } catch (e: java.lang.Exception) {
             // fail silently
@@ -284,6 +284,11 @@ object TextExpanderUtils {
         if (textBeforeCursor == null || !isEnabled(context)) return null
         getShortcuts(context)
         val compiledList = cachedCompiledList ?: return null
+        val fullText = if (word != null && !textBeforeCursor.endsWith(word, ignoreCase = true)) {
+            textBeforeCursor + word
+        } else {
+            textBeforeCursor
+        }
         
         for (item in compiledList) {
             val entry = item.entry
@@ -291,20 +296,18 @@ object TextExpanderUtils {
                 val regex = item.regex ?: continue
                 val prefix = entry.prefix
                 if (word != null) {
-                    val expectedSuffix = prefix + word
-                    if (textBeforeCursor.endsWith(expectedSuffix, ignoreCase = true)) {
+                    if (regex.matches(fullText)) {
                         try {
-                            if (regex.matches(expectedSuffix)) {
-                                val replaced = regex.replace(expectedSuffix, entry.template)
-                                return ExpandedResult(expand(replaced, context), prefix.length, expectedSuffix)
-                            }
+                            val replaced = regex.replace(fullText, entry.template)
+                            val prefixLength = if (fullText.length > word.length) fullText.length - word.length else prefix.length
+                            return ExpandedResult(expand(replaced, context), prefixLength, fullText)
                         } catch (e: java.lang.Exception) {
                             // ignore
                         }
                     }
                 }
                 try {
-                    val match = regex.findAll(textBeforeCursor).lastOrNull { it.range.last == textBeforeCursor.length - 1 }
+                    val match = regex.findAll(fullText).lastOrNull { it.range.last == fullText.length - 1 }
                     if (match != null && match.value.isNotEmpty()) {
                         val matchedString = match.value
                         val replaced = regex.replace(matchedString, entry.template)

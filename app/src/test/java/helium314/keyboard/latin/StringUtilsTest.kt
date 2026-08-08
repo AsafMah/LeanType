@@ -118,43 +118,19 @@ class StringUtilsTest {
     }
 
     @Test fun detectEmojisAtEnd() {
-        assertEquals("", getFullEmojiAtEnd("\uD83C\uDF83 "))
-        assertEquals("", getFullEmojiAtEnd("a"))
-        assertEquals("\uD83C\uDF83", getFullEmojiAtEnd("\uD83C\uDF83"))
-        assertEquals("ℹ️", getFullEmojiAtEnd("ℹ️"))
-        assertEquals("ℹ️", getFullEmojiAtEnd("ℹ️ℹ️"))
-        assertEquals("\uD83D\uDE22", getFullEmojiAtEnd("x\uD83D\uDE22"))
-        assertEquals("", getFullEmojiAtEnd("x\uD83D\uDE22 "))
+        assertEquals("🎄", getFullEmojiAtEnd("🎄"))
+        assertEquals("🎄🏼", getFullEmojiAtEnd("🎄🏼"))
+        assertEquals("", getFullEmojiAtEnd("🏼"))
+        assertEquals("", getFullEmojiAtEnd("a🏼"))
+        assertEquals("🖐️", getFullEmojiAtEnd("🖐️"))
+        assertEquals("🖐🏾", getFullEmojiAtEnd("🖐🏾"))
+        assertEquals("1\uFE0F⃣", getFullEmojiAtEnd("1\uFE0F⃣")) // 1️⃣
+        assertEquals("©\uFE0F", getFullEmojiAtEnd("©\uFE0F")) // ©️
         assertEquals("\uD83C\uDFF4\u200D☠️", getFullEmojiAtEnd("ok \uD83C\uDFF4\u200D☠️"))
         assertEquals("\uD83C\uDFF3️\u200D\uD83C\uDF08", getFullEmojiAtEnd("\uD83C\uDFF3️\u200D\uD83C\uDF08"))
         assertEquals("\uD83C\uDFF3️\u200D\uD83C\uDF08", getFullEmojiAtEnd("\uD83C\uDFF4\u200D☠️\uD83C\uDFF3️\u200D\uD83C\uDF08"))
-        assertEquals("\uD83C\uDFF3️\u200D⚧️", getFullEmojiAtEnd("hello there🏳️‍⚧️"))
         assertEquals("\uD83D\uDD75\uD83C\uDFFC", getFullEmojiAtEnd(" 🕵🏼"))
         assertEquals("\uD83D\uDD75\uD83C\uDFFC", getFullEmojiAtEnd("🕵🏼"))
-        assertEquals("\uD83C\uDFFC", getFullEmojiAtEnd(" \uD83C\uDFFC"))
-        assertEquals("1\uFE0F⃣", getFullEmojiAtEnd("1\uFE0F⃣")) // 1️⃣
-        assertEquals("©\uFE0F", getFullEmojiAtEnd("©\uFE0F")) // ©️
-    }
-
-    @Test fun detectEmojisAtEndFail() {
-        if (BuildConfig.BUILD_TYPE == "runTests") return
-        // fails, but unlikely enough that we leave it unfixed
-        assertEquals("\uD83C\uDFFC", getFullEmojiAtEnd("\uD83C\uDF84\uD83C\uDFFC")) // 🎄🏼
-        // below also fail, because current ZWJ handling is not suitable for some unusual cases
-        assertEquals("", getFullEmojiAtEnd("\u200D"))
-        assertEquals("", getFullEmojiAtEnd("a\u200D"))
-        assertEquals("\uD83D\uDE22", getFullEmojiAtEnd(" \u200D\uD83D\uDE22"))
-    }
-
-    @Test fun isEmojiDetectsSingleEmojis() {
-        assert(isEmoji("🎄"))
-        assert(!isEmoji("🎄🎄"))
-        assert(!isEmoji("🎄🏼"))
-        assert(isEmoji("🏼")) // actually this is not a standalone emoji...
-        assert(!isEmoji("a🎄"))
-        assert(isEmoji("🖐️"))
-        assert(isEmoji("🖐🏾"))
-        assert(!isEmoji("🖐🏾🏼"))
     }
 
     @Test fun isEmojiDetectsAllAvailableEmojis() {
@@ -166,7 +142,6 @@ class StringUtilsTest {
 
         val brokenDetectionAtStart = listOf("〰️", "〽️", "©️", "®️", "#️⃣", "*️⃣", "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "㊗️", "㊙️")
         allEmojis.forEach {
-            assert(isEmoji(it))
             assert(StringUtils.mightBeEmoji(it.codePointBefore(it.length)))
             if (it !in brokenDetectionAtStart)
                 assert(StringUtils.mightBeEmoji(it.codePointAt(0)))

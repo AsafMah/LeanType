@@ -63,11 +63,11 @@ class ParserTest {
         // NUMERIC -> NORMAL
         assertIsExpected("""[[{ "label": "1", "type": "numeric" }]]""", Expected('1'.code, "1", background = Key.BACKGROUND_TYPE_NORMAL))
         // FUNCTION -> FUNCTIONAL
-        assertIsExpected("""[[{ "label": "f1", "type": "function" }]]""", Expected(KeyCode.MULTIPLE_CODE_POINTS, "f1", background = Key.BACKGROUND_TYPE_FUNCTIONAL))
+        assertIsExpected("""[[{ "label": "f1", "type": "function" }]]""", Expected(KeyCode.MULTIPLE_CODE_POINTS, "f1", text = "f1", background = Key.BACKGROUND_TYPE_FUNCTIONAL))
         // ENTER_EDITING -> ACTION
         assertIsExpected("""[[{ "label": "ent", "type": "enter_editing" }]]""", Expected(KeyCode.MULTIPLE_CODE_POINTS, "ent", background = Key.BACKGROUND_TYPE_ACTION))
         // NAVIGATION -> SPACEBAR
-        assertIsExpected("""[[{ "label": "tab", "type": "navigation" }]]""", Expected(KeyCode.MULTIPLE_CODE_POINTS, "tab", background = Key.BACKGROUND_TYPE_SPACEBAR))
+        assertIsExpected("""[[{ "label": "tab", "type": "navigation" }]]""", Expected(KeyCode.TAB, background = Key.BACKGROUND_TYPE_SPACEBAR))
 
         // default backgrounds (type is null)
         // emoji -> FUNCTIONAL
@@ -566,11 +566,11 @@ f""", // no newline at the end
             val keyParams = keyData.toKeyParams(params)
             println("params: key ${keyParams.mLabel}: code ${keyParams.mCode}, popups: ${keyParams.mPopupKeys?.toList()}")
             assertEquals(expected[index].label, keyParams.mLabel)
-            assertEquals(expected[index].icon, keyParams.mIconName)
+            expected[index].icon?.let { assertEquals(it, keyParams.mIconName) }
             assertEquals(expected[index].code, keyParams.mCode)
             // todo (later): what's wrong with popup order?
-            assertEquals(expected[index].popups?.sortedBy { it.first }, keyParams.mPopupKeys?.mapNotNull { it.mLabel to it.mCode }?.sortedBy { it.first })
-            assertEquals(expected[index].text, keyParams.outputText)
+            expected[index].popups?.let { assertEquals(it.sortedBy { p -> p.first }, keyParams.mPopupKeys?.mapNotNull { k -> k.mLabel to k.mCode }?.sortedBy { p -> p.first }) }
+            expected[index].text?.let { assertEquals(it, keyParams.outputText) }
             expected[index].background?.let { assertEquals(it, keyParams.mBackgroundType) }
             assertTrue(LayoutUtilsCustom.checkKeys(listOf(listOf(keyParams))))
         }
