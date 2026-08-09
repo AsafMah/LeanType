@@ -44,4 +44,42 @@ class HandwritingLoaderTest {
         val apkFile = File(context.filesDir, "handwriting_plugin.apk")
         assertFalse(apkFile.exists())
     }
+
+    @Test
+    fun testGetEffectiveLanguageDefaultFallback() {
+        // Reset pref
+        HandwritingLoader.setHandwritingLanguage(context, HandwritingLoader.LANG_FOLLOW_KEYBOARD)
+        val effective = HandwritingLoader.getEffectiveLanguage(context, "ml-IN")
+        org.junit.Assert.assertEquals("ml-IN", effective)
+    }
+
+    @Test
+    fun testGetEffectiveLanguageCustomOverride() {
+        HandwritingLoader.setHandwritingLanguage(context, "en-US")
+        val effective = HandwritingLoader.getEffectiveLanguage(context, "ml-IN")
+        org.junit.Assert.assertEquals("en-US", effective)
+    }
+
+    @Test
+    fun testGetEffectiveDisplayName() {
+        HandwritingLoader.setHandwritingLanguage(context, "en-US")
+        val name = HandwritingLoader.getEffectiveDisplayName(context, "ml-IN")
+        org.junit.Assert.assertTrue(name.contains("English") || name.contains("en-US"))
+
+        HandwritingLoader.setHandwritingLanguage(context, HandwritingLoader.LANG_FOLLOW_KEYBOARD)
+        val defaultName = HandwritingLoader.getEffectiveDisplayName(context, "ml-IN")
+        org.junit.Assert.assertTrue(defaultName.contains("Malayalam") || defaultName.contains("ml-IN"))
+    }
+
+    @Test
+    fun testGetEffectiveDisplayNameCached() {
+        HandwritingLoader.setHandwritingLanguage(context, "en-US")
+        val name1 = HandwritingLoader.getEffectiveDisplayName(context, "ml-IN")
+        val name2 = HandwritingLoader.getEffectiveDisplayName(context, "ml-IN")
+        org.junit.Assert.assertSame(name1, name2)
+
+        HandwritingLoader.setHandwritingLanguage(context, HandwritingLoader.LANG_FOLLOW_KEYBOARD)
+        val name3 = HandwritingLoader.getEffectiveDisplayName(context, "ml-IN")
+        org.junit.Assert.assertTrue(name3.contains("Malayalam") || name3.contains("ml-IN"))
+    }
 }

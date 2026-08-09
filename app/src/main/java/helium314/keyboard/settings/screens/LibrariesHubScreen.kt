@@ -86,6 +86,9 @@ fun LibrariesHubScreen(
                                 icon = R.drawable.ic_edit,
                                 onSuccess = { handwritingInstalled = HandwritingLoader.hasPlugin(context) }
                             )
+                            if (handwritingInstalled) {
+                                helium314.keyboard.settings.preferences.HandwritingLanguagePreference()
+                            }
                         }
 
                         // Translation Plugin (available on standard and standardfull)

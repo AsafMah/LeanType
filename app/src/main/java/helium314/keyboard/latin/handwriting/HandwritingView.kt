@@ -170,6 +170,7 @@ class HandwritingView @JvmOverloads constructor(
         }
 
         val recognizer = HandwritingLoader.getRecognizer(context)
+        val displayName = HandwritingLoader.getEffectiveDisplayName(context, language)
         if (recognizer != null) {
             recognizer.setLanguage(language)
             recognitionExecutor.execute {
@@ -177,14 +178,14 @@ class HandwritingView @JvmOverloads constructor(
                 mainHandler.post {
                     if (!isReady) {
                         toolbar?.visibility = View.VISIBLE // ponytail: show for download progress
-                        languageLabel.text = "$language (Downloading...)"
+                        languageLabel.text = "$displayName (Downloading...)"
                         downloadProgress.visibility = View.VISIBLE
                         downloadProgress.progress = 0
                         recognizer.downloadModel(language, object : ModelDownloadListener {
                             override fun onProgress(progress: Float) {
                                 mainHandler.post {
                                     val percent = (progress * 100).toInt()
-                                    languageLabel.text = "$language (Downloading $percent%)"
+                                    languageLabel.text = "$displayName (Downloading $percent%)"
                                     downloadProgress.progress = percent
                                 }
                             }
@@ -193,11 +194,11 @@ class HandwritingView @JvmOverloads constructor(
                                     downloadProgress.visibility = View.GONE
                                     if (success) {
                                         toolbar?.visibility = View.GONE // ponytail: hide when done
-                                        languageLabel.text = language
+                                        languageLabel.text = displayName
                                         android.widget.Toast.makeText(context, "Handwriting model downloaded", android.widget.Toast.LENGTH_SHORT).show()
                                     } else {
                                         toolbar?.visibility = View.VISIBLE
-                                        languageLabel.text = "$language (Download failed)"
+                                        languageLabel.text = "$displayName (Download failed)"
                                         android.widget.Toast.makeText(context, "Failed to download handwriting model", android.widget.Toast.LENGTH_LONG).show()
                                     }
                                 }
@@ -205,7 +206,7 @@ class HandwritingView @JvmOverloads constructor(
                         })
                     } else {
                         toolbar?.visibility = View.GONE // ponytail: hide when already downloaded
-                        languageLabel.text = language
+                        languageLabel.text = displayName
                         downloadProgress.visibility = View.GONE
                     }
                 }

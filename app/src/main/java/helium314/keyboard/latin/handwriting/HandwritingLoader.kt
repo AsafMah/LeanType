@@ -13,8 +13,56 @@ object HandwritingLoader {
     private const val PLUGIN_CLASS_NAME = "helium314.keyboard.handwriting.plugin.HandwritingRecognizerImpl"
     private const val PREF_HAS_PLUGIN = "pref_handwriting_has_plugin"
 
+    const val PREF_HANDWRITING_LANGUAGE = "pref_handwriting_language"
+    const val LANG_FOLLOW_KEYBOARD = "default"
+
     private var activeRecognizer: HandwritingRecognizer? = null
 
+    @JvmStatic
+    fun getHandwritingLanguagePref(context: Context): String {
+        return context.prefs().getString(PREF_HANDWRITING_LANGUAGE, LANG_FOLLOW_KEYBOARD) ?: LANG_FOLLOW_KEYBOARD
+    }
+
+    @JvmStatic
+    fun setHandwritingLanguage(context: Context, language: String) {
+        context.prefs().edit().putString(PREF_HANDWRITING_LANGUAGE, language).apply()
+    }
+
+    @JvmStatic
+    fun getEffectiveLanguage(context: Context, subtypeLanguage: String): String {
+        val pref = getHandwritingLanguagePref(context)
+        return if (pref == LANG_FOLLOW_KEYBOARD || pref.isBlank()) {
+            subtypeLanguage
+        } else {
+            pref
+        }
+    }
+
+    private class DisplayNameCache(val tag: String, val name: String)
+
+    @Volatile
+    private var displayNameCache: DisplayNameCache? = null
+
+    @JvmStatic
+    fun getEffectiveDisplayName(context: Context, subtypeLanguage: String): String {
+        val tag = getEffectiveLanguage(context, subtypeLanguage)
+        val currentCache = displayNameCache
+        if (currentCache != null && currentCache.tag == tag) {
+            return currentCache.name
+        }
+        val displayName = try {
+            val locale = java.util.Locale.forLanguageTag(tag)
+            val sysLocale = context.resources.configuration.locales[0]
+            val name = locale.getDisplayName(sysLocale)
+            if (name.isNullOrBlank()) tag else name
+        } catch (_: Exception) {
+            tag
+        }
+        displayNameCache = DisplayNameCache(tag, displayName)
+        return displayName
+    }
+
+    @JvmStatic
     fun getRecognizer(context: Context): HandwritingRecognizer? {
         if (activeRecognizer != null) return activeRecognizer
         if (!hasPlugin(context)) return null

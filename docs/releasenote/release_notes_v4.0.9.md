@@ -9,6 +9,7 @@
   - Added complete (100% gap-free) localizations for 10 major languages: **Arabic (`ar`)**, **German (`de`)**, **Greek (`el`)**, **Spanish US (`es-rUS`)**, **French (`fr`)**, **Italian (`it`)**, **Malayalam (`ml`)**, **Portuguese (`pt`)**, **Russian (`ru`)**, **Turkish (`tr`)**, and **Urdu (`ur`)**.
   - Added reusable localization gap analysis and translation application tools in `Pdoc/scripts/`.
 - **Text Expander UI Usability**: Added vertical scrolling support to the shortcut creation and edit dialogs on smaller displays.
+- **Handwriting Recognition Language Selection**: Added option in settings to select a dedicated handwriting recognition language independent of active keyboard language, complete with thread-safe display name caching and spacebar text synchronization.
 
 ### 🐛 Bug Fixes & Stability Improvements
 - **Suggestion Strip Delete Mode Leak (#382)**: Resolved recycled view icon/click listener leaks during rapid suggestion strip updates by tracking and cancelling pending delete mode runnables.
