@@ -64,6 +64,7 @@ object HandwritingLoader {
 
     @JvmStatic
     fun getRecognizer(context: Context): HandwritingRecognizer? {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return null
         if (activeRecognizer != null) return activeRecognizer
         if (!hasPlugin(context)) return null
 
@@ -92,8 +93,10 @@ object HandwritingLoader {
             recognizer.init(context)
             activeRecognizer = recognizer
             return recognizer
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             Log.e("HandwritingLoader", "Failed to load handwriting plugin", e)
+        } catch (e: LinkageError) {
+            Log.e("HandwritingLoader", "Failed to link handwriting plugin (ML Kit incompatible on this OS)", e)
         }
         return null
     }

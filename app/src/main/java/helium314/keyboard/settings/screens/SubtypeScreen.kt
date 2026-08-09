@@ -243,7 +243,11 @@ fun SubtypeScreen(
                 val scope = rememberCoroutineScope()
                 LaunchedEffect(languageTag) {
                     withContext(Dispatchers.IO) {
-                        val ready = recognizer?.isLanguageReady(languageTag) == true
+                        val ready = try {
+                            recognizer?.isLanguageReady(languageTag) == true
+                        } catch (t: Throwable) {
+                            false
+                        }
                         withContext(Dispatchers.Main) {
                             isHandwritingDownloaded = ready
                         }
