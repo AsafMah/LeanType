@@ -378,9 +378,13 @@ public class SettingsValues {
                                 Defaults.PREF_GESTURE_TRAIL_FADEOUT_DURATION);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
+                final boolean moreAutoCorrection = prefs.getBoolean(Settings.PREF_MORE_AUTO_CORRECTION,
+                                Defaults.PREF_MORE_AUTO_CORRECTION);
+                final boolean isUriOrEmail = InputTypeUtils.isUriOrEmailType(mInputAttributes.mInputType);
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions
-                                && prefs.getBoolean(Settings.PREF_ALWAYS_SHOW_SUGGESTIONS,
+                                && (prefs.getBoolean(Settings.PREF_ALWAYS_SHOW_SUGGESTIONS,
                                                 Defaults.PREF_ALWAYS_SHOW_SUGGESTIONS)
+                                                || (moreAutoCorrection && !isUriOrEmail))
                                 && ((inputAttributes.mInputType
                                                 & InputType.TYPE_MASK_VARIATION) != InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
                                                 || !prefs.getBoolean(
