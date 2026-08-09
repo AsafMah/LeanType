@@ -38,17 +38,29 @@ object HandwritingLoader {
         }
     }
 
+    @Volatile
+    private var cachedTag: String? = null
+    @Volatile
+    private var cachedDisplayName: String? = null
+
     @JvmStatic
+    @Synchronized
     fun getEffectiveDisplayName(context: Context, subtypeLanguage: String): String {
         val tag = getEffectiveLanguage(context, subtypeLanguage)
-        return try {
+        if (tag == cachedTag && cachedDisplayName != null) {
+            return cachedDisplayName!!
+        }
+        val displayName = try {
             val locale = java.util.Locale.forLanguageTag(tag)
             val sysLocale = context.resources.configuration.locales[0]
-            val displayName = locale.getDisplayName(sysLocale)
-            if (displayName.isNullOrBlank()) tag else displayName
+            val name = locale.getDisplayName(sysLocale)
+            if (name.isNullOrBlank()) tag else name
         } catch (_: Exception) {
             tag
         }
+        cachedTag = tag
+        cachedDisplayName = displayName
+        return displayName
     }
 
     @JvmStatic
