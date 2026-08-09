@@ -1031,8 +1031,12 @@ private class DictionaryGroup(
     }
 
     fun isBlacklisted(word: String): Boolean {
-        val patterns = compiledBlacklistPatterns
+        val userDict = getSubDict(Dictionary.TYPE_USER)
         val lowercased = word.lowercase(locale)
+        if (userDict != null && (userDict.isInDictionary(word) || userDict.isInDictionary(lowercased))) {
+            return false
+        }
+        val patterns = compiledBlacklistPatterns
         return patterns.any { it.matches(lowercased) }
     }
 

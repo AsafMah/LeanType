@@ -430,6 +430,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     fun pickSuggestionByVisualPosition(positionInStrip: Int): Boolean {
+        disarmDeleteMode()
         if (suggestedWords.isEmpty || suggestedWords.isPunctuationSuggestions) return false
 
         val wordView = wordViews.getOrNull(positionInStrip) ?: return false
@@ -635,6 +636,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     override fun onClick(view: View) {
+        disarmDeleteMode()
         AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, this, HapticEvent.KEY_PRESS)
         val tag = view.tag
         if (tag is ToolbarKey) {
@@ -788,6 +790,16 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
     }
 
+    fun disarmDeleteMode() {
+        for (word in wordViews) {
+            deleteModeRunnables.remove(word)?.let(word::removeCallbacks)
+            word.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
+            word.setOnTouchListener(null)
+            word.setOnClickListener(this)
+        }
+        deleteModeRunnables.clear()
+    }
+
     private fun clear() {
         if (isTranslateLanguageSelectorVisible) hideTranslateLanguageSelector()
         suggestionsStrip.removeAllViews()
@@ -796,13 +808,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             suggestionsStrip.isVisible = true
         dismissMoreSuggestionsPanel()
 
-        for (word in wordViews) {
-            deleteModeRunnables.remove(word)?.let(word::removeCallbacks)
-            word.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
-            word.setOnTouchListener(null)
-            word.setOnClickListener(this)
-        }
-        deleteModeRunnables.clear()
+        disarmDeleteMode()
 
         updateSplitToolbarState()
     }
