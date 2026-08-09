@@ -38,17 +38,17 @@ object HandwritingLoader {
         }
     }
 
+    private class DisplayNameCache(val tag: String, val name: String)
+
     @Volatile
-    private var cachedTag: String? = null
-    @Volatile
-    private var cachedDisplayName: String? = null
+    private var displayNameCache: DisplayNameCache? = null
 
     @JvmStatic
-    @Synchronized
     fun getEffectiveDisplayName(context: Context, subtypeLanguage: String): String {
         val tag = getEffectiveLanguage(context, subtypeLanguage)
-        if (tag == cachedTag && cachedDisplayName != null) {
-            return cachedDisplayName!!
+        val currentCache = displayNameCache
+        if (currentCache != null && currentCache.tag == tag) {
+            return currentCache.name
         }
         val displayName = try {
             val locale = java.util.Locale.forLanguageTag(tag)
@@ -58,8 +58,7 @@ object HandwritingLoader {
         } catch (_: Exception) {
             tag
         }
-        cachedTag = tag
-        cachedDisplayName = displayName
+        displayNameCache = DisplayNameCache(tag, displayName)
         return displayName
     }
 
