@@ -277,3 +277,41 @@ private fun isUpdateAvailable(local: String, remote: String): Boolean {
     }
     return false
 }
+
+@Composable
+fun HandwritingLanguagePreference() {
+    val ctx = LocalContext.current
+    val items = listOf(
+        stringResource(R.string.handwriting_lang_follow_keyboard) to HandwritingLoader.LANG_FOLLOW_KEYBOARD,
+        "English (US)" to "en-US",
+        "English (UK)" to "en-GB",
+        "Malayalam" to "ml-IN",
+        "Hindi" to "hi-IN",
+        "German" to "de-DE",
+        "French" to "fr-FR",
+        "Spanish" to "es-ES",
+        "Spanish (US)" to "es-US",
+        "Arabic" to "ar",
+        "Portuguese" to "pt-PT",
+        "Portuguese (Brazil)" to "pt-BR",
+        "Italian" to "it-IT",
+        "Greek" to "el-GR",
+        "Urdu" to "ur-PK",
+        "Chinese (Simplified)" to "zh-CN",
+        "Japanese" to "ja-JP",
+        "Russian" to "ru-RU"
+    )
+    val setting = remember {
+        helium314.keyboard.settings.Setting(
+            key = HandwritingLoader.PREF_HANDWRITING_LANGUAGE,
+            title = ctx.getString(R.string.pref_handwriting_language_title)
+        ) {
+            ListPreference(
+                setting = it,
+                items = items,
+                default = HandwritingLoader.LANG_FOLLOW_KEYBOARD
+            )
+        }
+    }
+    setting.Preference()
+}

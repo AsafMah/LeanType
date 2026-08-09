@@ -1131,6 +1131,9 @@ New dictionary:
     <string name="libraries_hub_dictionary_title">Main Dictionaries</string>
     <string name="libraries_hub_emoji_title">Emoji Libraries</string>
     <string name="libraries_hub_handwriting_title">Handwriting Input Plugin</string>
+    <string name="pref_handwriting_language_title">Handwriting Language</string>
+    <string name="pref_handwriting_language_summary">Select a dedicated language for handwriting recognition</string>
+    <string name="handwriting_lang_follow_keyboard">Follow keyboard language</string>
     <string name="libraries_hub_dict_guide_title">Dictionary Loading Guide</string>
     <string name="libraries_hub_dict_guide_text">To add a new dictionary:\n1. Obtain a .dict file for your language.\n2. Tap \"Manage Dictionaries\".\n3. Use the plus (+) button to import the file.</string>
     <string name="libraries_status_active">Active</string>

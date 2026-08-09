@@ -42,6 +42,7 @@ import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.RichInputMethodSubtype;
 import helium314.keyboard.latin.WordComposer;
+import helium314.keyboard.latin.handwriting.HandwritingLoader;
 import helium314.keyboard.latin.handwriting.HandwritingView;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.settings.Settings;
@@ -500,11 +501,12 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
         if (mHandwritingView != null) {
             final RichInputMethodSubtype subtype = mRichImm.getCurrentSubtype();
-            final String language = subtype.getLocale().toLanguageTag();
+            final String subtypeLanguage = subtype.getLocale().toLanguageTag();
+            final String effectiveLanguage = HandwritingLoader.getEffectiveLanguage(mLatinIME, subtypeLanguage);
             mHandwritingView.startHandwriting(
                     mLatinIME.getCurrentInputEditorInfo(),
                     mLatinIME.mKeyboardActionListener,
-                    language
+                    effectiveLanguage
             );
             mHandwritingView.setVisibility(View.VISIBLE);
         }
