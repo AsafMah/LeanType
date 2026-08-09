@@ -197,6 +197,8 @@ public class SettingsValues {
         public final boolean mIncognitoModeEnabled;
         public final boolean mLongPressSymbolsForNumpad;
 
+        public final boolean mFoldableMode;
+
         // User-defined colors
         public final Colors mColors;
 
@@ -207,7 +209,8 @@ public class SettingsValues {
                 mLocale = ConfigurationCompatKt.locale(res.getConfiguration());
                 mCurrentKeyboardScript = currentKeyboardScript;
                 mDisplayOrientation = res.getConfiguration().orientation;
-                mScreenProfile = helium314.keyboard.latin.utils.ScreenProfileProvider.getScreenProfile(context, res.getConfiguration());
+                mFoldableMode = prefs.getBoolean(Settings.PREF_FOLDABLE_MODE, false);
+                mScreenProfile = helium314.keyboard.latin.utils.ScreenProfileProvider.getScreenProfile(context, res.getConfiguration(), this);
                 final InputMethodSubtype selectedSubtype = SubtypeSettings.INSTANCE.getSelectedSubtype(prefs);
 
                 // Store the input attributes

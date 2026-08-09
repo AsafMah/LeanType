@@ -201,6 +201,8 @@
 
     <string name="immediate_auto_space">Immediate auto-space</string>
     <string name="immediate_auto_space_summary">Commit space instantly when picking a suggestion to prevent delay on next typed letter</string>
+    <string name="pref_foldable_mode_title">Foldable screen profile</string>
+    <string name="pref_foldable_mode_summary">Enable automatic screen profile detection and split keyboard scaling for foldable devices</string>
 
     <!-- Option to show first-word suggestions when there is no input at the start of a sentence. -->
     <string name="first_word_prediction">First-word suggestions</string>

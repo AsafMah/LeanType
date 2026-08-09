@@ -105,6 +105,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_ENABLE_CLIPBOARD_LISTENER = "enable_clipboard_listener";
     public static final String PREF_ENABLE_SMS_OTP_RECEIVER = "enable_sms_otp_receiver";
     public static final String PREF_ENABLE_APP_SYNC_LISTENER = "enable_app_sync_listener";
+    public static final String PREF_FOLDABLE_MODE = "pref_foldable_mode";
     public static final String PREF_ENABLE_SPLIT_KEYBOARD = "split_keyboard";
     public static final String PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE = "split_keyboard_landscape";
     public static final String PREF_SPLIT_SPACER_SCALE_PREFIX = "split_spacer_scale";
