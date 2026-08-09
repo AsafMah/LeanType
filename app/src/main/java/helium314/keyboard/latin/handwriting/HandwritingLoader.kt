@@ -39,6 +39,19 @@ object HandwritingLoader {
     }
 
     @JvmStatic
+    fun getEffectiveDisplayName(context: Context, subtypeLanguage: String): String {
+        val tag = getEffectiveLanguage(context, subtypeLanguage)
+        return try {
+            val locale = java.util.Locale.forLanguageTag(tag)
+            val sysLocale = context.resources.configuration.locales[0]
+            val displayName = locale.getDisplayName(sysLocale)
+            if (displayName.isNullOrBlank()) tag else displayName
+        } catch (_: Exception) {
+            tag
+        }
+    }
+
+    @JvmStatic
     fun getRecognizer(context: Context): HandwritingRecognizer? {
         if (activeRecognizer != null) return activeRecognizer
         if (!hasPlugin(context)) return null

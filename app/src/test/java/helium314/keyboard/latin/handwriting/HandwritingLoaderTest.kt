@@ -59,4 +59,15 @@ class HandwritingLoaderTest {
         val effective = HandwritingLoader.getEffectiveLanguage(context, "ml-IN")
         org.junit.Assert.assertEquals("en-US", effective)
     }
+
+    @Test
+    fun testGetEffectiveDisplayName() {
+        HandwritingLoader.setHandwritingLanguage(context, "en-US")
+        val name = HandwritingLoader.getEffectiveDisplayName(context, "ml-IN")
+        org.junit.Assert.assertTrue(name.contains("English") || name.contains("en-US"))
+
+        HandwritingLoader.setHandwritingLanguage(context, HandwritingLoader.LANG_FOLLOW_KEYBOARD)
+        val defaultName = HandwritingLoader.getEffectiveDisplayName(context, "ml-IN")
+        org.junit.Assert.assertTrue(defaultName.contains("Malayalam") || defaultName.contains("ml-IN"))
+    }
 }

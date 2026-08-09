@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.preferences
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -278,29 +279,27 @@ private fun isUpdateAvailable(local: String, remote: String): Boolean {
     return false
 }
 
+private fun buildLanguageEntries(context: Context): List<Pair<String, String>> {
+    val sysLocale = context.resources.configuration.locales[0]
+    val locales = java.util.Locale.getAvailableLocales()
+        .filter { !it.language.isNullOrEmpty() && it.toLanguageTag() != "und" }
+        .distinctBy { it.toLanguageTag() }
+        .sortedBy { it.getDisplayName(sysLocale).lowercase(sysLocale) }
+
+    val list = mutableListOf<Pair<String, String>>()
+    list.add(context.getString(R.string.handwriting_lang_follow_keyboard) to HandwritingLoader.LANG_FOLLOW_KEYBOARD)
+    for (loc in locales) {
+        val displayName = loc.getDisplayName(sysLocale)
+        val tag = loc.toLanguageTag()
+        list.add("$displayName ($tag)" to tag)
+    }
+    return list
+}
+
 @Composable
 fun HandwritingLanguagePreference() {
     val ctx = LocalContext.current
-    val items = listOf(
-        stringResource(R.string.handwriting_lang_follow_keyboard) to HandwritingLoader.LANG_FOLLOW_KEYBOARD,
-        "English (US)" to "en-US",
-        "English (UK)" to "en-GB",
-        "Malayalam" to "ml-IN",
-        "Hindi" to "hi-IN",
-        "German" to "de-DE",
-        "French" to "fr-FR",
-        "Spanish" to "es-ES",
-        "Spanish (US)" to "es-US",
-        "Arabic" to "ar",
-        "Portuguese" to "pt-PT",
-        "Portuguese (Brazil)" to "pt-BR",
-        "Italian" to "it-IT",
-        "Greek" to "el-GR",
-        "Urdu" to "ur-PK",
-        "Chinese (Simplified)" to "zh-CN",
-        "Japanese" to "ja-JP",
-        "Russian" to "ru-RU"
-    )
+    val items = remember(ctx) { buildLanguageEntries(ctx) }
     val setting = remember {
         helium314.keyboard.settings.Setting(
             key = HandwritingLoader.PREF_HANDWRITING_LANGUAGE,
@@ -309,7 +308,8 @@ fun HandwritingLanguagePreference() {
             ListPreference(
                 setting = it,
                 items = items,
-                default = HandwritingLoader.LANG_FOLLOW_KEYBOARD
+                default = HandwritingLoader.LANG_FOLLOW_KEYBOARD,
+                icon = R.drawable.ic_settings_languages
             )
         }
     }
