@@ -1068,7 +1068,7 @@ public class LatinIME extends InputMethodService implements
         // can go into the correct mode, so we need to do some housekeeping here.
         final boolean needToCallLoadKeyboardLater;
         final Suggest suggest = mInputLogic.getSuggest();
-        if (!isImeSuppressedByHardwareKeyboard()) {
+        if (!isImeSuppressedByHardwareKeyboard() || currentSettingsValues.mHasHardwareKeyboard) {
             // The app calling setText() has the effect of clearing the composing
             // span, so we should reset our state unconditionally, even if restarting is
             // true.
@@ -1251,7 +1251,7 @@ public class LatinIME extends InputMethodService implements
         // it is then
         // we want to show suggestions anyway.
         final SettingsValues settingsValues = mSettings.getCurrent();
-        if (isInputViewShown()
+        if ((isInputViewShown() || mKeyboardSwitcher.isShowingStripContainer())
                 && mInputLogic.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
                         composingSpanStart, composingSpanEnd, settingsValues)) {
             // we don't want to update a manually set shift state if selection changed
@@ -1377,31 +1377,21 @@ public class LatinIME extends InputMethodService implements
             return;
         }
         final int inputHeight = mInputView.getHeight();
-        if (isImeSuppressedByHardwareKeyboard() && !visibleKeyboardView.isShown()) {
-            // If there is a hardware keyboard and a visible software keyboard view has been
-            // hidden,
-            // no visual element will be shown on the screen.
-            // for some reason setting contentTopInsets and visibleTopInsets broke somewhere
-            // along the
-            // way from OpenBoard to HeliBoard (GH-702, GH-1455), but not setting anything
-            // seems to work
-            mInsetsUpdater.setInsets(outInsets);
-            return;
-        }
+        final int keyboardHeight = visibleKeyboardView.isShown() ? visibleKeyboardView.getHeight() : 0;
         final int stripHeight = mKeyboardSwitcher.isShowingStripContainer()
                 ? mKeyboardSwitcher.getStripContainer().getHeight()
                 : 0;
-        final int visibleTopY = inputHeight - visibleKeyboardView.getHeight() - stripHeight;
+        final int visibleTopY = inputHeight - keyboardHeight - stripHeight;
 
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setMoreSuggestionsHeight(visibleTopY);
         }
 
-        // Need to set expanded touchable region only if a keyboard view is being shown.
-        if (visibleKeyboardView.isShown()) {
+        // Need to set expanded touchable region if keyboard view or strip container is being shown.
+        if (visibleKeyboardView.isShown() || mKeyboardSwitcher.isShowingStripContainer()) {
             final int touchLeft = 0;
             final int touchTop = mKeyboardSwitcher.isShowingPopupKeysPanel() ? 0 : visibleTopY;
-            final int touchRight = visibleKeyboardView.getWidth();
+            final int touchRight = mInputView.getWidth();
             final int touchBottom = inputHeight
                     // Extend touchable region below the keyboard.
                     + EXTENDED_TOUCHABLE_REGION_HEIGHT;
@@ -1439,6 +1429,10 @@ public class LatinIME extends InputMethodService implements
     @Override
     public boolean onEvaluateInputViewShown() {
         if (mIsExecutingStartShowingInputView) {
+            return true;
+        }
+        final SettingsValues settingsValues = mSettings.getCurrent();
+        if (settingsValues != null && settingsValues.mHasHardwareKeyboard && settingsValues.mShowToolbarOnly) {
             return true;
         }
         return super.onEvaluateInputViewShown();
@@ -1792,11 +1786,10 @@ public class LatinIME extends InputMethodService implements
     private void setSuggestedWords(final SuggestedWords suggestedWords) {
         final SettingsValues currentSettingsValues = mSettings.getCurrent();
         mInputLogic.setSuggestedWords(suggestedWords);
-        // TODO: Modify this when we support suggestions with hard keyboard
         if (!hasSuggestionStripView()) {
             return;
         }
-        if (!onEvaluateInputViewShown()) {
+        if (!onEvaluateInputViewShown() && !currentSettingsValues.mHasHardwareKeyboard) {
             return;
         }
 

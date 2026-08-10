@@ -50,6 +50,7 @@ public class SettingsValues {
         public final Locale mLocale;
         public final String mCurrentKeyboardScript;
         public final boolean mHasHardwareKeyboard;
+        public final boolean mShowToolbarOnly;
         public final String mPhysicalKeyboardSuggestionShortcuts;
         public final int mDisplayOrientation;
         public final helium314.keyboard.latin.utils.ScreenProfile mScreenProfile;
@@ -338,6 +339,7 @@ public class SettingsValues {
                                 Defaults.PREF_COMPRESS_SCREENSHOTS);
                 mDoubleSpacePeriodTimeout = 1100; // ms
                 mHasHardwareKeyboard = Settings.readHasHardwareKeyboard(res.getConfiguration());
+                mShowToolbarOnly = mHasHardwareKeyboard && prefs.getBoolean(Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD, Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD);
                 final boolean isLandscape = mDisplayOrientation == Configuration.ORIENTATION_LANDSCAPE;
                 final float displayWidthDp = TypedValueCompat.pxToDp(res.getDisplayMetrics().widthPixels,
                                 res.getDisplayMetrics());

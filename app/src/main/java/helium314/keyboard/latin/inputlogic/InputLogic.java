@@ -1530,6 +1530,9 @@ public final class InputLogic {
                 sendDownUpKeyEvent(codePoint - '0' + KeyEvent.KEYCODE_0);
             } else {
                 mConnection.commitCodePoint(codePoint);
+                if (settingsValues.needsToLookupSuggestions() && settingsValues.isWordCodePoint(codePoint)) {
+                    inputTransaction.setRequiresUpdateSuggestions();
+                }
             }
             if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
                     && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
