@@ -322,6 +322,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
     private var editEntry: ClipboardHistoryEntry? = null
     private var editText = StringBuilder()
     private var editCursorPos = 0
+    private var deleteSwipeStartPos = -1
+    private var currentDeleteSwipePos = -1
     private lateinit var editTextView: TextView
 
     val inEditMode: Boolean
@@ -353,6 +355,23 @@ class ClipboardHistoryView @JvmOverloads constructor(
             setPadding(32, 0, 0, 0)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.START
+            setOnTouchListener { _, event ->
+                if (event.action == android.view.MotionEvent.ACTION_UP) {
+                    val layout = layout
+                    if (layout != null) {
+                        val x = event.x - totalPaddingLeft + scrollX
+                        val y = event.y - totalPaddingTop + scrollY
+                        val line = layout.getLineForVertical(y.toInt().coerceIn(0, (layout.height - 1).coerceAtLeast(0)))
+                        var offset = layout.getOffsetForHorizontal(line, x)
+                        if (offset > editCursorPos) {
+                            offset = (offset - 1).coerceAtLeast(0)
+                        }
+                        editCursorPos = offset.coerceIn(0, editText.length)
+                        updateEditDisplay()
+                    }
+                }
+                true
+            }
         }
         clipboardStrip.addView(editTextView)
 
@@ -403,6 +422,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
         }
 
         editEntry = null
+        deleteSwipeStartPos = -1
+        currentDeleteSwipePos = -1
 
         // Restore toolbar
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
@@ -420,12 +441,36 @@ class ClipboardHistoryView @JvmOverloads constructor(
     }
 
     private fun updateEditDisplay() {
+        updateEditDisplayWithSelection(-1, -1)
+    }
+
+    private fun updateEditDisplayWithSelection(selStart: Int, selEnd: Int) {
         if (!this::editTextView.isInitialized) return
-        val sb = android.text.SpannableStringBuilder(editText)
-        if (editCursorPos in 0..sb.length) {
-            sb.insert(editCursorPos, "\u2502")
+        val colors = Settings.getValues().mColors
+        val textColor = colors.get(ColorType.KEY_TEXT)
+
+        if (selStart >= 0 && selEnd > selStart && selEnd <= editText.length) {
+            val sb = android.text.SpannableStringBuilder(editText)
+            val highlightColor = (textColor and 0x00FFFFFF) or 0x50000000
+            sb.setSpan(
+                android.text.style.BackgroundColorSpan(highlightColor),
+                selStart,
+                selEnd,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            editTextView.text = sb
+        } else {
+            val sb = android.text.SpannableStringBuilder(editText)
+            val pos = editCursorPos.coerceIn(0, sb.length)
+            sb.insert(pos, "|")
+            sb.setSpan(
+                android.text.style.ForegroundColorSpan(textColor),
+                pos,
+                pos + 1,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            editTextView.text = sb
         }
-        editTextView.text = sb
     }
 
     // Intercept Input - Implements KeyboardActionListener
@@ -559,12 +604,52 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onCancelInput() { keyboardActionListener.onCancelInput() }
     override fun onFinishSlidingInput() { keyboardActionListener.onFinishSlidingInput() }
     override fun onCustomRequest(requestCode: Int): Boolean { return keyboardActionListener.onCustomRequest(requestCode) }
-    override fun onHorizontalSpaceSwipe(steps: Int): Boolean { return keyboardActionListener.onHorizontalSpaceSwipe(steps) }
+    override fun onHorizontalSpaceSwipe(steps: Int): Boolean {
+        if (inEditMode) {
+            val newPos = (editCursorPos + steps).coerceIn(0, editText.length)
+            if (newPos != editCursorPos) {
+                editCursorPos = newPos
+                updateEditDisplay()
+            }
+            return true
+        }
+        return keyboardActionListener.onHorizontalSpaceSwipe(steps)
+    }
     override fun onVerticalSpaceSwipe(steps: Int): Boolean { return keyboardActionListener.onVerticalSpaceSwipe(steps) }
     override fun onEndSpaceSwipe() { keyboardActionListener.onEndSpaceSwipe() }
     override fun toggleNumpad(w: Boolean, f: Boolean): Boolean { return keyboardActionListener.toggleNumpad(w, f) }
-    override fun onMoveDeletePointer(steps: Int) { keyboardActionListener.onMoveDeletePointer(steps) }
-    override fun onUpWithDeletePointerActive() { keyboardActionListener.onUpWithDeletePointerActive() }
+    override fun onMoveDeletePointer(steps: Int) {
+        if (inEditMode) {
+            if (deleteSwipeStartPos == -1) {
+                deleteSwipeStartPos = editCursorPos
+                currentDeleteSwipePos = editCursorPos
+            }
+            currentDeleteSwipePos = (currentDeleteSwipePos + steps).coerceIn(0, editText.length)
+            updateEditDisplayWithSelection(
+                minOf(deleteSwipeStartPos, currentDeleteSwipePos),
+                maxOf(deleteSwipeStartPos, currentDeleteSwipePos)
+            )
+            return
+        }
+        keyboardActionListener.onMoveDeletePointer(steps)
+    }
+    override fun onUpWithDeletePointerActive() {
+        if (inEditMode) {
+            if (deleteSwipeStartPos != -1 && currentDeleteSwipePos != -1) {
+                val start = minOf(deleteSwipeStartPos, currentDeleteSwipePos)
+                val end = maxOf(deleteSwipeStartPos, currentDeleteSwipePos)
+                if (start < end) {
+                    editText.delete(start, end)
+                    editCursorPos = start
+                }
+            }
+            deleteSwipeStartPos = -1
+            currentDeleteSwipePos = -1
+            updateEditDisplay()
+            return
+        }
+        keyboardActionListener.onUpWithDeletePointerActive()
+    }
     override fun resetMetaState() { keyboardActionListener.resetMetaState() }
     
     private fun setupClipKey(params: KeyDrawParams) {
