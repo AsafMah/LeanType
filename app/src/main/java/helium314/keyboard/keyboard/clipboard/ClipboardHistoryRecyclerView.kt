@@ -77,8 +77,11 @@ class ClipboardHistoryRecyclerView @JvmOverloads constructor(
     }).attachToRecyclerView(this)
 
     private fun showEditDialog(entry: ClipboardHistoryEntry) {
-        val clipboardHistoryView = parent as? ClipboardHistoryView ?: return
-        clipboardHistoryView.startEditMode(entry)
+        var view = parent
+        while (view != null && view !is ClipboardHistoryView) {
+            view = (view as? android.view.View)?.parent
+        }
+        (view as? ClipboardHistoryView)?.startEditMode(entry)
     }
 
     private fun showUndoBar(entry: ClipboardHistoryEntry) {
