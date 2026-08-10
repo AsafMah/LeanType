@@ -474,7 +474,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mEmojiTabStripView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(View.GONE);
         mStripContainer.setVisibility(getSecondaryStripVisibility());
-        mClipboardStripScrollView.post(() -> mClipboardStripScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT));
+        mClipboardStripScrollView.post(() -> mClipboardStripScrollView.scrollTo(0, 0));
         Settings.getValues().mColors.setBackground(mClipboardStripScrollView, ColorType.STRIP_BACKGROUND);
         mClipboardStripScrollView.setVisibility(View.VISIBLE);
         mEmojiPalettesView.setVisibility(View.GONE);

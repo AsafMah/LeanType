@@ -203,6 +203,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         if (clipboardStripScrollView != null) {
             colors.setBackground(clipboardStripScrollView, ColorType.STRIP_BACKGROUND)
         }
+        clipboardStrip.removeAllViews()
         toolbarKeys.forEach {
             clipboardStrip.addView(it)
             val tag = it.tag
@@ -911,22 +912,25 @@ class ClipboardHistoryView @JvmOverloads constructor(
             ?: clipboardStrip.width.takeIf { it > 0 }
             ?: clipboardStrip.measuredWidth.takeIf { it > 0 }
             ?: context.resources.displayMetrics.widthPixels
+        val minKeyWidth = context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
+        val minTotalWidth = count * minKeyWidth
+
+        val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
+        val useEqualSpacing = isAutoSpan && containerWidth > 0 && minTotalWidth <= containerWidth
+
+        clipboardStrip.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else Gravity.START
+
         val singleKeyWidth = kotlin.math.min(
-            context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
+            minKeyWidth,
             context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
         )
 
-        val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
-        val minKeySize = (28 * context.resources.displayMetrics.density).toInt()
-        val canSpan = containerWidth > 0 && (containerWidth / count) >= minKeySize
-        val useEqualSpacing = isAutoSpan && canSpan
-
-        clipboardStrip.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else Gravity.END
-
         val toolbarKeyLayoutParams = LinearLayout.LayoutParams(
             singleKeyWidth,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
+            singleKeyWidth
+        ).apply {
+            gravity = Gravity.CENTER_VERTICAL
+        }
 
         for (i in 0 until count) {
             val child = clipboardStrip.getChildAt(i) ?: continue

@@ -1123,11 +1123,9 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
         val isSplit = Settings.getValues().mSplitToolbar
         val isToolbarVisible = toolbarContainer.isVisible && (isExpanded || isSplit)
-        val minKeySize = (28 * resources.displayMetrics.density).toInt()
-        val canSpan = containerWidth > 0 && (containerWidth / count) >= minKeySize
-        val useEqualSpacing = isAutoSpan && isToolbarVisible && (canSpan || isSplit)
+        val useEqualSpacing = isAutoSpan && isToolbarVisible && containerWidth > 0 && (totalKeysWidth <= containerWidth || isSplit)
 
-        (toolbar as? LinearLayout)?.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else Gravity.END
+        (toolbar as? LinearLayout)?.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else Gravity.START
 
         for (i in 0 until count) {
             val child = toolbar.getChildAt(i) ?: continue
