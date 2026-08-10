@@ -3,7 +3,6 @@
 - Added inline search bar for list dialogs and handwriting language selection.
 - Restored foldable screen profile toggle and fixed settings LazyColumn performance.
 - Aligned toolbar & clipboard key auto-spanning logic.
-- Fixed suggestion strip word truncation (e.g. physics cropped to physi).
 - Exempted Emoji and Clipboard keyboards from physical keyboard suppression.
 - Fixed handwriting engine crash & transparent canvas background.
 - Passed full unit test suite with 0 regressions across all IME modules.

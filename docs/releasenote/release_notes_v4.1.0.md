@@ -11,7 +11,6 @@
 ### 🐛 Bug Fixes & Stability Improvements
 - **Numeric Sequence Single-Click Backspace Fix**: Resolved single backspace deleting entire typed numeric sequences (e.g. `12345`) by fixing emoji sequence boundary detection (`StringUtils.kt`) for ASCII digits (`'0'..'9'`), decoupling batch-mode swipe deletion from single-character deletion in `InputLogic.java`, and adding numeric string guards against improper autocorrect reverts.
 - **Toolbar & Clipboard Key Auto-Spanning**: Unified key auto-spanning (`mAutoSpanToolbarKeys`) across suggestion and clipboard toolbars; equal-weight spanning triggers when keys fit container width, falling back to 36dp x 36dp square keys starting at `Gravity.START` with smooth horizontal scrolling when keys exceed width.
-- **Suggestion Strip Truncation Fix**: Resolved suggestion word cropping (e.g. `"physics"` cut to `"physi"`) by setting `layout_width="0dp"` with `layout_weight="1"` on `suggestions_strip` so container width is computed before word width measurement.
 - **Physical Keyboard Toolbar Exemption**: Exempted Emoji and Clipboard views from physical keyboard suppression so toolbar & emoji panels stay visible when a hardware keyboard is connected.
 - **Handwriting Engine & Canvas Fixes**: Handled `CLEAR_HANDWRITING` keycodes in `InputLogic` to eliminate "Unknown event" crashes, and set transparent canvas background to eliminate duplicate background image shifting.
 - **Unit Test Suite Verification**: All 207 unit tests pass cleanly with zero regressions.
