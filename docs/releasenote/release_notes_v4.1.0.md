@@ -4,35 +4,17 @@
 ## 🚀 What's New in v4.1.0
 
 ### ✨ New Features & Enhancements
-- **Inline Clipboard Item Editing**:
-  - Added right-swipe gesture on clipboard history items to trigger inline edit mode directly within the toolbar strip (`[Text│] [Save] [✕]`).
-  - Added tap-to-position cursor placement on the editing buffer text.
-  - Routed spacebar and delete key horizontal swipe gestures directly to the clipboard edit buffer for intuitive text manipulation.
-- **Settings List & Handwriting Search**:
-  - Added inline search bar option for list preference dialogs and handwriting recognition language selection dialogs.
-- **Foldable Mode & Settings Performance**:
-  - Restored foldable screen profile toggle in Appearance settings.
-  - Fixed `LazyColumn` key collision sluggishness across settings screens.
+- **Inline Clipboard History Item Editing**: Right-swipe any clipboard item to edit text directly inside the toolbar strip (`[Text│] [Save] [✕]`), with precise tap-to-position cursor placement and spacebar/delete swipe gesture routing within the edit buffer.
+- **Searchable Preference & Language Dialogs**: Added inline search bar filter to list preference dialogs and handwriting language selection.
+- **Foldable Mode & Settings Performance**: Restored foldable screen profile toggle in Appearance settings and fixed `LazyColumn` key collision sluggishness.
 
 ### 🐛 Bug Fixes & Stability Improvements
-- **Numeric Sequence Single-Click Backspace Fix**:
-  - Resolved an issue where pressing backspace once deleted an entire typed numeric sequence (e.g., `12345`) instead of a single digit.
-  - Fixed emoji sequence boundary detection in `StringUtils.kt` (`isEmojiSequenceEnd`) so ASCII digits (`'0'..'9'`), `'#'`, and `'*'` are not misclassified as emoji sequence ends.
-  - Decoupled batch mode gesture typing deletion from single-character backspace in `InputLogic.java`.
-  - Added numeric string guards (`!TextUtils.isDigitsOnly`) to prevent autocorrect revert (`revertCommit`) from applying to numeric sequences.
-- **Toolbar & Clipboard Auto-Spanning**:
-  - Aligned auto-spanning behavior across normal toolbar and clipboard toolbar (`mAutoSpanToolbarKeys`).
-  - Equal-weight auto-spanning triggers when keys fit within available container width (`totalKeysWidth <= containerWidth`).
-  - Automatically falls back to standard 36dp x 36dp square keys starting at `Gravity.START` with smooth horizontal scrolling when keys cover or exceed container width.
-- **Suggestion Strip Word Truncation Fix**:
-  - Resolved suggestion word cropping (e.g., `"physics"` truncated to `"physi"`) by setting `layout_width="0dp"` with `layout_weight="1"` on `suggestions_strip` so layout weight pass computes true container width prior to word measurement pass.
-- **Physical Keyboard Toolbar Exemption**:
-  - Exempted Emoji and Clipboard keyboards from physical keyboard suppression so toolbar and emoji panels remain fully visible and usable when a physical keyboard is attached.
-- **Handwriting Engine & Canvas Fixes**:
-  - Handled `CLEAR_HANDWRITING` and handwriting UI keycodes in `InputLogic.handleFunctionalEvent` to prevent "Unknown event" crashes.
-  - Set transparent background on handwriting canvas to eliminate duplicate shifting background images.
-- **Unit Test Suite Verification**:
-  - All 207 unit tests pass cleanly with zero regressions.
+- **Numeric Sequence Single-Click Backspace Fix**: Resolved single backspace deleting entire typed numeric sequences (e.g. `12345`) by fixing emoji sequence boundary detection (`StringUtils.kt`) for ASCII digits (`'0'..'9'`), decoupling batch-mode swipe deletion from single-character deletion in `InputLogic.java`, and adding numeric string guards against improper autocorrect reverts.
+- **Toolbar & Clipboard Key Auto-Spanning**: Unified key auto-spanning (`mAutoSpanToolbarKeys`) across suggestion and clipboard toolbars; equal-weight spanning triggers when keys fit container width, falling back to 36dp x 36dp square keys starting at `Gravity.START` with smooth horizontal scrolling when keys exceed width.
+- **Suggestion Strip Truncation Fix**: Resolved suggestion word cropping (e.g. `"physics"` cut to `"physi"`) by setting `layout_width="0dp"` with `layout_weight="1"` on `suggestions_strip` so container width is computed before word width measurement.
+- **Physical Keyboard Toolbar Exemption**: Exempted Emoji and Clipboard views from physical keyboard suppression so toolbar & emoji panels stay visible when a hardware keyboard is connected.
+- **Handwriting Engine & Canvas Fixes**: Handled `CLEAR_HANDWRITING` keycodes in `InputLogic` to eliminate "Unknown event" crashes, and set transparent canvas background to eliminate duplicate background image shifting.
+- **Unit Test Suite Verification**: All 207 unit tests pass cleanly with zero regressions.
 
 ## 📦 Downloads (Choose Your Flavor)
 
