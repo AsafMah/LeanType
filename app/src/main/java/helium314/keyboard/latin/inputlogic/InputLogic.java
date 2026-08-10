@@ -1851,6 +1851,7 @@ public final class InputLogic {
             // false.
         }
         if (mWordComposer.isComposingWord()) {
+            final boolean wasBatchMode = mWordComposer.isBatchMode();
             if (mWordComposer.isBatchMode()) {
                 final String rejectedSuggestion = mWordComposer.getTypedWord();
                 mWordComposer.reset();
@@ -1867,7 +1868,12 @@ public final class InputLogic {
             if (mWordComposer.isComposingWord()) {
                 setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
             } else {
-                mConnection.commitText("", 1);
+                if (wasBatchMode) {
+                    mConnection.commitText("", 1);
+                } else {
+                    mConnection.finishComposingText();
+                    mConnection.deleteTextBeforeCursor(1);
+                }
             }
             updateInlineEmojiSearch();
             inputTransaction.setRequiresUpdateSuggestions();
@@ -1877,7 +1883,8 @@ public final class InputLogic {
                 mJustRevertedExpandedShortcut = null;
             }
             if (mLastComposedWord.canRevertCommit()
-                    && inputTransaction.getSettingsValues().mBackspaceRevertsAutocorrect) {
+                    && inputTransaction.getSettingsValues().mBackspaceRevertsAutocorrect
+                    && !TextUtils.isDigitsOnly(mLastComposedWord.mCommittedWord)) {
                 final String lastComposedWord = mLastComposedWord.mTypedWord;
                 revertCommit(inputTransaction);
                 StatsUtils.onRevertAutoCorrect();
@@ -2542,11 +2549,13 @@ public final class InputLogic {
                 }
             }
         }
-        final int[] codePoints = StringUtils.toCodePointArray(typedWordString);
-        mWordComposer.setComposingWord(codePoints, mLatinIME.getCoordinatesForCurrentKeyboard(codePoints));
-        mWordComposer.setCursorPositionWithinWord(typedWordString.codePointCount(0, numberOfCharsInWordBeforeCursor));
-        mConnection.setComposingRegion(expectedCursorPosition - numberOfCharsInWordBeforeCursor,
-                expectedCursorPosition + range.getNumberOfCharsInWordAfterCursor());
+        if (!TextUtils.isDigitsOnly(typedWordString)) {
+            final int[] codePoints = StringUtils.toCodePointArray(typedWordString);
+            mWordComposer.setComposingWord(codePoints, mLatinIME.getCoordinatesForCurrentKeyboard(codePoints));
+            mWordComposer.setCursorPositionWithinWord(typedWordString.codePointCount(0, numberOfCharsInWordBeforeCursor));
+            mConnection.setComposingRegion(expectedCursorPosition - numberOfCharsInWordBeforeCursor,
+                    expectedCursorPosition + range.getNumberOfCharsInWordAfterCursor());
+        }
         if (suggestions.size() <= 1) {
             // If there weren't any suggestion spans on this word, suggestions#size() will
             // be 1

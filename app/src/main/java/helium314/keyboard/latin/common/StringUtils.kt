@@ -68,6 +68,9 @@ private fun isEmojiSequenceEnd(text: String, lastCodepoint: Int): Boolean {
         val prevCp = text.codePointBefore(text.length - len)
         return mightBeEmoji(prevCp)
     }
+    if (lastCodepoint in '0'.code..'9'.code || lastCodepoint == '#'.code || lastCodepoint == '*'.code) {
+        return false
+    }
     return mightBeEmoji(lastCodepoint)
 }
 
