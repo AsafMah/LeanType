@@ -376,17 +376,11 @@ class ClipboardHistoryView @JvmOverloads constructor(
         }
         clipboardStrip.addView(editTextView)
 
-        val saveButton = TextView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
-            gravity = Gravity.CENTER
-            textSize = 13f
-            setTextColor(colors.get(ColorType.KEY_TEXT))
-            text = context.getString(R.string.save)
-            setPadding(24, 0, 24, 0)
+        val saveButton = ImageButton(context).apply {
+            layoutParams = LinearLayout.LayoutParams(btnWidth, LinearLayout.LayoutParams.MATCH_PARENT)
+            setImageResource(R.drawable.ic_setup_check)
             setBackgroundResource(R.drawable.toolbar_key_background)
+            setColorFilter(colors.get(ColorType.KEY_ICON))
             colors.setColor(background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
             setOnClickListener { stopEditMode(save = true) }
         }

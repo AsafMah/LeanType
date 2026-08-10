@@ -1,5 +1,5 @@
 ### 💖 Support Our Work
-* We are committed to making our apps as powerful and polished as possible. As an entirely community-funded project, we rely on your support to keep going, please consider becoming a [sponsor](https://github.com/sponsors/LeanBitLab). A huge thank you to all our current supporters!
+As an open-source, community-funded project, we operate on a very limited budget and have little time for marketing. If LeanType helps you daily, please consider becoming a [sponsor](https://github.com/sponsors/LeanBitLab). Even if you can't contribute financially, sharing LeanType with your friends, family, or on social media makes a world of difference to help our project grow. Thank you for your support!
 
 ## 🚀 What's New in v4.1.0
 
