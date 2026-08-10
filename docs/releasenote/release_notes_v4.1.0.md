@@ -4,7 +4,7 @@ As an open-source, community-funded project, we operate on a very limited budget
 ## 🚀 What's New in v4.1.0
 
 ### ✨ New Features & Enhancements
-- **Inline Clipboard History Item Editing**: Right-swipe any clipboard item to edit text directly inside the toolbar strip (`[Text│] [Save] [✕]`), with precise tap-to-position cursor placement and spacebar/delete swipe gesture routing within the edit buffer.
+- **Inline Clipboard History Item Editing**: Right-swipe any clipboard item to edit text directly inside the toolbar strip (`[Text│] [✔] [✕]`), with precise tap-to-position cursor placement and spacebar/delete swipe gesture routing within the edit buffer.
 - **Searchable Preference & Language Dialogs**: Added inline search bar filter to list preference dialogs and handwriting language selection.
 - **Foldable Mode & Settings Performance**: Restored foldable screen profile toggle in Appearance settings and fixed `LazyColumn` key collision sluggishness.
 
