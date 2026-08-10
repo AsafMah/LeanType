@@ -364,6 +364,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     public boolean isImeSuppressedByHardwareKeyboard(
             @NonNull final SettingsValues settingsValues,
             @NonNull final KeyboardSwitchState toggleState) {
+        if (toggleState == KeyboardSwitchState.EMOJI || toggleState == KeyboardSwitchState.CLIPBOARD) {
+            return false;
+        }
         return settingsValues.mHasHardwareKeyboard && (toggleState == KeyboardSwitchState.HIDDEN || settingsValues.mShowToolbarOnly);
     }
 
