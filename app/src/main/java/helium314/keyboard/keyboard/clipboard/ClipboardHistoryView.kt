@@ -915,10 +915,11 @@ class ClipboardHistoryView @JvmOverloads constructor(
             context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
             context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
         )
-        val totalKeysWidth = count * singleKeyWidth
 
         val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
-        val useEqualSpacing = isAutoSpan && containerWidth > 0 && totalKeysWidth <= containerWidth
+        val minKeySize = (28 * context.resources.displayMetrics.density).toInt()
+        val canSpan = containerWidth > 0 && (containerWidth / count) >= minKeySize
+        val useEqualSpacing = isAutoSpan && canSpan
 
         clipboardStrip.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else Gravity.END
 
