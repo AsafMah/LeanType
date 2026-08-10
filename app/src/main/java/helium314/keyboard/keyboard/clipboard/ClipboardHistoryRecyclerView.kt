@@ -77,47 +77,8 @@ class ClipboardHistoryRecyclerView @JvmOverloads constructor(
     }).attachToRecyclerView(this)
 
     private fun showEditDialog(entry: ClipboardHistoryEntry) {
-        val themeContext = helium314.keyboard.latin.utils.getPlatformDialogThemeContext(context)
-        val builder = android.app.AlertDialog.Builder(themeContext)
-        builder.setTitle(context.getString(R.string.edit))
-
-        val editText = android.widget.EditText(themeContext).apply {
-            setText(entry.text)
-            setSelection(text.length)
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            maxLines = 8
-            gravity = android.view.Gravity.TOP or android.view.Gravity.START
-        }
-
-        val container = android.widget.FrameLayout(themeContext).apply {
-            val paddingHorizontal = (20 * resources.displayMetrics.density).toInt()
-            val paddingVertical = (12 * resources.displayMetrics.density).toInt()
-            setPadding(paddingHorizontal, paddingVertical, paddingHorizontal, paddingVertical)
-            addView(editText)
-        }
-        builder.setView(container)
-
-        builder.setPositiveButton(R.string.save) { dialog, _ ->
-            val newText = editText.text?.toString()?.trim() ?: ""
-            if (newText.isNotEmpty() && newText != entry.text) {
-                historyManager?.updateClipText(entry.id, newText)
-            }
-            dialog.dismiss()
-        }
-        builder.setNegativeButton(android.R.string.cancel) { dialog, _ ->
-            dialog.dismiss()
-        }
-
-        val dialog = builder.create()
-        val window = dialog.window
-        if (window != null) {
-            val lp = window.attributes
-            lp.token = windowToken
-            lp.type = android.view.WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
-            window.attributes = lp
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
-        }
-        dialog.show()
+        val clipboardHistoryView = parent as? ClipboardHistoryView ?: return
+        clipboardHistoryView.startEditMode(entry)
     }
 
     private fun showUndoBar(entry: ClipboardHistoryEntry) {

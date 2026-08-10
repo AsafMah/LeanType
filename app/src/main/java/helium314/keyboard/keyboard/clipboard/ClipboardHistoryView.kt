@@ -8,6 +8,7 @@ import android.content.SharedPreferences
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
+import android.widget.ScrollView
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -27,6 +28,7 @@ import helium314.keyboard.keyboard.internal.KeyVisualAttributes
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.ClipboardHistoryManager
+import helium314.keyboard.latin.ClipboardHistoryEntry
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.ColorType
@@ -317,11 +319,189 @@ class ClipboardHistoryView @JvmOverloads constructor(
         }
     }
 
+    // --- Edit Mode ---
+    private var editEntry: ClipboardHistoryEntry? = null
+    private var editText = StringBuilder()
+    private var editCursorPos = 0
+    private lateinit var editTextView: TextView
+    private lateinit var editScrollView: ScrollView
+
+    val inEditMode: Boolean
+        get() {
+            val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+            return editEntry != null && this::editTextView.isInitialized && editTextView.parent is ScrollView
+        }
+
+    fun startEditMode(entry: ClipboardHistoryEntry) {
+        // Stop search mode first if active
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if (inSearchMode) {
+            stopSearchMode()
+        }
+
+        editEntry = entry
+        editText = StringBuilder(entry.text)
+        editCursorPos = editText.length
+
+        // 1. Replace toolbar with edit strip: [Edit label] [Save] [Cancel]
+        clipboardStrip.removeAllViews()
+
+        val colors = Settings.getValues().mColors
+
+        val editLabel = TextView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            textSize = 14f
+            setTextColor(colors.get(ColorType.KEY_TEXT))
+            text = context.getString(R.string.edit)
+            setPadding(32, 0, 0, 0)
+        }
+        clipboardStrip.addView(editLabel)
+
+        val btnWidth = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
+
+        val saveButton = TextView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            gravity = Gravity.CENTER
+            textSize = 13f
+            setTextColor(colors.get(ColorType.KEY_TEXT))
+            text = context.getString(R.string.save)
+            setPadding(24, 0, 24, 0)
+            setBackgroundResource(R.drawable.toolbar_key_background)
+            colors.setColor(background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
+            setOnClickListener { stopEditMode(save = true) }
+        }
+        clipboardStrip.addView(saveButton)
+
+        val cancelButton = ImageButton(context).apply {
+            layoutParams = LinearLayout.LayoutParams(btnWidth, LinearLayout.LayoutParams.MATCH_PARENT)
+            setImageResource(R.drawable.ic_close)
+            setBackgroundResource(R.drawable.toolbar_key_background)
+            setColorFilter(colors.get(ColorType.KEY_ICON))
+            colors.setColor(background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
+            setOnClickListener { stopEditMode(save = false) }
+        }
+        clipboardStrip.addView(cancelButton)
+
+        // 2. Hide list and empty view, show edit text view
+        clipboardRecyclerView.visibility = View.GONE
+        emptyViewContainer.visibility = View.GONE
+
+        // Create a scrollable text view for the edit content
+        editTextView = TextView(context).apply {
+            val padPx = (12 * resources.displayMetrics.density).toInt()
+            setPadding(padPx, padPx, padPx, padPx)
+            textSize = 16f
+            setTextColor(colors.get(ColorType.KEY_TEXT))
+            setTextIsSelectable(false)
+        }
+        editScrollView = ScrollView(context).apply {
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+            addView(editTextView)
+        }
+        // Insert the scroll view into the FrameLayout that contains the list
+        val listParent = clipboardRecyclerView.parent as? android.view.ViewGroup
+        listParent?.addView(editScrollView)
+
+        updateEditDisplay()
+
+        // 3. Switch bottom row to alphabet keyboard
+        setBottomRowLayout(KeyboardId.ELEMENT_ALPHABET)
+    }
+
+    private fun stopEditMode(save: Boolean) {
+        val entry = editEntry ?: return
+
+        if (save) {
+            val newText = editText.toString().trim()
+            if (newText.isNotEmpty() && newText != entry.text) {
+                clipboardHistoryManager.updateClipText(entry.id, newText)
+            }
+        }
+
+        editEntry = null
+
+        // Remove the edit scroll view
+        val listParent = clipboardRecyclerView.parent as? android.view.ViewGroup
+        if (this::editScrollView.isInitialized) {
+            listParent?.removeView(editScrollView)
+        }
+
+        // Restore toolbar
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        clipboardStrip.removeAllViews()
+        toolbarKeys.forEach { clipboardStrip.addView(it) }
+        applyClipboardToolbarKeyLayoutParams()
+        clipboardStrip.post { applyClipboardToolbarKeyLayoutParams() }
+
+        // Switch back to clipboard bottom row
+        setBottomRowLayout(KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW)
+
+        // Show list again
+        clipboardRecyclerView.visibility = View.VISIBLE
+        updateEmptyView(clipboardAdapter.isFiltering)
+    }
+
+    private fun updateEditDisplay() {
+        if (!this::editTextView.isInitialized) return
+        val sb = android.text.SpannableStringBuilder(editText)
+        // Show a cursor indicator
+        if (editCursorPos >= 0 && editCursorPos <= sb.length) {
+            sb.insert(editCursorPos, "\u2502") // vertical bar as cursor
+        }
+        editTextView.text = sb
+        // Scroll to bottom if cursor is at end
+        if (this::editScrollView.isInitialized) {
+            editScrollView.post { editScrollView.fullScroll(View.FOCUS_DOWN) }
+        }
+    }
+
     // Intercept Input - Implements KeyboardActionListener
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
         
+        // Edit mode intercept
+        if (inEditMode) {
+            val char = if (primaryCode > 0) primaryCode.toChar() else null
+
+            if (primaryCode == KeyCode.DELETE) {
+                if (editCursorPos > 0) {
+                    editText.deleteCharAt(editCursorPos - 1)
+                    editCursorPos--
+                    updateEditDisplay()
+                }
+            } else if (primaryCode == Constants.CODE_ENTER) {
+                editText.insert(editCursorPos, "\n")
+                editCursorPos++
+                updateEditDisplay()
+            } else if (primaryCode == Constants.CODE_SPACE) {
+                editText.insert(editCursorPos, " ")
+                editCursorPos++
+                updateEditDisplay()
+            } else if (primaryCode == KeyCode.ARROW_LEFT) {
+                if (editCursorPos > 0) {
+                    editCursorPos--
+                    updateEditDisplay()
+                }
+            } else if (primaryCode == KeyCode.ARROW_RIGHT) {
+                if (editCursorPos < editText.length) {
+                    editCursorPos++
+                    updateEditDisplay()
+                }
+            } else if (char != null) {
+                editText.insert(editCursorPos, char.toString())
+                editCursorPos++
+                updateEditDisplay()
+            }
+            // Block sending to app
+            return
+        }
+
         if (inSearchMode) {
             val char = if (primaryCode > 0) primaryCode.toChar() else null
             
@@ -362,6 +542,14 @@ class ClipboardHistoryView @JvmOverloads constructor(
     }
     
     override fun onTextInput(text: String) {
+         // Edit mode intercept
+         if (inEditMode) {
+              editText.insert(editCursorPos, text)
+              editCursorPos += text.length
+              updateEditDisplay()
+              return
+         }
+
          val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
          val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
          
@@ -531,6 +719,11 @@ class ClipboardHistoryView @JvmOverloads constructor(
 
     fun stopClipboardHistory() {
         if (!this::clipboardAdapter.isInitialized) return
+
+        // Stop edit mode if active
+        if (inEditMode && isAttachedToWindow) {
+            stopEditMode(save = false)
+        }
         
         // Also ensure search mode is stopped if we explicitly leave clipboard history
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
