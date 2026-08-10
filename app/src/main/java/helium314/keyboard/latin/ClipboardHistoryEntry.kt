@@ -8,7 +8,7 @@ class ClipboardHistoryEntry(
     val id: Long,
     var timeStamp: Long,
     var isPinned: Boolean,
-    val text: String,
+    var text: String,
     val imageUri: String? = null
 ) : Comparable<ClipboardHistoryEntry> {
     override fun compareTo(other: ClipboardHistoryEntry): Int {

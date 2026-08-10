@@ -483,6 +483,10 @@ class ClipboardHistoryManager(
         clipboardDao?.restoreClip(entry)
     }
 
+    fun updateClipText(id: Long, newText: String) {
+        clipboardDao?.updateClipText(id, newText)
+    }
+
     fun sortHistoryEntries() {
         clipboardDao?.sort()
     }

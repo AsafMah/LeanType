@@ -27,6 +27,7 @@ class ClipboardDao private constructor(private val db: Database) {
         fun onClipInserted(position: Int)
         fun onClipsRemoved(position: Int, count: Int)
         fun onClipMoved(oldPosition: Int, newPosition: Int)
+        fun onClipChanged(position: Int) {}
     }
 
     var listener: Listener? = null
@@ -94,6 +95,19 @@ class ClipboardDao private constructor(private val db: Database) {
         val cv = ContentValues(1)
         cv.put(COLUMN_TIMESTAMP, timestamp)
         db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null)
+    }
+
+    @Synchronized
+    fun updateClipText(id: Long, newText: String) {
+        val entry = cache.firstOrNull { it.id == id } ?: return
+        entry.text = newText
+        val cv = ContentValues(1)
+        cv.put(COLUMN_TEXT, newText)
+        db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null)
+        val pos = cache.indexOf(entry)
+        if (pos != -1) {
+            listener?.onClipChanged(pos)
+        }
     }
 
     @Synchronized

@@ -799,6 +799,7 @@ language, hence "No language". -->
     <string name="remove">Remove</string>
     <!-- Title of the button to save a custom style entry in the settings dialog. Preferably 10 characters or less. -->
     <string name="save">Save</string>
+    <string name="edit">Edit</string>
     <!-- Title of the button to load a custom style entry in the settings dialog. Preferably 10 characters or less. -->
     <string name="load">Load</string>
     <!-- Title of the spinner for choosing a language of custom style in the settings dialog. Preferably 10 characters or less. -->

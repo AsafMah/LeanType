@@ -630,6 +630,12 @@ class ClipboardHistoryView @JvmOverloads constructor(
         }
     }
 
+    override fun onClipChanged(position: Int) {
+        confirmationHandler.post {
+            clipboardAdapter.refresh()
+        }
+    }
+
     override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
         setToolbarButtonsActivatedStateOnPrefChange(KeyboardSwitcher.getInstance().clipboardStrip, key)
 

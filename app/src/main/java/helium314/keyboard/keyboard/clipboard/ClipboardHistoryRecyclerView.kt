@@ -34,15 +34,21 @@ class ClipboardHistoryRecyclerView @JvmOverloads constructor(
     private val undoDismissRunnable = Runnable { dismissUndoBar() }
 
     @Suppress("unused")
-    private val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+    private val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
         override fun onMove(recyclerView: RecyclerView, viewHolder: ViewHolder, target: ViewHolder) = false
         override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: ViewHolder): Int {
             val position = viewHolder.absoluteAdapterPosition
             val entry = (adapter as? ClipboardAdapter)?.getItem(position) ?: return 0
             val cacheIndex = historyManager?.getClips()?.indexOfFirst { it.id == entry.id } ?: -1
-            if (cacheIndex == -1 || historyManager?.canRemove(cacheIndex) == false)
-                return 0 // block swipe for pinned items
-            return super.getSwipeDirs(recyclerView, viewHolder)
+            if (cacheIndex == -1) return 0
+            var dirs = 0
+            if (historyManager?.canRemove(cacheIndex) == true) {
+                dirs = dirs or ItemTouchHelper.LEFT
+            }
+            if (entry.imageUri == null && !entry.text.isNullOrEmpty()) {
+                dirs = dirs or ItemTouchHelper.RIGHT
+            }
+            return dirs
         }
         override fun onSwiped(viewHolder: ViewHolder, dir: Int) {
             val position = viewHolder.absoluteAdapterPosition
@@ -50,19 +56,69 @@ class ClipboardHistoryRecyclerView @JvmOverloads constructor(
             if (entry != null) {
                 val cacheIndex = historyManager?.getClips()?.indexOfFirst { it.id == entry.id } ?: -1
                 if (cacheIndex != -1) {
-                    val deletedEntry = historyManager?.removeEntry(cacheIndex)
-                    if (deletedEntry != null) {
-                        (adapter as? ClipboardAdapter)?.removeDisplayItem(position)
-                        adapter?.notifyItemRemoved(position)
-                        showUndoBar(deletedEntry)
+                    if (dir == ItemTouchHelper.LEFT) {
+                        val deletedEntry = historyManager?.removeEntry(cacheIndex)
+                        if (deletedEntry != null) {
+                            (adapter as? ClipboardAdapter)?.removeDisplayItem(position)
+                            adapter?.notifyItemRemoved(position)
+                            showUndoBar(deletedEntry)
+                        }
+                        return
+                    } else if (dir == ItemTouchHelper.RIGHT) {
+                        adapter?.notifyItemChanged(position)
+                        showEditDialog(entry)
+                        return
                     }
-                    return
                 }
             }
             // fallback in case entry or index was invalid
             adapter?.notifyItemChanged(position)
         }
     }).attachToRecyclerView(this)
+
+    private fun showEditDialog(entry: ClipboardHistoryEntry) {
+        val themeContext = helium314.keyboard.latin.utils.getPlatformDialogThemeContext(context)
+        val builder = android.app.AlertDialog.Builder(themeContext)
+        builder.setTitle(context.getString(R.string.edit))
+
+        val editText = android.widget.EditText(themeContext).apply {
+            setText(entry.text)
+            setSelection(text.length)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            maxLines = 8
+            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+        }
+
+        val container = android.widget.FrameLayout(themeContext).apply {
+            val paddingHorizontal = (20 * resources.displayMetrics.density).toInt()
+            val paddingVertical = (12 * resources.displayMetrics.density).toInt()
+            setPadding(paddingHorizontal, paddingVertical, paddingHorizontal, paddingVertical)
+            addView(editText)
+        }
+        builder.setView(container)
+
+        builder.setPositiveButton(R.string.save) { dialog, _ ->
+            val newText = editText.text?.toString()?.trim() ?: ""
+            if (newText.isNotEmpty() && newText != entry.text) {
+                historyManager?.updateClipText(entry.id, newText)
+            }
+            dialog.dismiss()
+        }
+        builder.setNegativeButton(android.R.string.cancel) { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        val dialog = builder.create()
+        val window = dialog.window
+        if (window != null) {
+            val lp = window.attributes
+            lp.token = windowToken
+            lp.type = android.view.WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+            window.attributes = lp
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+        }
+        dialog.show()
+    }
 
     private fun showUndoBar(entry: ClipboardHistoryEntry) {
         // Cancel any pending dismiss from a previous undo
