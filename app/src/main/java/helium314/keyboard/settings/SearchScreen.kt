@@ -108,7 +108,7 @@ fun SearchSettingsScreen(
                             .fillMaxSize(),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
                     ) {
-                        items(groups, key = { (titleRes, _) -> titleRes ?: 0 }) { (titleRes, keys) ->
+                        items(groups, key = { (titleRes, keys) -> titleRes?.toString() ?: keys.firstOrNull() ?: keys.hashCode().toString() }) { (titleRes, keys) ->
                             androidx.compose.material3.Card(
                                 modifier = Modifier
                                     .fillMaxWidth()

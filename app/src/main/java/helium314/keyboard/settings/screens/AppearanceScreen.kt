@@ -70,6 +70,7 @@ fun AppearanceScreen(
         // ponytail: persist text edit mode settings item
         Settings.PREF_PERSIST_TEXT_EDIT_MODE,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD,
+        Settings.PREF_FOLDABLE_MODE,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE,
         if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE)
             || prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD, Defaults.PREF_ENABLE_SPLIT_KEYBOARD))
