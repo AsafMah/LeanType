@@ -44,12 +44,9 @@
         </HorizontalScrollView>
         <!-- Provide audio and haptic feedback by ourselves based on the keyboard settings.
              We just need to ignore the system's audio and haptic feedback settings. -->
-        <!-- todo: sth is fishy with that maxwidth
-               check what is going on in the layout helper? -->
         <LinearLayout
             android:id="@+id/suggestions_strip"
             android:orientation="horizontal"
-            android:maxWidth="100dp"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="1"
