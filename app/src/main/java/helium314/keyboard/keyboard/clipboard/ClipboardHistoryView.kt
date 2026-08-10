@@ -906,22 +906,13 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip ?: return
         val count = clipboardStrip.childCount
         if (count == 0) return
-        val parentView = (clipboardStrip.parent as? View)
-        val containerWidth = parentView?.width?.takeIf { it > 0 }
-            ?: parentView?.measuredWidth?.takeIf { it > 0 }
-            ?: clipboardStrip.width.takeIf { it > 0 }
-            ?: clipboardStrip.measuredWidth.takeIf { it > 0 }
-            ?: context.resources.displayMetrics.widthPixels
+
         val singleKeyWidth = kotlin.math.min(
             context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
             context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
         )
-        val totalKeysWidth = count * singleKeyWidth
 
-        val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
-        val useEqualSpacing = isAutoSpan && containerWidth > 0 && totalKeysWidth <= containerWidth
-
-        clipboardStrip.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else Gravity.START
+        clipboardStrip.gravity = Gravity.START or Gravity.CENTER_VERTICAL
 
         val toolbarKeyLayoutParams = LinearLayout.LayoutParams(
             singleKeyWidth,
@@ -932,11 +923,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
 
         for (i in 0 until count) {
             val child = clipboardStrip.getChildAt(i) ?: continue
-            child.layoutParams = if (useEqualSpacing) {
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
-            } else {
-                toolbarKeyLayoutParams
-            }
+            child.layoutParams = toolbarKeyLayoutParams
         }
     }
 }
