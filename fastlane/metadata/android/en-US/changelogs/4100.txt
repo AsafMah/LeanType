@@ -1,0 +1,5 @@
+- Fixed single-click backspace issue where pressing delete deleted entire numeric sequences at once.
+- Fixed emoji sequence boundary detection (`isEmojiSequenceEnd`) for ASCII digits and symbols.
+- Decoupled batch mode gesture deletion from character-by-character backspacing.
+- Guarded autocorrect revert and composing region updates against numeric strings.
+- Passed full unit test suite with 0 regressions across all IME modules.
