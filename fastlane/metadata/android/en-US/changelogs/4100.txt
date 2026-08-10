@@ -1,5 +1,9 @@
-- Fixed single-click backspace issue where pressing delete deleted entire numeric sequences at once.
-- Fixed emoji sequence boundary detection (`isEmojiSequenceEnd`) for ASCII digits and symbols.
-- Decoupled batch mode gesture deletion from character-by-character backspacing.
-- Guarded autocorrect revert and composing region updates against numeric strings.
+- Fixed single-click backspace issue on typed numeric sequences.
+- Added inline clipboard item editing directly in toolbar strip with tap-to-position cursor and swipe gesture support.
+- Added inline search bar for list dialogs and handwriting language selection.
+- Restored foldable screen profile toggle and fixed settings LazyColumn performance.
+- Aligned toolbar & clipboard key auto-spanning logic.
+- Fixed suggestion strip word truncation (e.g. physics cropped to physi).
+- Exempted Emoji and Clipboard keyboards from physical keyboard suppression.
+- Fixed handwriting engine crash & transparent canvas background.
 - Passed full unit test suite with 0 regressions across all IME modules.
