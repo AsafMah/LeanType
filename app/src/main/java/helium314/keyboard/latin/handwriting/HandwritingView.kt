@@ -86,10 +86,10 @@ class HandwritingView @JvmOverloads constructor(
 
         val colors = Settings.getValues().mColors
         toolbar?.let {
-            colors.setBackground(it, ColorType.MAIN_BACKGROUND)
+            it.background = null
             it.visibility = View.GONE // ponytail: hide by default to avoid duplicate toolbar/X buttons
         }
-        colors.setBackground(canvas, ColorType.MAIN_BACKGROUND)
+        canvas.background = null
 
         languageLabel.setTextColor(colors.get(ColorType.KEY_TEXT))
         colors.setColor(clearButton, ColorType.KEY_ICON)
