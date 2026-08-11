@@ -279,6 +279,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         // HIDE Clipboard List while searching
         clipboardRecyclerView.visibility = View.GONE
         emptyViewContainer.visibility = View.GONE
+        updateClipboardGestureSuppression()
     }
 
     private fun stopSearchMode() {
@@ -309,6 +310,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         // SHOW Clipboard List
         clipboardRecyclerView.visibility = View.VISIBLE
         updateEmptyView(clipboardAdapter.isFiltering)
+        updateClipboardGestureSuppression()
     }
 
     private fun updateEmptyView(isSearch: Boolean) {
@@ -404,6 +406,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
 
         // Switch bottom row to alphabet keyboard
         setBottomRowLayout(KeyboardId.ELEMENT_ALPHABET)
+        updateClipboardGestureSuppression()
     }
 
     private fun stopEditMode(save: Boolean) {
@@ -433,6 +436,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         // Show list again
         clipboardRecyclerView.visibility = View.VISIBLE
         updateEmptyView(clipboardAdapter.isFiltering)
+        updateClipboardGestureSuppression()
     }
 
     private fun updateEditDisplay() {
@@ -836,6 +840,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
         clipboardRecyclerView.adapter = null
         clipboardHistoryManager.setHistoryChangeListener(null)
         clipboardAdapter.clipboardHistoryManager = null
+
+        PointerTracker.setClipboardInlineInputActive(false)
     }
 
     fun showClearAllConfirmationBar() {
@@ -982,6 +988,27 @@ class ClipboardHistoryView @JvmOverloads constructor(
             } else {
                 toolbarKeyLayoutParams
             }
+        }
+    }
+
+    private fun updateClipboardGestureSuppression() {
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        val active = inEditMode || inSearchMode
+        PointerTracker.setClipboardInlineInputActive(active)
+    }
+
+    override fun onDetachedFromWindow() {
+        PointerTracker.setClipboardInlineInputActive(false)
+        super.onDetachedFromWindow()
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (!isShown) {
+            PointerTracker.setClipboardInlineInputActive(false)
+        } else {
+            updateClipboardGestureSuppression()
         }
     }
 }

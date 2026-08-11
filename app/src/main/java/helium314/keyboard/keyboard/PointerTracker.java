@@ -254,6 +254,13 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         sGestureEnabler.setGestureHandlingEnabledByUser(gestureHandlingEnabledByUser);
     }
 
+    public static void setClipboardInlineInputActive(final boolean active) {
+        final boolean changed = sGestureEnabler.setClipboardInlineInputActive(active);
+        if (changed && active && sPointerTrackerQueue != null) {
+            sPointerTrackerQueue.cancelAllPointerTrackers();
+        }
+    }
+
     public static PointerTracker getPointerTracker(final int id) {
         final ArrayList<PointerTracker> trackers = sTrackers;
 
