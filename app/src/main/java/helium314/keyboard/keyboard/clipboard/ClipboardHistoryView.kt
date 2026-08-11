@@ -468,6 +468,41 @@ class ClipboardHistoryView @JvmOverloads constructor(
         }
     }
 
+    private val currentBottomRowLayout: Int
+        get() {
+            val keyboardView = findViewById<MainKeyboardView>(R.id.bottom_row_keyboard) ?: return KeyboardId.ELEMENT_ALPHABET
+            return keyboardView.keyboard?.mId?.mElementId ?: KeyboardId.ELEMENT_ALPHABET
+        }
+
+    private fun isLayoutSwitchCode(code: Int): Boolean {
+        return code == KeyCode.SYMBOL || code == KeyCode.SYMBOL_ALPHA || code == KeyCode.ALPHA
+                || code == KeyCode.SHIFT || code == KeyCode.CAPS_LOCK
+    }
+
+    private fun handleLayoutSwitchInEditOrSearch(primaryCode: Int): Boolean {
+        if (primaryCode == KeyCode.SYMBOL || primaryCode == KeyCode.SYMBOL_ALPHA || primaryCode == KeyCode.ALPHA) {
+            val isOnSymbols = currentBottomRowLayout == KeyboardId.ELEMENT_SYMBOLS
+                    || currentBottomRowLayout == KeyboardId.ELEMENT_SYMBOLS_SHIFTED
+            val targetId = if (isOnSymbols) KeyboardId.ELEMENT_ALPHABET else KeyboardId.ELEMENT_SYMBOLS
+            setBottomRowLayout(targetId)
+            return true
+        }
+        if (primaryCode == KeyCode.SHIFT || primaryCode == KeyCode.CAPS_LOCK) {
+            val targetId = when (currentBottomRowLayout) {
+                KeyboardId.ELEMENT_SYMBOLS -> KeyboardId.ELEMENT_SYMBOLS_SHIFTED
+                KeyboardId.ELEMENT_SYMBOLS_SHIFTED -> KeyboardId.ELEMENT_SYMBOLS
+                KeyboardId.ELEMENT_ALPHABET -> KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED
+                KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED,
+                KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED,
+                KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED -> KeyboardId.ELEMENT_ALPHABET
+                else -> KeyboardId.ELEMENT_ALPHABET
+            }
+            setBottomRowLayout(targetId)
+            return true
+        }
+        return false
+    }
+
     // Intercept Input - Implements KeyboardActionListener
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
@@ -475,6 +510,10 @@ class ClipboardHistoryView @JvmOverloads constructor(
         
         // Edit mode intercept
         if (inEditMode) {
+            if (handleLayoutSwitchInEditOrSearch(primaryCode)) {
+                return
+            }
+
             val char = if (primaryCode > 0) primaryCode.toChar() else null
 
             if (primaryCode == KeyCode.DELETE) {
@@ -511,6 +550,10 @@ class ClipboardHistoryView @JvmOverloads constructor(
         }
 
         if (inSearchMode) {
+            if (handleLayoutSwitchInEditOrSearch(primaryCode)) {
+                return
+            }
+
             val char = if (primaryCode > 0) primaryCode.toChar() else null
             
             if (primaryCode == KeyCode.DELETE) {
@@ -533,7 +576,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
                  searchBarTextView.text = searchQuery.toString()
                  clipboardAdapter.filter(searchQuery.toString())
             } else {
-                 // Any other key (like Symbols ?123 or Settings) should close search 
+                 // Any other key (like Settings) should close search 
                  // and pass through to original listener
                  stopSearchMode()
                  keyboardActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat)
@@ -578,9 +621,15 @@ class ClipboardHistoryView @JvmOverloads constructor(
 
     // Delegate other KeyboardActionListener methods
     override fun onPressKey(primaryCode: Int, repeatCount: Int, isSinglePointer: Boolean, hapticEvent: HapticEvent?) {
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if ((inEditMode || inSearchMode) && isLayoutSwitchCode(primaryCode)) return
         keyboardActionListener.onPressKey(primaryCode, repeatCount, isSinglePointer, hapticEvent)
     }
     override fun onReleaseKey(primaryCode: Int, withSliding: Boolean) {
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if ((inEditMode || inSearchMode) && isLayoutSwitchCode(primaryCode)) return
         keyboardActionListener.onReleaseKey(primaryCode, withSliding)
     }
     override fun onLongPressKey(primaryCode: Int) {
