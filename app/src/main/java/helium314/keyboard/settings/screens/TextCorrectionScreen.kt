@@ -9,16 +9,16 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.core.content.edit
 import helium314.keyboard.dictionarypack.DictionaryPackConstants
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
@@ -27,6 +27,7 @@ import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.SmsPackageProvider
 import helium314.keyboard.latin.utils.ToolbarMode
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.prefs
@@ -103,6 +104,8 @@ fun TextCorrectionScreen(
         if (prefs.getBoolean(Settings.PREF_SUGGEST_SCREENSHOTS, Defaults.PREF_SUGGEST_SCREENSHOTS))
             Settings.PREF_COMPRESS_SCREENSHOTS else null,
         Settings.PREF_AUTO_READ_OTP,
+        if (prefs.getBoolean(Settings.PREF_AUTO_READ_OTP, Defaults.PREF_AUTO_READ_OTP))
+            Settings.PREF_OTP_ALLOWED_SMS_PACKAGE else null,
         Settings.PREF_USE_CONTACTS,
         Settings.PREF_USE_APPS
     )
@@ -304,19 +307,73 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.auto_read_otp, R.string.auto_read_otp_summary
     ) { setting ->
         val activity = LocalContext.current.getActivity() ?: return@Setting
-        var granted by remember { mutableStateOf(PermissionsUtil.checkAllPermissionsGranted(activity, Manifest.permission.RECEIVE_SMS)) }
-        val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            granted = it
-            if (granted)
-                activity.prefs().edit { putBoolean(setting.key, true) }
+        var granted by remember { mutableStateOf(PermissionsUtil.isNotificationListenerEnabled(activity)) }
+        var pendingOtpEnable by rememberSaveable { mutableStateOf(false) }
+
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    val currentGranted = PermissionsUtil.isNotificationListenerEnabled(activity)
+                    granted = currentGranted
+                    if (pendingOtpEnable && currentGranted) {
+                        activity.prefs().edit { putBoolean(Settings.PREF_AUTO_READ_OTP, true) }
+                        pendingOtpEnable = false
+                    }
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
         }
+
         SwitchPreference(setting, Defaults.PREF_AUTO_READ_OTP,
             allowCheckedChange = {
-                if (it && !granted) {
-                    launcher.launch(Manifest.permission.RECEIVE_SMS)
-                    false
+                if (it) {
+                    val currentAllowed = activity.prefs().getString(Settings.PREF_OTP_ALLOWED_SMS_PACKAGE, null)
+                    if (currentAllowed.isNullOrBlank()) {
+                        val defaultSms = SmsPackageProvider.getDefaultSmsPackage(activity)
+                        if (!defaultSms.isNullOrBlank()) {
+                            activity.prefs().edit { putString(Settings.PREF_OTP_ALLOWED_SMS_PACKAGE, defaultSms) }
+                        }
+                    }
+                    if (!granted) {
+                        pendingOtpEnable = true
+                        try {
+                            activity.startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                        } catch (e: Exception) {
+                            Log.w("TextCorrectionScreen", "Could not launch notification listener settings", e)
+                        }
+                        false
+                    } else true
                 } else true
             }
+        )
+    },
+    Setting(
+        key = Settings.PREF_OTP_ALLOWED_SMS_PACKAGE,
+        title = "Allowed SMS app",
+        description = "Select which SMS app's notifications are monitored for OTP codes."
+    ) { setting ->
+        val activity = LocalContext.current.getActivity() ?: return@Setting
+        val autoReadOtp = activity.prefs().getBoolean(Settings.PREF_AUTO_READ_OTP, Defaults.PREF_AUTO_READ_OTP)
+        if (!autoReadOtp) return@Setting
+
+        val candidates = remember { SmsPackageProvider.getCandidateSmsPackages(activity) }
+        val items = remember(candidates) {
+            val list = mutableListOf<Pair<String, String>>()
+            list.add("Any known SMS app (Fallback allowlist)" to "")
+            candidates.forEach { (pkg, label) ->
+                list.add(label to pkg)
+            }
+            list
+        }
+
+        ListPreference(
+            setting = setting,
+            items = items,
+            default = Defaults.PREF_OTP_ALLOWED_SMS_PACKAGE
         )
     },
     Setting(context, Settings.PREF_USE_CONTACTS,
