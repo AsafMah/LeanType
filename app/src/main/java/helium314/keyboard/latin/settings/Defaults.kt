@@ -114,7 +114,7 @@ object Defaults {
     @JvmField
     val PREF_SPLIT_SPACER_SCALE = Array(2) { DEFAULT_SIZE_SCALE }
     @JvmField
-    val PREF_KEYBOARD_HEIGHT_SCALE = Array(2) { 0.77f }
+    val PREF_KEYBOARD_HEIGHT_SCALE = arrayOf(0.77f, 0.45f)
     @JvmField
     val PREF_BOTTOM_PADDING_SCALE = arrayOf(1.05f, 0f)
     @JvmField
