@@ -909,32 +909,33 @@ public class LatinIME extends InputMethodService implements
         }
     }
 
-    private void flashToolbarForVoice() {
-        final View inputView = mKeyboardSwitcher != null ? mKeyboardSwitcher.getMainKeyboardView() : null;
-        if (inputView == null) return;
-
-        final ObjectAnimator scaleX = ObjectAnimator.ofFloat(inputView, "scaleX", 1.0f, 1.02f, 1.0f);
-        final ObjectAnimator alpha = ObjectAnimator.ofFloat(inputView, "alpha", 1.0f, 0.85f, 1.0f);
-
-        final AnimatorSet set = new AnimatorSet();
-        set.playTogether(scaleX, alpha);
-        set.setDuration(200);
-        set.setInterpolator(new AccelerateDecelerateInterpolator());
-        set.start();
-    }
-
     public void onVoiceStateChanged(final VoiceInputManager.VoiceState state) {
         mHandler.post(() -> {
+            final boolean isActive = (state == VoiceInputManager.VoiceState.RECORDING
+                    || state == VoiceInputManager.VoiceState.STARTING_SESSION
+                    || state == VoiceInputManager.VoiceState.CONNECTING_PLUGIN);
+
+            if (hasSuggestionStripView()) {
+                if (isActive) {
+                    mSuggestionStripView.showLoadingAnimation();
+                } else {
+                    mSuggestionStripView.hideLoadingAnimation();
+                }
+            }
+
             if (state == VoiceInputManager.VoiceState.RECORDING) {
-                flashToolbarForVoice();
                 Toast.makeText(LatinIME.this, "Listening… speak now. Tap mic to finish, Back to cancel.", Toast.LENGTH_SHORT).show();
             } else if (state == VoiceInputManager.VoiceState.IDLE) {
                 Toast.makeText(LatinIME.this, "Voice input finished", Toast.LENGTH_SHORT).show();
             }
 
             final MainKeyboardView kv = mKeyboardSwitcher != null ? mKeyboardSwitcher.getMainKeyboardView() : null;
-            if (kv != null) {
-                kv.invalidateAllKeys();
+            if (kv != null && kv.getKeyboard() != null) {
+                for (final Key key : kv.getKeyboard().getSortedKeys()) {
+                    if (key.getCode() == KeyCode.VOICE_INPUT) {
+                        kv.invalidateKey(key);
+                    }
+                }
             }
         });
     }
