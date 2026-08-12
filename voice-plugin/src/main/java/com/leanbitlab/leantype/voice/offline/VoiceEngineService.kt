@@ -68,9 +68,8 @@ class VoiceEngineService : Service() {
             if (audioInput == null || callback == null) return
 
             if (isSessionActive) {
-                try { audioInput.close() } catch (_: Exception) {}
-                callback.onError(VoiceConstants.VOICE_ERROR_UNKNOWN, "Session already active")
-                return
+                voskEngine.cancelSession()
+                isSessionActive = false
             }
 
             val voskModelDir = modelManager.getModelDir(VoiceConstants.ENGINE_VOSK)

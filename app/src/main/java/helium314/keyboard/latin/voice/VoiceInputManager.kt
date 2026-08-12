@@ -81,9 +81,14 @@ class VoiceInputManager(
     }
 
     fun startVoice() {
-        if (state != VoiceState.IDLE && state != VoiceState.ERROR) {
-            Log.w(TAG, "Cannot start voice in state $state")
+        if (state == VoiceState.RECORDING) {
+            stopVoice()
             return
+        }
+
+        if (state != VoiceState.IDLE && state != VoiceState.ERROR) {
+            Log.w(TAG, "Resetting previous state $state for new voice session")
+            cancelVoice()
         }
 
         if (!canStartVoice()) {
@@ -91,6 +96,7 @@ class VoiceInputManager(
             return
         }
 
+        pluginManager.cancelSession()
         val sessionId = UUID.randomUUID().toString()
         activeSessionId = sessionId
         updateState(VoiceState.CONNECTING_PLUGIN)
@@ -351,10 +357,13 @@ class VoiceInputManager(
     private fun handleFinalText(text: String) {
         stopAudioLoop()
         val ic = ims.currentInputConnection
-        if (ic != null && text.isNotBlank()) {
+        val finalText = text.trim()
+        if (ic != null && finalText.isNotBlank()) {
             ic.finishComposingText()
-            ic.commitText(text, 1)
+            ic.commitText("$finalText ", 1)
+            ic.finishComposingText()
         } else if (ic != null) {
+            ic.setComposingText("", 1)
             ic.finishComposingText()
         }
         cleanupSession()
