@@ -18,6 +18,10 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="com.leanbitlab.leantype.permission.BIND_VOICE_PLUGIN" />
+    <permission
+        android:name="com.leanbitlab.leantype.permission.BIND_VOICE_PLUGIN"
+        android:protectionLevel="signature" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <queries>
