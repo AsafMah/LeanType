@@ -42,6 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 fun LibrariesHubScreen(
     onClickBack: () -> Unit,
     onClickDictionaries: () -> Unit,
+    onClickOfflineVoice: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val gestureInstalled = JniUtils.sHaveNativeGestureLib
@@ -101,6 +102,14 @@ fun LibrariesHubScreen(
                                 onSuccess = { translationInstalled = helium314.keyboard.latin.translation.TranslationLoader.hasPlugin(context) }
                             )
                         }
+
+                        // Offline Voice Input
+                        Preference(
+                            name = stringResource(R.string.offline_voice_title),
+                            description = stringResource(R.string.pref_offline_voice_summary),
+                            onClick = onClickOfflineVoice,
+                            icon = R.drawable.sym_keyboard_voice_holo
+                        ) { NextScreenIcon() }
 
                         // Documentation & Features
                         val uriHandler = LocalUriHandler.current
