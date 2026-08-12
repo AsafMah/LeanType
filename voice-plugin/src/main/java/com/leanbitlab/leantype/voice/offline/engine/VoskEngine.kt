@@ -44,8 +44,9 @@ class VoskEngine(private val context: Context) {
             return
         }
 
+        val dupPfd = try { pfd.dup() } catch (e: Exception) { pfd }
         isCancelled = false
-        activePfd = pfd
+        activePfd = dupPfd
 
         audioExecutor.execute {
             var recognizer: Recognizer? = null
@@ -55,7 +56,7 @@ class VoskEngine(private val context: Context) {
                 recognizer = Recognizer(currentModel, 16000f)
                 callback.onSessionStarted()
 
-                ParcelFileDescriptor.AutoCloseInputStream(pfd).use { input ->
+                ParcelFileDescriptor.AutoCloseInputStream(dupPfd).use { input ->
                     val buffer = ByteArray(4096)
                     var bytesRead: Int
 

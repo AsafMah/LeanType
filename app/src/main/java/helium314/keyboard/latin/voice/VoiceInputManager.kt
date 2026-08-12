@@ -228,9 +228,6 @@ class VoiceInputManager(
         mainHandler.postDelayed(handshakeTimeoutRunnable!!, HANDSHAKE_TIMEOUT_MS)
 
         val started = pluginManager.startSession(config, audioPipeReadSide!!, callback)
-        // LeanType closes readSide locally; plugin process owns its dup descriptor
-        closeQuietly(audioPipeReadSide)
-        audioPipeReadSide = null
 
         if (!started) {
             cancelHandshakeTimeout()
