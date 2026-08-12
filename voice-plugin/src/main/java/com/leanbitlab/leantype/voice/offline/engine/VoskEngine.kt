@@ -62,9 +62,9 @@ class VoskEngine(private val context: Context) {
                         if (bytesRead <= 0) break
 
                         if (recognizer.acceptWaveForm(buffer, bytesRead)) {
-                            val partialText = parseJsonText(recognizer.partialResult, "partial")
-                            if (partialText.isNotBlank()) {
-                                callback.onPartial(partialText)
+                            val text = parseJsonText(recognizer.result, "text")
+                            if (text.isNotBlank()) {
+                                callback.onPartial(text)
                             }
                         } else {
                             val partialText = parseJsonText(recognizer.partialResult, "partial")
