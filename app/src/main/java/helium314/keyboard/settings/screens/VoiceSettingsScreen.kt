@@ -477,24 +477,33 @@ fun VoiceSettingsScreen(
                                     return@Button
                                 }
                                 val ime = LatinIME.getInstance()
-                                if (ime != null) {
-                                    val mgr = VoiceInputManager(ime, pluginManager)
-                                    mgr.setListener(object : VoiceInputManager.VoiceInputListener {
-                                        override fun onStateChanged(state: VoiceInputManager.VoiceState) {
-                                            voiceStateText = state.name
-                                        }
-
-                                        override fun onError(message: String) {
-                                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                        }
-                                    })
+                                val mgr = ime?.voiceInputManager
+                                if (mgr != null) {
                                     mgr.startVoice()
                                 } else {
-                                    Toast.makeText(context, "LeanType IME instance not active", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "LeanType IME instance not active. Tap a text field to activate keyboard", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         ) {
-                            Text("Test Voice Input")
+                            Text("Start Dictation")
+                        }
+
+                        Button(
+                            onClick = {
+                                val ime = LatinIME.getInstance()
+                                ime?.voiceInputManager?.stopVoice()
+                            }
+                        ) {
+                            Text("Done")
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                val ime = LatinIME.getInstance()
+                                ime?.voiceInputManager?.cancelVoice()
+                            }
+                        ) {
+                            Text("Cancel")
                         }
                     }
                 }
