@@ -3,7 +3,6 @@ package helium314.keyboard.latin.voice
 
 import android.Manifest
 import android.content.Context
-import android.content.contentValuesOf
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -174,12 +173,11 @@ fun VoiceSettingsScreen(
     val offlineEnabledSetting = remember {
         Setting(
             key = VoiceConstants.PREF_VOICE_OFFLINE_ENABLED,
-            title = context.getString(R.string.offline_voice_title)
+            title = context.getString(R.string.offline_voice_title),
+            description = context.getString(R.string.pref_offline_voice_summary)
         ) {
             SwitchPreference(
                 setting = it,
-                title = context.getString(R.string.offline_voice_title),
-                description = context.getString(R.string.pref_offline_voice_summary),
                 default = false
             )
         }
@@ -192,7 +190,6 @@ fun VoiceSettingsScreen(
         ) {
             ListPreference(
                 setting = it,
-                title = "Engine Mode",
                 items = listOf(
                     "Fast (Vosk streaming)" to VoiceConstants.MODE_FAST,
                     "Accurate (Whisper offline)" to VoiceConstants.MODE_ACCURATE,
@@ -210,7 +207,6 @@ fun VoiceSettingsScreen(
         ) {
             ListPreference(
                 setting = it,
-                title = "Hybrid Timeout",
                 items = listOf(
                     "500 ms" to "500",
                     "700 ms" to "700",
@@ -226,12 +222,11 @@ fun VoiceSettingsScreen(
     val hybridFallbackSetting = remember {
         Setting(
             key = VoiceConstants.PREF_VOICE_HYBRID_FALLBACK,
-            title = "Fallback to Vosk if Whisper fails"
+            title = "Fallback to Vosk if Whisper fails",
+            description = "Allow Fast Vosk output if Whisper times out or model is missing"
         ) {
             SwitchPreference(
                 setting = it,
-                title = "Hybrid Fallback",
-                description = "Allow Fast Vosk output if Whisper times out or model is missing",
                 default = true
             )
         }
@@ -240,14 +235,13 @@ fun VoiceSettingsScreen(
     val debugStubSetting = remember {
         Setting(
             key = VoiceConstants.PREF_USE_DEBUG_VOICE_STUB,
-            title = "Use Debug Voice Stub"
+            title = "Use Debug Voice Stub Engine",
+            description = "Binds to internal debug engine to test voice pipeline without plugin APK"
         ) {
             SwitchPreference(
                 setting = it,
-                title = "Use Debug Voice Stub Engine",
-                description = "Binds to internal debug engine to test voice pipeline without plugin APK",
                 default = false,
-                onValueChange = {
+                onCheckedChange = {
                     pluginManager.unbind()
                     pluginManager.bindIfNeeded()
                 }

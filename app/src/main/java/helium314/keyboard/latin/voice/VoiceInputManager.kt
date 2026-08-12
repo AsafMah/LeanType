@@ -9,9 +9,9 @@ import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
-import android.view.inputmethod.InputType
 import androidx.core.content.ContextCompat
 import com.leanbitlab.leantype.voice.IVoiceCallback
 import com.leanbitlab.leantype.voice.VoiceConstants
