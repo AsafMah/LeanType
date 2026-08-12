@@ -263,6 +263,8 @@ class VoiceInputManager(
             return
         }
 
+        Log.i(TAG, "AudioRecord created: state=${audioRecord?.state} sampleRate=${audioRecord?.sampleRate}")
+
         if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
             Log.e(TAG, "AudioRecord uninitialized")
             notifyError("Microphone initialization failed")
@@ -279,6 +281,7 @@ class VoiceInputManager(
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO)
             val buffer = ByteArray(FRAME_SIZE_BYTES)
             val writeSide = audioPipeWriteSide
+            var totalBytesWrote = 0L
 
             try {
                 FileOutputStream(writeSide?.fileDescriptor).use { outputStream ->
@@ -287,6 +290,10 @@ class VoiceInputManager(
                         if (readBytes > 0) {
                             outputStream.write(buffer, 0, readBytes)
                             outputStream.flush()
+                            totalBytesWrote += readBytes
+                            if (totalBytesWrote % 32000L < readBytes) {
+                                Log.i(TAG, "pipe wrote totalBytes=$totalBytesWrote, icNull=${ims.currentInputConnection == null}")
+                            }
                         } else if (readBytes < 0) {
                             Log.e(TAG, "AudioRecord read error: $readBytes")
                             break
@@ -296,6 +303,7 @@ class VoiceInputManager(
             } catch (e: Exception) {
                 Log.e(TAG, "Audio recording pipe error", e)
             } finally {
+                Log.i(TAG, "Audio loop ended. Total wrote: $totalBytesWrote bytes")
                 closeQuietly(audioPipeWriteSide)
                 audioPipeWriteSide = null
             }

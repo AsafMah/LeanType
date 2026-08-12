@@ -49,7 +49,9 @@ class VoskEngine(private val context: Context) {
 
         audioExecutor.execute {
             var recognizer: Recognizer? = null
+            var totalRead = 0L
             try {
+                android.util.Log.i("VoskEngine", "startSession modelLoaded=${currentModel != null}")
                 recognizer = Recognizer(currentModel, 16000f)
                 callback.onSessionStarted()
 
@@ -60,15 +62,22 @@ class VoskEngine(private val context: Context) {
                     while (!isCancelled) {
                         bytesRead = input.read(buffer)
                         if (bytesRead <= 0) break
+                        totalRead += bytesRead
+
+                        if (totalRead % 32000L < bytesRead) {
+                            android.util.Log.i("VoskEngine", "pipe read totalRead=$totalRead")
+                        }
 
                         if (recognizer.acceptWaveForm(buffer, bytesRead)) {
                             val text = parseJsonText(recognizer.result, "text")
                             if (text.isNotBlank()) {
+                                android.util.Log.i("VoskEngine", "vosk acceptWaveForm text=$text")
                                 callback.onPartial(text)
                             }
                         } else {
                             val partialText = parseJsonText(recognizer.partialResult, "partial")
                             if (partialText.isNotBlank()) {
+                                android.util.Log.i("VoskEngine", "vosk partial=$partialText")
                                 callback.onPartial(partialText)
                             }
                         }
@@ -76,20 +85,20 @@ class VoskEngine(private val context: Context) {
 
                     if (!isCancelled) {
                         val finalText = parseJsonText(recognizer.result, "text")
-                        if (finalText.isNotBlank()) {
-                            callback.onFinal(finalText)
-                        } else {
-                            val finalAlt = parseJsonText(recognizer.finalResult, "text")
-                            callback.onFinal(finalAlt)
-                        }
+                        val finalAlt = parseJsonText(recognizer.finalResult, "text")
+                        val resultText = if (finalText.isNotBlank()) finalText else finalAlt
+                        android.util.Log.i("VoskEngine", "vosk final=$resultText")
+                        callback.onFinal(resultText)
                     }
                     callback.onSessionEnded()
                 }
             } catch (e: Exception) {
+                android.util.Log.e("VoskEngine", "Vosk engine error", e)
                 if (!isCancelled) {
                     callback.onError(VoiceConstants.VOICE_ERROR_UNKNOWN, e.message ?: "Vosk engine error")
                 }
             } finally {
+                android.util.Log.i("VoskEngine", "Vosk session ended. Total read: $totalRead bytes")
                 try {
                     recognizer?.close()
                 } catch (_: Exception) {}
