@@ -30,10 +30,13 @@ class VoicePluginManager(private val context: Context) : IBinder.DeathRecipient 
     private var deathRecipientRegistered = false
     private var connectionListener: PluginConnectionListener? = null
 
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             Log.i(TAG, "VoiceEngineService connected: $name")
             isConnecting = false
+            isBound = true
             engine = IVoiceEngine.Stub.asInterface(service)
             try {
                 service?.linkToDeath(this@VoicePluginManager, 0)
@@ -42,12 +45,16 @@ class VoicePluginManager(private val context: Context) : IBinder.DeathRecipient 
                 Log.e(TAG, "Failed to link to binder death", e)
             }
             val info = getInfo()
-            connectionListener?.onPluginConnected(info)
+            mainHandler.post {
+                connectionListener?.onPluginConnected(info)
+            }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             Log.w(TAG, "VoiceEngineService disconnected: $name")
-            handleDisconnection()
+            mainHandler.post {
+                handleDisconnection()
+            }
         }
     }
 
@@ -142,7 +149,9 @@ class VoicePluginManager(private val context: Context) : IBinder.DeathRecipient 
 
     fun getModelState(engineType: String): ModelState? {
         return try {
-            engine?.getModelState(engineType)
+            val state = engine?.getModelState(engineType)
+            Log.i(TAG, "getModelState for $engineType returned: ${state?.state} (${state?.message})")
+            state
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get model state for $engineType", e)
             null
