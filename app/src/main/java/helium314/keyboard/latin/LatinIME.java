@@ -48,8 +48,9 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import android.graphics.drawable.Drawable;
+import helium314.keyboard.keyboard.Key;
 import helium314.keyboard.latin.voice.VoiceInputManager;
-import helium314.keyboard.latin.voice.VoiceOverlayView;
 import helium314.keyboard.latin.voice.VoicePluginManager;
 import com.leanbitlab.leantype.voice.VoiceConstants;
 
@@ -584,11 +585,15 @@ public class LatinIME extends InputMethodService implements
     private static LatinIME sInstance;
     private VoicePluginManager mVoicePluginManager;
     private VoiceInputManager mVoiceInputManager;
-    private VoiceOverlayView mVoiceOverlayView;
 
     @Nullable
     public static LatinIME getInstance() {
         return sInstance;
+    }
+
+    @Nullable
+    public VoiceInputManager getVoiceInputManager() {
+        return mVoiceInputManager;
     }
 
     @Override
@@ -794,7 +799,6 @@ public class LatinIME extends InputMethodService implements
             mVoicePluginManager.release();
             mVoicePluginManager = null;
         }
-        mVoiceOverlayView = null;
         mHandler.removeCallbacksAndMessages(null);
         if (mFloatingKeyboardManager != null) {
             mFloatingKeyboardManager.destroy();
@@ -886,36 +890,35 @@ public class LatinIME extends InputMethodService implements
             mFloatingKeyboardManager.onInputViewRecreated(view);
         }
 
-        if (view instanceof ViewGroup) {
-            ViewGroup root = (ViewGroup) view;
-            mVoiceOverlayView = new VoiceOverlayView(this);
-            mVoiceOverlayView.setVisibility(View.GONE);
-            mVoiceOverlayView.setOnCancelListener(() -> {
-                if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice();
-            });
-            mVoiceOverlayView.setOnDoneListener(() -> {
-                if (mVoiceInputManager != null) mVoiceInputManager.stopVoice();
-            });
-            root.addView(mVoiceOverlayView, new android.widget.RelativeLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-            ));
-            if (mVoiceInputManager != null) {
-                mVoiceInputManager.setListener(new VoiceInputManager.VoiceInputListener() {
-                    @Override
-                    public void onStateChanged(@NonNull VoiceInputManager.VoiceState state) {
-                        if (mVoiceOverlayView != null) {
-                            mVoiceOverlayView.updateState(state);
-                        }
-                    }
+        if (mVoiceInputManager != null) {
+            mVoiceInputManager.setListener(new VoiceInputManager.VoiceInputListener() {
+                @Override
+                public void onStateChanged(@NonNull VoiceInputManager.VoiceState state) {
+                    onVoiceStateChanged(state);
+                }
 
-                    @Override
-                    public void onError(@NonNull String message) {
-                        Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
+                @Override
+                public void onError(@NonNull String message) {
+                    Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
+                    onVoiceStateChanged(VoiceInputManager.VoiceState.ERROR);
+                }
+            });
         }
+    }
+
+    public void onVoiceStateChanged(final VoiceInputManager.VoiceState state) {
+        mHandler.post(() -> {
+            if (state == VoiceInputManager.VoiceState.RECORDING) {
+                Toast.makeText(LatinIME.this, "Listening… speak now. Tap mic to finish, Back to cancel.", Toast.LENGTH_SHORT).show();
+            } else if (state == VoiceInputManager.VoiceState.IDLE) {
+                Toast.makeText(LatinIME.this, "Voice input finished", Toast.LENGTH_SHORT).show();
+            }
+
+            final MainKeyboardView kv = mKeyboardSwitcher != null ? mKeyboardSwitcher.getMainKeyboardView() : null;
+            if (kv != null) {
+                kv.invalidateAllKeys();
+            }
+        });
     }
 
     /**
