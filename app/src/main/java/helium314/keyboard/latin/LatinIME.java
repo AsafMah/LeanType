@@ -34,6 +34,9 @@ import android.view.Window;
 import android.view.WindowManager;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InlineSuggestion;
@@ -906,9 +909,24 @@ public class LatinIME extends InputMethodService implements
         }
     }
 
+    private void flashToolbarForVoice() {
+        final View inputView = mKeyboardSwitcher != null ? mKeyboardSwitcher.getMainKeyboardView() : null;
+        if (inputView == null) return;
+
+        final ObjectAnimator scaleX = ObjectAnimator.ofFloat(inputView, "scaleX", 1.0f, 1.02f, 1.0f);
+        final ObjectAnimator alpha = ObjectAnimator.ofFloat(inputView, "alpha", 1.0f, 0.85f, 1.0f);
+
+        final AnimatorSet set = new AnimatorSet();
+        set.playTogether(scaleX, alpha);
+        set.setDuration(200);
+        set.setInterpolator(new AccelerateDecelerateInterpolator());
+        set.start();
+    }
+
     public void onVoiceStateChanged(final VoiceInputManager.VoiceState state) {
         mHandler.post(() -> {
             if (state == VoiceInputManager.VoiceState.RECORDING) {
+                flashToolbarForVoice();
                 Toast.makeText(LatinIME.this, "Listening… speak now. Tap mic to finish, Back to cancel.", Toast.LENGTH_SHORT).show();
             } else if (state == VoiceInputManager.VoiceState.IDLE) {
                 Toast.makeText(LatinIME.this, "Voice input finished", Toast.LENGTH_SHORT).show();
