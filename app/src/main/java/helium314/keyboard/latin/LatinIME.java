@@ -41,6 +41,18 @@ import android.view.inputmethod.InlineSuggestionsRequest;
 import android.view.inputmethod.InlineSuggestionsResponse;
 import android.view.inputmethod.InputMethodSubtype;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import helium314.keyboard.latin.voice.VoiceInputManager;
+import helium314.keyboard.latin.voice.VoiceOverlayView;
+import helium314.keyboard.latin.voice.VoicePluginManager;
+import com.leanbitlab.leantype.voice.VoiceConstants;
+
 import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.compat.ConfigurationCompatKt;
 import helium314.keyboard.compat.EditorInfoCompatUtils;
@@ -570,6 +582,9 @@ public class LatinIME extends InputMethodService implements
     }
 
     private static LatinIME sInstance;
+    private VoicePluginManager mVoicePluginManager;
+    private VoiceInputManager mVoiceInputManager;
+    private VoiceOverlayView mVoiceOverlayView;
 
     @Nullable
     public static LatinIME getInstance() {
@@ -588,6 +603,8 @@ public class LatinIME extends InputMethodService implements
         mDisplayContext = KtxKt.getDisplayContext(this);
         KeyboardSwitcher.init(this);
         mFloatingKeyboardManager = new FloatingKeyboardManager(this, this);
+        mVoicePluginManager = new VoicePluginManager(this);
+        mVoiceInputManager = new VoiceInputManager(this, mVoicePluginManager);
         super.onCreate();
 
         loadSettings();
@@ -769,6 +786,15 @@ public class LatinIME extends InputMethodService implements
         if (sInstance == this) {
             sInstance = null;
         }
+        if (mVoiceInputManager != null) {
+            mVoiceInputManager.release();
+            mVoiceInputManager = null;
+        }
+        if (mVoicePluginManager != null) {
+            mVoicePluginManager.release();
+            mVoicePluginManager = null;
+        }
+        mVoiceOverlayView = null;
         mHandler.removeCallbacksAndMessages(null);
         if (mFloatingKeyboardManager != null) {
             mFloatingKeyboardManager.destroy();
@@ -858,6 +884,37 @@ public class LatinIME extends InputMethodService implements
         // reparent the new keyboard views into the overlay.
         if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
             mFloatingKeyboardManager.onInputViewRecreated(view);
+        }
+
+        if (view instanceof ViewGroup) {
+            ViewGroup root = (ViewGroup) view;
+            mVoiceOverlayView = new VoiceOverlayView(this);
+            mVoiceOverlayView.setVisibility(View.GONE);
+            mVoiceOverlayView.setOnCancelListener(() -> {
+                if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice();
+            });
+            mVoiceOverlayView.setOnDoneListener(() -> {
+                if (mVoiceInputManager != null) mVoiceInputManager.stopVoice();
+            });
+            root.addView(mVoiceOverlayView, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            if (mVoiceInputManager != null) {
+                mVoiceInputManager.setListener(new VoiceInputManager.VoiceInputListener() {
+                    @Override
+                    public void onStateChanged(@NonNull VoiceInputManager.VoiceState state) {
+                        if (mVoiceOverlayView != null) {
+                            mVoiceOverlayView.updateState(state);
+                        }
+                    }
+
+                    @Override
+                    public void onError(@NonNull String message) {
+                        Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
+                    }
+                });
+            }
         }
     }
 
@@ -1227,6 +1284,9 @@ public class LatinIME extends InputMethodService implements
     void onFinishInputViewInternal(final boolean finishingInput) {
         super.onFinishInputView(finishingInput);
         Log.i(TAG, "onFinishInputView");
+        if (mVoiceInputManager != null && mVoiceInputManager.isRecording()) {
+            mVoiceInputManager.cancelVoice();
+        }
         mOtpSuggestionManager.stop();
         mClipboardHistoryManager.onFinishInputView();
         cleanupInternalStateForFinishInput();
@@ -1675,7 +1735,25 @@ public class LatinIME extends InputMethodService implements
             return;
         }
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
-            mRichImm.switchToShortcutIme(this);
+            final boolean offlineEnabled = helium314.keyboard.latin.utils.KtxKt.prefs(this)
+                    .getBoolean(VoiceConstants.PREF_VOICE_OFFLINE_ENABLED, false);
+            if (offlineEnabled) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    if (mVoiceInputManager != null) {
+                        if (mVoiceInputManager.isRecording()) {
+                            mVoiceInputManager.stopVoice();
+                        } else {
+                            mVoiceInputManager.startVoice();
+                        }
+                    }
+                } else {
+                    Toast.makeText(this, "Microphone permission required for offline voice input. Enable in Settings -> Voice", Toast.LENGTH_LONG).show();
+                }
+            } else {
+                mRichImm.switchToShortcutIme(this);
+            }
+            return;
         }
         final InputTransaction completeInputTransaction = mInputLogic.onCodeInput(mSettings.getCurrent(), event,
                 mKeyboardSwitcher.getKeyboardShiftMode(), mHandler);

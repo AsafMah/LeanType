@@ -96,15 +96,35 @@ class VoiceInputManager(
         updateState(VoiceState.CONNECTING_PLUGIN)
 
         if (!pluginManager.isPluginConnected()) {
+            pluginManager.setConnectionListener(object : VoicePluginManager.PluginConnectionListener {
+                override fun onPluginConnected(info: com.leanbitlab.leantype.voice.VoiceEngineInfo?) {
+                    mainHandler.post {
+                        if (activeSessionId == sessionId && state == VoiceState.CONNECTING_PLUGIN) {
+                            initiateSessionHandshake(sessionId)
+                        }
+                    }
+                }
+
+                override fun onPluginDisconnected() {
+                    mainHandler.post {
+                        if (activeSessionId == sessionId) {
+                            notifyError("Plugin disconnected unexpectedly")
+                            cleanupSession()
+                            updateState(VoiceState.ERROR)
+                        }
+                    }
+                }
+            })
+
             val bound = pluginManager.bindIfNeeded()
             if (!bound) {
                 notifyError("Failed to bind to voice plugin")
                 updateState(VoiceState.ERROR)
                 return
             }
+        } else {
+            initiateSessionHandshake(sessionId)
         }
-
-        initiateSessionHandshake(sessionId)
     }
 
     private fun initiateSessionHandshake(sessionId: String) {
@@ -373,11 +393,15 @@ class VoiceInputManager(
 
     private fun updateState(newState: VoiceState) {
         this.state = newState
-        listener?.onStateChanged(newState)
+        mainHandler.post {
+            listener?.onStateChanged(newState)
+        }
     }
 
     private fun notifyError(message: String) {
-        listener?.onError(message)
+        mainHandler.post {
+            listener?.onError(message)
+        }
     }
 
     fun release() {
