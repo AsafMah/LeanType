@@ -6,6 +6,7 @@ plugins {
     kotlin("android")
     kotlin("plugin.serialization") version "2.2.21"
     kotlin("plugin.compose") version "2.2.21"
+    kotlin("plugin.parcelize")
 }
 
 // Load keystore properties
@@ -153,6 +154,7 @@ android {
         viewBinding = true
         buildConfig = true
         compose = true
+        aidl = true
     }
 
     externalNativeBuild {
