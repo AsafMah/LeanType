@@ -176,8 +176,11 @@ class VoiceInputManager(
 
             override fun onPartial(text: String?) {
                 mainHandler.post {
-                    if (activeSessionId == sessionId && state == VoiceState.RECORDING && text != null) {
-                        handlePartialText(text)
+                    if (activeSessionId == sessionId && isRecording.get()) {
+                        Log.i(TAG, "onPartial received: '$text' | icNull=${ims.currentInputConnection == null}")
+                        if (!text.isNullOrBlank()) {
+                            handlePartialText(text)
+                        }
                     }
                 }
             }
@@ -185,6 +188,7 @@ class VoiceInputManager(
             override fun onFinal(text: String?) {
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
+                        Log.i(TAG, "onFinal received: '$text' | icNull=${ims.currentInputConnection == null}")
                         cancelPendingPartial()
                         handleFinalText(text ?: "")
                     }

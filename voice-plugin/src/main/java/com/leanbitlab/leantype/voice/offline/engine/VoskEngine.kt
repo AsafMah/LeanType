@@ -60,10 +60,18 @@ class VoskEngine(private val context: Context) {
                     val buffer = ByteArray(4096)
                     var bytesRead: Int
 
+                    var isFirstRead = true
                     while (!isCancelled) {
                         bytesRead = input.read(buffer)
                         if (bytesRead <= 0) break
                         totalRead += bytesRead
+
+                        if (isFirstRead && bytesRead >= 4) {
+                            isFirstRead = false
+                            val sample0 = java.nio.ByteBuffer.wrap(buffer, 0, 2).order(java.nio.ByteOrder.LITTLE_ENDIAN).short
+                            val sample1 = java.nio.ByteBuffer.wrap(buffer, 2, 2).order(java.nio.ByteOrder.LITTLE_ENDIAN).short
+                            android.util.Log.i("VoskEngine", "First audio samples: s0=$sample0, s1=$sample1 (0 means mic is muted/silence)")
+                        }
 
                         if (totalRead % 32000L < bytesRead) {
                             android.util.Log.i("VoskEngine", "pipe read totalRead=$totalRead")
