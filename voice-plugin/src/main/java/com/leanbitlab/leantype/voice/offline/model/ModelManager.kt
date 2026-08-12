@@ -39,12 +39,17 @@ class ModelManager(private val context: Context) {
         val targetEngine = request.engineType
         val tmpZip = File(modelsDir, "${targetEngine}_${System.currentTimeMillis()}.tmp")
 
+        val isDebuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
         try {
-            android.util.Log.i("ModelManager", "Starting model import for $targetEngine, size: ${request.sizeBytes} bytes")
+            if (isDebuggable) {
+                android.util.Log.i("ModelManager", "Starting model import for $targetEngine, size: ${request.sizeBytes} bytes")
+            }
             ParcelFileDescriptor.AutoCloseInputStream(request.file).use { input ->
                 FileOutputStream(tmpZip).use { output ->
                     val copied = input.copyTo(output)
-                    android.util.Log.i("ModelManager", "Copied $copied bytes to temp file ${tmpZip.name}")
+                    if (isDebuggable) {
+                        android.util.Log.i("ModelManager", "Copied $copied bytes to temp file ${tmpZip.name}")
+                    }
                 }
             }
 
@@ -57,13 +62,17 @@ class ModelManager(private val context: Context) {
 
             return if (targetEngine == VoiceConstants.ENGINE_VOSK) {
                 val success = extractVoskModel(tmpZip, modelsDir)
-                android.util.Log.i("ModelManager", "Vosk model extraction success: $success")
+                if (isDebuggable) {
+                    android.util.Log.i("ModelManager", "Vosk model extraction success: $success")
+                }
                 success
             } else {
                 val finalFile = File(modelsDir, targetEngine)
                 finalFile.deleteRecursively()
                 val success = tmpZip.renameTo(finalFile)
-                android.util.Log.i("ModelManager", "Whisper model rename success: $success")
+                if (isDebuggable) {
+                    android.util.Log.i("ModelManager", "Whisper model rename success: $success")
+                }
                 success
             }
         } catch (e: Exception) {

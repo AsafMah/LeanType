@@ -51,6 +51,7 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import helium314.keyboard.settings.SearchSettingsScreen
@@ -130,9 +131,15 @@ fun VoiceSettingsScreen(
     }
 
     LaunchedEffect(isPluginConnected) {
-        while (isPluginConnected) {
-            updatePluginStatus()
-            kotlinx.coroutines.delay(1500)
+        if (isPluginConnected) {
+            while (isActive) {
+                updatePluginStatus()
+                val vosk = voskState?.state
+                if (vosk == ModelState.STATE_READY || vosk == ModelState.STATE_ERROR) {
+                    break
+                }
+                kotlinx.coroutines.delay(1500)
+            }
         }
     }
 
