@@ -50,6 +50,9 @@ import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.filePicker
@@ -126,47 +129,72 @@ fun VoiceSettingsScreen(
         }
     }
 
+    LaunchedEffect(isPluginConnected) {
+        while (isPluginConnected) {
+            updatePluginStatus()
+            kotlinx.coroutines.delay(1500)
+        }
+    }
+
     val voskPicker = filePicker { uri ->
-        try {
-            val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-            if (pfd != null) {
-                val size = pfd.statSize
-                val request = ModelImportRequest(
-                    engineType = VoiceConstants.ENGINE_VOSK,
-                    language = "en-US",
-                    sha256 = null,
-                    sizeBytes = size,
-                    file = pfd
-                )
-                pluginManager.importModelSafely(request)
-                Toast.makeText(context, "Vosk model import dispatched", Toast.LENGTH_SHORT).show()
-                updatePluginStatus()
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                if (pfd != null) {
+                    val size = pfd.statSize
+                    val request = ModelImportRequest(
+                        engineType = VoiceConstants.ENGINE_VOSK,
+                        language = "en-US",
+                        sha256 = null,
+                        sizeBytes = size,
+                        file = pfd
+                    )
+                    if (!pluginManager.isPluginConnected()) {
+                        pluginManager.bindIfNeeded()
+                    }
+                    pluginManager.importModelSafely(request)
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        Toast.makeText(context, "Vosk model import dispatched", Toast.LENGTH_SHORT).show()
+                        updatePluginStatus()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("VoiceSettingsScreen", "Failed to import Vosk model", e)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    Toast.makeText(context, "Model import failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
             }
-        } catch (e: Exception) {
-            Log.e("VoiceSettingsScreen", "Failed to import Vosk model", e)
-            Toast.makeText(context, "Model import failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
 
     val whisperPicker = filePicker { uri ->
-        try {
-            val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-            if (pfd != null) {
-                val size = pfd.statSize
-                val request = ModelImportRequest(
-                    engineType = VoiceConstants.ENGINE_WHISPER,
-                    language = "multilingual",
-                    sha256 = null,
-                    sizeBytes = size,
-                    file = pfd
-                )
-                pluginManager.importModelSafely(request)
-                Toast.makeText(context, "Whisper model import dispatched", Toast.LENGTH_SHORT).show()
-                updatePluginStatus()
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                if (pfd != null) {
+                    val size = pfd.statSize
+                    val request = ModelImportRequest(
+                        engineType = VoiceConstants.ENGINE_WHISPER,
+                        language = "multilingual",
+                        sha256 = null,
+                        sizeBytes = size,
+                        file = pfd
+                    )
+                    if (!pluginManager.isPluginConnected()) {
+                        pluginManager.bindIfNeeded()
+                    }
+                    pluginManager.importModelSafely(request)
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        Toast.makeText(context, "Whisper model import dispatched", Toast.LENGTH_SHORT).show()
+                        updatePluginStatus()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("VoiceSettingsScreen", "Failed to import Whisper model", e)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    Toast.makeText(context, "Model import failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
             }
-        } catch (e: Exception) {
-            Log.e("VoiceSettingsScreen", "Failed to import Whisper model", e)
-            Toast.makeText(context, "Model import failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
 

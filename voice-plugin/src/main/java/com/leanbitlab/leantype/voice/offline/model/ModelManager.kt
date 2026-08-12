@@ -40,26 +40,34 @@ class ModelManager(private val context: Context) {
         val tmpZip = File(modelsDir, "${targetEngine}_${System.currentTimeMillis()}.tmp")
 
         try {
+            android.util.Log.i("ModelManager", "Starting model import for $targetEngine, size: ${request.sizeBytes} bytes")
             ParcelFileDescriptor.AutoCloseInputStream(request.file).use { input ->
                 FileOutputStream(tmpZip).use { output ->
-                    input.copyTo(output)
+                    val copied = input.copyTo(output)
+                    android.util.Log.i("ModelManager", "Copied $copied bytes to temp file ${tmpZip.name}")
                 }
             }
 
             val sha256 = request.sha256
             if (sha256 != null && !verifySha256(tmpZip, sha256)) {
+                android.util.Log.e("ModelManager", "SHA256 verification failed")
                 tmpZip.delete()
                 return false
             }
 
             return if (targetEngine == VoiceConstants.ENGINE_VOSK) {
-                extractVoskModel(tmpZip, modelsDir)
+                val success = extractVoskModel(tmpZip, modelsDir)
+                android.util.Log.i("ModelManager", "Vosk model extraction success: $success")
+                success
             } else {
                 val finalFile = File(modelsDir, targetEngine)
                 finalFile.deleteRecursively()
-                tmpZip.renameTo(finalFile)
+                val success = tmpZip.renameTo(finalFile)
+                android.util.Log.i("ModelManager", "Whisper model rename success: $success")
+                success
             }
         } catch (e: Exception) {
+            android.util.Log.e("ModelManager", "Failed to import model", e)
             tmpZip.delete()
             return false
         }
