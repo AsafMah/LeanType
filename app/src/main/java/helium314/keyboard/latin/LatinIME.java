@@ -896,7 +896,7 @@ public class LatinIME extends InputMethodService implements
             mVoiceOverlayView.setOnDoneListener(() -> {
                 if (mVoiceInputManager != null) mVoiceInputManager.stopVoice();
             });
-            root.addView(mVoiceOverlayView, new FrameLayout.LayoutParams(
+            root.addView(mVoiceOverlayView, new android.widget.RelativeLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
             ));
