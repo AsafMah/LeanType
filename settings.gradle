@@ -1,5 +1,6 @@
 include ':app'
 include ':voice-contract'
+include ':voice-plugin'
 include ':tools:make-emoji-keys'
 
 // Explicitly disable R8 Full Mode programmatically to guarantee reproducible builds
