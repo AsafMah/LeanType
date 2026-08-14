@@ -230,16 +230,7 @@ fun VoiceSettingsScreen(
                     "Accurate (Whisper offline)" to VoiceConstants.MODE_ACCURATE,
                     "Hybrid (Vosk + Whisper)" to VoiceConstants.MODE_HYBRID
                 ),
-                default = VoiceConstants.MODE_FAST,
-                onChanged = { mode ->
-                    if (mode == VoiceConstants.MODE_HYBRID) {
-                        Toast.makeText(
-                            context,
-                            "Hybrid mode will refine with Whisper in Phase 2.3; currently using Fast mode",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
+                default = VoiceConstants.MODE_FAST
             )
         }
     }
