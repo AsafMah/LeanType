@@ -235,6 +235,10 @@ class VoiceInputManager(
 
         val started = pluginManager.startSession(config, audioPipeReadSide!!, callback)
 
+        // Close the host's copy of the read side of the pipe after passing it over AIDL binder
+        closeQuietly(audioPipeReadSide)
+        audioPipeReadSide = null
+
         if (!started) {
             cancelHandshakeTimeout()
             cleanupSession()
@@ -330,7 +334,9 @@ class VoiceInputManager(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Audio recording pipe error", e)
+                if (isRecording.get()) {
+                    Log.e(TAG, "Audio recording pipe error", e)
+                }
             } finally {
                 Log.i(TAG, "Audio loop ended. Total wrote: $totalBytesWrote bytes")
                 closeQuietly(audioPipeWriteSide)
@@ -343,7 +349,7 @@ class VoiceInputManager(
     }
 
     fun stopVoice() {
-        if (state == VoiceState.RECORDING) {
+        if (state == VoiceState.RECORDING || state == VoiceState.STARTING_SESSION || state == VoiceState.CONNECTING_PLUGIN) {
             updateState(VoiceState.PROCESSING_FINAL)
             stopAudioLoop()
             pluginManager.stopSession()
@@ -369,12 +375,23 @@ class VoiceInputManager(
                 audioRecord?.stop()
             }
             audioRecord?.release()
-            audioRecord = null
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping AudioRecord", e)
         }
+        audioRecord = null
+
+        audioThread?.let { thread ->
+            try {
+                thread.join(500)
+            } catch (_: InterruptedException) {}
+        }
+        audioThread = null
+
         closeQuietly(audioPipeWriteSide)
         audioPipeWriteSide = null
+
+        closeQuietly(audioPipeReadSide)
+        audioPipeReadSide = null
     }
 
     private fun handlePartialText(text: String) {
@@ -396,13 +413,9 @@ class VoiceInputManager(
         val ic = ims.currentInputConnection
         val finalText = text.trim()
         if (ic != null && finalText.isNotBlank()) {
-            ic.finishComposingText()
             ic.commitText("$finalText ", 1)
-            ic.finishComposingText()
-        } else if (ic != null) {
-            ic.setComposingText("", 1)
-            ic.finishComposingText()
         }
+        ic?.finishComposingText()
         cleanupSession()
         updateState(VoiceState.IDLE)
     }
