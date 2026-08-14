@@ -17,6 +17,7 @@ import com.leanbitlab.leantype.voice.IVoiceCallback
 import com.leanbitlab.leantype.voice.VoiceConstants
 import com.leanbitlab.leantype.voice.VoiceSessionConfig
 import helium314.keyboard.latin.LatinIME
+import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import java.io.FileOutputStream
@@ -152,10 +153,16 @@ class VoiceInputManager(
         val timeoutMs = ims.prefs().getString(VoiceConstants.PREF_VOICE_HYBRID_TIMEOUT_MS, "900")?.toIntOrNull() ?: 900
         val fallback = ims.prefs().getBoolean(VoiceConstants.PREF_VOICE_HYBRID_FALLBACK, true)
 
+        val languageTag = try {
+            RichInputMethodManager.getInstance().currentSubtypeLocale.toLanguageTag()
+        } catch (_: Exception) {
+            java.util.Locale.getDefault().toLanguageTag()
+        }
+
         val config = VoiceSessionConfig(
             sessionId = sessionId,
             mode = mode,
-            languageTag = null,
+            languageTag = languageTag,
             sampleRate = SAMPLE_RATE,
             enablePartial = true,
             maxSegmentMs = 6000,
