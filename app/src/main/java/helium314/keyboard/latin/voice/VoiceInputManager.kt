@@ -168,7 +168,6 @@ class VoiceInputManager(
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
                         cancelHandshakeTimeout()
-                        startAudioRecordingThread()
                         updateState(VoiceState.RECORDING)
                     }
                 }
@@ -219,7 +218,7 @@ class VoiceInputManager(
             }
         }
 
-        // Set handshake timeout guard (2000 ms)
+        // Set handshake timeout guard (8000 ms)
         handshakeTimeoutRunnable = Runnable {
             if (activeSessionId == sessionId && state == VoiceState.STARTING_SESSION) {
                 Log.e(TAG, "Session handshake timed out")
@@ -230,6 +229,9 @@ class VoiceInputManager(
             }
         }
         mainHandler.postDelayed(handshakeTimeoutRunnable!!, HANDSHAKE_TIMEOUT_MS)
+
+        // Start hardware audio capture IMMEDIATELY so the green mic privacy dot appears without IPC delay
+        startAudioRecordingThread()
 
         val started = pluginManager.startSession(config, audioPipeReadSide!!, callback)
 
@@ -249,22 +251,47 @@ class VoiceInputManager(
         )
         val bufferSize = maxOf(minBufferSize, FRAME_SIZE_BYTES * 4)
 
+        var source = MediaRecorder.AudioSource.VOICE_RECOGNITION
         try {
             audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                source,
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize
             )
+            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                Log.w(TAG, "VOICE_RECOGNITION uninitialized, falling back to MIC source")
+                audioRecord?.release()
+                source = MediaRecorder.AudioSource.MIC
+                audioRecord = AudioRecord(
+                    source,
+                    SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    bufferSize
+                )
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create AudioRecord", e)
-            notifyError("Microphone access failed")
-            updateState(VoiceState.ERROR)
-            return
+            Log.e(TAG, "Failed to create AudioRecord with VOICE_RECOGNITION, trying MIC", e)
+            try {
+                source = MediaRecorder.AudioSource.MIC
+                audioRecord = AudioRecord(
+                    source,
+                    SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    bufferSize
+                )
+            } catch (ex: Exception) {
+                Log.e(TAG, "AudioRecord creation failed completely", ex)
+                notifyError("Microphone access failed")
+                updateState(VoiceState.ERROR)
+                return
+            }
         }
 
-        Log.i(TAG, "AudioRecord created: state=${audioRecord?.state} sampleRate=${audioRecord?.sampleRate}")
+        Log.i(TAG, "AudioRecord created: state=${audioRecord?.state} sampleRate=${audioRecord?.sampleRate} source=$source")
 
         if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
             Log.e(TAG, "AudioRecord uninitialized")
@@ -277,6 +304,7 @@ class VoiceInputManager(
 
         isRecording.set(true)
         audioRecord?.startRecording()
+        Log.i(TAG, "AudioRecord started successfully")
 
         audioThread = Thread {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO)
