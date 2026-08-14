@@ -432,7 +432,7 @@ class VoiceInputManager(
         private const val SAMPLE_RATE = 16000
         private const val FRAME_SIZE_MS = 30
         private const val FRAME_SIZE_BYTES = (SAMPLE_RATE * FRAME_SIZE_MS / 1000) * 2 // 960 bytes
-        private const val HANDSHAKE_TIMEOUT_MS = 2000L
+        private const val HANDSHAKE_TIMEOUT_MS = 8000L
         private const val PARTIAL_THROTTLE_MS = 300L
 
         fun isBlockedEditor(info: EditorInfo?): Boolean {

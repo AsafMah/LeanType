@@ -923,7 +923,9 @@ public class LatinIME extends InputMethodService implements
                 }
             }
 
-            if (state == VoiceInputManager.VoiceState.RECORDING) {
+            if (state == VoiceInputManager.VoiceState.STARTING_SESSION || state == VoiceInputManager.VoiceState.CONNECTING_PLUGIN) {
+                Toast.makeText(LatinIME.this, "Loading voice model…", Toast.LENGTH_SHORT).show();
+            } else if (state == VoiceInputManager.VoiceState.RECORDING) {
                 Toast.makeText(LatinIME.this, "Listening… speak now. Tap mic to finish, Back to cancel.", Toast.LENGTH_SHORT).show();
             } else if (state == VoiceInputManager.VoiceState.IDLE) {
                 Toast.makeText(LatinIME.this, "Voice input finished", Toast.LENGTH_SHORT).show();
@@ -1081,6 +1083,10 @@ public class LatinIME extends InputMethodService implements
     void onStartInputViewInternal(final EditorInfo editorInfo, final boolean restarting) {
         super.onStartInputView(editorInfo, restarting);
         helium314.keyboard.latin.utils.ProofreadHelper.preloadModel(this);
+        if (mVoicePluginManager != null && !mVoicePluginManager.isPluginConnected()
+                && DeviceProtectedUtils.getSharedPreferences(this).getBoolean(VoiceConstants.PREF_VOICE_OFFLINE_ENABLED, false)) {
+            mVoicePluginManager.bindIfNeeded();
+        }
 
         mClipboardHistoryManager.onStartInputView();
         mDictionaryFacilitator.onStartInput();
