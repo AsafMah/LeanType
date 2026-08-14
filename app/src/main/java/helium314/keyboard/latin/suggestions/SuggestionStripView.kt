@@ -31,6 +31,7 @@ import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
+import com.leanbitlab.leantype.voice.VoiceConstants
 import helium314.keyboard.compat.isDeviceLocked
 import helium314.keyboard.event.HapticEvent
 import helium314.keyboard.keyboard.KeyboardSwitcher
@@ -553,6 +554,9 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     override fun onSharedPreferenceChanged(prefs: SharedPreferences, key: String?) {
         setToolbarButtonsActivatedStateOnPrefChange(pinnedKeys, key)
         setToolbarButtonsActivatedStateOnPrefChange(toolbar, key)
+        if (key == VoiceConstants.PREF_VOICE_OFFLINE_ENABLED) {
+            updateVoiceKey()
+        }
         if (key == Settings.PREF_PINNED_TOOLBAR_KEYS 
             || key == Settings.PREF_TOOLBAR_KEYS 
             || key == Settings.PREF_QUICK_PIN_TOOLBAR_KEYS 
