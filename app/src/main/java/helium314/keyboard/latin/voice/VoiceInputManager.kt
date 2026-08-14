@@ -185,9 +185,11 @@ class VoiceInputManager(
             }
 
             override fun onFinal(text: String?) {
+                Log.i(TAG, "Received onFinal: '$text'")
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
-                        Log.i(TAG, "onFinal received: '$text' | icNull=${ims.currentInputConnection == null}")
+                        val ic = ims.currentInputConnection
+                        Log.i(TAG, "Committing to InputConnection (isNull=${ic == null}, text='$text')")
                         cancelPendingPartial()
                         handleFinalText(text ?: "")
                     }
@@ -197,6 +199,7 @@ class VoiceInputManager(
             override fun onError(code: Int, message: String?) {
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
+                        Log.e(TAG, "Received onError: code=$code, message='$message'")
                         cancelPendingPartial()
                         clearComposingText()
                         notifyError(message ?: "Voice error ($code)")
@@ -209,6 +212,7 @@ class VoiceInputManager(
             override fun onSessionEnded() {
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
+                        Log.i(TAG, "Received onSessionEnded, state=$state")
                         cleanupSession()
                         if (state != VoiceState.ERROR) {
                             updateState(VoiceState.IDLE)
@@ -349,6 +353,7 @@ class VoiceInputManager(
     }
 
     fun stopVoice() {
+        Log.i(TAG, "stopVoice() called, state=$state")
         if (state == VoiceState.RECORDING || state == VoiceState.STARTING_SESSION || state == VoiceState.CONNECTING_PLUGIN) {
             updateState(VoiceState.PROCESSING_FINAL)
             stopAudioLoop()
@@ -357,6 +362,7 @@ class VoiceInputManager(
     }
 
     fun cancelVoice() {
+        Log.i(TAG, "cancelVoice() called, state=$state")
         if (state != VoiceState.IDLE) {
             cancelHandshakeTimeout()
             cancelPendingPartial()
@@ -369,6 +375,7 @@ class VoiceInputManager(
     }
 
     private fun stopAudioLoop() {
+        Log.i(TAG, "stopAudioLoop() executing")
         isRecording.set(false)
         try {
             if (audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
@@ -412,8 +419,12 @@ class VoiceInputManager(
         stopAudioLoop()
         val ic = ims.currentInputConnection
         val finalText = text.trim()
+        Log.i(TAG, "handleFinalText executing: icNull=${ic == null}, text='$finalText'")
         if (ic != null && finalText.isNotBlank()) {
-            ic.commitText("$finalText ", 1)
+            val committed = ic.commitText("$finalText ", 1)
+            Log.i(TAG, "commitText executed: success=$committed")
+        } else {
+            Log.w(TAG, "Skipped commitText: icNull=${ic == null}, text='$finalText'")
         }
         ic?.finishComposingText()
         cleanupSession()
