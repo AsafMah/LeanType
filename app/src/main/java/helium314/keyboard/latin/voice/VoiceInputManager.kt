@@ -217,56 +217,31 @@ class VoiceInputManager(
                         if (ic == null) {
                             Log.e(TAG, "onFinal: InputConnection lost! (ic is null, text='$text')")
                         }
-                        val rawText = text.orEmpty()
-                        val prefs = ims.prefs()
-                        val cmdsEnabled = prefs.getBoolean(VoiceConstants.PREF_VOICE_COMMANDS_ENABLED, true)
-                        val punctEnabled = prefs.getBoolean(VoiceConstants.PREF_VOICE_SMART_PUNCTUATION, true)
-
-                        val results = VoiceTextProcessor.process(rawText, cmdsEnabled, punctEnabled, needsCapitalStart)
+                        val rawText = text.orEmpty().trim()
 
                         if (ic != null) {
                             ic.beginBatchEdit()
                             try {
-                                // 1. Atomically clear trailing partial
+                                // 1. Delete trailing partial unconditionally
                                 if (lastPartialLength > 0) {
                                     ic.deleteSurroundingText(lastPartialLength, 0)
                                 }
-                                lastPartialLength = 0
 
-                                // 2. Commit processed clauses
-                                var lastWasTerminal = false
-                                var lastWasNewline = false
-
-                                for (result in results) {
-                                    when (result) {
-                                        is VoiceTextProcessor.Result.Command -> {
-                                            Log.i(TAG, "Executing voice command: ${result.action} ('${result.commandText}')")
-                                            executeVoiceCommand(result.action, ic)
-                                            if (result.action == VoiceTextProcessor.Action.NEW_LINE ||
-                                                result.action == VoiceTextProcessor.Action.NEW_PARAGRAPH
-                                            ) {
-                                                lastWasNewline = true
-                                            }
-                                        }
-                                        is VoiceTextProcessor.Result.Text -> {
-                                            val finalText = result.value.trim()
-                                            Log.i(TAG, "Processing onFinal text='$finalText' (isRecording=${isRecording.get()})")
-
-                                            if (finalText.isNotEmpty()) {
-                                                val committed = ic.commitText("$finalText ", 1)
-                                                Log.i(TAG, "commitText executed: success=$committed")
-                                                lastWasTerminal = result.isTerminal
-                                                lastWasNewline = false
-                                            }
-                                        }
+                                // 2. DIRECT COMMIT: Pure ASR text commit with clean sentence capitalization
+                                if (rawText.isNotEmpty()) {
+                                    val finalText = if (needsCapitalStart) {
+                                        rawText.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() }
+                                    } else {
+                                        rawText
                                     }
-                                }
+                                    val committed = ic.commitText("$finalText ", 1)
+                                    Log.i(TAG, "commitText executed: text='$finalText', success=$committed")
 
-                                if (results.isNotEmpty()) {
-                                    needsCapitalStart = lastWasTerminal || lastWasNewline
+                                    val lastChar = finalText.lastOrNull()
+                                    needsCapitalStart = lastChar != null && lastChar in ".!?"
                                 }
                             } finally {
-                                lastPartialLength = 0
+                                lastPartialLength = 0 // CRITICAL: Unconditional reset
                                 ic.endBatchEdit()
                             }
                         }
