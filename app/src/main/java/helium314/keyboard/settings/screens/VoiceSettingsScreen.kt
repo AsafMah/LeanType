@@ -147,6 +147,7 @@ fun VoiceSettingsScreen(
                     }
                     pluginManager.importModelSafely(request)
                     withContext(Dispatchers.Main) {
+                        prefs.edit().putString("installed_model_${VoiceConstants.ENGINE_VOSK}", "custom").apply()
                         Toast.makeText(context, "Vosk model import dispatched", Toast.LENGTH_SHORT).show()
                         updatePluginStatus()
                     }
@@ -178,6 +179,7 @@ fun VoiceSettingsScreen(
                     }
                     pluginManager.importModelSafely(request)
                     withContext(Dispatchers.Main) {
+                        prefs.edit().putString("installed_model_${VoiceConstants.ENGINE_WHISPER}", "custom").apply()
                         Toast.makeText(context, "Whisper model import dispatched", Toast.LENGTH_SHORT).show()
                         updatePluginStatus()
                     }

@@ -5,20 +5,13 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,6 +26,7 @@ import helium314.keyboard.latin.voice.VoiceDownloadDispatcher
 import helium314.keyboard.latin.voice.VoiceModelItem
 import helium314.keyboard.latin.voice.VoiceModelRegistry
 import helium314.keyboard.latin.voice.VoicePluginManager
+import helium314.keyboard.settings.DeleteButton
 
 @Composable
 fun VoiceModelDownloadDialog(
@@ -54,28 +48,28 @@ fun VoiceModelDownloadDialog(
         onDismissRequest = onDismissRequest,
         onConfirmed = {},
         confirmButtonText = null,
-        cancelButtonText = "Close",
-        title = { Text("Speech Recognition Models") },
+        cancelButtonText = null,
+        scrollContent = true,
+        title = { Text("Speech Models") },
         content = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 // Section: Whisper Models
                 Text(
                     text = "Whisper Models (Accurate & Hybrid)",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
 
                 val isWhisperInstalled = whisperState?.state == ModelState.STATE_READY
 
                 for (model in VoiceModelRegistry.whisperModels) {
                     val isThisModelInstalled = isWhisperInstalled && (
-                        installedWhisperId == model.id || (installedWhisperId == null && model.isRecommended)
+                        if (installedWhisperId != null) installedWhisperId == model.id
+                        else model.isRecommended
                     )
 
                     ModelDownloadRow(
@@ -95,21 +89,23 @@ fun VoiceModelDownloadDialog(
                     )
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 // Section: Vosk Models
                 Text(
                     text = "Vosk Models (Fast Streaming)",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
 
                 val isVoskInstalled = voskState?.state == ModelState.STATE_READY
 
                 for (model in VoiceModelRegistry.voskModels) {
                     val isThisModelInstalled = isVoskInstalled && (
-                        installedVoskId == model.id || (installedVoskId == null && model.isRecommended)
+                        if (installedVoskId != null) installedVoskId == model.id
+                        else model.isRecommended
                     )
 
                     ModelDownloadRow(
@@ -129,34 +125,120 @@ fun VoiceModelDownloadDialog(
                     )
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                // Local manual SAF import section
+                // Section: Custom / Offline Models
                 Text(
                     text = "Custom / Offline Models",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Import custom GGML .bin or Vosk .zip archive directly from your device storage:",
-                    style = MaterialTheme.typography.bodySmall
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
 
+                // Custom Whisper Row
+                val isCustomWhisperInstalled = isWhisperInstalled && installedWhisperId == "custom"
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(
-                        onClick = { onImportLocalFile(VoiceConstants.ENGINE_WHISPER) },
-                        modifier = Modifier.weight(1f)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
                     ) {
-                        Text("Import Whisper", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            text = "Custom Whisper Model",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Import GGML .bin model file from device storage",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    OutlinedButton(
-                        onClick = { onImportLocalFile(VoiceConstants.ENGINE_VOSK) },
-                        modifier = Modifier.weight(1f)
+
+                    if (isCustomWhisperInstalled) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "✓ Active",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                            DeleteButton(
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            ) {
+                                prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_WHISPER}").apply()
+                                pluginManager.deleteModel(VoiceConstants.ENGINE_WHISPER)
+                                Toast.makeText(context, "Whisper model deleted", Toast.LENGTH_SHORT).show()
+                                onRefresh()
+                            }
+                        }
+                    } else {
+                        TextButton(
+                            onClick = { onImportLocalFile(VoiceConstants.ENGINE_WHISPER) }
+                        ) {
+                            Text("Import")
+                        }
+                    }
+                }
+
+                // Custom Vosk Row
+                val isCustomVoskInstalled = isVoskInstalled && installedVoskId == "custom"
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
                     ) {
-                        Text("Import Vosk", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            text = "Custom Vosk Model",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Import Vosk .zip archive from device storage",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (isCustomVoskInstalled) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "✓ Active",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                            DeleteButton(
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            ) {
+                                prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_VOSK}").apply()
+                                pluginManager.deleteModel(VoiceConstants.ENGINE_VOSK)
+                                Toast.makeText(context, "Vosk model deleted", Toast.LENGTH_SHORT).show()
+                                onRefresh()
+                            }
+                        }
+                    } else {
+                        TextButton(
+                            onClick = { onImportLocalFile(VoiceConstants.ENGINE_VOSK) }
+                        ) {
+                            Text("Import")
+                        }
                     }
                 }
             }
@@ -173,79 +255,72 @@ private fun ModelDownloadRow(
     onDownload: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = model.displayName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = model.displayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (model.isRecommended) {
                     Text(
-                        text = "${model.language} • ${model.sizeMb}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = " (Recommended)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 4.dp)
                     )
                 }
-
-                if (isThisModelInstalled) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.padding(end = 6.dp)
-                        ) {
-                            Text(
-                                text = "Installed",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = onDelete,
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Delete", style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                } else {
-                    Button(
-                        onClick = onDownload
-                    ) {
-                        val label = if (isAnyModelInstalledForEngine) {
-                            if (isNetworkAvailable) "Replace" else "Browser"
-                        } else {
-                            if (isNetworkAvailable) "Download" else "Browser"
-                        }
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                }
             }
-
+            Text(
+                text = "${model.language} • ${model.sizeMb}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (model.description.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = model.description,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
+            }
+        }
+
+        if (isThisModelInstalled) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "✓ Installed",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(end = 4.dp)
+                )
+                DeleteButton(
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                ) {
+                    onDelete()
+                }
+            }
+        } else {
+            TextButton(
+                onClick = onDownload
+            ) {
+                val label = if (isAnyModelInstalledForEngine) {
+                    if (isNetworkAvailable) "Replace" else "Browser"
+                } else {
+                    if (isNetworkAvailable) "Download" else "Browser"
+                }
+                Text(label)
             }
         }
     }

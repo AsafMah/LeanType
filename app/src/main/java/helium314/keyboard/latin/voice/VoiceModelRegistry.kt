@@ -19,7 +19,7 @@ object VoiceModelRegistry {
     val whisperModels = listOf(
         VoiceModelItem(
             id = "whisper-base-q5_1",
-            displayName = "Whisper Base Q5_1 (Recommended)",
+            displayName = "Whisper Base Q5_1",
             engineType = VoiceConstants.ENGINE_WHISPER,
             language = "Multilingual",
             sizeMb = "57 MB",
@@ -55,7 +55,7 @@ object VoiceModelRegistry {
     val voskModels = listOf(
         VoiceModelItem(
             id = "vosk-small-en-us",
-            displayName = "Vosk Small US English (Recommended)",
+            displayName = "Vosk Small US English",
             engineType = VoiceConstants.ENGINE_VOSK,
             language = "en-US",
             sizeMb = "40 MB",
