@@ -61,7 +61,6 @@ class VoiceInputManager(
     private var handshakeTimeoutRunnable: Runnable? = null
     private var needsCapitalStart = true
     private var lastPartialLength = 0
-    private var isComposingSupported = true
 
     private var listener: VoiceInputListener? = null
 
@@ -113,7 +112,6 @@ class VoiceInputManager(
         activeSessionId = sessionId
         needsCapitalStart = true
         lastPartialLength = 0
-        isComposingSupported = true
 
         if (!isConnected) {
             updateState(VoiceState.CONNECTING_PLUGIN)
@@ -200,9 +198,7 @@ class VoiceInputManager(
                 Log.i(TAG, "Received onPartial from plugin: '$text'")
                 mainHandler.post {
                     if (activeSessionId == sessionId && isRecording.get()) {
-                        if (!text.isNullOrBlank()) {
-                            handlePartialText(text)
-                        }
+                        handlePartialText(text.orEmpty())
                     }
                 }
             }
@@ -222,14 +218,11 @@ class VoiceInputManager(
                         if (ic != null) {
                             ic.beginBatchEdit()
                             try {
-                                // 1. Clear trailing partial safely
-                                if (!isComposingSupported && lastPartialLength > 0) {
+                                // 1. Atomically clear trailing partial
+                                if (lastPartialLength > 0) {
                                     ic.deleteSurroundingText(lastPartialLength, 0)
-                                } else {
-                                    ic.finishComposingText()
+                                    lastPartialLength = 0
                                 }
-                                lastPartialLength = 0
-                                isComposingSupported = true // Reset for next segment
 
                                 // 2. Commit processed clauses
                                 var lastWasTerminal = false
@@ -503,18 +496,7 @@ class VoiceInputManager(
         val ic = ims.currentInputConnection ?: return
         if (!isRecording.get()) return
 
-        Log.i(TAG, "Setting composing text: '$text' (composingSupported=$isComposingSupported, lastLen=$lastPartialLength)")
-
-        if (isComposingSupported) {
-            val success = ic.setComposingText(text, 1)
-            if (!success) {
-                Log.w(TAG, "setComposingText returned false, switching to batch edit replacement fallback")
-                isComposingSupported = false
-            } else {
-                lastPartialLength = text.length
-                return
-            }
-        }
+        Log.i(TAG, "Setting partial text: '$text' (lastLen=$lastPartialLength)")
 
         ic.beginBatchEdit()
         try {
@@ -535,12 +517,12 @@ class VoiceInputManager(
     fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         if (!isRecording.get()) return
 
-        // If the cursor moved outside the expected composing region, the user moved it manually
-        // or the editor auto-committed and shifted things unpredictably.
-        if (newSelStart != candidatesEnd || newSelEnd != candidatesEnd) {
-            Log.i(TAG, "Cursor drift detected (newSelStart=$newSelStart, candEnd=$candidatesEnd), resetting partial length")
+        // If the cursor moved to a position before our tracked partial length,
+        // the user manually moved it or the editor auto-shifted it.
+        // Reset to prevent deleting the user's pre-existing document text.
+        if (lastPartialLength > 0 && newSelStart < lastPartialLength) {
+            Log.w(TAG, "Cursor drift detected (newSel=$newSelStart < partialLen=$lastPartialLength). Resetting tracker.")
             lastPartialLength = 0
-            isComposingSupported = true
         }
     }
 
@@ -605,14 +587,10 @@ class VoiceInputManager(
         if (ic != null) {
             ic.beginBatchEdit()
             try {
-                if (!isComposingSupported && lastPartialLength > 0) {
+                if (lastPartialLength > 0) {
                     ic.deleteSurroundingText(lastPartialLength, 0)
-                } else {
-                    ic.setComposingText("", 1)
-                    ic.finishComposingText()
+                    lastPartialLength = 0
                 }
-                lastPartialLength = 0
-                isComposingSupported = true
             } finally {
                 ic.endBatchEdit()
             }
