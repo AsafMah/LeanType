@@ -373,7 +373,9 @@ class VoiceInputManager(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Exception in audio write loop", e)
+                if (isRecording.get()) {
+                    Log.e(TAG, "Exception in audio write loop", e)
+                }
             } finally {
                 try { outputStream?.close() } catch (_: Exception) {}
                 Log.i(TAG, "Audio loop ended. Total wrote: $totalBytesWritten bytes")
