@@ -67,10 +67,7 @@ fun VoiceModelDownloadDialog(
                 val isWhisperInstalled = whisperState?.state == ModelState.STATE_READY
 
                 for (model in VoiceModelRegistry.whisperModels) {
-                    val isThisModelInstalled = isWhisperInstalled && (
-                        if (installedWhisperId != null) installedWhisperId == model.id
-                        else model.isRecommended
-                    )
+                    val isThisModelInstalled = isWhisperInstalled && installedWhisperId == model.id
 
                     ModelDownloadRow(
                         model = model,
@@ -103,10 +100,7 @@ fun VoiceModelDownloadDialog(
                 val isVoskInstalled = voskState?.state == ModelState.STATE_READY
 
                 for (model in VoiceModelRegistry.voskModels) {
-                    val isThisModelInstalled = isVoskInstalled && (
-                        if (installedVoskId != null) installedVoskId == model.id
-                        else model.isRecommended
-                    )
+                    val isThisModelInstalled = isVoskInstalled && installedVoskId == model.id
 
                     ModelDownloadRow(
                         model = model,
@@ -267,21 +261,11 @@ private fun ModelDownloadRow(
                 .weight(1f)
                 .padding(end = 8.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = model.displayName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                if (model.isRecommended) {
-                    Text(
-                        text = " (Recommended)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-            }
+            Text(
+                text = model.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
             Text(
                 text = "${model.language} • ${model.sizeMb}",
                 style = MaterialTheme.typography.bodySmall,

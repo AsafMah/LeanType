@@ -11,7 +11,6 @@ data class VoiceModelItem(
     val sizeMb: String,
     val downloadUrl: String,
     val browserUrl: String,
-    val isRecommended: Boolean = false,
     val description: String = ""
 )
 
@@ -25,7 +24,6 @@ object VoiceModelRegistry {
             sizeMb = "57 MB",
             downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
             browserUrl = "https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-base-q5_1.bin",
-            isRecommended = true,
             description = "High accuracy, quantized for fast CPU inference and low memory."
         ),
         VoiceModelItem(
@@ -36,7 +34,6 @@ object VoiceModelRegistry {
             sizeMb = "39 MB",
             downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
             browserUrl = "https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-tiny.bin",
-            isRecommended = false,
             description = "Ultra-compact and fastest Whisper model."
         ),
         VoiceModelItem(
@@ -47,7 +44,6 @@ object VoiceModelRegistry {
             sizeMb = "182 MB",
             downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
             browserUrl = "https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-small-q5_1.bin",
-            isRecommended = false,
             description = "Maximum recognition accuracy across multilingual accents."
         )
     )
@@ -61,7 +57,6 @@ object VoiceModelRegistry {
             sizeMb = "40 MB",
             downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
             browserUrl = "https://alphacephei.com/vosk/models",
-            isRecommended = true,
             description = "Lightweight streaming acoustic model for standard English."
         ),
         VoiceModelItem(
@@ -72,7 +67,6 @@ object VoiceModelRegistry {
             sizeMb = "36 MB",
             downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-en-in-0.4.zip",
             browserUrl = "https://alphacephei.com/vosk/models",
-            isRecommended = false,
             description = "Tuned for Indian English accents and vocabulary."
         )
     )
