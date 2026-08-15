@@ -468,7 +468,9 @@ class VoiceInputManager(
         activeSessionId = null
     }
 
+    @Synchronized
     private fun updateState(newState: VoiceState) {
+        if (this.state == newState) return
         this.state = newState
         mainHandler.post {
             listener?.onStateChanged(newState)
@@ -492,7 +494,7 @@ class VoiceInputManager(
         private const val FRAME_SIZE_MS = 30
         private const val FRAME_SIZE_BYTES = (SAMPLE_RATE * FRAME_SIZE_MS / 1000) * 2 // 960 bytes
         private const val HANDSHAKE_TIMEOUT_MS = 8000L
-        private const val PARTIAL_THROTTLE_MS = 300L
+        private const val PARTIAL_THROTTLE_MS = 30L
 
         fun isBlockedEditor(info: EditorInfo?): Boolean {
             if (info == null) return false

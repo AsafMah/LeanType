@@ -588,6 +588,7 @@ public class LatinIME extends InputMethodService implements
     private static LatinIME sInstance;
     private VoicePluginManager mVoicePluginManager;
     private VoiceInputManager mVoiceInputManager;
+    private VoiceInputManager.VoiceState mLastVoiceState = VoiceInputManager.VoiceState.IDLE;
 
     @Nullable
     public static LatinIME getInstance() {
@@ -911,6 +912,10 @@ public class LatinIME extends InputMethodService implements
 
     public void onVoiceStateChanged(final VoiceInputManager.VoiceState state) {
         mHandler.post(() -> {
+            if (state == mLastVoiceState) return;
+            final VoiceInputManager.VoiceState prevState = mLastVoiceState;
+            mLastVoiceState = state;
+
             final boolean isActive = (state == VoiceInputManager.VoiceState.RECORDING
                     || state == VoiceInputManager.VoiceState.STARTING_SESSION
                     || state == VoiceInputManager.VoiceState.CONNECTING_PLUGIN);
@@ -923,11 +928,12 @@ public class LatinIME extends InputMethodService implements
                 }
             }
 
-            if (state == VoiceInputManager.VoiceState.STARTING_SESSION || state == VoiceInputManager.VoiceState.CONNECTING_PLUGIN) {
+            if ((state == VoiceInputManager.VoiceState.STARTING_SESSION || state == VoiceInputManager.VoiceState.CONNECTING_PLUGIN)
+                    && (prevState == VoiceInputManager.VoiceState.IDLE || prevState == VoiceInputManager.VoiceState.ERROR)) {
                 Toast.makeText(LatinIME.this, "Loading voice model…", Toast.LENGTH_SHORT).show();
             } else if (state == VoiceInputManager.VoiceState.RECORDING) {
                 Toast.makeText(LatinIME.this, "Listening… speak now. Tap mic to finish, Back to cancel.", Toast.LENGTH_SHORT).show();
-            } else if (state == VoiceInputManager.VoiceState.IDLE) {
+            } else if (state == VoiceInputManager.VoiceState.IDLE && prevState != VoiceInputManager.VoiceState.IDLE) {
                 Toast.makeText(LatinIME.this, "Voice input finished", Toast.LENGTH_SHORT).show();
             }
 
