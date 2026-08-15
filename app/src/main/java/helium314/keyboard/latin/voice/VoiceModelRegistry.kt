@@ -69,7 +69,7 @@ object VoiceModelRegistry {
             displayName = "Vosk Indian English",
             engineType = VoiceConstants.ENGINE_VOSK,
             language = "en-IN",
-            languageCode = "en",
+            languageCode = "en-in",
             sizeMb = "36 MB",
             downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-en-in-0.4.zip",
             browserUrl = "https://alphacephei.com/vosk/models",
