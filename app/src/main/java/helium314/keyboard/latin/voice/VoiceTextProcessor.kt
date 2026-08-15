@@ -2,6 +2,7 @@
 package helium314.keyboard.latin.voice
 
 import java.util.Locale
+import java.util.StringTokenizer
 
 object VoiceTextProcessor {
 
@@ -54,36 +55,78 @@ object VoiceTextProcessor {
         commandsEnabled: Boolean,
         smartPunctuationEnabled: Boolean,
         needsCapital: Boolean
-    ): Result {
-        val normalized = raw.trim()
-        if (normalized.isEmpty()) return Result.Text("", false)
+    ): List<Result> {
+        val results = mutableListOf<Result>()
+        if (raw.isBlank()) return results
 
-        val lower = normalized.lowercase(Locale.ROOT).replace(Regex("""[.,!?;:]+$"""), "").trim()
-        if (commandsEnabled && COMMANDS.containsKey(lower)) {
-            return Result.Command(COMMANDS[lower]!!, lower)
-        }
-
-        var text = normalized
-        var isTerminal = false
-
+        // 1. Global spoken punctuation replacement
+        var text = raw.trim()
         if (smartPunctuationEnabled) {
             text = PUNCT_REGEX.replace(text) { match ->
-                val sym = PUNCT_MAP[match.value.lowercase(Locale.ROOT)] ?: match.value
-                if (sym in ".!?") isTerminal = true
-                sym
+                PUNCT_MAP[match.value.lowercase(Locale.ROOT)] ?: match.value
             }
             text = text.replace(SPACE_BEFORE_PUNCT, "$1").replace(SPACE_AFTER_PUNCT, "$1 ")
         }
 
-        if (needsCapital && text.isNotEmpty()) {
-            text = text.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+        // 2. Linear tokenization using StringTokenizer
+        val st = StringTokenizer(text, ",;.!?\n", true)
+        val currentClause = StringBuilder()
+        var currentCapital = needsCapital
+
+        while (st.hasMoreTokens()) {
+            val token = st.nextToken()
+            val isDelimiter = (token.length == 1 && ",;.!?".contains(token)) || token == "\n"
+
+            if (isDelimiter) {
+                val clauseStr = currentClause.toString().trim()
+                if (clauseStr.isNotBlank()) {
+                    val norm = clauseStr.lowercase(Locale.ROOT)
+                    val cmdAction = if (commandsEnabled) COMMANDS[norm] else null
+                    if (cmdAction != null) {
+                        results.add(Result.Command(cmdAction, norm))
+                        if (token in ".!?" || token == "\n") currentCapital = true
+                    } else {
+                        var finalText = clauseStr
+                        if (currentCapital) {
+                            finalText = finalText.replaceFirstChar {
+                                if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                            }
+                        }
+                        if (token != "\n") {
+                            finalText += token
+                        }
+                        val isTerminal = token in ".!?"
+                        results.add(Result.Text(finalText, isTerminal))
+                        currentCapital = isTerminal || token == "\n"
+                    }
+                } else if (token == "\n") {
+                    currentCapital = true
+                }
+                currentClause.clear()
+            } else {
+                currentClause.append(token)
+            }
         }
 
-        val lastChar = text.trimEnd().lastOrNull()
-        if (lastChar != null && lastChar in ".!?") {
-            isTerminal = true
+        val remainingClause = currentClause.toString().trim()
+        if (remainingClause.isNotBlank()) {
+            val norm = remainingClause.lowercase(Locale.ROOT)
+            val cmdAction = if (commandsEnabled) COMMANDS[norm] else null
+            if (cmdAction != null) {
+                results.add(Result.Command(cmdAction, norm))
+            } else {
+                var finalText = remainingClause
+                if (currentCapital) {
+                    finalText = finalText.replaceFirstChar {
+                        if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                    }
+                }
+                val lastChar = finalText.trimEnd().lastOrNull()
+                val isTerminal = lastChar != null && lastChar in ".!?"
+                results.add(Result.Text(finalText, isTerminal))
+            }
         }
 
-        return Result.Text(text, isTerminal)
+        return results
     }
 }

@@ -213,28 +213,43 @@ class VoiceInputManager(
                         val cmdsEnabled = prefs.getBoolean(VoiceConstants.PREF_VOICE_COMMANDS_ENABLED, true)
                         val punctEnabled = prefs.getBoolean(VoiceConstants.PREF_VOICE_SMART_PUNCTUATION, true)
 
-                        val result = VoiceTextProcessor.process(rawText, cmdsEnabled, punctEnabled, needsCapitalStart)
+                        val results = VoiceTextProcessor.process(rawText, cmdsEnabled, punctEnabled, needsCapitalStart)
 
-                        when (result) {
-                            is VoiceTextProcessor.Result.Command -> {
-                                Log.i(TAG, "Executing voice command: ${result.action} ('${result.commandText}')")
-                                if (ic != null) {
-                                    executeVoiceCommand(result.action, ic)
+                        var lastWasTerminal = false
+                        var lastWasNewline = false
+
+                        for (result in results) {
+                            when (result) {
+                                is VoiceTextProcessor.Result.Command -> {
+                                    Log.i(TAG, "Executing voice command: ${result.action} ('${result.commandText}')")
+                                    if (ic != null) {
+                                        executeVoiceCommand(result.action, ic)
+                                    }
+                                    if (result.action == VoiceTextProcessor.Action.NEW_LINE ||
+                                        result.action == VoiceTextProcessor.Action.NEW_PARAGRAPH
+                                    ) {
+                                        lastWasNewline = true
+                                    }
+                                }
+                                is VoiceTextProcessor.Result.Text -> {
+                                    val finalText = result.value.trim()
+                                    Log.i(TAG, "Processing onFinal text='$finalText' (icNull=${ic == null}, isRecording=${isRecording.get()})")
+
+                                    if (ic != null && finalText.isNotEmpty()) {
+                                        val committed = ic.commitText("$finalText ", 1)
+                                        Log.i(TAG, "commitText executed: success=$committed")
+                                        ic.finishComposingText()
+                                        lastWasTerminal = result.isTerminal
+                                        lastWasNewline = false
+                                    } else {
+                                        ic?.finishComposingText()
+                                    }
                                 }
                             }
-                            is VoiceTextProcessor.Result.Text -> {
-                                val finalText = result.value.trim()
-                                Log.i(TAG, "Processing onFinal text='$finalText' (icNull=${ic == null}, isRecording=${isRecording.get()})")
+                        }
 
-                                if (ic != null && finalText.isNotEmpty()) {
-                                    val committed = ic.commitText("$finalText ", 1)
-                                    Log.i(TAG, "commitText executed: success=$committed")
-                                    ic.finishComposingText()
-                                    needsCapitalStart = result.isTerminal
-                                } else {
-                                    ic?.finishComposingText()
-                                }
-                            }
+                        if (results.isNotEmpty()) {
+                            needsCapitalStart = lastWasTerminal || lastWasNewline
                         }
 
                         lastPartialText = null
