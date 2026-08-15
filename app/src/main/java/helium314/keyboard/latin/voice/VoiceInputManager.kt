@@ -104,6 +104,12 @@ class VoiceInputManager(
             return
         }
 
+        try {
+            ims.requestShowSelf(0)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to requestShowSelf", e)
+        }
+
         val isConnected = pluginManager.isPluginConnected()
         Log.i(TAG, "startVoice: isConnected=$isConnected")
 
@@ -208,6 +214,9 @@ class VoiceInputManager(
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
                         val ic = ims.currentInputConnection
+                        if (ic == null) {
+                            Log.e(TAG, "onFinal: InputConnection lost! (ic is null, text='$text')")
+                        }
                         val rawText = text.orEmpty()
                         val prefs = ims.prefs()
                         val cmdsEnabled = prefs.getBoolean(VoiceConstants.PREF_VOICE_COMMANDS_ENABLED, true)
@@ -221,8 +230,8 @@ class VoiceInputManager(
                                 // 1. Atomically clear trailing partial
                                 if (lastPartialLength > 0) {
                                     ic.deleteSurroundingText(lastPartialLength, 0)
-                                    lastPartialLength = 0
                                 }
+                                lastPartialLength = 0
 
                                 // 2. Commit processed clauses
                                 var lastWasTerminal = false
@@ -257,6 +266,7 @@ class VoiceInputManager(
                                     needsCapitalStart = lastWasTerminal || lastWasNewline
                                 }
                             } finally {
+                                lastPartialLength = 0
                                 ic.endBatchEdit()
                             }
                         }
@@ -493,7 +503,11 @@ class VoiceInputManager(
         if (text == lastPartialText) return
         lastPartialText = text
 
-        val ic = ims.currentInputConnection ?: return
+        val ic = ims.currentInputConnection
+        if (ic == null) {
+            Log.e(TAG, "handlePartialText: InputConnection lost! (ic is null, isRecording=${isRecording.get()})")
+            return
+        }
         if (!isRecording.get()) return
 
         Log.i(TAG, "Setting partial text: '$text' (lastLen=$lastPartialLength)")
@@ -501,7 +515,8 @@ class VoiceInputManager(
         ic.beginBatchEdit()
         try {
             if (lastPartialLength > 0) {
-                ic.deleteSurroundingText(lastPartialLength, 0)
+                val safeDelete = minOf(lastPartialLength, text.length + 5)
+                ic.deleteSurroundingText(safeDelete, 0)
             }
             if (text.isNotEmpty()) {
                 ic.commitText(text, 1)
