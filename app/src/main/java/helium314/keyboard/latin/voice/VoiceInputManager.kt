@@ -200,12 +200,30 @@ class VoiceInputManager(
             }
 
             override fun onFinal(text: String?) {
-                Log.i(TAG, "Received onFinal: '$text'")
+                Log.i(TAG, "Received onFinal: '$text' (isRecording=${isRecording.get()})")
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
                         val ic = ims.currentInputConnection
-                        Log.i(TAG, "Committing to InputConnection (isNull=${ic == null}, text='$text')")
-                        handleFinalText(text ?: "")
+                        val finalText = text.orEmpty().trim()
+                        Log.i(TAG, "Processing onFinal text='$finalText' (icNull=${ic == null}, isRecording=${isRecording.get()})")
+
+                        if (ic != null && finalText.isNotEmpty()) {
+                            val committed = ic.commitText("$finalText ", 1)
+                            Log.i(TAG, "commitText executed: success=$committed")
+                            ic.finishComposingText()
+                        } else {
+                            ic?.finishComposingText()
+                        }
+
+                        lastPartialText = null
+
+                        if (!isRecording.get()) {
+                            Log.i(TAG, "Final session commit complete, transitioning to IDLE")
+                            cleanupSession()
+                            updateState(VoiceState.IDLE)
+                        } else {
+                            Log.i(TAG, "Segment refined & committed. Continuing continuous recording.")
+                        }
                     }
                 }
             }
@@ -245,7 +263,9 @@ class VoiceInputManager(
                 updateState(VoiceState.ERROR)
             }
         }
-        mainHandler.postDelayed(handshakeTimeoutRunnable!!, HANDSHAKE_TIMEOUT_MS)
+        handshakeTimeoutRunnable?.let {
+            mainHandler.postDelayed(it, HANDSHAKE_TIMEOUT_MS)
+        }
 
         // Start hardware audio capture IMMEDIATELY so the green mic privacy dot appears without IPC delay
         startAudioRecordingThread()
@@ -283,7 +303,8 @@ class VoiceInputManager(
             return false
         }
 
-        val bufferSize = maxOf(minBufSize, FRAME_SIZE_BYTES * 4)
+        // Multiply by 4 (at least 8192) to prevent hardware buffer overruns during Whisper inference blocks
+        val bufferSize = maxOf(minBufSize * 4, FRAME_SIZE_BYTES * 8, 8192)
 
         var record: AudioRecord? = null
         try {
