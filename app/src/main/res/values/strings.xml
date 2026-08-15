@@ -470,6 +470,11 @@
     <string name="voice" tools:keep="@string/voice">Voice input</string>
     <string name="offline_voice_title">Offline Voice Input</string>
     <string name="pref_offline_voice_summary">Dictate text offline using local speech models</string>
+    <string name="voice_commands_title">Voice Commands</string>
+    <string name="voice_commands_summary">Perform editing actions by voice (e.g. \"new line\", \"delete word\", \"clear all\", \"send\")</string>
+    <string name="voice_smart_punctuation_title">Smart Spoken Punctuation</string>
+    <string name="voice_smart_punctuation_summary">Convert spoken words (\"comma\", \"question mark\", \"period\") into punctuation symbols</string>
+    <string name="voice_command_executed">Voice command executed</string>
 
     <string name="numpad" tools:keep="@string/numpad" translatable="false">@string/layout_numpad</string>
     <string name="settings" tools:keep="@string/settings">Settings</string>

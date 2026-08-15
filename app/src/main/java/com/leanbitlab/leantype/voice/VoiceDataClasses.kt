@@ -75,5 +75,7 @@ object VoiceConstants {
     const val PREF_VOICE_HYBRID_FALLBACK = "voice_hybrid_fallback"
     const val PREF_VOICE_WHISPER_KEEP_LOADED_SECONDS = "voice_whisper_keep_loaded_seconds"
     const val PREF_VOICE_ADVANCED_VAD = "voice_advanced_vad"
+    const val PREF_VOICE_COMMANDS_ENABLED = "voice_commands_enabled"
+    const val PREF_VOICE_SMART_PUNCTUATION = "voice_smart_punctuation"
     const val PREF_USE_DEBUG_VOICE_STUB = "use_debug_voice_stub"
 }

@@ -13,11 +13,13 @@ import android.os.ParcelFileDescriptor
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.leanbitlab.leantype.voice.IVoiceCallback
 import com.leanbitlab.leantype.voice.VoiceConstants
 import com.leanbitlab.leantype.voice.VoiceSessionConfig
 import helium314.keyboard.latin.LatinIME
+import helium314.keyboard.latin.R
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
@@ -57,6 +59,7 @@ class VoiceInputManager(
     private val mainHandler = Handler(Looper.getMainLooper())
     private var lastPartialText: String? = null
     private var handshakeTimeoutRunnable: Runnable? = null
+    private var needsCapitalStart = true
 
     private var listener: VoiceInputListener? = null
 
@@ -106,6 +109,7 @@ class VoiceInputManager(
         pluginManager.cancelSession()
         val sessionId = UUID.randomUUID().toString()
         activeSessionId = sessionId
+        needsCapitalStart = true
 
         if (!isConnected) {
             updateState(VoiceState.CONNECTING_PLUGIN)
@@ -204,15 +208,33 @@ class VoiceInputManager(
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
                         val ic = ims.currentInputConnection
-                        val finalText = text.orEmpty().trim()
-                        Log.i(TAG, "Processing onFinal text='$finalText' (icNull=${ic == null}, isRecording=${isRecording.get()})")
+                        val rawText = text.orEmpty()
+                        val prefs = ims.prefs()
+                        val cmdsEnabled = prefs.getBoolean(VoiceConstants.PREF_VOICE_COMMANDS_ENABLED, true)
+                        val punctEnabled = prefs.getBoolean(VoiceConstants.PREF_VOICE_SMART_PUNCTUATION, true)
 
-                        if (ic != null && finalText.isNotEmpty()) {
-                            val committed = ic.commitText("$finalText ", 1)
-                            Log.i(TAG, "commitText executed: success=$committed")
-                            ic.finishComposingText()
-                        } else {
-                            ic?.finishComposingText()
+                        val result = VoiceTextProcessor.process(rawText, cmdsEnabled, punctEnabled, needsCapitalStart)
+
+                        when (result) {
+                            is VoiceTextProcessor.Result.Command -> {
+                                Log.i(TAG, "Executing voice command: ${result.action} ('${result.commandText}')")
+                                if (ic != null) {
+                                    executeVoiceCommand(result.action, ic)
+                                }
+                            }
+                            is VoiceTextProcessor.Result.Text -> {
+                                val finalText = result.value.trim()
+                                Log.i(TAG, "Processing onFinal text='$finalText' (icNull=${ic == null}, isRecording=${isRecording.get()})")
+
+                                if (ic != null && finalText.isNotEmpty()) {
+                                    val committed = ic.commitText("$finalText ", 1)
+                                    Log.i(TAG, "commitText executed: success=$committed")
+                                    ic.finishComposingText()
+                                    needsCapitalStart = result.isTerminal
+                                } else {
+                                    ic?.finishComposingText()
+                                }
+                            }
                         }
 
                         lastPartialText = null
@@ -452,6 +474,46 @@ class VoiceInputManager(
         if (ic != null && isRecording.get()) {
             ic.setComposingText(text, 1)
         }
+    }
+
+    private fun executeVoiceCommand(action: VoiceTextProcessor.Action, ic: InputConnection) {
+        ic.finishComposingText()
+        when (action) {
+            VoiceTextProcessor.Action.NEW_LINE -> {
+                ic.commitText("\n", 1)
+            }
+            VoiceTextProcessor.Action.NEW_PARAGRAPH -> {
+                ic.commitText("\n\n", 1)
+            }
+            VoiceTextProcessor.Action.DELETE_LAST_WORD -> {
+                val before = ic.getTextBeforeCursor(100, 0)?.toString() ?: return
+                val trimmed = before.trimEnd()
+                val lastSpace = trimmed.lastIndexOf(' ')
+                val wordLen = if (lastSpace == -1) trimmed.length else trimmed.length - lastSpace - 1
+                val totalDelete = wordLen + (before.length - trimmed.length)
+                if (totalDelete > 0) {
+                    ic.deleteSurroundingText(totalDelete, 0)
+                }
+            }
+            VoiceTextProcessor.Action.CLEAR_ALL -> {
+                ic.beginBatchEdit()
+                ic.performContextMenuAction(android.R.id.selectAll)
+                ic.commitText("", 1)
+                ic.endBatchEdit()
+            }
+            VoiceTextProcessor.Action.SEND -> {
+                val editorInfo = ims.currentInputEditorInfo
+                if (editorInfo != null) {
+                    val actionId = editorInfo.imeOptions and EditorInfo.IME_MASK_ACTION
+                    if (actionId != EditorInfo.IME_ACTION_NONE && actionId != EditorInfo.IME_ACTION_UNSPECIFIED) {
+                        ic.performEditorAction(actionId)
+                    } else {
+                        ic.performEditorAction(EditorInfo.IME_ACTION_SEND)
+                    }
+                }
+            }
+        }
+        Toast.makeText(ims, R.string.voice_command_executed, Toast.LENGTH_SHORT).show()
     }
 
     private fun handleFinalText(text: String) {

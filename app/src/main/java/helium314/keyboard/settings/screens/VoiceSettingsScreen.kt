@@ -235,6 +235,32 @@ fun VoiceSettingsScreen(
         }
     }
 
+    val voiceCommandsSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_COMMANDS_ENABLED,
+            title = context.getString(R.string.voice_commands_title),
+            description = context.getString(R.string.voice_commands_summary)
+        ) {
+            SwitchPreference(
+                setting = it,
+                default = true
+            )
+        }
+    }
+
+    val smartPunctuationSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_SMART_PUNCTUATION,
+            title = context.getString(R.string.voice_smart_punctuation_title),
+            description = context.getString(R.string.voice_smart_punctuation_summary)
+        ) {
+            SwitchPreference(
+                setting = it,
+                default = true
+            )
+        }
+    }
+
     val whisperKeepLoadedSetting = remember {
         Setting(
             key = VoiceConstants.PREF_VOICE_WHISPER_KEEP_LOADED_SECONDS,
@@ -381,6 +407,8 @@ fun VoiceSettingsScreen(
             }
 
             voiceModeSetting.Preference()
+            voiceCommandsSetting.Preference()
+            smartPunctuationSetting.Preference()
 
             // Models section
             Text(
