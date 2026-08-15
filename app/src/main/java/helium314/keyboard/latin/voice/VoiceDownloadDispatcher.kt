@@ -10,6 +10,11 @@ import android.net.Uri
 import android.widget.Toast
 import com.leanbitlab.leantype.voice.ModelImportRequest
 import helium314.keyboard.latin.utils.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 object VoiceDownloadDispatcher {
     private const val TAG = "VoiceDownloadDispatcher"
@@ -87,7 +92,8 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
         val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
         if (downloadId == -1L) return
 
-        val prefs = context.getSharedPreferences("voice_download_tracker", Context.MODE_PRIVATE)
+        val appContext = context.applicationContext
+        val prefs = appContext.getSharedPreferences("voice_download_tracker", Context.MODE_PRIVATE)
         val modelId = prefs.getString("download_$downloadId", null) ?: return
         prefs.edit().remove("download_$downloadId").apply()
 
@@ -95,43 +101,57 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
 
         android.util.Log.i("DownloadCompleteReceiver", "Download complete for model: ${model.displayName} (id=$downloadId)")
 
-        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager ?: return
-        val query = DownloadManager.Query().setFilterById(downloadId)
+        val pendingResult = goAsync()
 
-        try {
-            dm.query(query)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                    val status = if (statusIndex != -1) cursor.getInt(statusIndex) else -1
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                val dm = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager ?: return@launch
+                val query = DownloadManager.Query().setFilterById(downloadId)
 
-                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        val uri = dm.getUriForDownloadedFile(downloadId)
-                        if (uri != null) {
-                            val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-                            if (pfd != null) {
-                                val pluginManager = VoicePluginManager(context)
-                                val request = ModelImportRequest(
-                                    engineType = model.engineType,
-                                    language = model.language,
-                                    sha256 = null,
-                                    sizeBytes = pfd.statSize,
-                                    file = pfd
-                                )
-                                pluginManager.bindIfNeeded()
-                                pluginManager.importModelSafely(request)
-                                Toast.makeText(context, "${model.displayName} installed successfully!", Toast.LENGTH_LONG).show()
+                dm.query(query)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                        val status = if (statusIndex != -1) cursor.getInt(statusIndex) else -1
+
+                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                            val uri = dm.getUriForDownloadedFile(downloadId)
+                            if (uri != null) {
+                                val pfd = appContext.contentResolver.openFileDescriptor(uri, "r")
+                                if (pfd != null) {
+                                    val pluginManager = VoicePluginManager(appContext)
+                                    val request = ModelImportRequest(
+                                        engineType = model.engineType,
+                                        language = model.language,
+                                        sha256 = null,
+                                        sizeBytes = pfd.statSize,
+                                        file = pfd
+                                    )
+
+                                    val success = kotlinx.coroutines.withTimeoutOrNull(9000L) {
+                                        pluginManager.bindAndImport(request)
+                                    } ?: false
+
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        if (success) {
+                                            Toast.makeText(appContext, "${model.displayName} installed successfully!", Toast.LENGTH_LONG).show()
+                                        } else {
+                                            Toast.makeText(appContext, "Failed to install ${model.displayName}", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
                             }
+                        } else {
+                            val reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON)
+                            val reason = if (reasonIndex != -1) cursor.getInt(reasonIndex) else -1
+                            android.util.Log.e("DownloadCompleteReceiver", "Download failed with status=$status, reason=$reason")
                         }
-                    } else {
-                        val reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON)
-                        val reason = if (reasonIndex != -1) cursor.getInt(reasonIndex) else -1
-                        android.util.Log.e("DownloadCompleteReceiver", "Download failed with status=$status, reason=$reason")
-                        Toast.makeText(context, "Download failed for ${model.displayName}", Toast.LENGTH_SHORT).show()
                     }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("DownloadCompleteReceiver", "Error processing downloaded model", e)
+            } finally {
+                pendingResult.finish()
             }
-        } catch (e: Exception) {
-            android.util.Log.e("DownloadCompleteReceiver", "Error processing downloaded model", e)
         }
     }
 }

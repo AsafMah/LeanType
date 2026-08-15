@@ -172,6 +172,78 @@ class VoicePluginManager(private val context: Context) : IBinder.DeathRecipient 
         }
     }
 
+    suspend fun bindAndImport(request: ModelImportRequest): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val appContext = context.applicationContext
+
+        if (isPluginConnected()) {
+            return@withContext try {
+                engine?.importModel(request)
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "importModel oneway dispatch failed", e)
+                false
+            } finally {
+                try { request.file.close() } catch (_: Exception) {}
+            }
+        }
+
+        var conn: ServiceConnection? = null
+        try {
+            val service = kotlinx.coroutines.suspendCancellableCoroutine<IVoiceEngine?> { cont ->
+                conn = object : ServiceConnection {
+                    override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+                        if (cont.isActive) {
+                            cont.resume(IVoiceEngine.Stub.asInterface(binder), null)
+                        }
+                    }
+
+                    override fun onServiceDisconnected(name: ComponentName?) {
+                        if (cont.isActive) {
+                            cont.resume(null, null)
+                        }
+                    }
+                }
+
+                val component = resolveServiceComponent()
+                val intent = Intent().apply { this.component = component }
+                val bound = try {
+                    appContext.bindService(intent, conn!!, Context.BIND_AUTO_CREATE)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to bind to voice plugin", e)
+                    false
+                }
+
+                if (!bound && cont.isActive) {
+                    cont.resume(null, null)
+                }
+
+                cont.invokeOnCancellation {
+                    try {
+                        conn?.let { appContext.unbindService(it) }
+                    } catch (_: Exception) {}
+                }
+            }
+
+            if (service == null) {
+                Log.e(TAG, "bindAndImport: service binding returned null")
+                return@withContext false
+            }
+
+            // oneway AIDL call returns in microseconds
+            service.importModel(request)
+            Log.i(TAG, "bindAndImport: oneway importModel dispatched successfully")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "bindAndImport failed", e)
+            false
+        } finally {
+            conn?.let {
+                try { appContext.unbindService(it) } catch (_: Exception) {}
+            }
+            try { request.file.close() } catch (_: Exception) {}
+        }
+    }
+
     fun unloadModel(engineType: String) {
         try {
             engine?.unloadModel(engineType)
