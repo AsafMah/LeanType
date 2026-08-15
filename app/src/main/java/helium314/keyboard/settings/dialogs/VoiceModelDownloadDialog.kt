@@ -13,7 +13,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -21,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leanbitlab.leantype.voice.ModelState
 import com.leanbitlab.leantype.voice.VoiceConstants
+import helium314.keyboard.latin.utils.SubtypeSettings
+import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.voice.VoiceDownloadDispatcher
 import helium314.keyboard.latin.voice.VoiceModelItem
@@ -43,6 +48,25 @@ fun VoiceModelDownloadDialog(
 
     val installedWhisperId = prefs.getString("installed_model_${VoiceConstants.ENGINE_WHISPER}", null)
     val installedVoskId = prefs.getString("installed_model_${VoiceConstants.ENGINE_VOSK}", null)
+
+    val enabledLanguages = remember {
+        val list = SubtypeSettings.getEnabledSubtypes(true).map { it.locale().language.lowercase() }.toSet()
+        if (list.isEmpty()) setOf("en") else list
+    }
+
+    var showAllLanguages by remember { mutableStateOf(false) }
+
+    val activeVoskModels = remember(enabledLanguages, installedVoskId) {
+        VoiceModelRegistry.voskModels.filter {
+            it.languageCode in enabledLanguages || installedVoskId == it.id
+        }.ifEmpty {
+            VoiceModelRegistry.voskModels.filter { it.languageCode == "en" }
+        }
+    }
+
+    val otherVoskModels = remember(activeVoskModels) {
+        VoiceModelRegistry.voskModels.filterNot { it in activeVoskModels }
+    }
 
     ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,
@@ -99,7 +123,7 @@ fun VoiceModelDownloadDialog(
 
                 val isVoskInstalled = voskState?.state == ModelState.STATE_READY
 
-                for (model in VoiceModelRegistry.voskModels) {
+                for (model in activeVoskModels) {
                     val isThisModelInstalled = isVoskInstalled && installedVoskId == model.id
 
                     ModelDownloadRow(
@@ -117,6 +141,37 @@ fun VoiceModelDownloadDialog(
                             onRefresh()
                         }
                     )
+                }
+
+                if (showAllLanguages) {
+                    for (model in otherVoskModels) {
+                        val isThisModelInstalled = isVoskInstalled && installedVoskId == model.id
+
+                        ModelDownloadRow(
+                            model = model,
+                            isThisModelInstalled = isThisModelInstalled,
+                            isAnyModelInstalledForEngine = isVoskInstalled,
+                            isNetworkAvailable = isNetworkAvailable,
+                            onDownload = {
+                                VoiceDownloadDispatcher.download(context, model)
+                            },
+                            onDelete = {
+                                prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_VOSK}").apply()
+                                pluginManager.deleteModel(VoiceConstants.ENGINE_VOSK)
+                                Toast.makeText(context, "Vosk model deleted", Toast.LENGTH_SHORT).show()
+                                onRefresh()
+                            }
+                        )
+                    }
+                }
+
+                if (otherVoskModels.isNotEmpty()) {
+                    TextButton(
+                        onClick = { showAllLanguages = !showAllLanguages },
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Text(if (showAllLanguages) "Hide other languages" else "Browse other languages (${otherVoskModels.size})")
+                    }
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
