@@ -147,6 +147,14 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 android:resource="@xml/provider_paths" />
         </provider>
 
+        <receiver
+            android:name="helium314.keyboard.latin.voice.DownloadCompleteReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+            </intent-filter>
+        </receiver>
+
         <!-- Disable WorkManager auto-initializer; App implements Configuration.Provider instead.
              Required for ML Kit Digital Ink plugin loaded via DexClassLoader. -->
         <provider

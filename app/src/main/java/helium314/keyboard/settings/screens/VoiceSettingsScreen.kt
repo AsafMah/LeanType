@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
+import helium314.keyboard.settings.dialogs.VoiceModelDownloadDialog
 import helium314.keyboard.settings.filePicker
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.Preference
@@ -79,6 +80,7 @@ fun VoiceSettingsScreen(
 
     var voskState by remember { mutableStateOf<ModelState?>(null) }
     var whisperState by remember { mutableStateOf<ModelState?>(null) }
+    var showModelDownloadDialog by remember { mutableStateOf(false) }
 
     val updatePluginStatus = {
         isPluginInstalled = pluginManager.isPluginInstalled()
@@ -273,6 +275,27 @@ fun VoiceSettingsScreen(
         }
     }
 
+    if (showModelDownloadDialog) {
+        VoiceModelDownloadDialog(
+            onDismissRequest = { showModelDownloadDialog = false },
+            pluginManager = pluginManager,
+            voskState = voskState,
+            whisperState = whisperState,
+            onRefresh = { updatePluginStatus() },
+            onImportLocalFile = { engineType ->
+                val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                if (engineType == VoiceConstants.ENGINE_WHISPER) {
+                    whisperPicker.launch(intent)
+                } else {
+                    voskPicker.launch(intent)
+                }
+            }
+        )
+    }
+
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = context.getString(R.string.offline_voice_title),
@@ -360,65 +383,26 @@ fun VoiceSettingsScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            // Vosk Model
-            Preference(
-                name = "Vosk Model (Fast)",
-                description = when (voskState?.state) {
-                    ModelState.STATE_READY -> "Ready (${voskState?.message ?: "Loaded"}). Tap to re-import"
-                    ModelState.STATE_LOADING -> "Loading…"
-                    ModelState.STATE_ERROR -> "Error: ${voskState?.message}"
-                    else -> "Not loaded. Tap to import local Vosk ZIP archive"
-                },
-                onClick = {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
-                        addCategory(android.content.Intent.CATEGORY_OPENABLE)
-                        type = "*/*"
-                    }
-                    voskPicker.launch(intent)
-                }
-            )
-            if (voskState?.state == ModelState.STATE_READY) {
-                OutlinedButton(
-                    onClick = {
-                        pluginManager.deleteModel(VoiceConstants.ENGINE_VOSK)
-                        Toast.makeText(context, "Vosk model deleted", Toast.LENGTH_SHORT).show()
-                        updatePluginStatus()
-                    },
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
-                ) {
-                    Text("Delete Vosk Model")
-                }
+            val whisperDesc = when (whisperState?.state) {
+                ModelState.STATE_READY -> "Whisper: Ready"
+                ModelState.STATE_LOADING -> "Whisper: Loading…"
+                ModelState.STATE_ERROR -> "Whisper: Error"
+                else -> "Whisper: Not installed"
+            }
+            val voskDesc = when (voskState?.state) {
+                ModelState.STATE_READY -> "Vosk: Ready"
+                ModelState.STATE_LOADING -> "Vosk: Loading…"
+                ModelState.STATE_ERROR -> "Vosk: Error"
+                else -> "Vosk: Not installed"
             }
 
-            // Whisper Model
             Preference(
-                name = "Whisper Model (Accurate)",
-                description = when (whisperState?.state) {
-                    ModelState.STATE_READY -> "Ready (${whisperState?.message ?: "Loaded"}). Tap to re-import"
-                    ModelState.STATE_LOADING -> "Loading…"
-                    ModelState.STATE_ERROR -> "Error: ${whisperState?.message}"
-                    else -> "Not loaded. Tap to import local GGML/GGUF Whisper model file"
-                },
+                name = "Manage & Download Speech Models",
+                description = "$whisperDesc • $voskDesc. Tap to manage curated models",
                 onClick = {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
-                        addCategory(android.content.Intent.CATEGORY_OPENABLE)
-                        type = "*/*"
-                    }
-                    whisperPicker.launch(intent)
+                    showModelDownloadDialog = true
                 }
             )
-            if (whisperState?.state == ModelState.STATE_READY) {
-                OutlinedButton(
-                    onClick = {
-                        pluginManager.deleteModel(VoiceConstants.ENGINE_WHISPER)
-                        Toast.makeText(context, "Whisper model deleted", Toast.LENGTH_SHORT).show()
-                        updatePluginStatus()
-                    },
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
-                ) {
-                    Text("Delete Whisper Model")
-                }
-            }
 
             whisperKeepLoadedSetting.Preference()
             hybridTimeoutSetting.Preference()
