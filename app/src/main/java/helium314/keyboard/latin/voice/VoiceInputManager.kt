@@ -60,6 +60,8 @@ class VoiceInputManager(
     private var lastPartialText: String? = null
     private var handshakeTimeoutRunnable: Runnable? = null
     private var needsCapitalStart = true
+    private var lastPartialLength = 0
+    private var isComposingSupported = true
 
     private var listener: VoiceInputListener? = null
 
@@ -110,6 +112,8 @@ class VoiceInputManager(
         val sessionId = UUID.randomUUID().toString()
         activeSessionId = sessionId
         needsCapitalStart = true
+        lastPartialLength = 0
+        isComposingSupported = true
 
         if (!isConnected) {
             updateState(VoiceState.CONNECTING_PLUGIN)
@@ -215,41 +219,53 @@ class VoiceInputManager(
 
                         val results = VoiceTextProcessor.process(rawText, cmdsEnabled, punctEnabled, needsCapitalStart)
 
-                        var lastWasTerminal = false
-                        var lastWasNewline = false
+                        if (ic != null) {
+                            ic.beginBatchEdit()
+                            try {
+                                // 1. Clear trailing partial safely
+                                if (!isComposingSupported && lastPartialLength > 0) {
+                                    ic.deleteSurroundingText(lastPartialLength, 0)
+                                } else {
+                                    ic.finishComposingText()
+                                }
+                                lastPartialLength = 0
+                                isComposingSupported = true // Reset for next segment
 
-                        for (result in results) {
-                            when (result) {
-                                is VoiceTextProcessor.Result.Command -> {
-                                    Log.i(TAG, "Executing voice command: ${result.action} ('${result.commandText}')")
-                                    if (ic != null) {
-                                        executeVoiceCommand(result.action, ic)
-                                    }
-                                    if (result.action == VoiceTextProcessor.Action.NEW_LINE ||
-                                        result.action == VoiceTextProcessor.Action.NEW_PARAGRAPH
-                                    ) {
-                                        lastWasNewline = true
+                                // 2. Commit processed clauses
+                                var lastWasTerminal = false
+                                var lastWasNewline = false
+
+                                for (result in results) {
+                                    when (result) {
+                                        is VoiceTextProcessor.Result.Command -> {
+                                            Log.i(TAG, "Executing voice command: ${result.action} ('${result.commandText}')")
+                                            executeVoiceCommand(result.action, ic)
+                                            if (result.action == VoiceTextProcessor.Action.NEW_LINE ||
+                                                result.action == VoiceTextProcessor.Action.NEW_PARAGRAPH
+                                            ) {
+                                                lastWasNewline = true
+                                            }
+                                        }
+                                        is VoiceTextProcessor.Result.Text -> {
+                                            val finalText = result.value.trim()
+                                            Log.i(TAG, "Processing onFinal text='$finalText' (isRecording=${isRecording.get()})")
+
+                                            if (finalText.isNotEmpty()) {
+                                                val committed = ic.commitText("$finalText ", 1)
+                                                Log.i(TAG, "commitText executed: success=$committed")
+                                                lastWasTerminal = result.isTerminal
+                                                lastWasNewline = false
+                                            }
+                                        }
                                     }
                                 }
-                                is VoiceTextProcessor.Result.Text -> {
-                                    val finalText = result.value.trim()
-                                    Log.i(TAG, "Processing onFinal text='$finalText' (icNull=${ic == null}, isRecording=${isRecording.get()})")
 
-                                    if (ic != null && finalText.isNotEmpty()) {
-                                        val committed = ic.commitText("$finalText ", 1)
-                                        Log.i(TAG, "commitText executed: success=$committed")
-                                        ic.finishComposingText()
-                                        lastWasTerminal = result.isTerminal
-                                        lastWasNewline = false
-                                    } else {
-                                        ic?.finishComposingText()
-                                    }
+                                if (results.isNotEmpty()) {
+                                    needsCapitalStart = lastWasTerminal || lastWasNewline
                                 }
+                            } finally {
+                                ic.endBatchEdit()
                             }
-                        }
-
-                        if (results.isNotEmpty()) {
-                            needsCapitalStart = lastWasTerminal || lastWasNewline
                         }
 
                         lastPartialText = null
@@ -484,10 +500,47 @@ class VoiceInputManager(
         if (text == lastPartialText) return
         lastPartialText = text
 
-        val ic = ims.currentInputConnection
-        Log.i(TAG, "Setting composing text on InputConnection: '$text' (icNull=${ic == null}, isRecording=${isRecording.get()})")
-        if (ic != null && isRecording.get()) {
-            ic.setComposingText(text, 1)
+        val ic = ims.currentInputConnection ?: return
+        if (!isRecording.get()) return
+
+        Log.i(TAG, "Setting composing text: '$text' (composingSupported=$isComposingSupported, lastLen=$lastPartialLength)")
+
+        if (isComposingSupported) {
+            val success = ic.setComposingText(text, 1)
+            if (!success) {
+                Log.w(TAG, "setComposingText returned false, switching to batch edit replacement fallback")
+                isComposingSupported = false
+            } else {
+                lastPartialLength = text.length
+                return
+            }
+        }
+
+        ic.beginBatchEdit()
+        try {
+            if (lastPartialLength > 0) {
+                ic.deleteSurroundingText(lastPartialLength, 0)
+            }
+            if (text.isNotEmpty()) {
+                ic.commitText(text, 1)
+                lastPartialLength = text.length
+            } else {
+                lastPartialLength = 0
+            }
+        } finally {
+            ic.endBatchEdit()
+        }
+    }
+
+    fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
+        if (!isRecording.get()) return
+
+        // If the cursor moved outside the expected composing region, the user moved it manually
+        // or the editor auto-committed and shifted things unpredictably.
+        if (newSelStart != candidatesEnd || newSelEnd != candidatesEnd) {
+            Log.i(TAG, "Cursor drift detected (newSelStart=$newSelStart, candEnd=$candidatesEnd), resetting partial length")
+            lastPartialLength = 0
+            isComposingSupported = true
         }
     }
 
@@ -550,8 +603,19 @@ class VoiceInputManager(
     private fun clearComposingText() {
         val ic = ims.currentInputConnection
         if (ic != null) {
-            ic.setComposingText("", 1)
-            ic.finishComposingText()
+            ic.beginBatchEdit()
+            try {
+                if (!isComposingSupported && lastPartialLength > 0) {
+                    ic.deleteSurroundingText(lastPartialLength, 0)
+                } else {
+                    ic.setComposingText("", 1)
+                    ic.finishComposingText()
+                }
+                lastPartialLength = 0
+                isComposingSupported = true
+            } finally {
+                ic.endBatchEdit()
+            }
         }
         lastPartialText = null
     }
