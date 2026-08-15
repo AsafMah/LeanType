@@ -2,10 +2,7 @@
 package helium314.keyboard.latin.voice
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
-import android.os.Build
-import android.os.ParcelFileDescriptor
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -24,7 +20,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -33,20 +28,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.leanbitlab.leantype.voice.ModelImportRequest
 import com.leanbitlab.leantype.voice.ModelState
 import com.leanbitlab.leantype.voice.VoiceConstants
 import com.leanbitlab.leantype.voice.VoiceEngineInfo
-import helium314.keyboard.latin.BuildConfig
-import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
@@ -88,9 +79,6 @@ fun VoiceSettingsScreen(
 
     var voskState by remember { mutableStateOf<ModelState?>(null) }
     var whisperState by remember { mutableStateOf<ModelState?>(null) }
-
-    var testInputText by rememberSaveable { mutableStateOf("") }
-    var voiceStateText by remember { mutableStateOf("IDLE") }
 
     val updatePluginStatus = {
         isPluginInstalled = pluginManager.isPluginInstalled()
@@ -144,7 +132,7 @@ fun VoiceSettingsScreen(
     }
 
     val voskPicker = filePicker { uri ->
-        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             try {
                 val pfd = context.contentResolver.openFileDescriptor(uri, "r")
                 if (pfd != null) {
@@ -160,14 +148,14 @@ fun VoiceSettingsScreen(
                         pluginManager.bindIfNeeded()
                     }
                     pluginManager.importModelSafely(request)
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                         Toast.makeText(context, "Vosk model import dispatched", Toast.LENGTH_SHORT).show()
                         updatePluginStatus()
                     }
                 }
             } catch (e: Exception) {
                 Log.e("VoiceSettingsScreen", "Failed to import Vosk model", e)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Model import failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                 }
             }
@@ -175,7 +163,7 @@ fun VoiceSettingsScreen(
     }
 
     val whisperPicker = filePicker { uri ->
-        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             try {
                 val pfd = context.contentResolver.openFileDescriptor(uri, "r")
                 if (pfd != null) {
@@ -191,14 +179,14 @@ fun VoiceSettingsScreen(
                         pluginManager.bindIfNeeded()
                     }
                     pluginManager.importModelSafely(request)
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                         Toast.makeText(context, "Whisper model import dispatched", Toast.LENGTH_SHORT).show()
                         updatePluginStatus()
                     }
                 }
             } catch (e: Exception) {
                 Log.e("VoiceSettingsScreen", "Failed to import Whisper model", e)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Model import failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                 }
             }
@@ -231,32 +219,6 @@ fun VoiceSettingsScreen(
                     "Hybrid (Vosk + Whisper)" to VoiceConstants.MODE_HYBRID
                 ),
                 default = VoiceConstants.MODE_FAST
-            )
-        }
-    }
-
-    val voiceCommandsSetting = remember {
-        Setting(
-            key = VoiceConstants.PREF_VOICE_COMMANDS_ENABLED,
-            title = context.getString(R.string.voice_commands_title),
-            description = context.getString(R.string.voice_commands_summary)
-        ) {
-            SwitchPreference(
-                setting = it,
-                default = true
-            )
-        }
-    }
-
-    val smartPunctuationSetting = remember {
-        Setting(
-            key = VoiceConstants.PREF_VOICE_SMART_PUNCTUATION,
-            title = context.getString(R.string.voice_smart_punctuation_title),
-            description = context.getString(R.string.voice_smart_punctuation_summary)
-        ) {
-            SwitchPreference(
-                setting = it,
-                default = true
             )
         }
     }
@@ -307,23 +269,6 @@ fun VoiceSettingsScreen(
             SwitchPreference(
                 setting = it,
                 default = true
-            )
-        }
-    }
-
-    val debugStubSetting = remember {
-        Setting(
-            key = VoiceConstants.PREF_USE_DEBUG_VOICE_STUB,
-            title = "Use Debug Voice Stub Engine",
-            description = "Binds to internal debug engine to test voice pipeline without plugin APK"
-        ) {
-            SwitchPreference(
-                setting = it,
-                default = false,
-                onCheckedChange = {
-                    pluginManager.unbind()
-                    pluginManager.bindIfNeeded()
-                }
             )
         }
     }
@@ -407,8 +352,6 @@ fun VoiceSettingsScreen(
             }
 
             voiceModeSetting.Preference()
-            voiceCommandsSetting.Preference()
-            smartPunctuationSetting.Preference()
 
             // Models section
             Text(
@@ -480,81 +423,6 @@ fun VoiceSettingsScreen(
             whisperKeepLoadedSetting.Preference()
             hybridTimeoutSetting.Preference()
             hybridFallbackSetting.Preference()
-
-            if (BuildConfig.DEBUG) {
-                Text(
-                    text = "Debug Options",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-                debugStubSetting.Preference()
-            }
-
-            // Phase 1 Verification Test Target Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Phase 1 Voice Test Target",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "State: $voiceStateText",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = testInputText,
-                        onValueChange = { testInputText = it },
-                        label = { Text("Test Dictation Output Target") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                if (!isMicPermissionGranted) {
-                                    Toast.makeText(context, "Grant microphone permission first", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-                                val ime = LatinIME.getInstance()
-                                val mgr = ime?.voiceInputManager
-                                if (mgr != null) {
-                                    mgr.startVoice()
-                                } else {
-                                    Toast.makeText(context, "LeanType IME instance not active. Tap a text field to activate keyboard", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        ) {
-                            Text("Start Dictation")
-                        }
-
-                        Button(
-                            onClick = {
-                                val ime = LatinIME.getInstance()
-                                ime?.voiceInputManager?.stopVoice()
-                            }
-                        ) {
-                            Text("Done")
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                val ime = LatinIME.getInstance()
-                                ime?.voiceInputManager?.cancelVoice()
-                            }
-                        ) {
-                            Text("Cancel")
-                        }
-                    }
-                }
-            }
         }
     }
 }
