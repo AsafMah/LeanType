@@ -133,6 +133,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
 
                                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                                         if (success) {
+                                            prefs.edit().putString("installed_model_${model.engineType}", model.id).apply()
                                             Toast.makeText(appContext, "${model.displayName} installed successfully!", Toast.LENGTH_LONG).show()
                                         } else {
                                             Toast.makeText(appContext, "Failed to install ${model.displayName}", Toast.LENGTH_LONG).show()

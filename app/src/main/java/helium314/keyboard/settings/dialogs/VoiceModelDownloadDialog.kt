@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.dialogs
 
-import android.content.Intent
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,8 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -23,17 +19,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leanbitlab.leantype.voice.ModelState
 import com.leanbitlab.leantype.voice.VoiceConstants
+import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.voice.VoiceDownloadDispatcher
 import helium314.keyboard.latin.voice.VoiceModelItem
 import helium314.keyboard.latin.voice.VoiceModelRegistry
@@ -50,6 +45,10 @@ fun VoiceModelDownloadDialog(
 ) {
     val context = LocalContext.current
     val isNetworkAvailable = remember(context) { VoiceDownloadDispatcher.hasInternetPermission(context) }
+    val prefs = context.prefs()
+
+    val installedWhisperId = prefs.getString("installed_model_${VoiceConstants.ENGINE_WHISPER}", null)
+    val installedVoskId = prefs.getString("installed_model_${VoiceConstants.ENGINE_VOSK}", null)
 
     ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,
@@ -75,15 +74,20 @@ fun VoiceModelDownloadDialog(
                 val isWhisperInstalled = whisperState?.state == ModelState.STATE_READY
 
                 for (model in VoiceModelRegistry.whisperModels) {
+                    val isThisModelInstalled = isWhisperInstalled && (
+                        installedWhisperId == model.id || (installedWhisperId == null && model.isRecommended)
+                    )
+
                     ModelDownloadRow(
                         model = model,
-                        isInstalled = isWhisperInstalled,
-                        installedMessage = if (isWhisperInstalled) whisperState?.message else null,
+                        isThisModelInstalled = isThisModelInstalled,
+                        isAnyModelInstalledForEngine = isWhisperInstalled,
                         isNetworkAvailable = isNetworkAvailable,
                         onDownload = {
                             VoiceDownloadDispatcher.download(context, model)
                         },
                         onDelete = {
+                            prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_WHISPER}").apply()
                             pluginManager.deleteModel(VoiceConstants.ENGINE_WHISPER)
                             Toast.makeText(context, "Whisper model deleted", Toast.LENGTH_SHORT).show()
                             onRefresh()
@@ -104,15 +108,20 @@ fun VoiceModelDownloadDialog(
                 val isVoskInstalled = voskState?.state == ModelState.STATE_READY
 
                 for (model in VoiceModelRegistry.voskModels) {
+                    val isThisModelInstalled = isVoskInstalled && (
+                        installedVoskId == model.id || (installedVoskId == null && model.isRecommended)
+                    )
+
                     ModelDownloadRow(
                         model = model,
-                        isInstalled = isVoskInstalled,
-                        installedMessage = if (isVoskInstalled) voskState?.message else null,
+                        isThisModelInstalled = isThisModelInstalled,
+                        isAnyModelInstalledForEngine = isVoskInstalled,
                         isNetworkAvailable = isNetworkAvailable,
                         onDownload = {
                             VoiceDownloadDispatcher.download(context, model)
                         },
                         onDelete = {
+                            prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_VOSK}").apply()
                             pluginManager.deleteModel(VoiceConstants.ENGINE_VOSK)
                             Toast.makeText(context, "Vosk model deleted", Toast.LENGTH_SHORT).show()
                             onRefresh()
@@ -158,8 +167,8 @@ fun VoiceModelDownloadDialog(
 @Composable
 private fun ModelDownloadRow(
     model: VoiceModelItem,
-    isInstalled: Boolean,
-    installedMessage: String?,
+    isThisModelInstalled: Boolean,
+    isAnyModelInstalledForEngine: Boolean,
     isNetworkAvailable: Boolean,
     onDownload: () -> Unit,
     onDelete: () -> Unit
@@ -190,7 +199,7 @@ private fun ModelDownloadRow(
                     )
                 }
 
-                if (isInstalled && model.isRecommended) {
+                if (isThisModelInstalled) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
@@ -217,8 +226,13 @@ private fun ModelDownloadRow(
                     Button(
                         onClick = onDownload
                     ) {
+                        val label = if (isAnyModelInstalledForEngine) {
+                            if (isNetworkAvailable) "Replace" else "Browser"
+                        } else {
+                            if (isNetworkAvailable) "Download" else "Browser"
+                        }
                         Text(
-                            text = if (isNetworkAvailable) "Download" else "Browser",
+                            text = label,
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
