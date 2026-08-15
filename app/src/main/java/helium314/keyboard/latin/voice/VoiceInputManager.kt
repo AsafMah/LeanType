@@ -2,6 +2,7 @@
 package helium314.keyboard.latin.voice
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -54,7 +55,6 @@ class VoiceInputManager(
     private var audioThread: Thread? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var pendingPartialRunnable: Runnable? = null
     private var lastPartialText: String? = null
     private var handshakeTimeoutRunnable: Runnable? = null
 
@@ -70,12 +70,15 @@ class VoiceInputManager(
 
     fun canStartVoice(): Boolean {
         if (!ims.prefs().getBoolean(VoiceConstants.PREF_VOICE_OFFLINE_ENABLED, false)) {
+            Log.w(TAG, "canStartVoice: Voice input not enabled in preferences")
             return false
         }
         if (ContextCompat.checkSelfPermission(ims, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "canStartVoice: Missing RECORD_AUDIO permission")
             return false
         }
         if (isBlockedEditor(ims.currentInputEditorInfo)) {
+            Log.w(TAG, "canStartVoice: Blocked editor (password or no-suggestions)")
             return false
         }
         return true
@@ -97,12 +100,15 @@ class VoiceInputManager(
             return
         }
 
+        val isConnected = pluginManager.isPluginConnected()
+        Log.i(TAG, "startVoice: isConnected=$isConnected")
+
         pluginManager.cancelSession()
         val sessionId = UUID.randomUUID().toString()
         activeSessionId = sessionId
-        updateState(VoiceState.CONNECTING_PLUGIN)
 
-        if (!pluginManager.isPluginConnected()) {
+        if (!isConnected) {
+            updateState(VoiceState.CONNECTING_PLUGIN)
             pluginManager.setConnectionListener(object : VoicePluginManager.PluginConnectionListener {
                 override fun onPluginConnected(info: com.leanbitlab.leantype.voice.VoiceEngineInfo?) {
                     mainHandler.post {
@@ -135,7 +141,9 @@ class VoiceInputManager(
     }
 
     private fun initiateSessionHandshake(sessionId: String) {
-        updateState(VoiceState.STARTING_SESSION)
+        if (state == VoiceState.CONNECTING_PLUGIN) {
+            updateState(VoiceState.STARTING_SESSION)
+        }
 
         val pipe: Array<ParcelFileDescriptor>
         try {
@@ -181,9 +189,9 @@ class VoiceInputManager(
             }
 
             override fun onPartial(text: String?) {
+                Log.i(TAG, "Received onPartial from plugin: '$text'")
                 mainHandler.post {
                     if (activeSessionId == sessionId && isRecording.get()) {
-                        Log.i(TAG, "onPartial received: '$text' | icNull=${ims.currentInputConnection == null}")
                         if (!text.isNullOrBlank()) {
                             handlePartialText(text)
                         }
@@ -197,17 +205,15 @@ class VoiceInputManager(
                     if (activeSessionId == sessionId) {
                         val ic = ims.currentInputConnection
                         Log.i(TAG, "Committing to InputConnection (isNull=${ic == null}, text='$text')")
-                        cancelPendingPartial()
                         handleFinalText(text ?: "")
                     }
                 }
             }
 
             override fun onError(code: Int, message: String?) {
+                Log.e(TAG, "Received onError: code=$code, message='$message'")
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
-                        Log.e(TAG, "Received onError: code=$code, message='$message'")
-                        cancelPendingPartial()
                         clearComposingText()
                         notifyError(message ?: "Voice error ($code)")
                         cleanupSession()
@@ -217,9 +223,9 @@ class VoiceInputManager(
             }
 
             override fun onSessionEnded() {
+                Log.i(TAG, "Received onSessionEnded, state=$state")
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
-                        Log.i(TAG, "Received onSessionEnded, state=$state")
                         cleanupSession()
                         if (state != VoiceState.ERROR) {
                             updateState(VoiceState.IDLE)
@@ -244,118 +250,125 @@ class VoiceInputManager(
         // Start hardware audio capture IMMEDIATELY so the green mic privacy dot appears without IPC delay
         startAudioRecordingThread()
 
-        val started = pluginManager.startSession(config, audioPipeReadSide!!, callback)
-
-        // Close the host's copy of the read side of the pipe after passing it over AIDL binder
-        closeQuietly(audioPipeReadSide)
-        audioPipeReadSide = null
-
-        if (!started) {
+        try {
+            val pfdForPlugin = audioPipeReadSide
+            if (pfdForPlugin != null) {
+                audioPipeReadSide = null
+                pluginManager.startSession(config, pfdForPlugin, callback)
+            } else {
+                throw IllegalStateException("Read-side pipe descriptor is null")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Remote exception starting voice session", e)
             cancelHandshakeTimeout()
+            notifyError("Failed to start voice session with plugin")
             cleanupSession()
-            notifyError("Failed to dispatch voice session")
             updateState(VoiceState.ERROR)
         }
     }
 
-    private fun startAudioRecordingThread() {
-        val minBufferSize = AudioRecord.getMinBufferSize(
+    private fun startAudioRecordingThread(): Boolean {
+        if (ContextCompat.checkSelfPermission(ims, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(TAG, "startAudioRecordingThread: Missing RECORD_AUDIO permission")
+            return false
+        }
+
+        val minBufSize = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT
         )
-        val bufferSize = maxOf(minBufferSize, FRAME_SIZE_BYTES * 4)
+        if (minBufSize <= 0) {
+            Log.e(TAG, "startAudioRecordingThread: Invalid min buffer size: $minBufSize")
+            return false
+        }
 
-        var source = MediaRecorder.AudioSource.VOICE_RECOGNITION
+        val bufferSize = maxOf(minBufSize, FRAME_SIZE_BYTES * 4)
+
+        var record: AudioRecord? = null
         try {
-            audioRecord = AudioRecord(
-                source,
+            record = AudioRecord(
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize
             )
-            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                Log.w(TAG, "VOICE_RECOGNITION uninitialized, falling back to MIC source")
-                audioRecord?.release()
-                source = MediaRecorder.AudioSource.MIC
-                audioRecord = AudioRecord(
-                    source,
-                    SAMPLE_RATE,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    bufferSize
-                )
-            }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create AudioRecord with VOICE_RECOGNITION, trying MIC", e)
+            Log.w(TAG, "Failed to create AudioRecord with VOICE_RECOGNITION, trying MIC", e)
+        }
+
+        if (record == null || record.state != AudioRecord.STATE_INITIALIZED) {
             try {
-                source = MediaRecorder.AudioSource.MIC
-                audioRecord = AudioRecord(
-                    source,
+                record?.release()
+                record = AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
                     SAMPLE_RATE,
                     AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
                     bufferSize
                 )
-            } catch (ex: Exception) {
-                Log.e(TAG, "AudioRecord creation failed completely", ex)
-                notifyError("Microphone access failed")
-                updateState(VoiceState.ERROR)
-                return
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create AudioRecord with MIC fallback", e)
+                return false
             }
         }
 
-        Log.i(TAG, "AudioRecord created: state=${audioRecord?.state} sampleRate=${audioRecord?.sampleRate} source=$source")
+        if (record.state != AudioRecord.STATE_INITIALIZED) {
+            Log.e(TAG, "AudioRecord failed to initialize (state=${record.state})")
+            record.release()
+            return false
+        }
 
-        if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-            Log.e(TAG, "AudioRecord uninitialized")
-            notifyError("Microphone initialization failed")
+        audioRecord = record
+        try {
+            audioRecord?.startRecording()
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception in AudioRecord.startRecording", e)
             audioRecord?.release()
             audioRecord = null
-            updateState(VoiceState.ERROR)
-            return
+            return false
         }
 
         isRecording.set(true)
-        audioRecord?.startRecording()
-        Log.i(TAG, "AudioRecord started successfully")
+        val writePfd = audioPipeWriteSide ?: return false
 
-        audioThread = Thread {
-            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO)
+        audioThread = Thread({
             val buffer = ByteArray(FRAME_SIZE_BYTES)
-            val writeSide = audioPipeWriteSide
-            var totalBytesWrote = 0L
+            var outputStream: FileOutputStream? = null
+            var totalBytesWritten = 0L
 
             try {
-                FileOutputStream(writeSide?.fileDescriptor).use { outputStream ->
-                    while (isRecording.get()) {
-                        val readBytes = audioRecord?.read(buffer, 0, buffer.size) ?: -1
-                        if (readBytes > 0) {
-                            outputStream.write(buffer, 0, readBytes)
-                            outputStream.flush()
-                            totalBytesWrote += readBytes
-                            if (totalBytesWrote % 32000L < readBytes) {
-                                Log.i(TAG, "pipe wrote totalBytes=$totalBytesWrote, icNull=${ims.currentInputConnection == null}")
-                            }
-                        } else if (readBytes < 0) {
-                            Log.e(TAG, "AudioRecord read error: $readBytes")
-                            break
-                        }
+                outputStream = FileOutputStream(writePfd.fileDescriptor)
+                while (isRecording.get()) {
+                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: -1
+                    if (read > 0) {
+                        outputStream.write(buffer, 0, read)
+                        outputStream.flush()
+                        totalBytesWritten += read
+                    } else if (read < 0) {
+                        Log.e(TAG, "AudioRecord read error: $read")
+                        break
                     }
                 }
             } catch (e: Exception) {
-                if (isRecording.get()) {
-                    Log.e(TAG, "Audio recording pipe error", e)
-                }
+                Log.e(TAG, "Exception in audio write loop", e)
             } finally {
-                Log.i(TAG, "Audio loop ended. Total wrote: $totalBytesWrote bytes")
-                closeQuietly(audioPipeWriteSide)
-                audioPipeWriteSide = null
+                try { outputStream?.close() } catch (_: Exception) {}
+                Log.i(TAG, "Audio loop ended. Total wrote: $totalBytesWritten bytes")
             }
-        }.apply {
-            name = "LeanTypeVoiceAudioThread"
+        }, "VoiceAudioThread").apply {
+            isDaemon = true
             start()
+        }
+
+        return true
+    }
+
+    private fun cancelHandshakeTimeout() {
+        handshakeTimeoutRunnable?.let {
+            mainHandler.removeCallbacks(it)
+            handshakeTimeoutRunnable = null
         }
     }
 
@@ -371,55 +384,51 @@ class VoiceInputManager(
     fun cancelVoice() {
         Log.i(TAG, "cancelVoice() called, state=$state")
         if (state != VoiceState.IDLE) {
-            cancelHandshakeTimeout()
-            cancelPendingPartial()
-            stopAudioLoop()
+            cleanupSession()
             pluginManager.cancelSession()
             clearComposingText()
-            cleanupSession()
             updateState(VoiceState.IDLE)
         }
     }
 
     private fun stopAudioLoop() {
+        if (!isRecording.getAndSet(false)) return
         Log.i(TAG, "stopAudioLoop() executing")
-        isRecording.set(false)
+
         try {
-            if (audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
-                audioRecord?.stop()
-            }
-            audioRecord?.release()
+            audioRecord?.stop()
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping AudioRecord", e)
+        }
+        try {
+            audioRecord?.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing AudioRecord", e)
         }
         audioRecord = null
 
         audioThread?.let { thread ->
             try {
                 thread.join(500)
-            } catch (_: InterruptedException) {}
+            } catch (e: InterruptedException) {
+                Log.w(TAG, "Interrupted while joining audioThread", e)
+            }
         }
         audioThread = null
 
         closeQuietly(audioPipeWriteSide)
         audioPipeWriteSide = null
-
-        closeQuietly(audioPipeReadSide)
-        audioPipeReadSide = null
     }
 
     private fun handlePartialText(text: String) {
         if (text == lastPartialText) return
         lastPartialText = text
 
-        cancelPendingPartial()
-        pendingPartialRunnable = Runnable {
-            val ic = ims.currentInputConnection
-            if (ic != null && isRecording.get()) {
-                ic.setComposingText(text, 1)
-            }
+        val ic = ims.currentInputConnection
+        Log.i(TAG, "Setting composing text on InputConnection: '$text' (icNull=${ic == null}, isRecording=${isRecording.get()})")
+        if (ic != null && isRecording.get()) {
+            ic.setComposingText(text, 1)
         }
-        mainHandler.postDelayed(pendingPartialRunnable!!, PARTIAL_THROTTLE_MS)
     }
 
     private fun handleFinalText(text: String) {
@@ -444,22 +453,11 @@ class VoiceInputManager(
             ic.setComposingText("", 1)
             ic.finishComposingText()
         }
-    }
-
-    private fun cancelPendingPartial() {
-        pendingPartialRunnable?.let { mainHandler.removeCallbacks(it) }
-        pendingPartialRunnable = null
         lastPartialText = null
-    }
-
-    private fun cancelHandshakeTimeout() {
-        handshakeTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
-        handshakeTimeoutRunnable = null
     }
 
     private fun cleanupSession() {
         cancelHandshakeTimeout()
-        cancelPendingPartial()
         stopAudioLoop()
         closeQuietly(audioPipeReadSide)
         audioPipeReadSide = null
@@ -470,7 +468,12 @@ class VoiceInputManager(
 
     @Synchronized
     private fun updateState(newState: VoiceState) {
-        if (this.state == newState) return
+        val oldState = this.state
+        if (oldState == newState) {
+            Log.d(TAG, "State dedup: $oldState -> $newState (ignored)")
+            return
+        }
+        Log.i(TAG, "State transition: $oldState -> $newState")
         this.state = newState
         mainHandler.post {
             listener?.onStateChanged(newState)
@@ -494,7 +497,6 @@ class VoiceInputManager(
         private const val FRAME_SIZE_MS = 30
         private const val FRAME_SIZE_BYTES = (SAMPLE_RATE * FRAME_SIZE_MS / 1000) * 2 // 960 bytes
         private const val HANDSHAKE_TIMEOUT_MS = 8000L
-        private const val PARTIAL_THROTTLE_MS = 30L
 
         fun isBlockedEditor(info: EditorInfo?): Boolean {
             if (info == null) return false
