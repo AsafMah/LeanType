@@ -490,11 +490,12 @@ class VoiceInputManager(
         val trimmed = rawText.trim()
 
         // If onFinal has empty text (e.g. silence timeout fired after audio stream closed),
-        // keep whatever text was already emitted during partials and commit a trailing space.
+        // lock whatever text was already emitted during partials and commit a trailing space.
         if (isFinal && trimmed.isEmpty()) {
             if (sessionEmittedText.isNotEmpty()) {
                 ic.beginBatchEdit()
                 try {
+                    ic.finishComposingText()
                     ic.commitText(" ", 1)
                     val lastChar = sessionEmittedText.lastOrNull()
                     needsCapitalStart = lastChar != null && lastChar in ".!?"
@@ -516,36 +517,6 @@ class VoiceInputManager(
         }
 
         val current = sessionEmittedText
-
-        // Check if this is a disjoint new utterance segment (e.g. "hello" followed by "how are you")
-        if (current.isNotEmpty()) {
-            var prefixLen = 0
-            val minLen = minOf(current.length, fullTargetText.length)
-            while (prefixLen < minLen && current[prefixLen].lowercaseChar() == fullTargetText[prefixLen].lowercaseChar()) {
-                prefixLen++
-            }
-
-            if (prefixLen == 0) {
-                // Disjoint new segment: preserve previous phrase with a space and start tracking new segment
-                Log.i(TAG, "syncRecognizedText: Disjoint utterance detected (prev='$current', new='$fullTargetText')")
-                ic.beginBatchEdit()
-                try {
-                    ic.commitText(" ", 1)
-                    ic.commitText(fullTargetText, 1)
-                    if (isFinal) {
-                        ic.commitText(" ", 1)
-                        val lastChar = fullTargetText.lastOrNull()
-                        needsCapitalStart = lastChar != null && lastChar in ".!?"
-                        sessionEmittedText = ""
-                    } else {
-                        sessionEmittedText = fullTargetText
-                    }
-                } finally {
-                    ic.endBatchEdit()
-                }
-                return
-            }
-        }
 
         // Find longest common prefix between what's in the editor from this utterance and the new target
         var commonPrefixLen = 0
@@ -572,6 +543,7 @@ class VoiceInputManager(
                 ic.commitText(textToAppend, 1)
             }
             if (isFinal && fullTargetText.isNotEmpty()) {
+                ic.finishComposingText()
                 ic.commitText(" ", 1)
                 val lastChar = fullTargetText.lastOrNull()
                 needsCapitalStart = lastChar != null && lastChar in ".!?"

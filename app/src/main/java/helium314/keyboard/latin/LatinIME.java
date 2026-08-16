@@ -1319,7 +1319,7 @@ public class LatinIME extends InputMethodService implements
         super.onFinishInputView(finishingInput);
         Log.i(TAG, "onFinishInputView");
         if (mVoiceInputManager != null && mVoiceInputManager.isRecording()) {
-            mVoiceInputManager.cancelVoice();
+            mVoiceInputManager.stopVoice();
         }
         mOtpSuggestionManager.stop();
         mClipboardHistoryManager.onFinishInputView();
