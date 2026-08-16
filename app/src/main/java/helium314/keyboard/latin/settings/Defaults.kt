@@ -49,6 +49,7 @@ object Defaults {
     
     const val PREF_SPLIT_TOOLBAR = false
     const val PREF_AUTO_SPAN_TOOLBAR_KEYS = true
+    const val PREF_CLIPBOARD_KEYS_ALIGNMENT = "right"
     const val PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR = true
     const val PREF_USE_SYSTEM_EMOJI = false
 
