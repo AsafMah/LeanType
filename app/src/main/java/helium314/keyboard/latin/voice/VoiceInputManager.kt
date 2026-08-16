@@ -64,15 +64,6 @@ class VoiceInputManager(
     private var needsCapitalStart = true
     private var sessionEmittedText = ""
 
-    // DSP state (IIR 80Hz High-Pass Filter + Soft-Knee Limiter)
-    private var prevIn = 0.0
-    private var prevOut = 0.0
-    private val alpha = 1.0 / (1.0 + 2.0 * Math.PI * 80.0 / 16000.0)
-
-    // Pre-allocated buffers to prevent GC allocations on hot audio recording path
-    private val shortBuffer = ShortArray(FRAME_SIZE_SHORTS)
-    private val byteBuffer = ByteBuffer.allocate(FRAME_SIZE_BYTES).order(ByteOrder.LITTLE_ENDIAN)
-
     private var listener: VoiceInputListener? = null
 
     fun setListener(listener: VoiceInputListener?) {
@@ -129,8 +120,6 @@ class VoiceInputManager(
         activeSessionId = sessionId
         needsCapitalStart = true
         sessionEmittedText = ""
-        prevIn = 0.0
-        prevOut = 0.0
 
         if (!isConnected) {
             updateState(VoiceState.CONNECTING_PLUGIN)
@@ -371,6 +360,7 @@ class VoiceInputManager(
         val initialTimeoutMs = if (silenceTimeoutSec > 0) maxOf(silenceTimeoutSec * 2000L, 5000L) else 0L
 
         audioThread = Thread({
+            val buffer = ByteArray(FRAME_SIZE_BYTES)
             var outputStream: FileOutputStream? = null
             var totalBytesWritten = 0L
             val sessionStartTime = System.currentTimeMillis()
@@ -380,24 +370,23 @@ class VoiceInputManager(
             try {
                 outputStream = FileOutputStream(writePfd.fileDescriptor)
                 while (isRecording.get()) {
-                    val readShorts = audioRecord?.read(shortBuffer, 0, shortBuffer.size) ?: -1
-                    if (readShorts > 0) {
-                        applySoftDSP(shortBuffer, readShorts)
-
-                        byteBuffer.clear()
-                        byteBuffer.asShortBuffer().put(shortBuffer, 0, readShorts)
-                        val bytesToWrite = readShorts * 2
-                        outputStream.write(byteBuffer.array(), 0, bytesToWrite)
+                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: -1
+                    if (read > 0) {
+                        outputStream.write(buffer, 0, read)
                         outputStream.flush()
-                        totalBytesWritten += bytesToWrite
+                        totalBytesWritten += read
 
                         if (silenceTimeoutMs > 0L) {
                             var sum = 0.0
-                            for (i in 0 until readShorts) {
-                                val sample = shortBuffer[i].toDouble()
-                                sum += sample * sample
+                            var sampleCount = 0
+                            var i = 0
+                            while (i < read - 1) {
+                                val sample = ((buffer[i + 1].toInt() shl 8) or (buffer[i].toInt() and 0xFF)).toShort()
+                                sum += sample.toDouble() * sample.toDouble()
+                                sampleCount++
+                                i += 2
                             }
-                            val rms = kotlin.math.sqrt(sum / readShorts)
+                            val rms = if (sampleCount > 0) kotlin.math.sqrt(sum / sampleCount) else 0.0
                             val now = System.currentTimeMillis()
                             if (rms > 400.0) {
                                 lastSpeechTime = now
@@ -414,8 +403,8 @@ class VoiceInputManager(
                                 break
                             }
                         }
-                    } else if (readShorts < 0) {
-                        Log.e(TAG, "AudioRecord read error: $readShorts")
+                    } else if (read < 0) {
+                        Log.e(TAG, "AudioRecord read error: $read")
                         break
                     }
                 }
@@ -433,32 +422,6 @@ class VoiceInputManager(
         }
 
         return true
-    }
-
-    private fun applySoftDSP(buffer: ShortArray, readSize: Int) {
-        val threshold = 30000.0
-        val maxCap = 32767.0 - threshold
-        for (i in 0 until readSize) {
-            val inSample = buffer[i].toDouble()
-
-            // 80Hz High-pass filtering (DC block + rumble removal)
-            val filtered = alpha * (prevOut + inSample - prevIn)
-            prevIn = inSample
-            prevOut = filtered
-
-            // True continuous soft-knee limiter (hyperbolic rational function)
-            val outSample = if (filtered > threshold) {
-                val u = filtered - threshold
-                threshold + u / (1.0 + u / maxCap)
-            } else if (filtered < -threshold) {
-                val u = -filtered - threshold
-                -threshold - u / (1.0 + u / maxCap)
-            } else {
-                filtered
-            }
-
-            buffer[i] = outSample.toInt().toShort()
-        }
     }
 
     private fun cancelHandshakeTimeout() {
@@ -553,6 +516,36 @@ class VoiceInputManager(
         }
 
         val current = sessionEmittedText
+
+        // Check if this is a disjoint new utterance segment (e.g. "hello" followed by "how are you")
+        if (current.isNotEmpty()) {
+            var prefixLen = 0
+            val minLen = minOf(current.length, fullTargetText.length)
+            while (prefixLen < minLen && current[prefixLen].lowercaseChar() == fullTargetText[prefixLen].lowercaseChar()) {
+                prefixLen++
+            }
+
+            if (prefixLen == 0) {
+                // Disjoint new segment: preserve previous phrase with a space and start tracking new segment
+                Log.i(TAG, "syncRecognizedText: Disjoint utterance detected (prev='$current', new='$fullTargetText')")
+                ic.beginBatchEdit()
+                try {
+                    ic.commitText(" ", 1)
+                    ic.commitText(fullTargetText, 1)
+                    if (isFinal) {
+                        ic.commitText(" ", 1)
+                        val lastChar = fullTargetText.lastOrNull()
+                        needsCapitalStart = lastChar != null && lastChar in ".!?"
+                        sessionEmittedText = ""
+                    } else {
+                        sessionEmittedText = fullTargetText
+                    }
+                } finally {
+                    ic.endBatchEdit()
+                }
+                return
+            }
+        }
 
         // Find longest common prefix between what's in the editor from this utterance and the new target
         var commonPrefixLen = 0
@@ -655,8 +648,6 @@ class VoiceInputManager(
         audioPipeWriteSide = null
         activeSessionId = null
         sessionEmittedText = ""
-        prevIn = 0.0
-        prevOut = 0.0
     }
 
     @Synchronized
