@@ -24,6 +24,8 @@ import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -61,6 +63,15 @@ class VoiceInputManager(
     private var handshakeTimeoutRunnable: Runnable? = null
     private var needsCapitalStart = true
     private var sessionEmittedText = ""
+
+    // DSP state (IIR 80Hz High-Pass Filter + Soft-Knee Limiter)
+    private var prevIn = 0.0
+    private var prevOut = 0.0
+    private val alpha = 1.0 / (1.0 + 2.0 * Math.PI * 80.0 / 16000.0)
+
+    // Pre-allocated buffers to prevent GC allocations on hot audio recording path
+    private val shortBuffer = ShortArray(FRAME_SIZE_SHORTS)
+    private val byteBuffer = ByteBuffer.allocate(FRAME_SIZE_BYTES).order(ByteOrder.LITTLE_ENDIAN)
 
     private var listener: VoiceInputListener? = null
 
@@ -118,6 +129,8 @@ class VoiceInputManager(
         activeSessionId = sessionId
         needsCapitalStart = true
         sessionEmittedText = ""
+        prevIn = 0.0
+        prevOut = 0.0
 
         if (!isConnected) {
             updateState(VoiceState.CONNECTING_PLUGIN)
@@ -358,7 +371,6 @@ class VoiceInputManager(
         val initialTimeoutMs = if (silenceTimeoutSec > 0) maxOf(silenceTimeoutSec * 2000L, 5000L) else 0L
 
         audioThread = Thread({
-            val buffer = ByteArray(FRAME_SIZE_BYTES)
             var outputStream: FileOutputStream? = null
             var totalBytesWritten = 0L
             val sessionStartTime = System.currentTimeMillis()
@@ -368,23 +380,24 @@ class VoiceInputManager(
             try {
                 outputStream = FileOutputStream(writePfd.fileDescriptor)
                 while (isRecording.get()) {
-                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: -1
-                    if (read > 0) {
-                        outputStream.write(buffer, 0, read)
+                    val readShorts = audioRecord?.read(shortBuffer, 0, shortBuffer.size) ?: -1
+                    if (readShorts > 0) {
+                        applySoftDSP(shortBuffer, readShorts)
+
+                        byteBuffer.clear()
+                        byteBuffer.asShortBuffer().put(shortBuffer, 0, readShorts)
+                        val bytesToWrite = readShorts * 2
+                        outputStream.write(byteBuffer.array(), 0, bytesToWrite)
                         outputStream.flush()
-                        totalBytesWritten += read
+                        totalBytesWritten += bytesToWrite
 
                         if (silenceTimeoutMs > 0L) {
                             var sum = 0.0
-                            var sampleCount = 0
-                            var i = 0
-                            while (i < read - 1) {
-                                val sample = ((buffer[i + 1].toInt() shl 8) or (buffer[i].toInt() and 0xFF)).toShort()
-                                sum += sample.toDouble() * sample.toDouble()
-                                sampleCount++
-                                i += 2
+                            for (i in 0 until readShorts) {
+                                val sample = shortBuffer[i].toDouble()
+                                sum += sample * sample
                             }
-                            val rms = if (sampleCount > 0) kotlin.math.sqrt(sum / sampleCount) else 0.0
+                            val rms = kotlin.math.sqrt(sum / readShorts)
                             val now = System.currentTimeMillis()
                             if (rms > 400.0) {
                                 lastSpeechTime = now
@@ -401,8 +414,8 @@ class VoiceInputManager(
                                 break
                             }
                         }
-                    } else if (read < 0) {
-                        Log.e(TAG, "AudioRecord read error: $read")
+                    } else if (readShorts < 0) {
+                        Log.e(TAG, "AudioRecord read error: $readShorts")
                         break
                     }
                 }
@@ -420,6 +433,32 @@ class VoiceInputManager(
         }
 
         return true
+    }
+
+    private fun applySoftDSP(buffer: ShortArray, readSize: Int) {
+        val threshold = 30000.0
+        val maxCap = 32767.0 - threshold
+        for (i in 0 until readSize) {
+            val inSample = buffer[i].toDouble()
+
+            // 80Hz High-pass filtering (DC block + rumble removal)
+            val filtered = alpha * (prevOut + inSample - prevIn)
+            prevIn = inSample
+            prevOut = filtered
+
+            // True continuous soft-knee limiter (hyperbolic rational function)
+            val outSample = if (filtered > threshold) {
+                val u = filtered - threshold
+                threshold + u / (1.0 + u / maxCap)
+            } else if (filtered < -threshold) {
+                val u = -filtered - threshold
+                -threshold - u / (1.0 + u / maxCap)
+            } else {
+                filtered
+            }
+
+            buffer[i] = outSample.toInt().toShort()
+        }
     }
 
     private fun cancelHandshakeTimeout() {
@@ -616,6 +655,8 @@ class VoiceInputManager(
         audioPipeWriteSide = null
         activeSessionId = null
         sessionEmittedText = ""
+        prevIn = 0.0
+        prevOut = 0.0
     }
 
     @Synchronized
@@ -647,7 +688,8 @@ class VoiceInputManager(
         private const val TAG = "VoiceInputManager"
         private const val SAMPLE_RATE = 16000
         private const val FRAME_SIZE_MS = 30
-        private const val FRAME_SIZE_BYTES = (SAMPLE_RATE * FRAME_SIZE_MS / 1000) * 2 // 960 bytes
+        private const val FRAME_SIZE_SHORTS = SAMPLE_RATE * FRAME_SIZE_MS / 1000 // 480 shorts
+        private const val FRAME_SIZE_BYTES = FRAME_SIZE_SHORTS * 2 // 960 bytes
         private const val HANDSHAKE_TIMEOUT_MS = 8000L
 
         fun isBlockedEditor(info: EditorInfo?): Boolean {
