@@ -425,130 +425,22 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
         val rtl = RichInputMethodManager.getInstance().currentSubtype.isRtlSubtype
         val steps = if (rtl) -rawSteps else rawSteps
 
-        val isSelecting = keyboardSwitcher.keyboard?.mId?.isAlphabetShiftedManually == true || sPersistentSelectionModeActive
-        if (isSelecting) {
-            val code = if (steps < 0) {
-                gestureMoveBackHaptics()
-                if (rtl) KeyCode.ARROW_RIGHT else KeyCode.ARROW_LEFT
-            } else {
-                gestureMoveForwardHaptics(true)
-                if (rtl) KeyCode.ARROW_LEFT else KeyCode.ARROW_RIGHT
-            }
-            repeat(abs(steps)) {
-                onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
-            }
-            return true
-        }
-
-        // Web editors (Chromium, Firefox, etc.) handle direct setSelection badly during fast swipes,
-        // often resulting in focus loss, caret hiding, or composition desynchronization.
-        // Fall back to sending simulated arrow keys, which is fast, asynchronous, and robust.
-        val isWebEditText = (InputType.TYPE_MASK_VARIATION and Settings.getValues().mInputAttributes.mInputType) == InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
-        if (isWebEditText) {
-            val code = if (steps < 0) {
-                gestureMoveBackHaptics()
-                if (rtl) KeyCode.ARROW_RIGHT else KeyCode.ARROW_LEFT
-            } else {
-                gestureMoveForwardHaptics(true)
-                if (rtl) KeyCode.ARROW_LEFT else KeyCode.ARROW_RIGHT
-            }
-            repeat(abs(steps)) {
-                onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
-            }
-            return true
-        }
-
-        val moveSteps: Int
-        if (steps < 0) {
-            val text = connection.getTextBeforeCursor(-steps * 4, 0) ?: return false
-            moveSteps = negativeMoveSteps(text, steps)
-            if (moveSteps == 0) {
-                // don't send dpad events if we are already at the beginning of the field
-                if (text.isEmpty() && connection.expectedSelectionStart == 0) return true
-                // some apps don't return any text via input connection, and the cursor can't be moved
-                // we fall back to virtually pressing the left/right key one or more times instead
-                repeat(-steps) {
-                    onCodeInput(if (rtl) KeyCode.ARROW_RIGHT else KeyCode.ARROW_LEFT, Constants.NOT_A_COORDINATE,
-                        Constants.NOT_A_COORDINATE, false)
-                }
-                if (text.isNotEmpty()) {
-                    gestureMoveBackHaptics()
-                }
-                return true
-            }
-            gestureMoveBackHaptics()
-        } else {
-            val text = connection.getTextAfterCursor(steps * 4, 0) ?: return false
-            moveSteps = positiveMoveSteps(text, steps)
-            if (moveSteps == 0) {
-                // don't send dpad events if we are already at the end of the field
-                if (text.isEmpty()) return true
-                // some apps don't return any text via input connection, and the cursor can't be moved
-                // we fall back to virtually pressing the left/right key one or more times instead
-                repeat(steps) {
-                    onCodeInput(if (rtl) KeyCode.ARROW_LEFT else KeyCode.ARROW_RIGHT, Constants.NOT_A_COORDINATE,
-                        Constants.NOT_A_COORDINATE, false)
-                }
-                if (text.isNotEmpty()) {
-                    gestureMoveForwardHaptics(true)
-                }
-                return true
-            }
-            gestureMoveForwardHaptics(text.isNotEmpty())
-        }
-
-        // the shortcut below causes issues due to horrible handling of text fields by Firefox and forks
-        // issues:
-        //  * setSelection "will cause the editor to call onUpdateSelection", see: https://developer.android.com/reference/android/view/inputmethod/InputConnection#setSelection(int,%20int)
-        //     but Firefox is simply not doing this within the same word... WTF?
-        //     https://github.com/Helium314/HeliBoard/issues/1139#issuecomment-2588169384
-        //  * inputType is NOT of variant InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT (variant appears to always be 0)
-        //     -> this is "fixed" now using AppWorkarounds.adjustInputType
-        val variation = InputType.TYPE_MASK_VARIATION and Settings.getValues().mInputAttributes.mInputType
-        if (variation != InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
-                && inputLogic.moveCursorByAndReturnIfInsideComposingWord(moveSteps)) {
-            // no need to finish input and restart suggestions if we're still in the word
-            // this is a noticeable performance improvement when moving through long words
-            val newPosition = connection.expectedSelectionStart + moveSteps
-            connection.setSelection(newPosition, newPosition)
-            return true
-        }
-
         if (!isSpaceSwipeActive) {
             isSpaceSwipeActive = true
             inputLogic.finishInput()
         }
-        val newPosition = connection.expectedSelectionStart + moveSteps
-        connection.setSelection(newPosition, newPosition)
+
+        val code = if (steps < 0) {
+            gestureMoveBackHaptics()
+            if (rtl) KeyCode.ARROW_RIGHT else KeyCode.ARROW_LEFT
+        } else {
+            gestureMoveForwardHaptics(true)
+            if (rtl) KeyCode.ARROW_LEFT else KeyCode.ARROW_RIGHT
+        }
+        repeat(abs(steps)) {
+            onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+        }
         return true
-    }
-
-    private fun positiveMoveSteps(text: CharSequence, steps: Int): Int {
-        var actualSteps = 0
-        // corrected steps to avoid splitting chars belonging to the same codepoint
-        loopOverCodePoints(text) { cp, charCount ->
-            // For emojis we (incorrectly) return 0 so the move is handled by virtual arrow key presses.
-            // This is a simple workaround to avoid determining the correct character count, which can
-            // be tricky because in some cases older Android versions show two emojis where newer ones show one.
-            if (StringUtils.mightBeEmoji(cp)) return 0
-            actualSteps += charCount
-            actualSteps >= steps
-        }
-        return min(actualSteps, text.length)
-    }
-
-    private fun negativeMoveSteps(text: CharSequence, steps: Int): Int {
-        var actualSteps = 0
-        // corrected steps to avoid splitting chars belonging to the same codepoint
-        loopOverCodePointsBackwards(text) { cp, charCount ->
-            // For emojis we (incorrectly) return 0 so the move is handled by virtual arrow key presses.
-            // This is a simple workaround to avoid determining the correct character count, which can
-            // be tricky because in some cases older Android versions show two emojis where newer ones show one.
-            if (StringUtils.mightBeEmoji(cp)) return 0
-            actualSteps -= charCount
-            actualSteps <= steps
-        }
-        return -min(-actualSteps, text.length)
     }
 
     private fun gestureMoveBackHaptics() {
