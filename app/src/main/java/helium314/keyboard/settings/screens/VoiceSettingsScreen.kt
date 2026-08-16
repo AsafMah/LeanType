@@ -268,6 +268,7 @@ fun VoiceSettingsScreen(
             ListPreference(
                 setting = it,
                 items = listOf(
+                    "3 seconds" to "3",
                     "5 seconds (Recommended)" to "5",
                     "7 seconds" to "7",
                     "10 seconds" to "10",
