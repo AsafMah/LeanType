@@ -67,10 +67,7 @@ interface Colors {
             KEY_BACKGROUND, MORE_SUGGESTIONS_WORD_BACKGROUND, ACTION_KEY_POPUP_KEYS_BACKGROUND, POPUP_KEYS_BACKGROUND ->
                 attr.getDrawable(R.styleable.KeyboardView_keyBackground)
             FUNCTIONAL_KEY_BACKGROUND -> attr.getDrawable(R.styleable.KeyboardView_functionalKeyBackground)
-            SPACE_BAR_BACKGROUND -> {
-                if (hasKeyBorders) attr.getDrawable(R.styleable.KeyboardView_spacebarBackground)
-                else attr.getDrawable(R.styleable.KeyboardView_spacebarNoBorderBackground)
-            }
+            SPACE_BAR_BACKGROUND -> attr.getDrawable(R.styleable.KeyboardView_spacebarBackground)
             ACTION_KEY_BACKGROUND -> {
                 if (themeStyle == STYLE_HOLO && hasKeyBorders) // no borders has a very small pressed drawable otherwise
                     attr.getDrawable(R.styleable.KeyboardView_functionalKeyBackground)
@@ -257,8 +254,9 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 else pressedStateList(doubleAdjustedAccent, accent)
 
             spaceBarStateList =
-                if (!isNight) pressedStateList(gesture, adjustedFunctionalKey)
-                else pressedStateList(adjustedKeyBackground, spaceBar)
+                if (themeStyle == STYLE_HOLO) pressedStateList(spaceBar, spaceBar)
+                else if (!isNight) pressedStateList(adjustedBackground, keyBackground)
+                else pressedStateList(adjustedKeyBackground, keyBackground)
         }
         keyTextFilter = colorFilter(keyText)
 
