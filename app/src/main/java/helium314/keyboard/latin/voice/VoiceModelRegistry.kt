@@ -18,19 +18,41 @@ data class VoiceModelItem(
 object VoiceModelRegistry {
     val whisperModels = listOf(
         VoiceModelItem(
+            id = "distil-whisper-small-en-q5_1",
+            displayName = "Distil-Whisper Small (English)",
+            engineType = VoiceConstants.ENGINE_WHISPER,
+            language = "English (Fast & Accurate)",
+            languageCode = "en",
+            sizeMb = "105 MB",
+            downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-distil-small.en-q5_1.bin",
+            browserUrl = "https://huggingface.co/distil-whisper/distil-small.en",
+            description = "6x faster than Whisper Small, 49% smaller parameters with state-of-the-art English accuracy."
+        ),
+        VoiceModelItem(
+            id = "distil-whisper-medium-en-q5_1",
+            displayName = "Distil-Whisper Medium (English)",
+            engineType = VoiceConstants.ENGINE_WHISPER,
+            language = "English (High Accuracy)",
+            languageCode = "en",
+            sizeMb = "260 MB",
+            downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-distil-medium.en-q5_1.bin",
+            browserUrl = "https://huggingface.co/distil-whisper/distil-medium.en",
+            description = "6x faster than Whisper Medium with exceptional conversational understanding."
+        ),
+        VoiceModelItem(
             id = "whisper-base-q5_1",
-            displayName = "Whisper Base Q5_1",
+            displayName = "Whisper Base Q5_1 (Multilingual)",
             engineType = VoiceConstants.ENGINE_WHISPER,
             language = "Multilingual (99+ languages)",
             languageCode = "mul",
             sizeMb = "57 MB",
             downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
             browserUrl = "https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-base-q5_1.bin",
-            description = "High accuracy, quantized for fast CPU inference and low memory."
+            description = "Fast multilingual CPU inference with balanced accuracy."
         ),
         VoiceModelItem(
             id = "whisper-tiny",
-            displayName = "Whisper Tiny",
+            displayName = "Whisper Tiny (Multilingual)",
             engineType = VoiceConstants.ENGINE_WHISPER,
             language = "Multilingual (99+ languages)",
             languageCode = "mul",
@@ -41,209 +63,18 @@ object VoiceModelRegistry {
         ),
         VoiceModelItem(
             id = "whisper-small-q5_1",
-            displayName = "Whisper Small Q5_1",
+            displayName = "Whisper Small Q5_1 (Multilingual)",
             engineType = VoiceConstants.ENGINE_WHISPER,
             language = "Multilingual (99+ languages)",
             languageCode = "mul",
             sizeMb = "182 MB",
             downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
             browserUrl = "https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-small-q5_1.bin",
-            description = "Maximum recognition accuracy across multilingual accents."
-        )
-    )
-
-    val voskModels = listOf(
-        VoiceModelItem(
-            id = "vosk-small-en-us",
-            displayName = "Vosk US English",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "en-US",
-            languageCode = "en",
-            sizeMb = "40 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Lightweight streaming acoustic model for American English."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-en-in",
-            displayName = "Vosk Indian English",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "en-IN",
-            languageCode = "en-in",
-            sizeMb = "36 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-en-in-0.4.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Tuned for Indian English accents and vocabulary."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-es",
-            displayName = "Vosk Spanish",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "es",
-            languageCode = "es",
-            sizeMb = "39 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Spanish."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-fr",
-            displayName = "Vosk French",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "fr",
-            languageCode = "fr",
-            sizeMb = "41 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for French."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-de",
-            displayName = "Vosk German",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "de",
-            languageCode = "de",
-            sizeMb = "45 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for German."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-hi",
-            displayName = "Vosk Hindi",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "hi",
-            languageCode = "hi",
-            sizeMb = "42 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Hindi."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-it",
-            displayName = "Vosk Italian",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "it",
-            languageCode = "it",
-            sizeMb = "48 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Italian."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-pt",
-            displayName = "Vosk Portuguese",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "pt",
-            languageCode = "pt",
-            sizeMb = "31 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Portuguese."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-ru",
-            displayName = "Vosk Russian",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "ru",
-            languageCode = "ru",
-            sizeMb = "45 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Russian."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-ja",
-            displayName = "Vosk Japanese",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "ja",
-            languageCode = "ja",
-            sizeMb = "48 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Japanese."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-cn",
-            displayName = "Vosk Chinese",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "zh",
-            languageCode = "zh",
-            sizeMb = "42 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Mandarin Chinese."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-ko",
-            displayName = "Vosk Korean",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "ko",
-            languageCode = "ko",
-            sizeMb = "67 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-ko-0.22.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Korean."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-tr",
-            displayName = "Vosk Turkish",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "tr",
-            languageCode = "tr",
-            sizeMb = "35 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-tr-0.3.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Turkish."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-uk",
-            displayName = "Vosk Ukrainian",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "uk",
-            languageCode = "uk",
-            sizeMb = "41 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-uk-v3-small.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Ukrainian."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-nl",
-            displayName = "Vosk Dutch",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "nl",
-            languageCode = "nl",
-            sizeMb = "39 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-nl-0.22.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Dutch."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-pl",
-            displayName = "Vosk Polish",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "pl",
-            languageCode = "pl",
-            sizeMb = "48 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Polish."
-        ),
-        VoiceModelItem(
-            id = "vosk-small-vn",
-            displayName = "Vosk Vietnamese",
-            engineType = VoiceConstants.ENGINE_VOSK,
-            language = "vi",
-            languageCode = "vi",
-            sizeMb = "32 MB",
-            downloadUrl = "https://alphacephei.com/vosk/models/vosk-model-small-vn-0.4.zip",
-            browserUrl = "https://alphacephei.com/vosk/models",
-            description = "Streaming acoustic model for Vietnamese."
+            description = "High accuracy across global accents and languages."
         )
     )
 
     fun findById(id: String): VoiceModelItem? {
         return whisperModels.firstOrNull { it.id == id }
-            ?: voskModels.firstOrNull { it.id == id }
     }
 }

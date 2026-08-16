@@ -171,9 +171,9 @@ class VoiceInputManager(
             return
         }
 
-        val mode = ims.prefs().getString(VoiceConstants.PREF_VOICE_MODE, VoiceConstants.MODE_FAST) ?: VoiceConstants.MODE_FAST
+        val mode = ims.prefs().getString(VoiceConstants.PREF_VOICE_MODE, VoiceConstants.MODE_ACCURATE) ?: VoiceConstants.MODE_ACCURATE
         val timeoutMs = ims.prefs().getString(VoiceConstants.PREF_VOICE_HYBRID_TIMEOUT_MS, "900")?.toIntOrNull() ?: 900
-        val fallback = ims.prefs().getBoolean(VoiceConstants.PREF_VOICE_HYBRID_FALLBACK, true)
+        val fallback = ims.prefs().getBoolean(VoiceConstants.PREF_VOICE_HYBRID_FALLBACK, false)
 
         val languageTag = try {
             RichInputMethodManager.getInstance().currentSubtypeLocale.toLanguageTag()

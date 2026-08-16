@@ -78,7 +78,6 @@ fun VoiceSettingsScreen(
     var isPluginConnected by remember { mutableStateOf(false) }
     var isPluginInstalled by remember { mutableStateOf(false) }
 
-    var voskState by remember { mutableStateOf<ModelState?>(null) }
     var whisperState by remember { mutableStateOf<ModelState?>(null) }
     var showModelDownloadDialog by remember { mutableStateOf(false) }
 
@@ -87,12 +86,10 @@ fun VoiceSettingsScreen(
         if (pluginManager.isPluginConnected()) {
             isPluginConnected = true
             engineInfo = pluginManager.getInfo()
-            voskState = pluginManager.getModelState(VoiceConstants.ENGINE_VOSK)
             whisperState = pluginManager.getModelState(VoiceConstants.ENGINE_WHISPER)
         } else {
             isPluginConnected = false
             engineInfo = null
-            voskState = null
             whisperState = null
         }
     }
@@ -108,7 +105,6 @@ fun VoiceSettingsScreen(
             override fun onPluginDisconnected() {
                 isPluginConnected = false
                 engineInfo = null
-                voskState = null
                 whisperState = null
             }
         })
@@ -125,38 +121,6 @@ fun VoiceSettingsScreen(
             while (isActive) {
                 updatePluginStatus()
                 kotlinx.coroutines.delay(1500)
-            }
-        }
-    }
-
-    val voskPicker = filePicker { uri ->
-        scope.launch(Dispatchers.IO) {
-            try {
-                val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-                if (pfd != null) {
-                    val size = pfd.statSize
-                    val request = ModelImportRequest(
-                        engineType = VoiceConstants.ENGINE_VOSK,
-                        language = "en-US",
-                        sha256 = null,
-                        sizeBytes = size,
-                        file = pfd
-                    )
-                    if (!pluginManager.isPluginConnected()) {
-                        pluginManager.bindIfNeeded()
-                    }
-                    pluginManager.importModelSafely(request)
-                    withContext(Dispatchers.Main) {
-                        prefs.edit().putString("installed_model_${VoiceConstants.ENGINE_VOSK}", "custom").apply()
-                        Toast.makeText(context, "Vosk model import dispatched", Toast.LENGTH_SHORT).show()
-                        updatePluginStatus()
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("VoiceSettingsScreen", "Failed to import Vosk model", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Model import failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                }
             }
         }
     }
@@ -206,23 +170,6 @@ fun VoiceSettingsScreen(
         }
     }
 
-    val voiceModeSetting = remember {
-        Setting(
-            key = VoiceConstants.PREF_VOICE_MODE,
-            title = "Voice Engine Mode"
-        ) {
-            ListPreference(
-                setting = it,
-                items = listOf(
-                    "Fast (Vosk streaming)" to VoiceConstants.MODE_FAST,
-                    "Accurate (Whisper offline)" to VoiceConstants.MODE_ACCURATE,
-                    "Hybrid (Vosk + Whisper)" to VoiceConstants.MODE_HYBRID
-                ),
-                default = VoiceConstants.MODE_FAST
-            )
-        }
-    }
-
     val whisperKeepLoadedSetting = remember {
         Setting(
             key = VoiceConstants.PREF_VOICE_WHISPER_KEEP_LOADED_SECONDS,
@@ -237,25 +184,6 @@ fun VoiceSettingsScreen(
                     "Unload immediately after session" to "0"
                 ),
                 default = "300"
-            )
-        }
-    }
-
-    val hybridTimeoutSetting = remember {
-        Setting(
-            key = VoiceConstants.PREF_VOICE_HYBRID_TIMEOUT_MS,
-            title = "Hybrid Whisper Timeout (ms)"
-        ) {
-            ListPreference(
-                setting = it,
-                items = listOf(
-                    "500 ms" to "500",
-                    "700 ms" to "700",
-                    "900 ms (Recommended)" to "900",
-                    "1200 ms" to "1200",
-                    "1500 ms" to "1500"
-                ),
-                default = "900"
             )
         }
     }
@@ -280,36 +208,18 @@ fun VoiceSettingsScreen(
         }
     }
 
-    val hybridFallbackSetting = remember {
-        Setting(
-            key = VoiceConstants.PREF_VOICE_HYBRID_FALLBACK,
-            title = "Fallback to Vosk if Whisper fails",
-            description = "Allow Fast Vosk output if Whisper times out or model is missing"
-        ) {
-            SwitchPreference(
-                setting = it,
-                default = true
-            )
-        }
-    }
-
     if (showModelDownloadDialog) {
         VoiceModelDownloadDialog(
             onDismissRequest = { showModelDownloadDialog = false },
             pluginManager = pluginManager,
-            voskState = voskState,
             whisperState = whisperState,
             onRefresh = { updatePluginStatus() },
-            onImportLocalFile = { engineType ->
+            onImportLocalFile = {
                 val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
                     addCategory(android.content.Intent.CATEGORY_OPENABLE)
                     type = "*/*"
                 }
-                if (engineType == VoiceConstants.ENGINE_WHISPER) {
-                    whisperPicker.launch(intent)
-                } else {
-                    voskPicker.launch(intent)
-                }
+                whisperPicker.launch(intent)
             }
         )
     }
@@ -394,40 +304,31 @@ fun VoiceSettingsScreen(
                 }
             }
 
-            voiceModeSetting.Preference()
             silenceTimeoutSetting.Preference()
 
             // Models section
             Text(
-                text = "Local Speech Models",
+                text = "Speech Models (Whisper & Distil-Whisper)",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp)
             )
 
             val whisperDesc = when (whisperState?.state) {
-                ModelState.STATE_READY -> "Whisper: Ready"
-                ModelState.STATE_LOADING -> "Whisper: Loading…"
-                ModelState.STATE_ERROR -> "Whisper: Error"
-                else -> "Whisper: Not installed"
-            }
-            val voskDesc = when (voskState?.state) {
-                ModelState.STATE_READY -> "Vosk: Ready"
-                ModelState.STATE_LOADING -> "Vosk: Loading…"
-                ModelState.STATE_ERROR -> "Vosk: Error"
-                else -> "Vosk: Not installed"
+                ModelState.STATE_READY -> "Status: Ready"
+                ModelState.STATE_LOADING -> "Status: Loading…"
+                ModelState.STATE_ERROR -> "Status: Error"
+                else -> "Status: No model installed"
             }
 
             Preference(
-                name = "Manage & Download Speech Models",
-                description = "$whisperDesc • $voskDesc. Tap to manage curated models",
+                name = "Manage & Download Models",
+                description = "$whisperDesc. Tap to download Distil-Whisper or standard Whisper models",
                 onClick = {
                     showModelDownloadDialog = true
                 }
             )
 
             whisperKeepLoadedSetting.Preference()
-            hybridTimeoutSetting.Preference()
-            hybridFallbackSetting.Preference()
         }
     }
 }

@@ -37,7 +37,7 @@ import helium314.keyboard.settings.DeleteButton
 fun VoiceModelDownloadDialog(
     onDismissRequest: () -> Unit,
     pluginManager: VoicePluginManager,
-    voskState: ModelState?,
+    voskState: ModelState? = null,
     whisperState: ModelState?,
     onRefresh: () -> Unit,
     onImportLocalFile: (String) -> Unit
@@ -47,26 +47,6 @@ fun VoiceModelDownloadDialog(
     val prefs = context.prefs()
 
     val installedWhisperId = prefs.getString("installed_model_${VoiceConstants.ENGINE_WHISPER}", null)
-    val installedVoskId = prefs.getString("installed_model_${VoiceConstants.ENGINE_VOSK}", null)
-
-    val enabledLanguages = remember {
-        val list = SubtypeSettings.getEnabledSubtypes(true).map { it.locale().language.lowercase() }.toSet()
-        if (list.isEmpty()) setOf("en") else list
-    }
-
-    var showAllLanguages by remember { mutableStateOf(false) }
-
-    val activeVoskModels = remember(enabledLanguages, installedVoskId) {
-        VoiceModelRegistry.voskModels.filter {
-            it.languageCode in enabledLanguages || installedVoskId == it.id
-        }.ifEmpty {
-            VoiceModelRegistry.voskModels.filter { it.languageCode == "en" }
-        }
-    }
-
-    val otherVoskModels = remember(activeVoskModels) {
-        VoiceModelRegistry.voskModels.filterNot { it in activeVoskModels }
-    }
 
     ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,
@@ -74,18 +54,16 @@ fun VoiceModelDownloadDialog(
         confirmButtonText = null,
         cancelButtonText = null,
         scrollContent = true,
-        title = { Text("Speech Models") },
+        title = { Text("Speech Models (Whisper & Distil-Whisper)") },
         content = {
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Section: Whisper Models
                 Text(
-                    text = "Whisper Models (Accurate & Hybrid)",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 4.dp)
+                    text = "High-accuracy, transformer-based speech recognition models for on-device typing.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 val isWhisperInstalled = whisperState?.state == ModelState.STATE_READY
@@ -104,81 +82,17 @@ fun VoiceModelDownloadDialog(
                         onDelete = {
                             prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_WHISPER}").apply()
                             pluginManager.deleteModel(VoiceConstants.ENGINE_WHISPER)
-                            Toast.makeText(context, "Whisper model deleted", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Model deleted", Toast.LENGTH_SHORT).show()
                             onRefresh()
                         }
                     )
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                // Section: Vosk Models
-                Text(
-                    text = "Vosk Models (Fast Streaming)",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-
-                val isVoskInstalled = voskState?.state == ModelState.STATE_READY
-
-                for (model in activeVoskModels) {
-                    val isThisModelInstalled = isVoskInstalled && installedVoskId == model.id
-
-                    ModelDownloadRow(
-                        model = model,
-                        isThisModelInstalled = isThisModelInstalled,
-                        isAnyModelInstalledForEngine = isVoskInstalled,
-                        isNetworkAvailable = isNetworkAvailable,
-                        onDownload = {
-                            VoiceDownloadDispatcher.download(context, model)
-                        },
-                        onDelete = {
-                            prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_VOSK}").apply()
-                            pluginManager.deleteModel(VoiceConstants.ENGINE_VOSK)
-                            Toast.makeText(context, "Vosk model deleted", Toast.LENGTH_SHORT).show()
-                            onRefresh()
-                        }
-                    )
-                }
-
-                if (showAllLanguages) {
-                    for (model in otherVoskModels) {
-                        val isThisModelInstalled = isVoskInstalled && installedVoskId == model.id
-
-                        ModelDownloadRow(
-                            model = model,
-                            isThisModelInstalled = isThisModelInstalled,
-                            isAnyModelInstalledForEngine = isVoskInstalled,
-                            isNetworkAvailable = isNetworkAvailable,
-                            onDownload = {
-                                VoiceDownloadDispatcher.download(context, model)
-                            },
-                            onDelete = {
-                                prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_VOSK}").apply()
-                                pluginManager.deleteModel(VoiceConstants.ENGINE_VOSK)
-                                Toast.makeText(context, "Vosk model deleted", Toast.LENGTH_SHORT).show()
-                                onRefresh()
-                            }
-                        )
-                    }
-                }
-
-                if (otherVoskModels.isNotEmpty()) {
-                    TextButton(
-                        onClick = { showAllLanguages = !showAllLanguages },
-                        modifier = Modifier.padding(top = 2.dp)
-                    ) {
-                        Text(if (showAllLanguages) "Hide other languages" else "Browse other languages (${otherVoskModels.size})")
-                    }
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 // Section: Custom / Offline Models
                 Text(
-                    text = "Custom / Offline Models",
+                    text = "Custom Model File",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -200,12 +114,12 @@ fun VoiceModelDownloadDialog(
                             .padding(end = 8.dp)
                     ) {
                         Text(
-                            text = "Custom Whisper Model",
+                            text = "Custom GGML / GGUF Model",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Import GGML .bin model file from device storage",
+                            text = "Import any GGML .bin model file from device storage",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -225,66 +139,13 @@ fun VoiceModelDownloadDialog(
                             ) {
                                 prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_WHISPER}").apply()
                                 pluginManager.deleteModel(VoiceConstants.ENGINE_WHISPER)
-                                Toast.makeText(context, "Whisper model deleted", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Model deleted", Toast.LENGTH_SHORT).show()
                                 onRefresh()
                             }
                         }
                     } else {
                         TextButton(
                             onClick = { onImportLocalFile(VoiceConstants.ENGINE_WHISPER) }
-                        ) {
-                            Text("Import")
-                        }
-                    }
-                }
-
-                // Custom Vosk Row
-                val isCustomVoskInstalled = isVoskInstalled && installedVoskId == "custom"
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 8.dp)
-                    ) {
-                        Text(
-                            text = "Custom Vosk Model",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Import Vosk .zip archive from device storage",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    if (isCustomVoskInstalled) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "✓ Active",
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(end = 4.dp)
-                            )
-                            DeleteButton(
-                                modifier = Modifier.size(32.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            ) {
-                                prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_VOSK}").apply()
-                                pluginManager.deleteModel(VoiceConstants.ENGINE_VOSK)
-                                Toast.makeText(context, "Vosk model deleted", Toast.LENGTH_SHORT).show()
-                                onRefresh()
-                            }
-                        }
-                    } else {
-                        TextButton(
-                            onClick = { onImportLocalFile(VoiceConstants.ENGINE_VOSK) }
                         ) {
                             Text("Import")
                         }
