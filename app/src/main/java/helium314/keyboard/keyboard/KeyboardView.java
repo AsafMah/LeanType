@@ -62,8 +62,10 @@ public class KeyboardView extends View {
     private final Drawable mFunctionalKeyBackground;
     private final Drawable mActionKeyBackground;
     private final Drawable mSpacebarBackground;
+    private final Drawable mEditModeKeyBackground;
     private final float mSpacebarIconWidthRatio;
     private final Rect mKeyBackgroundPadding = new Rect();
+    private final Rect mEditModeKeyBackgroundPadding = new Rect();
     private static final float KET_TEXT_SHADOW_RADIUS_DISABLED = -1.0f;
     private final Colors mColors;
     private float mKeyScaleForText;
@@ -148,6 +150,17 @@ public class KeyboardView extends View {
         mVerticalCorrection = keyboardViewAttr.getDimension(
                 R.styleable.KeyboardView_verticalCorrection, 0.0f);
         keyboardViewAttr.recycle();
+
+        final TypedArray popupAttrs = context.obtainStyledAttributes(attrs,
+                R.styleable.KeyboardView, R.attr.popupKeysKeyboardViewStyle, R.style.PopupKeysKeyboardView);
+        final Drawable editBg = popupAttrs.getDrawable(R.styleable.KeyboardView_keyBackground);
+        if (editBg != null) {
+            mEditModeKeyBackground = editBg.mutate();
+            mEditModeKeyBackground.getPadding(mEditModeKeyBackgroundPadding);
+        } else {
+            mEditModeKeyBackground = null;
+        }
+        popupAttrs.recycle();
 
         final TypedArray keyAttr = context.obtainStyledAttributes(attrs,
                 R.styleable.Keyboard_Key, defStyle, R.style.KeyboardView);
@@ -378,32 +391,8 @@ public class KeyboardView extends View {
     // Draw key background.
     protected void onDrawKeyBackground(@NonNull final Key key, @NonNull final Canvas canvas,
             @NonNull final Drawable background) {
-        final int keyWidth = key.getDrawWidth();
-        final int keyHeight = key.getHeight();
-        final int bgWidth, bgHeight, bgX, bgY;
-        if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags)
-                // HACK: To disable expanding normal/functional key background.
-                && !key.hasCustomActionLabel()) {
-            bgWidth = (int) (background.getIntrinsicWidth() * mIconScaleFactor);
-            bgHeight = (int) (background.getIntrinsicHeight() * mIconScaleFactor);
-            bgX = (keyWidth - bgWidth) / 2;
-            bgY = (keyHeight - bgHeight) / 2;
-        } else {
-            final Rect padding = mKeyBackgroundPadding;
-            bgWidth = keyWidth + padding.left + padding.right;
-            bgHeight = keyHeight + padding.top + padding.bottom;
-            bgY = -padding.top;
-            bgX = -padding.left;
-        }
-        background.setBounds(0, 0, bgWidth, bgHeight);
-        canvas.translate(bgX, bgY);
-        
-        final boolean isSelected = (key.getCode() == KeyCode.SHIFT && key.isLocked())
-                || (key.getCode() == KeyCode.TOGGLE_SELECTION_MODE && KeyboardActionListenerImpl.sPersistentSelectionModeActive);
-        
-        boolean hasCustomTint = false;
+        int customColor = 0;
         if (KeyboardActionListenerImpl.sPersistentTextEditModeActive) {
-            int customColor = 0;
             switch (key.getCode()) {
                 case -131: // Undo
                 case -132: // Redo
@@ -437,27 +426,60 @@ public class KeyboardView extends View {
                     customColor = mColors.get(ColorType.EDIT_MODE_JUMP_BACKGROUND);
                     break;
             }
-            if (customColor != 0) {
-                androidx.core.graphics.drawable.DrawableCompat.setTint(background, customColor);
-                mKeyCustomBgColors.put(key, customColor);
-                hasCustomTint = true;
-            }
+        }
+
+        final Drawable drawBackground = (customColor != 0 && mEditModeKeyBackground != null)
+                ? mEditModeKeyBackground : background;
+        final Rect padding = (customColor != 0 && mEditModeKeyBackground != null)
+                ? mEditModeKeyBackgroundPadding : mKeyBackgroundPadding;
+
+        final int keyWidth = key.getDrawWidth();
+        final int keyHeight = key.getHeight();
+        final int bgWidth, bgHeight, bgX, bgY;
+        if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags)
+                // HACK: To disable expanding normal/functional key background.
+                && !key.hasCustomActionLabel()) {
+            bgWidth = (int) (drawBackground.getIntrinsicWidth() * mIconScaleFactor);
+            bgHeight = (int) (drawBackground.getIntrinsicHeight() * mIconScaleFactor);
+            bgX = (keyWidth - bgWidth) / 2;
+            bgY = (keyHeight - bgHeight) / 2;
+        } else {
+            bgWidth = keyWidth + padding.left + padding.right;
+            bgHeight = keyHeight + padding.top + padding.bottom;
+            bgY = -padding.top;
+            bgX = -padding.left;
+        }
+        drawBackground.setBounds(0, 0, bgWidth, bgHeight);
+        canvas.translate(bgX, bgY);
+        
+        final boolean isSelected = (key.getCode() == KeyCode.SHIFT && key.isLocked())
+                || (key.getCode() == KeyCode.TOGGLE_SELECTION_MODE && KeyboardActionListenerImpl.sPersistentSelectionModeActive);
+        
+        boolean hasCustomTint = false;
+        if (customColor != 0) {
+            androidx.core.graphics.drawable.DrawableCompat.setTint(drawBackground, customColor);
+            mKeyCustomBgColors.put(key, customColor);
+            hasCustomTint = true;
         }
         
         if (isSelected) {
-            background.setColorFilter(Color.argb(0x80, 0, 0, 0), PorterDuff.Mode.SRC_ATOP);
+            drawBackground.setColorFilter(Color.argb(0x80, 0, 0, 0), PorterDuff.Mode.SRC_ATOP);
         }
         
-        background.draw(canvas);
+        drawBackground.draw(canvas);
         
         if (isSelected) {
-            background.clearColorFilter();
+            drawBackground.clearColorFilter();
         }
         if (hasCustomTint) {
-            final ColorType originalType = key.getBackgroundType() == Key.BACKGROUND_TYPE_FUNCTIONAL 
-                ? ColorType.FUNCTIONAL_KEY_BACKGROUND 
-                : ColorType.KEY_BACKGROUND;
-            mColors.setColor(background, originalType);
+            if (drawBackground == background) {
+                final ColorType originalType = key.getBackgroundType() == Key.BACKGROUND_TYPE_FUNCTIONAL 
+                    ? ColorType.FUNCTIONAL_KEY_BACKGROUND 
+                    : ColorType.KEY_BACKGROUND;
+                mColors.setColor(background, originalType);
+            } else {
+                androidx.core.graphics.drawable.DrawableCompat.setTintList(drawBackground, null);
+            }
         }
         
         canvas.translate(-bgX, -bgY);

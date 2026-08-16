@@ -72,7 +72,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         pinIconId = clipboardViewAttr.getResourceId(R.styleable.ClipboardHistoryView_iconPinnedClip, 0)
         clipboardViewAttr.recycle()
         @SuppressLint("UseKtx") // suggestion does not work
-        val keyboardViewAttr = context.obtainStyledAttributes(attrs, R.styleable.KeyboardView, defStyle, R.style.KeyboardView)
+        val keyboardViewAttr = context.obtainStyledAttributes(attrs, R.styleable.KeyboardView, R.attr.popupKeysKeyboardViewStyle, R.style.PopupKeysKeyboardView)
         keyBackgroundId = keyboardViewAttr.getResourceId(R.styleable.KeyboardView_keyBackground, 0)
         keyboardViewAttr.recycle()
         if (Settings.getValues().mSecondaryStripVisible) {

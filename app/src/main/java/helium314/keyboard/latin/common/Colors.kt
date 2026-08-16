@@ -207,11 +207,7 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 pressedStateList(accent, Color.WHITE)
             }
 
-        val stripBackground = if (keyboardBackground == null && !hasKeyBorders) {
-            if (isDarkColor(background)) 0x16ffffff else 0x11000000
-        } else {
-            Color.TRANSPARENT
-        }
+        val stripBackground = Color.TRANSPARENT
         val pressedStripElementBackground = if (keyboardBackground == null) adjustedBackground
         else if (isDarkColor(background)) 0x22ffffff else 0x11000000
         stripBackgroundList = pressedStateList(pressedStripElementBackground, stripBackground)
@@ -292,7 +288,7 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
         MORE_SUGGESTIONS_WORD_BACKGROUND, MAIN_BACKGROUND -> background
         KEY_BACKGROUND -> keyBackground
         ACTION_KEY_POPUP_KEYS_BACKGROUND -> if (themeStyle == STYLE_HOLO) adjustedBackground else accent
-        STRIP_BACKGROUND -> if (!hasKeyBorders && themeStyle == STYLE_MATERIAL) adjustedBackground else background
+        STRIP_BACKGROUND -> background
         CLIPBOARD_SUGGESTION_BACKGROUND -> doubleAdjustedBackground
         NAVIGATION_BAR -> navBar
         MORE_SUGGESTIONS_HINT, SUGGESTED_WORD, SUGGESTION_TYPED_WORD, SUGGESTION_VALID_WORD -> adjustedKeyText
@@ -442,16 +438,13 @@ class DefaultColors (
 
         val stripBackground: Int
         val pressedStripElementBackground: Int
-        if (keyboardBackground != null || (themeStyle == STYLE_HOLO && hasKeyBorders)) {
+        if (keyboardBackground != null || themeStyle == STYLE_HOLO) {
             stripBackground = Color.TRANSPARENT
             pressedStripElementBackground = if (isDarkColor(background)) 0x22ffffff // assume background is similar to the background color
                 else 0x11000000
-        } else if (hasKeyBorders) {
+        } else {
             stripBackground = background
             pressedStripElementBackground = adjustedBackground
-        } else {
-            stripBackground = adjustedBackground
-            pressedStripElementBackground = doubleAdjustedBackground
         }
         stripBackgroundList = pressedStateList(pressedStripElementBackground, stripBackground)
 
@@ -508,7 +501,7 @@ class DefaultColors (
         MORE_SUGGESTIONS_WORD_BACKGROUND, MAIN_BACKGROUND -> background
         KEY_BACKGROUND -> keyBackground
         ACTION_KEY_POPUP_KEYS_BACKGROUND -> if (themeStyle == STYLE_HOLO) adjustedBackground else accent
-        STRIP_BACKGROUND -> if (!hasKeyBorders && themeStyle == STYLE_MATERIAL) adjustedBackground else background
+        STRIP_BACKGROUND -> background
         NAVIGATION_BAR -> navBar
         SUGGESTION_AUTO_CORRECT, EMOJI_CATEGORY, TOOL_BAR_KEY, TOOL_BAR_EXPAND_KEY, ONE_HANDED_MODE_BUTTON -> suggestionText
         MORE_SUGGESTIONS_HINT, SUGGESTED_WORD, SUGGESTION_TYPED_WORD, SUGGESTION_VALID_WORD -> adjustedSuggestionText
