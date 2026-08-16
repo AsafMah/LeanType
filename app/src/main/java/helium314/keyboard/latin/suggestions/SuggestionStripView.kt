@@ -549,6 +549,91 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
     }
 
+    private var isVoiceActive = false
+
+    @JvmOverloads
+    fun showVoiceStatus(statusText: String, isProcessing: Boolean, onStop: Runnable? = null, onCancel: Runnable? = null) {
+        clear()
+        isExternalSuggestionVisible = true
+        isVoiceActive = true
+
+        val colors = Settings.getValues().mColors
+        val accentColor = colors.get(ColorType.GESTURE_TRAIL)
+        val textColor = colors.get(ColorType.KEY_TEXT)
+
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+            setPadding(12.dpToPx(resources), 0, 8.dpToPx(resources), 0)
+        }
+
+        val micIconView = ImageButton(context).apply {
+            val micDrawable = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.VOICE.name.lowercase(java.util.Locale.US), context)
+            setImageDrawable(micDrawable)
+            background = null
+            scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+            layoutParams = LinearLayout.LayoutParams(36.dpToPx(resources), 36.dpToPx(resources))
+            setColorFilter(accentColor)
+        }
+        container.addView(micIconView)
+
+        val textView = TextView(context).apply {
+            text = statusText
+            setTextColor(textColor)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply {
+                marginStart = 8.dpToPx(resources)
+            }
+        }
+        container.addView(textView)
+
+        if (!isProcessing && onStop != null) {
+            val stopButton = ImageButton(context).apply {
+                val selectIcon = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.SELECT_ALL.name.lowercase(java.util.Locale.US), context)
+                setImageDrawable(selectIcon)
+                background = null
+                scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                layoutParams = LinearLayout.LayoutParams(36.dpToPx(resources), 36.dpToPx(resources))
+                setColorFilter(accentColor)
+                contentDescription = "Stop Voice"
+                setOnClickListener { onStop.run() }
+            }
+            container.addView(stopButton)
+        }
+
+        if (onCancel != null) {
+            val closeButton = ImageButton(context).apply {
+                val closeIcon = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase(java.util.Locale.US), context)
+                setImageDrawable(closeIcon)
+                background = null
+                scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                layoutParams = LinearLayout.LayoutParams(36.dpToPx(resources), 36.dpToPx(resources))
+                setColorFilter(textColor)
+                contentDescription = "Cancel Voice"
+                setOnClickListener { onCancel.run() }
+            }
+            container.addView(closeButton)
+        }
+
+        suggestionsStrip.addView(container)
+        pinnedKeys.isVisible = false
+        suggestionsStrip.isVisible = true
+        toolbarContainer.isVisible = false
+        updateSplitToolbarState()
+    }
+
+    fun hideVoiceStatus() {
+        if (!isVoiceActive) return
+        isVoiceActive = false
+        isExternalSuggestionVisible = false
+        clear()
+        setToolbarVisibility(isToolbarManuallyOpen, saveState = false)
+        updateSplitToolbarState()
+    }
+
     // overrides: necessarily public, but not used from outside
 
     override fun onSharedPreferenceChanged(prefs: SharedPreferences, key: String?) {

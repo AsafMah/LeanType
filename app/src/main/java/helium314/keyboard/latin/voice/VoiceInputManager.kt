@@ -351,9 +351,9 @@ class VoiceInputManager(
         isRecording.set(true)
         val writePfd = audioPipeWriteSide ?: return false
 
-        val silenceTimeoutSec = ims.prefs().getString(VoiceConstants.PREF_VOICE_SILENCE_TIMEOUT_SECONDS, "5")?.toIntOrNull() ?: 5
+        val silenceTimeoutSec = ims.prefs().getString(VoiceConstants.PREF_VOICE_SILENCE_TIMEOUT_SECONDS, "3")?.toIntOrNull() ?: 3
         val silenceTimeoutMs = if (silenceTimeoutSec > 0) silenceTimeoutSec * 1000L else 0L
-        val initialTimeoutMs = if (silenceTimeoutSec > 0) maxOf(silenceTimeoutSec * 2000L, 5000L) else 0L
+        val initialTimeoutMs = if (silenceTimeoutSec > 0) maxOf(silenceTimeoutSec * 2000L, 6000L) else 0L
 
         audioThread = Thread({
             val buffer = ByteArray(FRAME_SIZE_BYTES)
@@ -384,7 +384,7 @@ class VoiceInputManager(
                             }
                             val rms = if (sampleCount > 0) kotlin.math.sqrt(sum / sampleCount) else 0.0
                             val now = System.currentTimeMillis()
-                            if (rms > 400.0) {
+                            if (rms > 120.0) {
                                 lastSpeechTime = now
                                 hasSpoken = true
                             }

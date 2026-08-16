@@ -916,25 +916,39 @@ public class LatinIME extends InputMethodService implements
             final VoiceInputManager.VoiceState prevState = mLastVoiceState;
             mLastVoiceState = state;
 
-            final boolean isActive = (state == VoiceInputManager.VoiceState.RECORDING
-                    || state == VoiceInputManager.VoiceState.STARTING_SESSION
-                    || state == VoiceInputManager.VoiceState.CONNECTING_PLUGIN);
-
             if (hasSuggestionStripView()) {
-                if (isActive) {
-                    mSuggestionStripView.showLoadingAnimation();
-                } else {
-                    mSuggestionStripView.hideLoadingAnimation();
+                switch (state) {
+                    case CONNECTING_PLUGIN:
+                    case STARTING_SESSION:
+                        mSuggestionStripView.showVoiceStatus(
+                                "Connecting speech engine…",
+                                false,
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.stopVoice(); },
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); }
+                        );
+                        break;
+                    case RECORDING:
+                        mSuggestionStripView.showVoiceStatus(
+                                "Listening… speak now",
+                                false,
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.stopVoice(); },
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); }
+                        );
+                        break;
+                    case PROCESSING_FINAL:
+                        mSuggestionStripView.showVoiceStatus(
+                                "Processing…",
+                                true,
+                                null,
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); }
+                        );
+                        break;
+                    case IDLE:
+                    case ERROR:
+                    default:
+                        mSuggestionStripView.hideVoiceStatus();
+                        break;
                 }
-            }
-
-            if ((state == VoiceInputManager.VoiceState.STARTING_SESSION || state == VoiceInputManager.VoiceState.CONNECTING_PLUGIN)
-                    && (prevState == VoiceInputManager.VoiceState.IDLE || prevState == VoiceInputManager.VoiceState.ERROR)) {
-                Toast.makeText(LatinIME.this, "Loading voice model…", Toast.LENGTH_SHORT).show();
-            } else if (state == VoiceInputManager.VoiceState.RECORDING) {
-                Toast.makeText(LatinIME.this, "Listening… speak now. Tap mic to finish, Back to cancel.", Toast.LENGTH_SHORT).show();
-            } else if (state == VoiceInputManager.VoiceState.IDLE && prevState != VoiceInputManager.VoiceState.IDLE) {
-                Toast.makeText(LatinIME.this, "Voice input finished", Toast.LENGTH_SHORT).show();
             }
 
             final MainKeyboardView kv = mKeyboardSwitcher != null ? mKeyboardSwitcher.getMainKeyboardView() : null;
