@@ -268,13 +268,13 @@ fun VoiceSettingsScreen(
             ListPreference(
                 setting = it,
                 items = listOf(
-                    "2 seconds" to "2",
-                    "3 seconds (Recommended)" to "3",
-                    "5 seconds" to "5",
+                    "5 seconds (Recommended)" to "5",
+                    "7 seconds" to "7",
                     "10 seconds" to "10",
+                    "15 seconds" to "15",
                     "Never (Listen until mic tapped)" to "0"
                 ),
-                default = "3"
+                default = "5"
             )
         }
     }

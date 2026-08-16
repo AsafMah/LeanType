@@ -60,6 +60,7 @@ class VoiceInputManager(
     private var lastPartialText: String? = null
     private var handshakeTimeoutRunnable: Runnable? = null
     private var needsCapitalStart = true
+    private var sessionEmittedText = ""
 
     private var listener: VoiceInputListener? = null
 
@@ -116,6 +117,7 @@ class VoiceInputManager(
         val sessionId = UUID.randomUUID().toString()
         activeSessionId = sessionId
         needsCapitalStart = true
+        sessionEmittedText = ""
 
         if (!isConnected) {
             updateState(VoiceState.CONNECTING_PLUGIN)
@@ -202,7 +204,7 @@ class VoiceInputManager(
                 Log.i(TAG, "Received onPartial from plugin: '$text'")
                 mainHandler.post {
                     if (activeSessionId == sessionId && isRecording.get()) {
-                        handlePartialText(text.orEmpty())
+                        syncRecognizedText(text.orEmpty(), isFinal = false)
                     }
                 }
             }
@@ -211,34 +213,7 @@ class VoiceInputManager(
                 Log.i(TAG, "Received onFinal: '$text' (isRecording=${isRecording.get()})")
                 mainHandler.post {
                     if (activeSessionId == sessionId) {
-                        val ic = ims.currentInputConnection
-                        if (ic == null) {
-                            Log.e(TAG, "onFinal: InputConnection lost! (ic is null, text='$text')")
-                        }
-                        val rawText = text.orEmpty().trim()
-
-                        if (ic != null) {
-                            ic.beginBatchEdit()
-                            try {
-                                if (rawText.isNotEmpty()) {
-                                    val finalText = if (needsCapitalStart) {
-                                        rawText.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() }
-                                    } else {
-                                        rawText
-                                    }
-                                    val committed = ic.commitText("$finalText ", 1)
-                                    Log.i(TAG, "commitText executed: text='$finalText', success=$committed")
-
-                                    val lastChar = finalText.lastOrNull()
-                                    needsCapitalStart = lastChar != null && lastChar in ".!?"
-                                } else {
-                                    ic.finishComposingText()
-                                }
-                            } finally {
-                                ic.endBatchEdit()
-                            }
-                        }
-
+                        syncRecognizedText(text.orEmpty(), isFinal = true)
                         lastPartialText = null
 
                         if (!isRecording.get()) {
@@ -378,7 +353,7 @@ class VoiceInputManager(
         isRecording.set(true)
         val writePfd = audioPipeWriteSide ?: return false
 
-        val silenceTimeoutSec = ims.prefs().getString(VoiceConstants.PREF_VOICE_SILENCE_TIMEOUT_SECONDS, "3")?.toIntOrNull() ?: 3
+        val silenceTimeoutSec = ims.prefs().getString(VoiceConstants.PREF_VOICE_SILENCE_TIMEOUT_SECONDS, "5")?.toIntOrNull() ?: 5
         val silenceTimeoutMs = if (silenceTimeoutSec > 0) silenceTimeoutSec * 1000L else 0L
         val initialTimeoutMs = if (silenceTimeoutSec > 0) maxOf(silenceTimeoutSec * 2000L, 5000L) else 0L
 
@@ -502,36 +477,83 @@ class VoiceInputManager(
         audioPipeWriteSide = null
     }
 
-    private fun handlePartialText(text: String) {
-        if (text == lastPartialText) return
-        lastPartialText = text
-
+    private fun syncRecognizedText(rawText: String, isFinal: Boolean) {
         val ic = ims.currentInputConnection
         if (ic == null) {
-            Log.e(TAG, "handlePartialText: InputConnection lost! (ic is null, isRecording=${isRecording.get()})")
+            Log.e(TAG, "syncRecognizedText: InputConnection lost! (ic is null, isFinal=$isFinal)")
             return
         }
-        if (!isRecording.get()) return
+        if (!isRecording.get() && !isFinal) return
 
-        Log.i(TAG, "Setting partial composing text: '$text'")
+        val trimmed = rawText.trim()
 
-        val trimmed = text.trim()
-        if (trimmed.isEmpty()) {
-            ic.finishComposingText()
+        // If onFinal has empty text (e.g. silence timeout fired after audio stream closed),
+        // keep whatever text was already emitted during partials and commit a trailing space.
+        if (isFinal && trimmed.isEmpty()) {
+            if (sessionEmittedText.isNotEmpty()) {
+                ic.beginBatchEdit()
+                try {
+                    ic.commitText(" ", 1)
+                    val lastChar = sessionEmittedText.lastOrNull()
+                    needsCapitalStart = lastChar != null && lastChar in ".!?"
+                } finally {
+                    ic.endBatchEdit()
+                    sessionEmittedText = ""
+                }
+            }
             return
         }
 
-        val displayText = if (needsCapitalStart) {
+        if (trimmed.isEmpty()) return
+
+        // Sentence capitalization for the current utterance
+        val fullTargetText = if (needsCapitalStart && trimmed.isNotEmpty()) {
             trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() }
         } else {
             trimmed
         }
 
-        ic.setComposingText(displayText, 1)
+        val current = sessionEmittedText
+
+        // Find longest common prefix between what's in the editor from this utterance and the new target
+        var commonPrefixLen = 0
+        val minLen = minOf(current.length, fullTargetText.length)
+        while (commonPrefixLen < minLen && current[commonPrefixLen] == fullTargetText[commonPrefixLen]) {
+            commonPrefixLen++
+        }
+
+        val charsToDelete = current.length - commonPrefixLen
+        val textToAppend = fullTargetText.substring(commonPrefixLen)
+
+        if (charsToDelete == 0 && textToAppend.isEmpty() && !isFinal) {
+            return
+        }
+
+        Log.i(TAG, "syncRecognizedText: current='$current', target='$fullTargetText', commonPrefixLen=$commonPrefixLen, delete=$charsToDelete, append='$textToAppend', isFinal=$isFinal")
+
+        ic.beginBatchEdit()
+        try {
+            if (charsToDelete > 0) {
+                ic.deleteSurroundingText(charsToDelete, 0)
+            }
+            if (textToAppend.isNotEmpty()) {
+                ic.commitText(textToAppend, 1)
+            }
+            if (isFinal && fullTargetText.isNotEmpty()) {
+                ic.commitText(" ", 1)
+                val lastChar = fullTargetText.lastOrNull()
+                needsCapitalStart = lastChar != null && lastChar in ".!?"
+                sessionEmittedText = ""
+            } else {
+                sessionEmittedText = fullTargetText
+            }
+        } finally {
+            ic.endBatchEdit()
+        }
     }
 
     fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
-        // Composing span is managed natively by InputConnection
+        // Delta algorithm tracks emitted text directly
     }
 
     private fun executeVoiceCommand(action: VoiceTextProcessor.Action, ic: InputConnection) {
@@ -574,25 +596,14 @@ class VoiceInputManager(
         Toast.makeText(ims, R.string.voice_command_executed, Toast.LENGTH_SHORT).show()
     }
 
-    private fun handleFinalText(text: String) {
-        stopAudioLoop()
-        val ic = ims.currentInputConnection
-        val finalText = text.trim()
-        Log.i(TAG, "handleFinalText executing: icNull=${ic == null}, text='$finalText'")
-        if (ic != null && finalText.isNotBlank()) {
-            val committed = ic.commitText("$finalText ", 1)
-            Log.i(TAG, "commitText executed: success=$committed")
-        } else {
-            Log.w(TAG, "Skipped commitText: icNull=${ic == null}, text='$finalText'")
-        }
-        ic?.finishComposingText()
-        cleanupSession()
-        updateState(VoiceState.IDLE)
-    }
-
     private fun clearComposingText() {
-        val ic = ims.currentInputConnection
-        ic?.finishComposingText()
+        if (sessionEmittedText.isNotEmpty()) {
+            val ic = ims.currentInputConnection
+            if (ic != null) {
+                ic.deleteSurroundingText(sessionEmittedText.length, 0)
+            }
+            sessionEmittedText = ""
+        }
         lastPartialText = null
     }
 
@@ -604,6 +615,7 @@ class VoiceInputManager(
         closeQuietly(audioPipeWriteSide)
         audioPipeWriteSide = null
         activeSessionId = null
+        sessionEmittedText = ""
     }
 
     @Synchronized
