@@ -2810,7 +2810,20 @@ public final class InputLogic {
     private void performEditorAction(final int actionId, final SettingsValues settingsValues,
             final LatinIME.UIHandler handler) {
         if (mWordComposer.isComposingWord()) {
-            commitCurrentAutoCorrection(settingsValues, LastComposedWord.NOT_A_SEPARATOR, handler);
+            final SuggestedWordInfo autoCorrection = mWordComposer.getAutoCorrectionOrNull();
+            final String typedWord = mWordComposer.getTypedWord();
+            if (autoCorrection != null && !typedWord.equals(autoCorrection.mWord)) {
+                commitCurrentAutoCorrection(settingsValues, LastComposedWord.NOT_A_SEPARATOR, handler);
+            } else {
+                final NgramContext ngramContext = mConnection.getNgramContextFromNthPreviousWord(
+                        settingsValues.mSpacingAndPunctuations, 1);
+                performAdditionToUserHistoryDictionary(settingsValues, typedWord, ngramContext);
+                mLastComposedWord = mWordComposer.commitWord(
+                        LastComposedWord.COMMIT_TYPE_USER_TYPED_WORD, typedWord,
+                        LastComposedWord.NOT_A_SEPARATOR, ngramContext);
+                mConnection.finishComposingText();
+                StatsUtils.onWordCommitUserTyped(typedWord, mWordComposer.isBatchMode());
+            }
         }
         mConnection.performEditorAction(actionId);
     }
