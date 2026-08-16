@@ -60,7 +60,6 @@ class VoiceInputManager(
     private var lastPartialText: String? = null
     private var handshakeTimeoutRunnable: Runnable? = null
     private var needsCapitalStart = true
-    private var lastPartialLength = 0
 
     private var listener: VoiceInputListener? = null
 
@@ -82,7 +81,7 @@ class VoiceInputManager(
             return false
         }
         if (isBlockedEditor(ims.currentInputEditorInfo)) {
-            Log.w(TAG, "canStartVoice: Blocked editor (password or no-suggestions)")
+            Log.w(TAG, "canStartVoice: Blocked editor (password)")
             return false
         }
         return true
@@ -117,7 +116,6 @@ class VoiceInputManager(
         val sessionId = UUID.randomUUID().toString()
         activeSessionId = sessionId
         needsCapitalStart = true
-        lastPartialLength = 0
 
         if (!isConnected) {
             updateState(VoiceState.CONNECTING_PLUGIN)
@@ -222,12 +220,6 @@ class VoiceInputManager(
                         if (ic != null) {
                             ic.beginBatchEdit()
                             try {
-                                // 1. Delete trailing partial unconditionally
-                                if (lastPartialLength > 0) {
-                                    ic.deleteSurroundingText(lastPartialLength, 0)
-                                }
-
-                                // 2. DIRECT COMMIT: Pure ASR text commit with clean sentence capitalization
                                 if (rawText.isNotEmpty()) {
                                     val finalText = if (needsCapitalStart) {
                                         rawText.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() }
@@ -239,9 +231,10 @@ class VoiceInputManager(
 
                                     val lastChar = finalText.lastOrNull()
                                     needsCapitalStart = lastChar != null && lastChar in ".!?"
+                                } else {
+                                    ic.finishComposingText()
                                 }
                             } finally {
-                                lastPartialLength = 0 // CRITICAL: Unconditional reset
                                 ic.endBatchEdit()
                             }
                         }
@@ -385,10 +378,17 @@ class VoiceInputManager(
         isRecording.set(true)
         val writePfd = audioPipeWriteSide ?: return false
 
+        val silenceTimeoutSec = ims.prefs().getString(VoiceConstants.PREF_VOICE_SILENCE_TIMEOUT_SECONDS, "3")?.toIntOrNull() ?: 3
+        val silenceTimeoutMs = if (silenceTimeoutSec > 0) silenceTimeoutSec * 1000L else 0L
+        val initialTimeoutMs = if (silenceTimeoutSec > 0) maxOf(silenceTimeoutSec * 2000L, 5000L) else 0L
+
         audioThread = Thread({
             val buffer = ByteArray(FRAME_SIZE_BYTES)
             var outputStream: FileOutputStream? = null
             var totalBytesWritten = 0L
+            val sessionStartTime = System.currentTimeMillis()
+            var lastSpeechTime = sessionStartTime
+            var hasSpoken = false
 
             try {
                 outputStream = FileOutputStream(writePfd.fileDescriptor)
@@ -398,6 +398,34 @@ class VoiceInputManager(
                         outputStream.write(buffer, 0, read)
                         outputStream.flush()
                         totalBytesWritten += read
+
+                        if (silenceTimeoutMs > 0L) {
+                            var sum = 0.0
+                            var sampleCount = 0
+                            var i = 0
+                            while (i < read - 1) {
+                                val sample = ((buffer[i + 1].toInt() shl 8) or (buffer[i].toInt() and 0xFF)).toShort()
+                                sum += sample.toDouble() * sample.toDouble()
+                                sampleCount++
+                                i += 2
+                            }
+                            val rms = if (sampleCount > 0) kotlin.math.sqrt(sum / sampleCount) else 0.0
+                            val now = System.currentTimeMillis()
+                            if (rms > 400.0) {
+                                lastSpeechTime = now
+                                hasSpoken = true
+                            }
+
+                            if (hasSpoken && (now - lastSpeechTime > silenceTimeoutMs)) {
+                                Log.i(TAG, "Silence timeout (${silenceTimeoutMs}ms) detected after speech. Stopping voice input.")
+                                mainHandler.post { stopVoice() }
+                                break
+                            } else if (!hasSpoken && (now - sessionStartTime > initialTimeoutMs)) {
+                                Log.i(TAG, "Initial silence timeout (${initialTimeoutMs}ms) detected. Stopping voice input.")
+                                mainHandler.post { stopVoice() }
+                                break
+                            }
+                        }
                     } else if (read < 0) {
                         Log.e(TAG, "AudioRecord read error: $read")
                         break
@@ -485,35 +513,25 @@ class VoiceInputManager(
         }
         if (!isRecording.get()) return
 
-        Log.i(TAG, "Setting partial text: '$text' (lastLen=$lastPartialLength)")
+        Log.i(TAG, "Setting partial composing text: '$text'")
 
-        ic.beginBatchEdit()
-        try {
-            if (lastPartialLength > 0) {
-                val safeDelete = minOf(lastPartialLength, text.length + 5)
-                ic.deleteSurroundingText(safeDelete, 0)
-            }
-            if (text.isNotEmpty()) {
-                ic.commitText(text, 1)
-                lastPartialLength = text.length
-            } else {
-                lastPartialLength = 0
-            }
-        } finally {
-            ic.endBatchEdit()
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) {
+            ic.finishComposingText()
+            return
         }
+
+        val displayText = if (needsCapitalStart) {
+            trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() }
+        } else {
+            trimmed
+        }
+
+        ic.setComposingText(displayText, 1)
     }
 
     fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
-        if (!isRecording.get()) return
-
-        // If the cursor moved to a position before our tracked partial length,
-        // the user manually moved it or the editor auto-shifted it.
-        // Reset to prevent deleting the user's pre-existing document text.
-        if (lastPartialLength > 0 && newSelStart < lastPartialLength) {
-            Log.w(TAG, "Cursor drift detected (newSel=$newSelStart < partialLen=$lastPartialLength). Resetting tracker.")
-            lastPartialLength = 0
-        }
+        // Composing span is managed natively by InputConnection
     }
 
     private fun executeVoiceCommand(action: VoiceTextProcessor.Action, ic: InputConnection) {
@@ -574,17 +592,7 @@ class VoiceInputManager(
 
     private fun clearComposingText() {
         val ic = ims.currentInputConnection
-        if (ic != null) {
-            ic.beginBatchEdit()
-            try {
-                if (lastPartialLength > 0) {
-                    ic.deleteSurroundingText(lastPartialLength, 0)
-                    lastPartialLength = 0
-                }
-            } finally {
-                ic.endBatchEdit()
-            }
-        }
+        ic?.finishComposingText()
         lastPartialText = null
     }
 
@@ -638,8 +646,7 @@ class VoiceInputManager(
             return variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
                     variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD ||
                     variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
-                    variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD ||
-                    (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
+                    variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
         }
     }
 

@@ -77,5 +77,6 @@ object VoiceConstants {
     const val PREF_VOICE_ADVANCED_VAD = "voice_advanced_vad"
     const val PREF_VOICE_COMMANDS_ENABLED = "voice_commands_enabled"
     const val PREF_VOICE_SMART_PUNCTUATION = "voice_smart_punctuation"
+    const val PREF_VOICE_SILENCE_TIMEOUT_SECONDS = "voice_silence_timeout_seconds"
     const val PREF_USE_DEBUG_VOICE_STUB = "use_debug_voice_stub"
 }

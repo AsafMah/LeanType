@@ -260,6 +260,25 @@ fun VoiceSettingsScreen(
         }
     }
 
+    val silenceTimeoutSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_SILENCE_TIMEOUT_SECONDS,
+            title = "Silence Timeout"
+        ) {
+            ListPreference(
+                setting = it,
+                items = listOf(
+                    "2 seconds" to "2",
+                    "3 seconds (Recommended)" to "3",
+                    "5 seconds" to "5",
+                    "10 seconds" to "10",
+                    "Never (Listen until mic tapped)" to "0"
+                ),
+                default = "3"
+            )
+        }
+    }
+
     val hybridFallbackSetting = remember {
         Setting(
             key = VoiceConstants.PREF_VOICE_HYBRID_FALLBACK,
@@ -308,31 +327,31 @@ fun VoiceSettingsScreen(
         ) {
             offlineEnabledSetting.Preference()
 
-            // Microphone permission card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            // Microphone permission card (only show when not granted)
+            if (!isMicPermissionGranted) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Microphone Permission",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = if (isMicPermissionGranted) "Granted" else "Permission required for voice dictation",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    if (!isMicPermissionGranted) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Microphone Permission",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = "Permission required for voice dictation",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                         Button(onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
                             Text("Grant")
                         }
@@ -340,39 +359,42 @@ fun VoiceSettingsScreen(
                 }
             }
 
-            // Plugin status card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Plugin Status",
-                        style = MaterialTheme.typography.titleMedium
+            // Plugin status card (only show when not installed or not connected)
+            if (!isPluginInstalled || !isPluginConnected) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    val statusText = when {
-                        isPluginConnected -> "Connected: ${engineInfo?.displayName ?: "Voice Plugin"}"
-                        isPluginInstalled -> "Plugin installed (disconnected)"
-                        else -> "Plugin not installed (com.leanbitlab.leantype.voice.offline)"
-                    }
-                    Text(text = statusText, style = MaterialTheme.typography.bodyMedium)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Plugin Status",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val statusText = when {
+                            isPluginConnected -> "Connected: ${engineInfo?.displayName ?: "Voice Plugin"}"
+                            isPluginInstalled -> "Plugin installed (disconnected)"
+                            else -> "Plugin not installed (com.leanbitlab.leantype.voice.offline)"
+                        }
+                        Text(text = statusText, style = MaterialTheme.typography.bodyMedium)
 
-                    if (!isPluginConnected) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = {
-                            pluginManager.bindIfNeeded()
-                            updatePluginStatus()
-                        }) {
-                            Text("Connect Plugin")
+                        if (!isPluginConnected) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(onClick = {
+                                pluginManager.bindIfNeeded()
+                                updatePluginStatus()
+                            }) {
+                                Text("Connect Plugin")
+                            }
                         }
                     }
                 }
             }
 
             voiceModeSetting.Preference()
+            silenceTimeoutSetting.Preference()
 
             // Models section
             Text(
