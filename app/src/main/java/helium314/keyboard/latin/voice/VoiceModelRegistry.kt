@@ -18,59 +18,37 @@ data class VoiceModelItem(
 object VoiceModelRegistry {
     val whisperModels = listOf(
         VoiceModelItem(
-            id = "distil-whisper-small-en-q5_1",
-            displayName = "Distil-Whisper Small (English)",
-            engineType = VoiceConstants.ENGINE_WHISPER,
-            language = "English (Fast & Accurate)",
-            languageCode = "en",
-            sizeMb = "105 MB",
-            downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-distil-small.en-q5_1.bin",
-            browserUrl = "https://huggingface.co/distil-whisper/distil-small.en",
-            description = "6x faster than Whisper Small, 49% smaller parameters with state-of-the-art English accuracy."
-        ),
-        VoiceModelItem(
-            id = "distil-whisper-medium-en-q5_1",
-            displayName = "Distil-Whisper Medium (English)",
-            engineType = VoiceConstants.ENGINE_WHISPER,
-            language = "English (High Accuracy)",
-            languageCode = "en",
-            sizeMb = "260 MB",
-            downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-distil-medium.en-q5_1.bin",
-            browserUrl = "https://huggingface.co/distil-whisper/distil-medium.en",
-            description = "6x faster than Whisper Medium with exceptional conversational understanding."
-        ),
-        VoiceModelItem(
             id = "whisper-base-q5_1",
-            displayName = "Whisper Base Q5_1 (Multilingual)",
+            displayName = "Whisper Base Q5_1 (Recommended)",
             engineType = VoiceConstants.ENGINE_WHISPER,
             language = "Multilingual (99+ languages)",
             languageCode = "mul",
             sizeMb = "57 MB",
             downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
             browserUrl = "https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-base-q5_1.bin",
-            description = "Fast multilingual CPU inference with balanced accuracy."
+            description = "High accuracy with ARM NEON 5-bit quantization for fast on-device inference."
         ),
         VoiceModelItem(
-            id = "whisper-tiny",
-            displayName = "Whisper Tiny (Multilingual)",
+            id = "whisper-tiny-q5_1",
+            displayName = "Whisper Tiny Q5_1 (Ultra Fast)",
             engineType = VoiceConstants.ENGINE_WHISPER,
             language = "Multilingual (99+ languages)",
             languageCode = "mul",
-            sizeMb = "39 MB",
-            downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
-            browserUrl = "https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-tiny.bin",
-            description = "Ultra-compact and fastest Whisper model."
+            sizeMb = "32 MB",
+            downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin",
+            browserUrl = "https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-tiny-q5_1.bin",
+            description = "Ultra-compact 32MB model with instant response time and minimal RAM usage."
         ),
         VoiceModelItem(
             id = "whisper-small-q5_1",
-            displayName = "Whisper Small Q5_1 (Multilingual)",
+            displayName = "Whisper Small Q5_1 (High Accuracy)",
             engineType = VoiceConstants.ENGINE_WHISPER,
             language = "Multilingual (99+ languages)",
             languageCode = "mul",
             sizeMb = "182 MB",
             downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
             browserUrl = "https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-small-q5_1.bin",
-            description = "High accuracy across global accents and languages."
+            description = "Maximum recognition accuracy across global accents and noisy environments."
         )
     )
 
