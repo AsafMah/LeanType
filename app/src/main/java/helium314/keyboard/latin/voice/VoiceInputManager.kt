@@ -171,10 +171,6 @@ class VoiceInputManager(
             return
         }
 
-        val mode = ims.prefs().getString(VoiceConstants.PREF_VOICE_MODE, VoiceConstants.MODE_ACCURATE) ?: VoiceConstants.MODE_ACCURATE
-        val timeoutMs = ims.prefs().getString(VoiceConstants.PREF_VOICE_HYBRID_TIMEOUT_MS, "900")?.toIntOrNull() ?: 900
-        val fallback = ims.prefs().getBoolean(VoiceConstants.PREF_VOICE_HYBRID_FALLBACK, false)
-
         val languageTag = try {
             RichInputMethodManager.getInstance().currentSubtypeLocale.toLanguageTag()
         } catch (_: Exception) {
@@ -183,13 +179,13 @@ class VoiceInputManager(
 
         val config = VoiceSessionConfig(
             sessionId = sessionId,
-            mode = mode,
+            mode = VoiceConstants.MODE_ACCURATE,
             languageTag = languageTag,
             sampleRate = SAMPLE_RATE,
             enablePartial = true,
-            maxSegmentMs = 6000,
-            hybridTimeoutMs = timeoutMs,
-            hybridFallbackToVosk = fallback
+            maxSegmentMs = 5000,
+            hybridTimeoutMs = 0,
+            hybridFallbackToVosk = false
         )
 
         val callback = object : IVoiceCallback.Stub() {
