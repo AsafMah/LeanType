@@ -79,6 +79,8 @@
         name="ClipboardHistoryView.Rounded_Base"
         parent="MainKeyboardView.Rounded_Base"
         >
+        <item name="keyBackground">@drawable/btn_keyboard_key_rounded_base_border</item>
+        <item name="functionalKeyBackground">@drawable/btn_keyboard_key_functional_rounded_base_border</item>
         <item name="iconPinnedClip">@drawable/ic_clipboard_pin_rounded</item>
     </style>
 
