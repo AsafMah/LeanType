@@ -58,6 +58,7 @@ fun VoiceModelDownloadDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val isWhisperInstalled = whisperState?.state == ModelState.STATE_READY
+                val matchedPredefinedModel = VoiceModelRegistry.whisperModels.any { it.id == installedWhisperId }
 
                 for (model in VoiceModelRegistry.whisperModels) {
                     val isThisModelInstalled = isWhisperInstalled && installedWhisperId == model.id
@@ -73,14 +74,14 @@ fun VoiceModelDownloadDialog(
                         onDelete = {
                             prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_WHISPER}").apply()
                             pluginManager.deleteModel(VoiceConstants.ENGINE_WHISPER)
-                            Toast.makeText(context, "Model deleted", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Model removed", Toast.LENGTH_SHORT).show()
                             onRefresh()
                         }
                     )
                 }
 
                 // Section: Custom Model File
-                val isCustomWhisperInstalled = isWhisperInstalled && installedWhisperId == "custom"
+                val isCustomWhisperInstalled = isWhisperInstalled && (installedWhisperId == "custom" || !matchedPredefinedModel)
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -100,7 +101,10 @@ fun VoiceModelDownloadDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Custom GGML / GGUF",
+                            text = if (isCustomWhisperInstalled && installedWhisperId == null)
+                                "Loaded Model (Local / External)"
+                            else
+                                "Custom GGML / GGUF",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
@@ -110,7 +114,7 @@ fun VoiceModelDownloadDialog(
                                 onClick = {
                                     prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_WHISPER}").apply()
                                     pluginManager.deleteModel(VoiceConstants.ENGINE_WHISPER)
-                                    Toast.makeText(context, "Model deleted", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Model removed", Toast.LENGTH_SHORT).show()
                                     onRefresh()
                                 },
                                 colors = ButtonDefaults.buttonColors(
