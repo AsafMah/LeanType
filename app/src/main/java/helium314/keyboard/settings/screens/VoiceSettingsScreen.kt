@@ -199,9 +199,10 @@ fun VoiceSettingsScreen(
             ListPreference(
                 setting = it,
                 items = listOf(
-                    "Keep in memory for 1 minute" to "60",
-                    "Keep in memory for 5 minutes (Recommended)" to "300",
+                    "Always keep in memory" to "-1",
                     "Keep in memory for 15 minutes" to "900",
+                    "Keep in memory for 5 minutes" to "300",
+                    "Keep in memory for 1 minute" to "60",
                     "Unload immediately after session" to "0"
                 ),
                 default = "300"
