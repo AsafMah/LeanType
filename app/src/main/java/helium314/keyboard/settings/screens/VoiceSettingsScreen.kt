@@ -471,11 +471,11 @@ fun VoiceSettingsScreen(
                                 }
                                 OutlinedButton(
                                     onClick = {
-                                        val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
+                                        val appInfoIntent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                             data = Uri.parse("package:${VoiceConstants.VOICE_PLUGIN_PACKAGE}")
                                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                         }
-                                        context.startActivity(uninstallIntent)
+                                        context.startActivity(appInfoIntent)
                                     },
                                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                                         contentColor = MaterialTheme.colorScheme.error
