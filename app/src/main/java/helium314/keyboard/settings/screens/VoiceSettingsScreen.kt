@@ -78,8 +78,13 @@ fun VoiceSettingsScreen(
     var isPluginConnected by remember { mutableStateOf(pluginManager.isPluginConnected()) }
     var isPluginInstalled by remember { mutableStateOf(pluginManager.isPluginInstalled()) }
     var isInitialConnectionPending by remember { mutableStateOf(!isPluginConnected && isPluginInstalled) }
-
-    var whisperState by remember { mutableStateOf<ModelState?>(pluginManager.getModelState(VoiceConstants.ENGINE_WHISPER)) }
+    val installedWhisperPref = remember(prefs) { prefs.getString("installed_model_${VoiceConstants.ENGINE_WHISPER}", null) }
+    var whisperState by remember {
+        mutableStateOf<ModelState?>(
+            pluginManager.getModelState(VoiceConstants.ENGINE_WHISPER)
+                ?: if (installedWhisperPref != null) ModelState(VoiceConstants.ENGINE_WHISPER, ModelState.STATE_READY, null) else null
+        )
+    }
     var showModelDownloadDialog by remember { mutableStateOf(false) }
 
     val updatePluginStatus = {
@@ -338,23 +343,43 @@ fun VoiceSettingsScreen(
 
             // Models section
             Text(
-                text = "Speech Models (Whisper & Distil-Whisper)",
+                text = "Speech Models",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            val whisperDesc = when (whisperState?.state) {
-                ModelState.STATE_READY -> "Status: Ready"
-                ModelState.STATE_LOADING -> "Status: Loading…"
-                ModelState.STATE_ERROR -> "Status: Error"
-                else -> if (isPluginConnected) "Status: No model installed" else if (isInitialConnectionPending) "Status: Connecting…" else "Status: Plugin disconnected"
+            val (badgeText, badgeContainerColor, badgeContentColor) = when (whisperState?.state) {
+                ModelState.STATE_READY -> Triple("Ready", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+                ModelState.STATE_LOADING -> Triple("Loading…", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
+                ModelState.STATE_ERROR -> Triple("Error", MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+                else -> if (isPluginConnected) {
+                    Triple("No model", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                } else if (isInitialConnectionPending) {
+                    Triple("Connecting…", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Triple("Disconnected", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
 
             Preference(
                 name = "Manage & Download Models",
-                description = "$whisperDesc. Tap to download Distil-Whisper or standard Whisper models",
+                description = null,
                 onClick = {
                     showModelDownloadDialog = true
+                },
+                value = {
+                    androidx.compose.material3.Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                        color = badgeContainerColor
+                    ) {
+                        Text(
+                            text = badgeText,
+                            color = badgeContentColor,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             )
 
