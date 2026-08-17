@@ -94,10 +94,12 @@ fun VoiceSettingsScreen(
             isInitialConnectionPending = false
             engineInfo = pluginManager.getInfo()
             whisperState = pluginManager.getModelState(VoiceConstants.ENGINE_WHISPER)
-        } else {
+        } else if (!isInitialConnectionPending) {
             isPluginConnected = false
             engineInfo = null
-            whisperState = null
+            whisperState = if (installedWhisperPref != null) {
+                ModelState(VoiceConstants.ENGINE_WHISPER, ModelState.STATE_READY, null)
+            } else null
         }
     }
 
@@ -120,8 +122,8 @@ fun VoiceSettingsScreen(
         val bound = pluginManager.bindIfNeeded()
         if (!bound) {
             isInitialConnectionPending = false
+            updatePluginStatus()
         }
-        updatePluginStatus()
 
         onDispose {
             pluginManager.unbind()

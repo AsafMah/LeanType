@@ -5,16 +5,16 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -29,7 +29,6 @@ import helium314.keyboard.latin.voice.VoiceDownloadDispatcher
 import helium314.keyboard.latin.voice.VoiceModelItem
 import helium314.keyboard.latin.voice.VoiceModelRegistry
 import helium314.keyboard.latin.voice.VoicePluginManager
-import helium314.keyboard.settings.DeleteButton
 
 @Composable
 fun VoiceModelDownloadDialog(
@@ -52,7 +51,7 @@ fun VoiceModelDownloadDialog(
         confirmButtonText = null,
         cancelButtonText = null,
         scrollContent = true,
-        title = { Text("Speech Models") },
+        title = { Text("Whisper Models") },
         content = {
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -92,46 +91,41 @@ fun VoiceModelDownloadDialog(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                     )
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "Custom GGML / GGUF",
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (isCustomWhisperInstalled) {
-                                Text(
-                                    text = "✓ Active",
-                                    color = MaterialTheme.colorScheme.primary,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(end = 6.dp)
-                                )
-                                DeleteButton(
-                                    modifier = Modifier.size(32.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                ) {
+                        if (isCustomWhisperInstalled) {
+                            Button(
+                                onClick = {
                                     prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_WHISPER}").apply()
                                     pluginManager.deleteModel(VoiceConstants.ENGINE_WHISPER)
                                     Toast.makeText(context, "Model deleted", Toast.LENGTH_SHORT).show()
                                     onRefresh()
-                                }
-                            } else {
-                                Button(
-                                    onClick = { onImportLocalFile(VoiceConstants.ENGINE_WHISPER) },
-                                    modifier = Modifier.height(36.dp)
-                                ) {
-                                    Text("Import")
-                                }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Text("Remove")
+                            }
+                        } else {
+                            TextButton(
+                                onClick = { onImportLocalFile(VoiceConstants.ENGINE_WHISPER) },
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Text("Import")
                             }
                         }
                     }
@@ -186,20 +180,15 @@ private fun ModelDownloadRow(
             }
 
             if (isThisModelInstalled) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "✓ Installed",
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(end = 6.dp)
-                    )
-                    DeleteButton(
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.error
-                    ) {
-                        onDelete()
-                    }
+                Button(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Remove")
                 }
             } else {
                 Button(
