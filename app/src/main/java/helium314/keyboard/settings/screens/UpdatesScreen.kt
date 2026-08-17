@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.screens
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings as AndroidSettings
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -21,8 +25,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -30,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -37,10 +43,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
@@ -54,48 +60,20 @@ import helium314.keyboard.settings.preferences.SwitchPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
-data class ChangelogEntry(
-    val version: String,
-    val date: String,
-    val items: List<String>
-)
-
-private val changelogEntries = listOf(
-    ChangelogEntry(
-        version = "v4.1.1",
-        date = "August 2026",
-        items = listOf(
-            "✨ Offline Voice Input: Integrated Whisper speech recognition models (Base, Tiny, Small) with real-time waveform visualizer",
-            "✨ Keep Whisper in memory option with background retention strategies",
-            "🎨 Redesigned voice toolbar indicator, improved button contrast & dark/light theme tinting",
-            "🎨 Cleaned Speech Models download dialog with single-row custom model import",
-            "🌱 Added Open Collective support alongside GitHub Sponsors",
-            "🐛 Fixed settings screen flickering on plugin status and model ready state"
-        )
-    ),
-    ChangelogEntry(
-        version = "v4.1.0",
-        date = "July 2026",
-        items = listOf(
-            "✨ Integrated on-device proofreading & AI suggestions",
-            "✨ Text Expander and shortcut expansion system",
-            "✨ Handwrite and Translation plugin management hubs",
-            "🎨 Modernized Compose settings hierarchy with card groupings",
-            "🐛 Fixed clipboard preview clipping and one-handed toolbar alignment"
-        )
-    ),
-    ChangelogEntry(
-        version = "v4.0.0",
-        date = "June 2026",
-        items = listOf(
-            "✨ Complete UI overhaul with Material 3 expressive dynamic theming",
-            "✨ Re-engineered gesture typing engine with improved multilingual accuracy",
-            "✨ Custom AI keys with configurable system prompts and custom actions"
-        )
-    )
+private val currentChangelogItems = listOf(
+    "✨ Offline Voice Input: Integrated Whisper speech recognition models (Base, Tiny, Small) with real-time waveform visualizer",
+    "✨ Keep Whisper in memory option with background retention strategies",
+    "🎨 Redesigned voice toolbar indicator, improved button contrast & dark/light theme tinting",
+    "🎨 Cleaned Speech Models download dialog with single-row custom model import",
+    "🌱 Added Open Collective support alongside GitHub Sponsors",
+    "🚀 In-app self-update downloading and installation for standard full releases",
+    "🐛 Fixed settings screen flickering on plugin status and model ready state"
 )
 
 @Composable
@@ -106,58 +84,175 @@ fun UpdatesScreen(
     val scope = rememberCoroutineScope()
     val prefs = context.prefs()
 
-    val hasInternetAccess = BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull"
+    val isOnlineFlavor = BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull"
+    val isStandardFull = BuildConfig.FLAVOR == "standardfull"
 
     var isCheckingUpdates by remember { mutableStateOf(false) }
-    var updateCheckResult by remember { mutableStateOf<String?>(null) }
+    var updateCheckStatus by remember { mutableStateOf<String?>(null) }
     var latestVersionTag by remember { mutableStateOf<String?>(null) }
+    var downloadApkUrl by remember { mutableStateOf<String?>(null) }
     var isUpdateAvailable by remember { mutableStateOf(false) }
 
-    fun checkForUpdates() {
-        if (!hasInternetAccess) {
-            val intent = Intent(Intent.ACTION_VIEW, Links.GITHUB_RELEASES_PAGE.toUri())
-            context.startActivity(intent)
-            return
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableFloatStateOf(0f) }
+    var downloadedApkFile by remember { mutableStateOf<File?>(null) }
+
+    fun installApk(file: File) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!context.packageManager.canRequestPackageInstalls()) {
+                    Toast.makeText(context, "Please allow LeanType to install unknown apps", Toast.LENGTH_LONG).show()
+                    val permissionIntent = Intent(
+                        AndroidSettings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:${context.packageName}")
+                    ).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(permissionIntent)
+                    return
+                }
+            }
+
+            val apkUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+
+            val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
+            context.startActivity(installIntent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error starting installation: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    fun startDownload(apkUrl: String, versionTag: String) {
+        isDownloading = true
+        downloadProgress = 0f
+        scope.launch(Dispatchers.IO) {
+            try {
+                val updatesDir = File(context.cacheDir, "updates")
+                if (!updatesDir.exists()) updatesDir.mkdirs()
+                val targetFile = File(updatesDir, "LeanType_${versionTag}.apk")
+
+                var url = URL(apkUrl)
+                var conn = url.openConnection() as HttpURLConnection
+                conn.instanceFollowRedirects = true
+                conn.setRequestProperty("User-Agent", "LeanType-Android")
+                conn.connect()
+
+                // Follow redirects if any
+                var redirectCount = 0
+                while ((conn.responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                            conn.responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                            conn.responseCode == 307 || conn.responseCode == 308) && redirectCount < 5) {
+                    val location = conn.getHeaderField("Location") ?: break
+                    url = URL(location)
+                    conn = url.openConnection() as HttpURLConnection
+                    conn.setRequestProperty("User-Agent", "LeanType-Android")
+                    conn.connect()
+                    redirectCount++
+                }
+
+                val totalBytes = conn.contentLength
+                var downloadedBytes = 0L
+
+                conn.inputStream.use { input ->
+                    FileOutputStream(targetFile).use { output ->
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            downloadedBytes += bytesRead
+                            if (totalBytes > 0) {
+                                val prog = downloadedBytes.toFloat() / totalBytes.toFloat()
+                                withContext(Dispatchers.Main) {
+                                    downloadProgress = prog
+                                }
+                            }
+                        }
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    downloadedApkFile = targetFile
+                    isDownloading = false
+                    installApk(targetFile)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isDownloading = false
+                    Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    fun checkForUpdates() {
+        if (!isOnlineFlavor) return
 
         isCheckingUpdates = true
-        updateCheckResult = null
+        updateCheckStatus = null
         scope.launch(Dispatchers.IO) {
             try {
                 val url = URL(Links.GITHUB_RELEASES_API)
                 val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 7000
-                conn.readTimeout = 7000
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
                 conn.setRequestProperty("User-Agent", "LeanType-Android")
                 conn.connect()
 
                 if (conn.responseCode == 200) {
                     val response = conn.inputStream.bufferedReader().use { it.readText() }
-                    val regex = "\"tag_name\"\\s*:\\s*\"([^\"]+)\"".toRegex()
-                    val match = regex.find(response)
-                    val tag = match?.groupValues?.get(1)?.trim() ?: ""
+                    val json = JSONObject(response)
+                    val tag = json.optString("tag_name", "").trim()
+
+                    var targetApkUrl: String? = null
+                    val assets = json.optJSONArray("assets")
+                    if (assets != null) {
+                        for (i in 0 until assets.length()) {
+                            val asset = assets.getJSONObject(i)
+                            val name = asset.optString("name", "")
+                            val downloadUrl = asset.optString("browser_download_url", "")
+                            if (name.endsWith(".apk", ignoreCase = true)) {
+                                if (isStandardFull && name.contains("standardfull", ignoreCase = true)) {
+                                    targetApkUrl = downloadUrl
+                                    break
+                                } else if (!isStandardFull && name.contains("standard", ignoreCase = true) && !name.contains("standardfull", ignoreCase = true)) {
+                                    targetApkUrl = downloadUrl
+                                    break
+                                } else if (targetApkUrl == null) {
+                                    targetApkUrl = downloadUrl
+                                }
+                            }
+                        }
+                    }
 
                     withContext(Dispatchers.Main) {
                         latestVersionTag = tag
+                        downloadApkUrl = targetApkUrl
                         val cleanCurrent = BuildConfig.VERSION_NAME.removePrefix("v").trim()
                         val cleanRemote = tag.removePrefix("v").trim()
 
                         if (cleanRemote.isNotBlank() && isNewerVersion(cleanCurrent, cleanRemote)) {
                             isUpdateAvailable = true
-                            updateCheckResult = context.getString(R.string.updates_available, tag)
+                            updateCheckStatus = "Update available: $tag"
                         } else {
                             isUpdateAvailable = false
-                            updateCheckResult = context.getString(R.string.updates_up_to_date)
+                            updateCheckStatus = context.getString(R.string.updates_up_to_date)
                         }
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        updateCheckResult = "Could not check for updates (HTTP ${conn.responseCode})"
+                        updateCheckStatus = "Check failed (HTTP ${conn.responseCode})"
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    updateCheckResult = "Network error while checking updates"
+                    updateCheckStatus = "Network error checking updates"
                 }
             } finally {
                 withContext(Dispatchers.Main) {
@@ -209,67 +304,158 @@ fun UpdatesScreen(
                     .padding(innerPadding)
                     .padding(vertical = 8.dp)
             ) {
-                // Section 1: App Updates
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        val currentVersionText = "Installed: v${BuildConfig.VERSION_NAME} (${BuildConfig.FLAVOR})"
-                        val checkDescription = when {
-                            isCheckingUpdates -> stringResource(R.string.updates_checking)
-                            updateCheckResult != null -> updateCheckResult!!
-                            else -> currentVersionText
-                        }
-
-                        Preference(
-                            name = stringResource(R.string.updates_check_title),
-                            description = checkDescription,
-                            icon = R.drawable.ic_settings_updates,
-                            onClick = {
-                                if (isUpdateAvailable) {
-                                    val intent = Intent(Intent.ACTION_VIEW, Links.GITHUB_RELEASES_PAGE.toUri())
-                                    context.startActivity(intent)
-                                } else {
-                                    checkForUpdates()
-                                }
-                            },
-                            value = {
-                                if (isUpdateAvailable) {
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer
-                                    ) {
+                // Section 1: App Updates (OMITTED entirely on offline / offlinelite flavors)
+                if (isOnlineFlavor) {
+                    // Minimal Update Indicator Banner if update is available
+                    if (isUpdateAvailable && latestVersionTag != null) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "Update",
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                            text = "🎉 New Update Available",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Text(
+                                            text = "Version $latestVersionTag is ready to install",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                                         )
                                     }
-                                } else if (updateCheckResult != null && !isCheckingUpdates) {
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant
+                                }
+
+                                if (isDownloading) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    LinearProgressIndicator(
+                                        progress = { downloadProgress },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Downloading: ${(downloadProgress * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End
                                     ) {
-                                        Text(
-                                            text = "Up to date",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                        )
+                                        if (isStandardFull) {
+                                            Button(
+                                                onClick = {
+                                                    val localApk = downloadedApkFile
+                                                    if (localApk != null && localApk.exists()) {
+                                                        installApk(localApk)
+                                                    } else if (downloadApkUrl != null) {
+                                                        startDownload(downloadApkUrl!!, latestVersionTag!!)
+                                                    } else {
+                                                        val intent = Intent(Intent.ACTION_VIEW, Links.GITHUB_RELEASES_PAGE.toUri())
+                                                        context.startActivity(intent)
+                                                    }
+                                                },
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.primary
+                                                )
+                                            ) {
+                                                val btnText = if (downloadedApkFile != null && downloadedApkFile!!.exists()) "Install Now" else "Download & Install"
+                                                Text(btnText, fontWeight = FontWeight.Bold)
+                                            }
+                                        } else {
+                                            Button(
+                                                onClick = {
+                                                    val intent = Intent(Intent.ACTION_VIEW, Links.GITHUB_RELEASES_PAGE.toUri())
+                                                    context.startActivity(intent)
+                                                },
+                                                shape = RoundedCornerShape(12.dp)
+                                            ) {
+                                                Text("View Release", fontWeight = FontWeight.Bold)
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        )
+                        }
+                    }
 
-                        if (hasInternetAccess) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                            val currentVersionText = "Installed: v${BuildConfig.VERSION_NAME} (${BuildConfig.FLAVOR})"
+                            val checkDescription = when {
+                                isCheckingUpdates -> stringResource(R.string.updates_checking)
+                                updateCheckStatus != null -> updateCheckStatus!!
+                                else -> currentVersionText
+                            }
+
+                            Preference(
+                                name = stringResource(R.string.updates_check_title),
+                                description = checkDescription,
+                                icon = R.drawable.ic_settings_updates,
+                                onClick = { checkForUpdates() },
+                                value = {
+                                    if (isCheckingUpdates) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    } else if (isUpdateAvailable) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer
+                                        ) {
+                                            Text(
+                                                text = "Update",
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    } else if (updateCheckStatus != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant
+                                        ) {
+                                            Text(
+                                                text = "Latest",
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                             autoCheckSetting.Preference()
 
@@ -277,18 +463,11 @@ fun UpdatesScreen(
                             if (isAutoCheckEnabled) {
                                 frequencySetting.Preference()
                             }
-                        } else {
-                            Text(
-                                text = stringResource(R.string.updates_offline_notice),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
                         }
                     }
                 }
 
-                // Section 2: Changelog
+                // Section 2: Changelog (Current Version Only)
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -298,19 +477,40 @@ fun UpdatesScreen(
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = stringResource(R.string.updates_changelog_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        for (entry in changelogEntries) {
-                            ChangelogCard(entry = entry)
-                            if (entry != changelogEntries.last()) {
-                                Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "What's New in v${BuildConfig.VERSION_NAME}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Text(
+                                    text = "Current",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
                             }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        for (item in currentChangelogItems) {
+                            Text(
+                                text = item,
+                                style = MaterialTheme.typography.bodySmall,
+                                lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.3f,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(vertical = 3.dp)
+                            )
                         }
                     }
                 }
@@ -353,75 +553,11 @@ fun UpdatesScreen(
                         Preference(
                             name = stringResource(R.string.updates_opencollective_title),
                             description = stringResource(R.string.updates_opencollective_desc),
-                            icon = R.drawable.ic_settings_default,
+                            icon = R.drawable.ic_dollar,
                             onClick = {
                                 val intent = Intent(Intent.ACTION_VIEW, Links.OPEN_COLLECTIVE.toUri())
                                 context.startActivity(intent)
                             }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChangelogCard(entry: ChangelogEntry) {
-    var expanded by remember { mutableStateOf(entry == changelogEntries.first()) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Text(
-                            text = entry.version,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
-                    }
-                    Text(
-                        text = " • ${entry.date}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-
-                Text(
-                    text = if (expanded) "▲" else "▼",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            AnimatedVisibility(visible = expanded) {
-                Column(modifier = Modifier.padding(top = 10.dp)) {
-                    for (item in entry.items) {
-                        Text(
-                            text = item,
-                            style = MaterialTheme.typography.bodySmall,
-                            lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.25f,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(vertical = 2.dp)
                         )
                     }
                 }
