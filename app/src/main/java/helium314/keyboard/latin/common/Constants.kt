@@ -21,6 +21,9 @@ object Links {
     const val WIKI_URL = "$ORIGINAL_GITHUB/wiki"
     const val CUSTOM_LAYOUTS = "$GITHUB/discussions/categories/custom-layout"
     const val CUSTOM_COLORS = "$GITHUB/discussions/categories/custom-colors"
+    // Voice Plugin Links
+    const val VOICE_PLUGIN_REPO = "https://github.com/LeanBitLab/LeanType-Voice-Plugin"
+    const val VOICE_PLUGIN_RELEASES_API = "https://api.github.com/repos/LeanBitLab/LeanType-Voice-Plugin/releases/latest"
 }
 
 val combiningRange = 0x300..0x35b

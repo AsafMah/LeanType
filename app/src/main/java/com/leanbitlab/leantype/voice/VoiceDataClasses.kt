@@ -79,4 +79,5 @@ object VoiceConstants {
     const val PREF_VOICE_SMART_PUNCTUATION = "voice_smart_punctuation"
     const val PREF_VOICE_SILENCE_TIMEOUT_SECONDS = "voice_silence_timeout_seconds"
     const val PREF_USE_DEBUG_VOICE_STUB = "use_debug_voice_stub"
+    const val VOICE_PLUGIN_PACKAGE = "com.leanbitlab.leantype.voice.offline"
 }

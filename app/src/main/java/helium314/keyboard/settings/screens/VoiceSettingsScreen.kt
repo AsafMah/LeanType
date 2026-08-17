@@ -2,7 +2,9 @@
 package helium314.keyboard.latin.voice
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -25,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,17 +38,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.leanbitlab.leantype.voice.ModelImportRequest
 import com.leanbitlab.leantype.voice.ModelState
 import com.leanbitlab.leantype.voice.VoiceConstants
 import com.leanbitlab.leantype.voice.VoiceEngineInfo
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.Links
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.dialogs.VoiceModelDownloadDialog
@@ -52,6 +55,15 @@ import helium314.keyboard.settings.filePicker
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.SwitchPreference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 @Composable
 fun VoiceSettingsScreen(
@@ -86,6 +98,129 @@ fun VoiceSettingsScreen(
         )
     }
     var showModelDownloadDialog by remember { mutableStateOf(false) }
+
+    var isDownloadingPlugin by remember { mutableStateOf(false) }
+    var pluginDownloadProgress by remember { mutableFloatStateOf(0f) }
+
+    fun installDownloadedPlugin(file: File) {
+        try {
+            val apkUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
+            context.startActivity(installIntent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error starting installation: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun downloadAndInstallPlugin() {
+        isDownloadingPlugin = true
+        pluginDownloadProgress = 0f
+        scope.launch(Dispatchers.IO) {
+            try {
+                var downloadUrl: String? = null
+                try {
+                    val url = URL(Links.VOICE_PLUGIN_RELEASES_API)
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.setRequestProperty("User-Agent", "LeanType-Android")
+                    conn.connectTimeout = 8000
+                    conn.readTimeout = 8000
+                    if (conn.responseCode == 200) {
+                        val resp = conn.inputStream.bufferedReader().use { it.readText() }
+                        val json = JSONObject(resp)
+                        val assets = json.optJSONArray("assets")
+                        if (assets != null) {
+                            for (i in 0 until assets.length()) {
+                                val asset = assets.getJSONObject(i)
+                                val name = asset.optString("name", "")
+                                if (name.endsWith(".apk", ignoreCase = true)) {
+                                    downloadUrl = asset.optString("browser_download_url", "")
+                                    break
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("VoiceSettingsScreen", "Failed to fetch plugin release from API", e)
+                }
+
+                if (downloadUrl.isNullOrBlank()) {
+                    withContext(Dispatchers.Main) {
+                        isDownloadingPlugin = false
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(Links.VOICE_PLUGIN_REPO)).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                        Toast.makeText(context, "Opening plugin repository in browser", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                val updatesDir = File(context.cacheDir, "updates")
+                if (!updatesDir.exists()) updatesDir.mkdirs()
+                val targetFile = File(updatesDir, "voice_plugin.apk")
+
+                var url = URL(downloadUrl)
+                var conn = url.openConnection() as HttpURLConnection
+                conn.instanceFollowRedirects = true
+                conn.setRequestProperty("User-Agent", "LeanType-Android")
+                conn.connect()
+
+                var redirectCount = 0
+                while ((conn.responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                            conn.responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                            conn.responseCode == 307 || conn.responseCode == 308) && redirectCount < 5) {
+                    val location = conn.getHeaderField("Location") ?: break
+                    url = URL(location)
+                    conn = url.openConnection() as HttpURLConnection
+                    conn.setRequestProperty("User-Agent", "LeanType-Android")
+                    conn.connect()
+                    redirectCount++
+                }
+
+                val totalBytes = conn.contentLength
+                var downloadedBytes = 0L
+
+                conn.inputStream.use { input ->
+                    FileOutputStream(targetFile).use { output ->
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            downloadedBytes += bytesRead
+                            if (totalBytes > 0) {
+                                val prog = downloadedBytes.toFloat() / totalBytes.toFloat()
+                                withContext(Dispatchers.Main) {
+                                    pluginDownloadProgress = prog
+                                }
+                            }
+                        }
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    isDownloadingPlugin = false
+                    installDownloadedPlugin(targetFile)
+                }
+            } catch (e: Exception) {
+                Log.e("VoiceSettingsScreen", "Failed to download plugin", e)
+                withContext(Dispatchers.Main) {
+                    isDownloadingPlugin = false
+                    Toast.makeText(context, "Download failed: ${e.localizedMessage}. Opening browser...", Toast.LENGTH_LONG).show()
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(Links.VOICE_PLUGIN_REPO)).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
+                }
+            }
+        }
+    }
 
     val updatePluginStatus = {
         isPluginInstalled = pluginManager.isPluginInstalled()
@@ -137,12 +272,10 @@ fun VoiceSettingsScreen(
         }
     }
 
-    LaunchedEffect(isPluginConnected) {
-        if (isPluginConnected) {
-            while (isActive) {
-                updatePluginStatus()
-                kotlinx.coroutines.delay(1500)
-            }
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            updatePluginStatus()
+            kotlinx.coroutines.delay(1500)
         }
     }
 
@@ -292,8 +425,70 @@ fun VoiceSettingsScreen(
                 }
             }
 
-            // Plugin status card (only show when not installed or confirmed disconnected)
-            if (!isPluginInstalled) {
+            // Plugin status card
+            if (isPluginInstalled) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Voice Plugin",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = if (isPluginConnected) "Installed & Connected"
+                                    else if (isInitialConnectionPending) "Connecting…"
+                                    else "Installed (Disconnected)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (isPluginConnected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (!isPluginConnected && !isInitialConnectionPending) {
+                                    Button(
+                                        onClick = {
+                                            pluginManager.bindIfNeeded()
+                                            updatePluginStatus()
+                                        },
+                                        modifier = Modifier.height(36.dp)
+                                    ) {
+                                        Text("Connect")
+                                    }
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
+                                            data = Uri.parse("package:${VoiceConstants.VOICE_PLUGIN_PACKAGE}")
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(uninstallIntent)
+                                    },
+                                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    ),
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text("Uninstall")
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -304,7 +499,8 @@ fun VoiceSettingsScreen(
                         Text(
                             text = "Voice Plugin Not Installed",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -312,31 +508,39 @@ fun VoiceSettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
-                    }
-                }
-            } else if (!isPluginConnected && !isInitialConnectionPending) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Voice Plugin Disconnected",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "The voice engine service is currently disconnected.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = {
-                            pluginManager.bindIfNeeded()
-                            updatePluginStatus()
-                        }) {
-                            Text("Connect Plugin")
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (BuildConfig.FLAVOR == "standardfull") {
+                            if (isDownloadingPlugin) {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    LinearProgressIndicator(
+                                        progress = { pluginDownloadProgress },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Text(
+                                        text = "Downloading plugin... ${(pluginDownloadProgress * 100).toInt()}%",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            } else {
+                                Button(
+                                    onClick = { downloadAndInstallPlugin() }
+                                ) {
+                                    Text("Download & Install Plugin")
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(Links.VOICE_PLUGIN_REPO)).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            ) {
+                                Text("Download Plugin")
+                            }
                         }
                     }
                 }
