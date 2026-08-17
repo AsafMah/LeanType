@@ -11,6 +11,9 @@ object Links {
     const val GITHUB = "https://github.com/LeanBitLab/HeliboardL"
     const val LICENSE = "$GITHUB/blob/main/LICENSE"
     const val SPONSOR = "https://github.com/sponsors/LeanBitLab"
+    const val OPEN_COLLECTIVE = "https://opencollective.com/leanbitlab-org"
+    const val GITHUB_RELEASES_API = "https://api.github.com/repos/LeanBitLab/HeliboardL/releases/latest"
+    const val GITHUB_RELEASES_PAGE = "https://github.com/LeanBitLab/HeliboardL/releases"
     const val FEATURES_URL = "$GITHUB/blob/main/docs/FEATURES.md"
     // Original HeliBoard wiki and community links
     const val ORIGINAL_GITHUB = "https://github.com/Helium314/HeliBoard"

@@ -46,6 +46,7 @@ import helium314.keyboard.settings.previewDark
 
 @Composable
 fun MainSettingsScreen(
+    onClickUpdates: () -> Unit,
     onClickAbout: () -> Unit,
     onClickTextCorrection: () -> Unit,
     onClickPreferences: () -> Unit,
@@ -104,9 +105,15 @@ fun MainSettingsScreen(
             }
             SponsorDialog(
                 onDismissRequest = { showSponsorDialog = false },
-                onSponsor = {
+                onSponsorGitHub = {
                     val intent = Intent()
                     intent.data = Links.SPONSOR.toUri()
+                    intent.action = Intent.ACTION_VIEW
+                    ctx.startActivity(intent)
+                },
+                onSponsorOpenCollective = {
+                    val intent = Intent()
+                    intent.data = Links.OPEN_COLLECTIVE.toUri()
                     intent.action = Intent.ACTION_VIEW
                     ctx.startActivity(intent)
                 },
@@ -211,6 +218,11 @@ fun MainSettingsScreen(
                             icon = R.drawable.ic_settings_advanced
                         ) { NextScreenIcon() }
                         Preference(
+                            name = stringResource(R.string.settings_screen_updates),
+                            onClick = onClickUpdates,
+                            icon = R.drawable.ic_settings_updates
+                        ) { NextScreenIcon() }
+                        Preference(
                             name = stringResource(R.string.settings_screen_about),
                             onClick = onClickAbout,
                             icon = R.drawable.ic_settings_about
@@ -228,7 +240,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
         }
     }
 }

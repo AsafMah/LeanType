@@ -37,6 +37,7 @@ import helium314.keyboard.settings.screens.SecondaryLayoutScreen
 import helium314.keyboard.settings.screens.SubtypeScreen
 import helium314.keyboard.settings.screens.TextCorrectionScreen
 import helium314.keyboard.settings.screens.ToolbarScreen
+import helium314.keyboard.settings.screens.UpdatesScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -71,6 +72,7 @@ fun SettingsNavHost(
     ) {
         composable(SettingsDestination.Settings) {
             MainSettingsScreen(
+                onClickUpdates = { navController.navigate(SettingsDestination.Updates) },
                 onClickAbout = { navController.navigate(SettingsDestination.About) },
                 onClickTextCorrection = { navController.navigate(SettingsDestination.TextCorrection) },
                 onClickPreferences = { navController.navigate(SettingsDestination.Preferences) },
@@ -85,6 +87,9 @@ fun SettingsNavHost(
                 onClickGesture = { navController.navigate(SettingsDestination.GestureTyping) },
                 onClickBack = ::goBack,
             )
+        }
+        composable(SettingsDestination.Updates) {
+            UpdatesScreen(onClickBack = ::goBack)
         }
         composable(SettingsDestination.About) {
             AboutScreen(onClickBack = ::goBack)
@@ -185,6 +190,7 @@ fun SettingsNavHost(
 
 object SettingsDestination {
     const val Settings = "settings"
+    const val Updates = "updates"
     const val About = "about"
     const val TextCorrection = "text_correction"
     const val Preferences = "preferences"

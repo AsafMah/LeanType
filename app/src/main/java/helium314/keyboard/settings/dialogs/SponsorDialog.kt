@@ -54,7 +54,8 @@ import helium314.keyboard.latin.settings.Settings
 @Composable
 fun SponsorDialog(
     onDismissRequest: () -> Unit,
-    onSponsor: () -> Unit,
+    onSponsorGitHub: () -> Unit,
+    onSponsorOpenCollective: () -> Unit,
     prefs: SharedPreferences
 ) {
     var neverShowAgain by remember { mutableStateOf(false) }
@@ -148,7 +149,7 @@ fun SponsorDialog(
                             onClick = {
                                 if (neverShowAgain)
                                     prefs.edit { putBoolean(Settings.PREF_DONT_SHOW_SPONSOR_DIALOG, true) }
-                                onSponsor()
+                                onSponsorGitHub()
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(20.dp),
@@ -164,7 +165,26 @@ fun SponsorDialog(
                             )
                         }
                         
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = {
+                                if (neverShowAgain)
+                                    prefs.edit { putBoolean(Settings.PREF_DONT_SHOW_SPONSOR_DIALOG, true) }
+                                onSponsorOpenCollective()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            Text("🌐", modifier = Modifier.padding(end = 8.dp))
+                            Text(
+                                text = "Support on Open Collective",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(10.dp))
                         
                         TextButton(
                             onClick = {

@@ -1144,6 +1144,24 @@ New dictionary:
     <!-- description for features.md link -->
     <string name="about_features_link_description">List of main features and keyboard manual</string>
 
+    <!-- Updates Screen -->
+    <string name="settings_screen_updates">Updates</string>
+    <string name="updates_check_title">Check for updates</string>
+    <string name="updates_checking">Checking for updates…</string>
+    <string name="updates_up_to_date">You are using the latest version</string>
+    <string name="updates_available">New version available: %s</string>
+    <string name="updates_auto_check_title">Auto check for updates</string>
+    <string name="updates_auto_check_summary">Periodically check for new releases in the background</string>
+    <string name="updates_frequency_title">Check frequency</string>
+    <string name="updates_changelog_title">Changelog</string>
+    <string name="updates_support_title">Support development</string>
+    <string name="updates_support_summary">LeanType is 100% free, open-source, and independent. Your support directly helps us continue active development!</string>
+    <string name="updates_github_sponsor_title">GitHub Sponsors</string>
+    <string name="updates_github_sponsor_desc">Sponsor monthly or one-time via GitHub Sponsors</string>
+    <string name="updates_opencollective_title">Open Collective</string>
+    <string name="updates_opencollective_desc">Support our open-source collective and fund development</string>
+    <string name="updates_offline_notice">Offline builds do not have internet permission to check for updates automatically.</string>
+
     <!-- Libraries Hub -->
     <string name="libraries_hub_title">Libraries</string>
     <string name="libraries_hub_summary">Manage gesture typing library, dictionaries, and emoji libraries.</string>
