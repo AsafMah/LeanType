@@ -921,26 +921,29 @@ public class LatinIME extends InputMethodService implements
                     case CONNECTING_PLUGIN:
                     case STARTING_SESSION:
                         mSuggestionStripView.showVoiceStatus(
-                                "Connecting speech engine…",
+                                getString(R.string.voice_status_connecting),
                                 false,
                                 () -> { if (mVoiceInputManager != null) mVoiceInputManager.stopVoice(); },
-                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); }
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); },
+                                helium314.keyboard.latin.suggestions.VoiceVisualizerView.Mode.CONNECTING
                         );
                         break;
                     case RECORDING:
                         mSuggestionStripView.showVoiceStatus(
-                                "Listening… speak now",
+                                getString(R.string.voice_status_listening),
                                 false,
                                 () -> { if (mVoiceInputManager != null) mVoiceInputManager.stopVoice(); },
-                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); }
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); },
+                                helium314.keyboard.latin.suggestions.VoiceVisualizerView.Mode.RECORDING
                         );
                         break;
                     case PROCESSING_FINAL:
                         mSuggestionStripView.showVoiceStatus(
-                                "Processing…",
+                                getString(R.string.voice_status_processing),
                                 true,
                                 null,
-                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); }
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); },
+                                helium314.keyboard.latin.suggestions.VoiceVisualizerView.Mode.PROCESSING
                         );
                         break;
                     case IDLE:

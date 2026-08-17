@@ -475,6 +475,11 @@
     <string name="voice_smart_punctuation_title">Smart Spoken Punctuation</string>
     <string name="voice_smart_punctuation_summary">Convert spoken words (\"comma\", \"question mark\", \"period\") into punctuation symbols</string>
     <string name="voice_command_executed">Voice command executed</string>
+    <string name="voice_status_connecting">Connecting speech engine…</string>
+    <string name="voice_status_listening">Listening… speak now</string>
+    <string name="voice_status_processing">Processing…</string>
+    <string name="voice_action_done">Done</string>
+    <string name="voice_action_cancel">Cancel</string>
 
     <string name="numpad" tools:keep="@string/numpad" translatable="false">@string/layout_numpad</string>
     <string name="settings" tools:keep="@string/settings">Settings</string>

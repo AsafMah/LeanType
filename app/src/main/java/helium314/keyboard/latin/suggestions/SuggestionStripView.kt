@@ -7,6 +7,7 @@ package helium314.keyboard.latin.suggestions
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import java.util.Locale
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
@@ -405,6 +406,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     fun setSuggestions(suggestions: SuggestedWords, isRtlLanguage: Boolean) {
+        if (isVoiceActive) return
 
         if (isShowingEmojiSuggestions && !helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().isShowingEmojiPalettes) {
             isShowingEmojiSuggestions = false
@@ -445,6 +447,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     fun setExternalSuggestionView(view: View?, addCloseButton: Boolean) {
+        if (isVoiceActive) return
         if (isShowingEmojiSuggestions && !helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().isShowingEmojiPalettes) {
             isShowingEmojiSuggestions = false
         }
@@ -550,9 +553,16 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     private var isVoiceActive = false
+    private var voiceVisualizerView: VoiceVisualizerView? = null
 
     @JvmOverloads
-    fun showVoiceStatus(statusText: String, isProcessing: Boolean, onStop: Runnable? = null, onCancel: Runnable? = null) {
+    fun showVoiceStatus(
+        statusText: String,
+        isProcessing: Boolean,
+        onStop: Runnable? = null,
+        onCancel: Runnable? = null,
+        mode: VoiceVisualizerView.Mode = if (isProcessing) VoiceVisualizerView.Mode.PROCESSING else VoiceVisualizerView.Mode.RECORDING
+    ) {
         clear()
         isExternalSuggestionVisible = true
         isVoiceActive = true
@@ -560,60 +570,91 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val colors = Settings.getValues().mColors
         val accentColor = colors.get(ColorType.GESTURE_TRAIL)
         val textColor = colors.get(ColorType.KEY_TEXT)
+        val actionColor = if (accentColor != 0) accentColor else textColor
 
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-            setPadding(12.dpToPx(resources), 0, 8.dpToPx(resources), 0)
+            setPadding(8.dpToPx(resources), 0, 4.dpToPx(resources), 0)
         }
 
-        val micIconView = ImageButton(context).apply {
-            val micDrawable = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.VOICE.name.lowercase(java.util.Locale.US), context)
+        // Microphone Icon
+        val micIconView = android.widget.ImageView(context).apply {
+            val micDrawable = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.VOICE.name.lowercase(Locale.US), context)
             setImageDrawable(micDrawable)
-            background = null
             scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-            layoutParams = LinearLayout.LayoutParams(36.dpToPx(resources), 36.dpToPx(resources))
-            setColorFilter(accentColor)
+            val pad = 6.dpToPx(resources)
+            setPadding(pad, pad, pad, pad)
+            layoutParams = LinearLayout.LayoutParams(34.dpToPx(resources), 34.dpToPx(resources))
+            setColorFilter(actionColor)
         }
         container.addView(micIconView)
 
+        // Animated Audio Waveform Visualizer
+        val visualizer = VoiceVisualizerView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(28.dpToPx(resources), LayoutParams.MATCH_PARENT).apply {
+                marginStart = 2.dpToPx(resources)
+                marginEnd = 6.dpToPx(resources)
+            }
+            setColor(actionColor)
+            setMode(mode)
+        }
+        voiceVisualizerView = visualizer
+        container.addView(visualizer)
+
+        // Status Text
         val textView = TextView(context).apply {
             text = statusText
             setTextColor(textColor)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER_VERTICAL
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
             layoutParams = LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply {
-                marginStart = 8.dpToPx(resources)
+                marginStart = 4.dpToPx(resources)
+                marginEnd = 4.dpToPx(resources)
             }
         }
         container.addView(textView)
 
+        // Done / Stop Button (Checkmark)
         if (!isProcessing && onStop != null) {
-            val stopButton = ImageButton(context).apply {
-                val selectIcon = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.SELECT_ALL.name.lowercase(java.util.Locale.US), context)
-                setImageDrawable(selectIcon)
-                background = null
+            val doneButton = ImageButton(context, null, R.attr.suggestionWordStyle).apply {
+                val doneIcon = KeyboardIconsSet.instance.getNewDrawable(KeyboardIconsSet.NAME_DONE_KEY, context)
+                setImageDrawable(doneIcon)
+                setBackgroundResource(R.drawable.toolbar_key_background)
                 scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-                layoutParams = LinearLayout.LayoutParams(36.dpToPx(resources), 36.dpToPx(resources))
-                setColorFilter(accentColor)
-                contentDescription = "Stop Voice"
-                setOnClickListener { onStop.run() }
+                val pad = 9.dpToPx(resources)
+                setPadding(pad, pad, pad, pad)
+                layoutParams = LinearLayout.LayoutParams(40.dpToPx(resources), LayoutParams.MATCH_PARENT)
+                setColorFilter(actionColor)
+                contentDescription = context.getString(R.string.voice_action_done)
+                setOnClickListener {
+                    AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, this@SuggestionStripView, HapticEvent.KEY_PRESS)
+                    onStop.run()
+                }
             }
-            container.addView(stopButton)
+            container.addView(doneButton)
         }
 
+        // Close / Cancel Button (X)
         if (onCancel != null) {
-            val closeButton = ImageButton(context).apply {
-                val closeIcon = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase(java.util.Locale.US), context)
+            val closeButton = ImageButton(context, null, R.attr.suggestionWordStyle).apply {
+                val closeIcon = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase(Locale.US), context)
                 setImageDrawable(closeIcon)
-                background = null
+                setBackgroundResource(R.drawable.toolbar_key_background)
                 scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-                layoutParams = LinearLayout.LayoutParams(36.dpToPx(resources), 36.dpToPx(resources))
+                val pad = 9.dpToPx(resources)
+                setPadding(pad, pad, pad, pad)
+                layoutParams = LinearLayout.LayoutParams(40.dpToPx(resources), LayoutParams.MATCH_PARENT)
                 setColorFilter(textColor)
-                contentDescription = "Cancel Voice"
-                setOnClickListener { onCancel.run() }
+                contentDescription = context.getString(R.string.voice_action_cancel)
+                setOnClickListener {
+                    AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, this@SuggestionStripView, HapticEvent.KEY_PRESS)
+                    onCancel.run()
+                }
             }
             container.addView(closeButton)
         }
@@ -629,6 +670,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         if (!isVoiceActive) return
         isVoiceActive = false
         isExternalSuggestionVisible = false
+        voiceVisualizerView?.setMode(VoiceVisualizerView.Mode.IDLE)
+        voiceVisualizerView = null
         clear()
         setToolbarVisibility(isToolbarManuallyOpen, saveState = false)
         updateSplitToolbarState()
@@ -1261,6 +1304,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
      * @param onEmojiClick Callback when an emoji is tapped
      */
     fun setEmojiSuggestions(emojis: List<String>, onEmojiClick: java.util.function.Consumer<String>) {
+        if (isVoiceActive) return
         if (!Settings.getValues().mSplitToolbar) return
         isShowingEmojiSuggestions = true
         suggestionsStrip.removeAllViews()
@@ -1319,6 +1363,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
      * @param isDownloading Whether the dictionary is currently downloading
      */
     fun setEmojiDownloadButton(onClick: java.lang.Runnable, isDownloading: Boolean) {
+        if (isVoiceActive) return
         if (!Settings.getValues().mSplitToolbar) return
         isShowingEmojiSuggestions = true
         suggestionsStrip.removeAllViews()
