@@ -74,17 +74,19 @@ fun VoiceSettingsScreen(
     }
 
     val pluginManager = remember(context) { VoicePluginManager(context) }
-    var engineInfo by remember { mutableStateOf<VoiceEngineInfo?>(null) }
-    var isPluginConnected by remember { mutableStateOf(false) }
-    var isPluginInstalled by remember { mutableStateOf(false) }
+    var engineInfo by remember { mutableStateOf<VoiceEngineInfo?>(pluginManager.getInfo()) }
+    var isPluginConnected by remember { mutableStateOf(pluginManager.isPluginConnected()) }
+    var isPluginInstalled by remember { mutableStateOf(pluginManager.isPluginInstalled()) }
+    var isInitialConnectionPending by remember { mutableStateOf(!isPluginConnected && isPluginInstalled) }
 
-    var whisperState by remember { mutableStateOf<ModelState?>(null) }
+    var whisperState by remember { mutableStateOf<ModelState?>(pluginManager.getModelState(VoiceConstants.ENGINE_WHISPER)) }
     var showModelDownloadDialog by remember { mutableStateOf(false) }
 
     val updatePluginStatus = {
         isPluginInstalled = pluginManager.isPluginInstalled()
         if (pluginManager.isPluginConnected()) {
             isPluginConnected = true
+            isInitialConnectionPending = false
             engineInfo = pluginManager.getInfo()
             whisperState = pluginManager.getModelState(VoiceConstants.ENGINE_WHISPER)
         } else {
@@ -98,21 +100,33 @@ fun VoiceSettingsScreen(
         pluginManager.setConnectionListener(object : VoicePluginManager.PluginConnectionListener {
             override fun onPluginConnected(info: VoiceEngineInfo?) {
                 isPluginConnected = true
+                isInitialConnectionPending = false
                 engineInfo = info
                 updatePluginStatus()
             }
 
             override fun onPluginDisconnected() {
                 isPluginConnected = false
+                isInitialConnectionPending = false
                 engineInfo = null
                 whisperState = null
             }
         })
-        pluginManager.bindIfNeeded()
+        val bound = pluginManager.bindIfNeeded()
+        if (!bound) {
+            isInitialConnectionPending = false
+        }
         updatePluginStatus()
 
         onDispose {
             pluginManager.unbind()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (isInitialConnectionPending) {
+            kotlinx.coroutines.delay(1200)
+            isInitialConnectionPending = false
         }
     }
 
@@ -270,8 +284,29 @@ fun VoiceSettingsScreen(
                 }
             }
 
-            // Plugin status card (only show when not installed or not connected)
-            if (!isPluginInstalled || !isPluginConnected) {
+            // Plugin status card (only show when not installed or confirmed disconnected)
+            if (!isPluginInstalled) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Voice Plugin Not Installed",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Offline voice input requires the LeanType Voice Plugin (com.leanbitlab.leantype.voice.offline).",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            } else if (!isPluginConnected && !isInitialConnectionPending) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -280,25 +315,20 @@ fun VoiceSettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Plugin Status",
+                            text = "Voice Plugin Disconnected",
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        val statusText = when {
-                            isPluginConnected -> "Connected: ${engineInfo?.displayName ?: "Voice Plugin"}"
-                            isPluginInstalled -> "Plugin installed (disconnected)"
-                            else -> "Plugin not installed (com.leanbitlab.leantype.voice.offline)"
-                        }
-                        Text(text = statusText, style = MaterialTheme.typography.bodyMedium)
-
-                        if (!isPluginConnected) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedButton(onClick = {
-                                pluginManager.bindIfNeeded()
-                                updatePluginStatus()
-                            }) {
-                                Text("Connect Plugin")
-                            }
+                        Text(
+                            text = "The voice engine service is currently disconnected.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(onClick = {
+                            pluginManager.bindIfNeeded()
+                            updatePluginStatus()
+                        }) {
+                            Text("Connect Plugin")
                         }
                     }
                 }
@@ -317,7 +347,7 @@ fun VoiceSettingsScreen(
                 ModelState.STATE_READY -> "Status: Ready"
                 ModelState.STATE_LOADING -> "Status: Loading…"
                 ModelState.STATE_ERROR -> "Status: Error"
-                else -> "Status: No model installed"
+                else -> if (isPluginConnected) "Status: No model installed" else if (isInitialConnectionPending) "Status: Connecting…" else "Status: Plugin disconnected"
             }
 
             Preference(
