@@ -207,28 +207,33 @@ fun <T: Any?> SearchScreen(
                             }
                         },
                         actions = {
-                            if (icon == null)
-                                IconButton(onClick = { setShowSearch(!showSearch) }) { SearchIcon() }
-                            else
-                                icon()
-                            if (menu != null)
-                                Box {
-                                    var showMenu by remember { mutableStateOf(false) }
-                                    IconButton(
-                                        onClick = { showMenu = true }
-                                    ) { Icon(painterResource(R.drawable.ic_arrow_left), "menu", Modifier.rotate(-90f)) }
-                                    DropdownMenu(
-                                        expanded = showMenu,
-                                        onDismissRequest = { showMenu = false }
-                                    ) {
-                                        menu.forEach {
-                                            DropdownMenuItem(
-                                                text = { Text(it.first) },
-                                                onClick = { showMenu = false; it.second() }
-                                            )
+                            androidx.compose.foundation.layout.Row(
+                                modifier = Modifier.padding(end = 12.dp),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                if (icon == null)
+                                    IconButton(onClick = { setShowSearch(!showSearch) }) { SearchIcon() }
+                                else
+                                    icon()
+                                if (menu != null)
+                                    Box {
+                                        var showMenu by remember { mutableStateOf(false) }
+                                        IconButton(
+                                            onClick = { showMenu = true }
+                                        ) { Icon(painterResource(R.drawable.ic_arrow_left), "menu", Modifier.rotate(-90f)) }
+                                        DropdownMenu(
+                                            expanded = showMenu,
+                                            onDismissRequest = { showMenu = false }
+                                        ) {
+                                            menu.forEach {
+                                                DropdownMenuItem(
+                                                    text = { Text(it.first) },
+                                                    onClick = { showMenu = false; it.second() }
+                                                )
+                                            }
                                         }
                                     }
-                                }
+                            }
                         },
                     )
                     ExpandableSearchField(

@@ -197,9 +197,9 @@ private fun ModelDownloadRow(
                     modifier = Modifier.height(36.dp)
                 ) {
                     val label = if (isAnyModelInstalledForEngine) {
-                        if (isNetworkAvailable) "Replace" else "Browser"
+                        "Replace"
                     } else {
-                        if (isNetworkAvailable) "Download" else "Browser"
+                        "Download"
                     }
                     Text(label)
                 }
