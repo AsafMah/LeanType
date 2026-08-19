@@ -13,6 +13,7 @@
 [![Stars](https://img.shields.io/github/stars/LeanBitLab/HeliboardL?style=flat-square&color=f59e0b&label=Stars)](https://github.com/LeanBitLab/HeliboardL/stargazers)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
 [![Sponsor](https://img.shields.io/badge/Sponsor-LeanBitLab-ff69b4?style=flat-square&logo=github)](https://github.com/sponsors/LeanBitLab)
+[![Donate on Open Collective](https://img.shields.io/badge/Donate-Open_Collective-2979ff?style=flat-square&logo=opencollective&logoColor=white)](https://opencollective.com/leanbitlab-org)
 
 **A private, smart, and deeply customizable open-source Android keyboard.**  
 *Forked from [HeliBoard](https://github.com/Helium314/HeliBoard) / OpenBoard / AOSP LatinIME.*
@@ -186,7 +187,11 @@ If LeanType improves your daily typing workflow, please consider sponsoring our 
 
 <div align="left">
   <a href="https://github.com/sponsors/LeanBitLab">
-    <img src="https://img.shields.io/static/v1?label=Sponsor%20on%20GitHub&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86" height="38" alt="Sponsor LeanBitLab"/>
+    <img src="https://img.shields.io/static/v1?label=Sponsor%20on%20GitHub&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86" height="38" alt="Sponsor LeanBitLab on GitHub"/>
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://opencollective.com/leanbitlab-org">
+    <img src="https://img.shields.io/static/v1?label=Donate%20on&message=Open%20Collective&logo=opencollective&logoColor=white&color=%232979ff" height="38" alt="Donate to LeanBitLab on Open Collective"/>
   </a>
 </div>
 
