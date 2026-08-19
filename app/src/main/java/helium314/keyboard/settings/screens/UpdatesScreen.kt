@@ -29,7 +29,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -102,6 +101,7 @@ fun UpdatesScreen(
     var isDownloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableFloatStateOf(0f) }
     var downloadedApkFile by remember { mutableStateOf<File?>(null) }
+    var isAutoCheckEnabled by remember { mutableStateOf(prefs.getBoolean("pref_auto_check_updates", true)) }
 
     fun installApk(file: File) {
         try {
@@ -276,7 +276,8 @@ fun UpdatesScreen(
         ) {
             SwitchPreference(
                 setting = it,
-                default = true
+                default = true,
+                onCheckedChange = { isAutoCheckEnabled = it }
             )
         }
     }
@@ -462,10 +463,8 @@ fun UpdatesScreen(
                                 }
                             )
 
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                             autoCheckSetting.Preference()
 
-                            val isAutoCheckEnabled = prefs.getBoolean("pref_auto_check_updates", true)
                             if (isAutoCheckEnabled) {
                                 frequencySetting.Preference()
                             }
