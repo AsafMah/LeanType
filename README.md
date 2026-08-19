@@ -140,7 +140,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 ### 2. Voice Input Setup (Whisper AI)
 1. Install the companion [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin/releases/latest).
 2. Open **Settings → Voice typing → Whisper Speech Models**.
-3. Download or import your preferred Whisper model (e.g. *Whisper Tiny / Base English* ~35–75 MB).
+3. Download or import your preferred Multilingual Whisper model (e.g. *Tiny* ~32 MB, *Base* ~57 MB, or *Small* ~182 MB supporting 99+ languages).
 4. Tap the microphone icon on the keyboard toolbar to start typing with your voice!
 
 ### 3. Translation Plugin Setup
