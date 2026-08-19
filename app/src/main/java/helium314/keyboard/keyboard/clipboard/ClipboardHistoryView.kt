@@ -1042,7 +1042,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
         val useEqualSpacing = isAutoSpan && containerWidth > 0 && totalKeysWidth <= containerWidth
 
-        val alignmentGravity = when (Settings.getValues().mClipboardKeysAlignment) {
+        val alignmentGravity = when (Settings.getValues().mToolbarKeysAlignment) {
             "left" -> Gravity.START or Gravity.CENTER_VERTICAL
             "center" -> Gravity.CENTER
             else -> Gravity.END or Gravity.CENTER_VERTICAL

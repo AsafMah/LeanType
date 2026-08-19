@@ -693,7 +693,12 @@
     </string-array>
     <!-- Title of the setting to set clipboard toolbar keys -->
     <string name="clipboard_toolbar_keys">Select clipboard toolbar keys</string>
-    <string name="clipboard_keys_alignment">Clipboard keys alignment</string>
+    <string name="toolbar_keys_alignment">Toolbar keys alignment</string>
+    <string name="toolbar_keys_alignment_summary">Align keys in toolbar and clipboard strip</string>
+    <string name="toolbar_keys_alignment_left">Left</string>
+    <string name="toolbar_keys_alignment_center">Center</string>
+    <string name="toolbar_keys_alignment_right">Right</string>
+    <string name="clipboard_keys_alignment">Toolbar keys alignment</string>
     <string name="clipboard_keys_alignment_left">Left</string>
     <string name="clipboard_keys_alignment_center">Center</string>
     <string name="clipboard_keys_alignment_right">Right</string>

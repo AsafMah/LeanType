@@ -76,7 +76,7 @@ fun ToolbarScreen(
         Settings.PREF_TOOLBAR_KEYS,
         if (!isSplitToolbar) Settings.PREF_PINNED_TOOLBAR_KEYS else null,
         Settings.PREF_CLIPBOARD_TOOLBAR_KEYS,
-        Settings.PREF_CLIPBOARD_KEYS_ALIGNMENT,
+        Settings.PREF_TOOLBAR_KEYS_ALIGNMENT,
         Settings.PREF_TOOLBAR_CUSTOM_KEY_CODES,
         Settings.PREF_TOOLBAR_LONG_PRESS_HINT,
         if (toolbarMode == ToolbarMode.EXPANDABLE && !isSplitToolbar) Settings.PREF_QUICK_PIN_TOOLBAR_KEYS else null,
@@ -138,16 +138,16 @@ fun createToolbarSettings(context: Context): List<Setting> {
         Setting(context, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS, R.string.clipboard_toolbar_keys) {
             ReorderSwitchPreference(it, Defaults.PREF_CLIPBOARD_TOOLBAR_KEYS, filter)
         },
-        Setting(context, Settings.PREF_CLIPBOARD_KEYS_ALIGNMENT, R.string.clipboard_keys_alignment) { setting ->
+        Setting(context, Settings.PREF_TOOLBAR_KEYS_ALIGNMENT, R.string.toolbar_keys_alignment, R.string.toolbar_keys_alignment_summary) { setting ->
             val items = listOf(
-                stringResource(R.string.clipboard_keys_alignment_left) to "left",
-                stringResource(R.string.clipboard_keys_alignment_center) to "center",
-                stringResource(R.string.clipboard_keys_alignment_right) to "right"
+                stringResource(R.string.toolbar_keys_alignment_left) to "left",
+                stringResource(R.string.toolbar_keys_alignment_center) to "center",
+                stringResource(R.string.toolbar_keys_alignment_right) to "right"
             )
             ListPreference(
                 setting,
                 items,
-                Defaults.PREF_CLIPBOARD_KEYS_ALIGNMENT
+                Defaults.PREF_TOOLBAR_KEYS_ALIGNMENT
             ) {
                 KeyboardSwitcher.getInstance().setThemeNeedsReload()
             }

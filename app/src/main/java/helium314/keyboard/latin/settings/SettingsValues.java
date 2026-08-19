@@ -147,6 +147,7 @@ public class SettingsValues {
         public final boolean mToolbarHidingGlobal;
         public final boolean mSplitToolbar;
         public final boolean mAutoSpanToolbarKeys;
+        public final String mToolbarKeysAlignment;
         public final String mClipboardKeysAlignment;
         public final boolean mShowDownloadButtonInToolbar;
         public final boolean mAutoShowToolbar;
@@ -225,7 +226,9 @@ public class SettingsValues {
                                 Defaults.PREF_TOOLBAR_HIDING_GLOBAL);
                 mSplitToolbar = prefs.getBoolean(Settings.PREF_SPLIT_TOOLBAR, Defaults.PREF_SPLIT_TOOLBAR);
                 mAutoSpanToolbarKeys = prefs.getBoolean(Settings.PREF_AUTO_SPAN_TOOLBAR_KEYS, Defaults.PREF_AUTO_SPAN_TOOLBAR_KEYS);
-                mClipboardKeysAlignment = prefs.getString(Settings.PREF_CLIPBOARD_KEYS_ALIGNMENT, Defaults.PREF_CLIPBOARD_KEYS_ALIGNMENT);
+                mToolbarKeysAlignment = prefs.getString(Settings.PREF_TOOLBAR_KEYS_ALIGNMENT,
+                                prefs.getString(Settings.PREF_CLIPBOARD_KEYS_ALIGNMENT, Defaults.PREF_TOOLBAR_KEYS_ALIGNMENT));
+                mClipboardKeysAlignment = mToolbarKeysAlignment;
                 mShowDownloadButtonInToolbar = prefs.getBoolean(Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR,
                                 Defaults.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR);
                 mAutoCap = prefs.getBoolean(Settings.PREF_AUTO_CAP, Defaults.PREF_AUTO_CAP)

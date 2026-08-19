@@ -1259,7 +1259,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val isToolbarVisible = toolbarContainer.isVisible && (isExpanded || isSplit)
         val useEqualSpacing = isAutoSpan && isToolbarVisible && containerWidth > 0 && totalKeysWidth <= containerWidth
 
-        (toolbar as? LinearLayout)?.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else Gravity.END
+        val alignmentGravity = when (Settings.getValues().mToolbarKeysAlignment) {
+            "left" -> Gravity.START or Gravity.CENTER_VERTICAL
+            "center" -> Gravity.CENTER
+            else -> Gravity.END or Gravity.CENTER_VERTICAL
+        }
+        (toolbar as? LinearLayout)?.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else alignmentGravity
 
         for (i in 0 until count) {
             val child = toolbar.getChildAt(i) ?: continue
