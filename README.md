@@ -8,17 +8,17 @@
 
 <div align="center">
 
-[![Latest Release](https://img.shields.io/github/v/release/LeanBitLab/HeliboardL?style=flat-square&color=6366f1&label=Release)](https://github.com/LeanBitLab/HeliboardL/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/LeanBitLab/HeliboardL/total?style=flat-square&color=10b981&label=Downloads)](https://github.com/LeanBitLab/HeliboardL/releases)
-[![Stars](https://img.shields.io/github/stars/LeanBitLab/HeliboardL?style=flat-square&color=f59e0b&label=Stars)](https://github.com/LeanBitLab/HeliboardL/stargazers)
+[![Latest Release](https://img.shields.io/github/v/release/LeanBitLab/HeliboardL?style=flat-square&color=4f46e5&label=Release)](https://github.com/LeanBitLab/HeliboardL/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/LeanBitLab/HeliboardL/total?style=flat-square&color=059669&label=Downloads)](https://github.com/LeanBitLab/HeliboardL/releases)
+[![Stars](https://img.shields.io/github/stars/LeanBitLab/HeliboardL?style=flat-square&color=d97706&label=Stars)](https://github.com/LeanBitLab/HeliboardL/stargazers)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
-[![Sponsor](https://img.shields.io/badge/Sponsor-LeanBitLab-ff69b4?style=flat-square&logo=github)](https://github.com/sponsors/LeanBitLab)
-[![Donate on Open Collective](https://img.shields.io/badge/Donate-Open_Collective-2979ff?style=flat-square&logo=opencollective&logoColor=white)](https://opencollective.com/leanbitlab-org)
+[![Sponsor](https://img.shields.io/badge/Sponsor-LeanBitLab-db2777?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/LeanBitLab)
+[![Donate on Open Collective](https://img.shields.io/badge/Donate-Open_Collective-1f6feb?style=flat-square&logo=opencollective&logoColor=white)](https://opencollective.com/leanbitlab-org)
 
 **A private, smart, and deeply customizable open-source Android keyboard.**  
 *Forked from [HeliBoard](https://github.com/Helium314/HeliBoard) / OpenBoard / AOSP LatinIME.*
 
-[Download APKs](#-download) • [Flavor Comparison](#-flavor-comparison) • [Features](#-features) • [Setup Guide](#-setup-guide) • [Ecosystem](#-ecosystem--plugins)
+[Download APKs](#-download) • [Flavor Comparison](#-flavor-comparison) • [Features](#-features) • [Setup Guide](#-setup-guide) • [Ecosystem](#-ecosystem--plugins) • [Other Projects](https://github.com/LeanBitLab#-android-projects)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ## 🚀 Overview
 
-**LeanType** combines the trusted, lightweight, privacy-focused foundation of HeliBoard with modern productivity features: **Multi-Provider Cloud & Offline AI proofreading**, **On-Device Whisper Voice Typing**, **Handwriting Recognition**, **Smart Toolbar Auto-Spanning**, **Built-in Self-Updater**, and **Rich Text Tools**—while keeping you in complete control over your data.
+**LeanType** combines the trusted, lightweight, privacy-focused foundation of HeliBoard with modern productivity features: Multi-Provider Cloud, Self-Hosted & Offline AI proofreading, On-Device Whisper Voice Typing, Handwriting Recognition, Smart Toolbar Auto-Spanning, Built-in Self-Updater, and Rich Text Tools, while keeping you in complete control over your data.
 
 ---
 
@@ -57,10 +57,10 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 ## ✨ Features
 
 ### 🤖 AI Integration & Smart Tools
-- **Multi-Provider Cloud AI**: Integrated proofreading, grammar correction, and text rewriting powered by **Google Gemini**, **Groq** (Llama 3.3, Mixtral, DeepSeek), or any **OpenAI-compatible** custom endpoint.
-- **Dynamic Model Fetching**: Automatically fetches and populates the latest available model IDs directly from your provider.
+- **Multi-Provider Cloud & Self-Hosted AI**: Integrated proofreading, grammar correction, and text rewriting powered by **Google Gemini**, **Groq** (Llama 3.3, Mixtral, DeepSeek), **OpenAI**, or any **Self-Hosted local LLM server** (Ollama, LM Studio, LocalAI, vLLM, or custom OpenAI-compatible endpoints).
+- **Dynamic Model Fetching**: Automatically fetches and populates the latest available model IDs directly from your cloud or self-hosted provider.
 - **🛡️ Offline Neural Proofreading (GGUF)**: Run compact, quantized GGUF language models directly on your device via embedded `llama.cpp`—100% private, zero network access (`offline` flavor).
-- **🌐 Dual-Engine In-Keyboard Translation**: Translate text directly into any language. Freely choose between your configured **AI Provider** (Gemini, Groq, OpenAI, or local GGUF) or the high-speed **Google Translation Plugin**, with automatic fallback support.
+- **🌐 Dual-Engine In-Keyboard Translation**: Translate text directly into any language. Freely choose between your configured **AI Provider** (Gemini, Groq, OpenAI, self-hosted LLM, or local GGUF) or the high-speed **Google Translation Plugin**, with automatic fallback support.
 - **🧠 Custom AI Keys & Capsules**: Assign custom prompts, personas (`#editor`, `#proofread`), and themed tag capsules to 10 customizable toolbar keys.
 
 ### 🎙️ Voice & Handwriting Input
@@ -131,11 +131,12 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 
 ## 🛠️ Setup Guide
 
-### 1. Cloud AI Setup (Gemini / Groq / OpenAI)
-1. Obtain an API key from [Google AI Studio](https://aistudio.google.com/apikey) or [Groq Console](https://console.groq.com/keys).
-2. Open **Settings → AI Integration → Set AI Provider**.
-3. Select your provider, paste your API token, and pick your preferred model and target language.
-4. 👉 **[Read the Full AI & Prompts Guide](docs/FEATURES.md)**
+### 1. Cloud & Self-Hosted AI Setup (Gemini / Groq / OpenAI / Ollama)
+1. **Cloud API**: Obtain an API key from [Google AI Studio](https://aistudio.google.com/apikey) or [Groq Console](https://console.groq.com/keys).
+2. **Self-Hosted AI**: Run [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/), or [LocalAI](https://localai.io/) on your local network (e.g. `http://192.168.1.100:11434/v1`).
+3. Open **Settings → AI Integration → Set AI Provider**.
+4. Select your provider (or choose **Custom (OpenAI-compatible)** for self-hosted instances), enter your endpoint URL/token, and choose your preferred model and target language.
+5. 👉 **[Read the Full AI & Prompts Guide](docs/FEATURES.md)**
 
 ### 2. Voice Input Setup (Whisper AI)
 1. Install the companion [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin/releases/latest).
@@ -170,6 +171,13 @@ Expand LeanType with official companion plugins:
 
 ---
 
+## 📱 More Android Projects by LeanBitLab
+
+Discover our complete suite of privacy-first, open-source Android applications and utilities:  
+👉 **[Explore All LeanBitLab Android Projects](https://github.com/LeanBitLab#-android-projects)**
+
+---
+
 ## 🤝 Community & Contributing
 
 - **Bug Reports & Feature Requests**: [Open a GitHub Issue](https://github.com/LeanBitLab/HeliboardL/issues)
@@ -187,11 +195,11 @@ If LeanType improves your daily typing workflow, please consider sponsoring our 
 
 <div align="left">
   <a href="https://github.com/sponsors/LeanBitLab">
-    <img src="https://img.shields.io/static/v1?label=Sponsor%20on%20GitHub&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86" height="38" alt="Sponsor LeanBitLab on GitHub"/>
+    <img src="https://img.shields.io/static/v1?label=Sponsor%20on%20GitHub&message=%E2%9D%A4&logo=GitHub&color=%23db2777" height="38" alt="Sponsor LeanBitLab on GitHub"/>
   </a>
   &nbsp;&nbsp;
   <a href="https://opencollective.com/leanbitlab-org">
-    <img src="https://img.shields.io/static/v1?label=Donate%20on&message=Open%20Collective&logo=opencollective&logoColor=white&color=%232979ff" height="38" alt="Donate to LeanBitLab on Open Collective"/>
+    <img src="https://img.shields.io/static/v1?label=Donate%20on&message=Open%20Collective&logo=opencollective&logoColor=white&color=%231f6feb" height="38" alt="Donate to LeanBitLab on Open Collective"/>
   </a>
 </div>
 
