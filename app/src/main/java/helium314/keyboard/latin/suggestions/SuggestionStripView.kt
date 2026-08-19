@@ -58,6 +58,7 @@ import helium314.keyboard.latin.utils.createToolbarKey
 import helium314.keyboard.latin.utils.setToolbarButtonActivatedState
 import helium314.keyboard.latin.utils.isRepeatableToolbarKey
 import helium314.keyboard.latin.utils.RepeatableKeyTouchListener
+import helium314.keyboard.latin.utils.ResourceUtils
 import helium314.keyboard.latin.utils.dpToPx
 import helium314.keyboard.latin.utils.getCodeForToolbarKey
 import helium314.keyboard.latin.utils.getCodeForToolbarKeyLongClick
@@ -691,6 +692,9 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             || key == Settings.PREF_TOOLBAR_KEYS 
             || key == Settings.PREF_QUICK_PIN_TOOLBAR_KEYS 
             || key == Settings.PREF_AUTO_HIDE_PINNED_KEYS 
+            || key == Settings.PREF_AUTO_SPAN_TOOLBAR_KEYS
+            || key == Settings.PREF_TOOLBAR_KEYS_ALIGNMENT
+            || key == Settings.PREF_CLIPBOARD_KEYS_ALIGNMENT
             || key == Settings.PREF_SPLIT_TOOLBAR
             || key == Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR
             || key == Settings.PREF_CUSTOM_ICON_NAMES
@@ -1247,17 +1251,36 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val count = toolbar.childCount
         if (count == 0) return
         val singleKeyWidth = keyDimension
+
+        val visibleCount = (0 until count).count {
+            val child = toolbar.getChildAt(it)
+            child != null && child.visibility != View.GONE
+        }
+        if (visibleCount == 0) return
+
+        val keyboardWidth = ResourceUtils.getKeyboardWidth(context, Settings.getValues())
+        val currentStripWidth = (if (width > 0) width else measuredWidth).takeIf { it > 0 } ?: keyboardWidth
+        val expandKeyWidth = if (toolbarExpandKey.isVisible) {
+            if (toolbarExpandKey.width > 0) toolbarExpandKey.width else keyDimension
+        } else 0
+        val pinnedWidth = if (pinnedKeys.isVisible) {
+            val visiblePinnedCount = (0 until pinnedKeys.childCount).count {
+                val child = pinnedKeys.getChildAt(it)
+                child != null && child.visibility != View.GONE
+            }
+            if (pinnedKeys.width > 0) pinnedKeys.width else (visiblePinnedCount * keyDimension)
+        } else 0
+        val fallbackAvailableWidth = (currentStripWidth - expandKeyWidth - pinnedWidth).coerceAtLeast(0)
+
         val containerWidth = toolbarContainer.width.takeIf { it > 0 }
             ?: toolbarContainer.measuredWidth.takeIf { it > 0 }
-            ?: (width - toolbarExpandKey.width - pinnedKeys.width).takeIf { it > 0 }
-            ?: (measuredWidth - toolbarExpandKey.measuredWidth - pinnedKeys.measuredWidth).takeIf { it > 0 }
-            ?: (resources.displayMetrics.widthPixels - singleKeyWidth * 2)
-        val totalKeysWidth = count * singleKeyWidth
+            ?: fallbackAvailableWidth
 
         val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
         val isSplit = Settings.getValues().mSplitToolbar
         val isToolbarVisible = toolbarContainer.isVisible && (isExpanded || isSplit)
-        val useEqualSpacing = isAutoSpan && isToolbarVisible && containerWidth > 0 && totalKeysWidth <= containerWidth
+        val canSpan = containerWidth > 0 && (containerWidth / visibleCount.toFloat() >= singleKeyWidth * 1.05f)
+        val useEqualSpacing = isAutoSpan && isToolbarVisible && canSpan
 
         val alignmentGravity = when (Settings.getValues().mToolbarKeysAlignment) {
             "left" -> Gravity.START or Gravity.CENTER_VERTICAL
@@ -1266,10 +1289,15 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
         (toolbar as? LinearLayout)?.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else alignmentGravity
 
+        val spannedLayoutParams = LinearLayout.LayoutParams(0, singleKeyWidth, 1f).apply {
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
         for (i in 0 until count) {
             val child = toolbar.getChildAt(i) ?: continue
+            if (child.visibility == View.GONE) continue
             child.layoutParams = if (useEqualSpacing) {
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+                spannedLayoutParams
             } else {
                 toolbarKeyLayoutParams
             }
