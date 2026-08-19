@@ -1258,18 +1258,19 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
         if (visibleCount == 0) return
 
-        val keyboardWidth = ResourceUtils.getKeyboardWidth(context, Settings.getValues())
-        val currentStripWidth = (if (width > 0) width else measuredWidth).takeIf { it > 0 } ?: keyboardWidth
-        val expandKeyWidth = if (toolbarExpandKey.isVisible) {
+        val isSplit = Settings.getValues().mSplitToolbar
+        val hasExpandKey = Settings.getValues().mToolbarMode == ToolbarMode.EXPANDABLE && !isSplit
+        val expandKeyWidth = if (hasExpandKey) {
             if (toolbarExpandKey.width > 0) toolbarExpandKey.width else keyDimension
         } else 0
-        val pinnedWidth = if (pinnedKeys.isVisible) {
-            val visiblePinnedCount = (0 until pinnedKeys.childCount).count {
-                val child = pinnedKeys.getChildAt(it)
-                child != null && child.visibility != View.GONE
-            }
-            if (pinnedKeys.width > 0) pinnedKeys.width else (visiblePinnedCount * keyDimension)
+
+        val pinnedCount = if (!Settings.getValues().mAutoHidePinnedKeys && !isSplit) {
+            getPinnedToolbarKeys(context.prefs()).size
         } else 0
+        val pinnedWidth = if (pinnedKeys.width > 0) pinnedKeys.width else (pinnedCount * keyDimension)
+
+        val keyboardWidth = ResourceUtils.getKeyboardWidth(context, Settings.getValues())
+        val currentStripWidth = (if (width > 0) width else measuredWidth).takeIf { it > 0 } ?: keyboardWidth
         val fallbackAvailableWidth = (currentStripWidth - expandKeyWidth - pinnedWidth).coerceAtLeast(0)
 
         val containerWidth = toolbarContainer.width.takeIf { it > 0 }
@@ -1277,9 +1278,9 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             ?: fallbackAvailableWidth
 
         val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
-        val isSplit = Settings.getValues().mSplitToolbar
         val isToolbarVisible = toolbarContainer.isVisible && (isExpanded || isSplit)
-        val canSpan = containerWidth > 0 && (containerWidth / visibleCount.toFloat() >= singleKeyWidth * 1.05f)
+        val minSpannedKeyWidth = (singleKeyWidth * 1.25f).toInt()
+        val canSpan = containerWidth > 0 && (containerWidth / visibleCount >= minSpannedKeyWidth)
         val useEqualSpacing = isAutoSpan && isToolbarVisible && canSpan
 
         val alignmentGravity = when (Settings.getValues().mToolbarKeysAlignment) {
