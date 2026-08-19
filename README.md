@@ -58,7 +58,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 - **Multi-Provider Cloud AI**: Integrated proofreading, grammar correction, and text rewriting powered by **Google Gemini**, **Groq** (Llama 3.3, Mixtral, DeepSeek), or any **OpenAI-compatible** custom endpoint.
 - **Dynamic Model Fetching**: Automatically fetches and populates the latest available model IDs directly from your provider.
 - **🛡️ Offline Neural Proofreading (GGUF)**: Run compact, quantized GGUF language models directly on your device via embedded `llama.cpp`—100% private, zero network access (`offline` flavor).
-- **🌐 AI Translation**: Select text and translate it instantly to any target language with dedicated model selection.
+- **🌐 In-Keyboard Translation**: Translate text instantly using Cloud AI providers, Offline GGUF models, or the dedicated [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin).
 - **🧠 Custom AI Keys & Capsules**: Assign custom prompts, personas (`#editor`, `#proofread`), and themed tag capsules to 10 customizable toolbar keys.
 
 ### 🎙️ Voice & Handwriting Input
@@ -141,11 +141,15 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 3. Download or import your preferred Distil-Whisper model (e.g. *Distil-Whisper Small English* ~35 MB).
 4. Tap the microphone icon on the keyboard toolbar to start typing with your voice!
 
-### 3. Gesture Typing Setup
+### 3. Translation Plugin Setup
+1. In LeanType, open **Settings → Text correction → Translation method → Translation Plugin**.
+2. Download or import the [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) APK for fast, dedicated translation without separate API keys.
+
+### 4. Gesture Typing Setup
 1. In the `standard` and `standardfull` builds, open **Settings → Gesture typing** to download the gesture library automatically.
 2. In `offline` builds, [download the library manually](https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs) and load it via *Settings → Gesture typing → Load gesture library*.
 
-### 4. Offline AI Setup (GGUF Models)
+### 5. Offline AI Setup (GGUF Models)
 1. Download a compatible GGUF model (such as `Qwen2.5-0.5B-Instruct-Q4_K_M.gguf` or `Llama-3.2-1B-Instruct-Q4_K_M.gguf`).
 2. In LeanType (`offline` build), navigate to **Settings → Advanced → GGUF Model (.gguf)** and select the file from your local storage.
 
@@ -158,6 +162,7 @@ Expand LeanType with official companion plugins:
 | Plugin | Repository | Description |
 | :--- | :--- | :--- |
 | 🎙️ **Voice Plugin** | [LeanBitLab/Leantype-Voice-Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin) | On-device Distil-Whisper speech-to-text engine |
+| 🌐 **Translation Plugin** | [LeanBitLab/LeanType-Translation-Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin) | Dedicated on-device translation provider engine |
 | ✍️ **Handwriting Plugin** | [LeanBitLab/Leantype-Handwriting-Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) | ML Kit Digital Ink canvas recognition engine |
 | 🎨 **Community Themes** | [GitHub: `leantype-theme`](https://github.com/topics/leantype-theme) | Browse and share custom color themes |
 
