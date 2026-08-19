@@ -64,7 +64,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 - **🧠 Custom AI Keys & Capsules**: Assign custom prompts, personas (`#editor`, `#proofread`), and themed tag capsules to 10 customizable toolbar keys.
 
 ### 🎙️ Voice & Handwriting Input
-- **On-Device Whisper Voice Typing**: High-accuracy speech recognition powered by compact quantized **Distil-Whisper models** via the [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin).
+- **On-Device Whisper Voice Typing**: High-accuracy speech recognition powered by compact quantized **Whisper models** via the [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin).
 - **Interactive Voice Toolbar**: Real-time waveform audio visualizer, silence detection sensitivity slider, and background keep-alive options.
 - **✍️ Handwriting Recognition**: Draw characters or words directly on an expansive writing canvas using the [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (`standardfull` flavor).
 
@@ -140,7 +140,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 ### 2. Voice Input Setup (Whisper AI)
 1. Install the companion [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin/releases/latest).
 2. Open **Settings → Voice typing → Whisper Speech Models**.
-3. Download or import your preferred Distil-Whisper model (e.g. *Distil-Whisper Small English* ~35 MB).
+3. Download or import your preferred Whisper model (e.g. *Whisper Tiny / Base English* ~35–75 MB).
 4. Tap the microphone icon on the keyboard toolbar to start typing with your voice!
 
 ### 3. Translation Plugin Setup
@@ -163,7 +163,7 @@ Expand LeanType with official companion plugins:
 
 | Plugin | Repository | Description |
 | :--- | :--- | :--- |
-| 🎙️ **Voice Plugin** | [LeanBitLab/Leantype-Voice-Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin) | On-device Distil-Whisper speech-to-text engine |
+| 🎙️ **Voice Plugin** | [LeanBitLab/Leantype-Voice-Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin) | On-device Whisper speech-to-text engine |
 | 🌐 **Translation Plugin** | [LeanBitLab/LeanType-Translation-Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin) | Dedicated on-device translation provider engine |
 | ✍️ **Handwriting Plugin** | [LeanBitLab/Leantype-Handwriting-Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) | ML Kit Digital Ink canvas recognition engine |
 | 🎨 **Community Themes** | [GitHub: `leantype-theme`](https://github.com/topics/leantype-theme) | Browse and share custom color themes |
@@ -202,7 +202,7 @@ If LeanType improves your daily typing workflow, please consider sponsoring our 
 - **[HeliBoard](https://github.com/Helium314/HeliBoard)** by Helium314 — the foundational keyboard project
 - **[OpenBoard](https://github.com/openboard-team/openboard)** & **[AOSP LatinIME](https://android.googlesource.com/platform/packages/inputmethods/LatinIME/)**
 - **[llama.cpp](https://github.com/ggerganov/llama.cpp)** & **[llamacpp-kotlin](https://github.com/ljcamargo/llamacpp-kotlin)** — on-device local LLM execution
-- **[whisper.cpp](https://github.com/ggerganov/whisper.cpp)** & **[Distil-Whisper](https://github.com/huggingface/distil-whisper)** — on-device speech recognition
+- **[whisper.cpp](https://github.com/ggerganov/whisper.cpp)** — on-device speech recognition
 - All [contributors](https://github.com/LeanBitLab/HeliboardL/graphs/contributors) and open-source supporters!
 
 ---
