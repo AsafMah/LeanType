@@ -38,7 +38,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 | **Target Audience** | **Recommended** for full feature set | F-Droid / 100% Pure FOSS users | Privacy purists wanting **Local AI** | Minimalists wanting **Zero AI** |
 | **Cloud AI** *(Gemini, Groq, OpenAI)* | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
 | **Offline AI** *(Local GGUF via llama.cpp)* | ❌ No | ❌ No | ✅ **Yes** | ❌ No |
-| **Translation** *(Google / Plugin / Cloud)* | ✅ **Yes** | ✅ **Yes** | ⚙️ Offline GGUF only | ❌ No |
+| **Translation Engine** | ✅ **AI or Google Plugin**<br>*(User Choice / Auto fallback)* | ✅ **AI or Google Plugin**<br>*(User Choice / Auto fallback)* | ⚙️ **Offline GGUF only** | ❌ No |
 | **Voice Typing** *(On-device Whisper)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* |
 | **Handwriting Input** *(ML Kit)* | ✅ **Yes** *(via plugin)* | ❌ No *(Proprietary-free)* | ❌ No | ❌ No |
 | **In-App Self-Updater** | ✅ **Yes** *(GitHub Releases)* | ❌ No *(F-Droid managed)* | ❌ No | ❌ No |
@@ -59,7 +59,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 - **Multi-Provider Cloud AI**: Integrated proofreading, grammar correction, and text rewriting powered by **Google Gemini**, **Groq** (Llama 3.3, Mixtral, DeepSeek), or any **OpenAI-compatible** custom endpoint.
 - **Dynamic Model Fetching**: Automatically fetches and populates the latest available model IDs directly from your provider.
 - **🛡️ Offline Neural Proofreading (GGUF)**: Run compact, quantized GGUF language models directly on your device via embedded `llama.cpp`—100% private, zero network access (`offline` flavor).
-- **🌐 In-Keyboard Translation**: Translate text instantly using Cloud AI providers, Offline GGUF models, or the dedicated [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin).
+- **🌐 Dual-Engine In-Keyboard Translation**: Translate text directly into any language. Freely choose between your configured **AI Provider** (Gemini, Groq, OpenAI, or local GGUF) or the high-speed **Google Translation Plugin**, with automatic fallback support.
 - **🧠 Custom AI Keys & Capsules**: Assign custom prompts, personas (`#editor`, `#proofread`), and themed tag capsules to 10 customizable toolbar keys.
 
 ### 🎙️ Voice & Handwriting Input
