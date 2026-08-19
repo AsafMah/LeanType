@@ -72,17 +72,17 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 - **👆 Gesture / Glide Typing**: Smooth swipe typing powered by native C++ libraries (`libjni_latinime.so`).
 - **📐 Smart Auto-Spanning Toolbar**: Dynamically expands and balances toolbar keys symmetrically to prevent awkward gaps across portrait, landscape, and tablet widths.
 - **🧭 Dedicated Text Editing Panel**: Gboard-style precision DPAD arrow navigation, selection mode (Shift + arrows), select word, select all, and editing shortcuts.
-- **🖱️ Touchpad Mode**: Swipe up on the spacebar to control the cursor freely across the screen, including full-screen laptop-style touchpad mode.
+- **🖱️ Touchpad Mode & Sliding Input**: Swipe up on the spacebar for laptop-style touchpad mode; slide seamlessly from `?123` Symbols, `Emoji`, or `Clipboard` keys to insert items on release.
 - **🪟 Floating & Resizable Keyboard**: Detach into a moveable floating window with persistent positioning for multitasking.
 - **⌨️ Dual Toolbar / Split Suggestions**: Option to split suggestions from the quick-action toolbar.
 - **🎨 Custom Layout Profiles**: Save up to 5 custom layout profiles with persistent slot index tracking.
 - **⌨️ Direct Switch Target IME**: Bind keycode `-10076` to any toolbar key to switch directly to a specific target keyboard (e.g. Japanese, Korean, or Chinese IME).
 
 ### 📋 Clipboard & Productivity
-- **🔍 Searchable Clipboard History**: Search through copied snippets in real-time, fold pinned items by default, and enjoy timed swipe-to-delete undo protection.
+- **🔍 Smart Clipboard History & Inline Editing**: Search clips in real-time, swipe right to edit text directly in the toolbar with full gesture cursor/deletion, swipe left to delete with 5s undo, and fold pinned items.
 - **📸 Screenshot Suggestions**: Detects recently taken screenshots and offers instant 1-tap sharing via the suggestion strip or clipboard history.
 - **📝 Text Expander**: Built-in shortcut expansion with dynamic variables (`%date%`, `%time%`, `%clipboard%`, `%cursor%`, custom placeholders).
-- **✉️ Auto-Read OTP**: Automatically extracts and suggests one-time verification codes from incoming SMS notifications.
+- **✉️ Privacy-First OTP Auto-Fill**: Notification-based OTP verification code detection without sensitive SMS permissions, with customizable messaging app selection.
 - **📚 Smart Learning & Session Boost**: Adaptive personal dictionary learning threshold (1 to 5 times) and dynamic session word boosting.
 - **🚫 Blacklist & Regex Filtering**: Filter offensive words or unwanted suggestions with custom regex pattern support.
 - **🔄 Google Dictionary Import**: Seamlessly import personal dictionary words exported from Gboard.

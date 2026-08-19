@@ -21,11 +21,11 @@ LeanType combines a lightweight, privacy-focused keyboard foundation with cuttin
 | 🪟 **[Floating & Resizable Keyboard](#10-floating--resizable-keyboard)** | Draggable, resizable floating keyboard window |
 | ⌨️ **[Dual Toolbar & Split Suggestions](#11-dual-toolbar--split-suggestions)** | Split toolbar actions and word suggestions into separate rows |
 | 📝 **[Text Expander](#12-text-expander)** | Shortcut expansion with dynamic template placeholders |
-| 📋 **[Searchable Clipboard & Undo](#13-searchable-clipboard--undo)** | Search history, fold pinned items, and timed swipe-to-delete undo |
+| 📋 **[Searchable Clipboard, Editing & Gestures](#13-searchable-clipboard-editing--gestures)** | Real-time search, swipe-to-edit inline, swipe-to-delete undo, pinned folding, and sliding select |
 | 📸 **[Screenshot Suggestions & Capture](#14-screenshot-suggestions--capture)** | Recent screenshot suggestion strip and clipboard storage |
 | 🔎 **[Emoji Search](#15-emoji-search)** | Search for emojis by keyword with an Emoji Dictionary |
 | 🚫 **[Blocked Words & Regex Blacklist](#16-blocked-words--regex-blacklist)** | Filter out offensive or unwanted words using custom regex patterns |
-| ✉️ **[Auto-Read OTP](#17-auto-read-otp)** | Automatically extracts and suggests OTP codes from SMS notifications |
+| ✉️ **[Privacy-First OTP Auto-Fill](#17-privacy-first-otp-auto-fill)** | Notification-based OTP extraction from messaging apps without SMS permissions |
 | 📚 **[Adaptive Personal Dictionary Learning](#18-adaptive-personal-dictionary-learning)** | Customizable repeat learning thresholds & session word boosting |
 | 👆 **[Gesture / Glide Typing](#19-gesture--glide-typing)** | Smooth swipe typing powered by native C++ library |
 | ⌨️ **[Direct Switch Target IME](#20-direct-switch-target-ime)** | Switch directly to a specific target keyboard with keycode `-10076` |
@@ -44,18 +44,18 @@ LeanType combines a lightweight, privacy-focused keyboard foundation with cuttin
 | **Offline Proofreading (GGUF)** | Zero-network, on-device neural proofreading powered by embedded `llama.cpp`. | `Advanced > GGUF Model (.gguf)` |
 | **Dual-Engine Translation** | Translate selected text via Cloud AI or dedicated Translation Plugin with auto-fallback. | `AI Integration / Text correction > Translation method` |
 | **Whisper Voice Typing** | On-device speech-to-text with quantized multilingual Whisper models and audio visualizer. | `Voice typing > Whisper Speech Models` |
-| **Handwriting Recognition** | Draw characters on a dedicated canvas (Standard Full flavor via Handwriting Plugin). | `Libraries > Handwriting Input Plugin` |
+| **Handwriting Recognition** | Draw characters on a dedicated canvas with independent language selection (Standard Full flavor). | `Libraries > Handwriting Input Plugin` |
 | **Text Editing Panel** | Precision DPAD arrow navigation, Shift selection mode, and clipboard shortcuts. | Toolbar > Text Editing Icon |
 | **Auto-Spanning Toolbar** | Dynamically expands and balances toolbar keys symmetrically across device widths. | `Appearance > Toolbar auto-spacing` |
-| **Touchpad Mode** | Swipe up on Spacebar to activate full cursor control and laptop-style touchpad gestures. | `Gesture typing > Vertical spacebar swipe` |
+| **Touchpad Mode & Sliding Gestures** | Spacebar swipe touchpad mode, plus "Touch -> Slide -> Select" on Symbols, Emoji, and Clipboard keys. | `Gesture typing > Vertical spacebar swipe` |
 | **Floating Keyboard** | Detach keyboard into a draggable, resizable window with persistent positioning. | Toolbar > Floating Keyboard |
 | **Split Toolbar & Suggestions** | Separates suggestions from the toolbar into a dual-row view. | `Appearance > Split toolbar & suggestions` |
 | **Text Expander** | Expand custom shortcuts using dynamic placeholders (`%date%`, `%time%`, `%clipboard%`, `%cursor%`). | `Text correction > Text Expander` |
-| **Searchable Clipboard** | Real-time clipboard search, fold pinned items by default, and timed swipe-to-delete undo. | Clipboard Toolbar > Search Icon |
+| **Clipboard History & Inline Edit** | Search history, swipe-right to edit inline, swipe-left to delete with undo, fold pinned clips, and slide-select. | Clipboard Toolbar > Search / Swipe items |
 | **Screenshot Suggestions** | Instant 1-tap sharing of recently taken screenshots via the suggestion strip. | `Text correction > Suggest recent screenshots` |
 | **Emoji Search** | Search emojis by name/keyword directly from the emoji palette. | `Emoji Key > Search Icon` |
 | **Blocked Words Blacklist** | Prevent unwanted words from being suggested with regex pattern matching. | `Text correction > Blocked words blacklist` |
-| **Auto-Read OTP** | Extracts and suggests verification OTP codes from incoming SMS notifications. | `Text correction > Suggest OTP from SMS` |
+| **Privacy-First OTP Auto-Fill** | Extracts OTP verification codes from incoming notifications with app package selector. | `Text correction > OTP Auto-Fill` |
 | **Smart Learning & Boost** | Adjustable personal dictionary learning threshold (1-5 times) and temporary session word boost. | `Text correction > Dictionary learning threshold` |
 | **Gesture Typing** | Swipe typing powered by native C++ spatial scoring engine. | `Gesture typing > Enable gesture typing` |
 | **Direct Switch Target IME** | Fast 1-tap switching to another configured IME using custom keycode `-10076`. | `Preferences > Direct Switch Target IME` |
@@ -173,8 +173,9 @@ Draw letters, words, or symbols directly on a handwriting recognition canvas usi
 ### Setup Instructions
 1. Open **Settings → Libraries → Handwriting Input Plugin**.
 2. Tap **Download** to install the companion [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin).
-3. Tap the **Handwriting (Pencil)** icon on the keyboard toolbar to open the drawing canvas.
-4. Draw characters naturally—the handwriting engine transcribes strokes into text in real-time.
+3. Select your preferred **Handwriting recognition language** (e.g. English, Chinese, Devanagari, Japanese, etc.), independent of your active keyboard typing language.
+4. Tap the **Handwriting (Pencil)** icon on the keyboard toolbar to open the drawing canvas.
+5. Draw characters naturally—the handwriting engine transcribes strokes into text in real-time.
 
 ---
 
@@ -204,7 +205,7 @@ Turn the entire keyboard space into a fluid laptop-style trackpad:
 - **Activate via Swipe**: Swipe up on the **Spacebar** to toggle Touchpad Mode.
 - **Activate via Toolbar**: Tap the **Touchpad** icon in the toolbar.
 
-### Gestures Guide
+### Trackpad Gestures
 - **1-Finger Drag**: Smooth, pixel-perfect cursor movement.
 - **1-Finger Double Tap**: Selects the word under the cursor.
 - **1-Finger Long Press & Drag**: Starts continuous text selection.
@@ -213,6 +214,11 @@ Turn the entire keyboard space into a fluid laptop-style trackpad:
 - **2-Finger Tap**: Inserts a space.
 - **2-Finger Double Tap**: Copies selected text (or Pastes if nothing is selected).
 - **2-Finger Long Press**: Continuous backspace deletion.
+
+### 👆 Touch → Slide → Select (Symbols, Emoji & Clipboard)
+- **Symbol Key (`?123`)**: Touch down on the `?123` key, slide your finger to any symbol, and release to insert it and return instantly to the alphabet layout.
+- **Emoji Key (`😊`) & Clipboard Key (`📋`)**: Hold the Emoji or Clipboard key, slide your finger into the opened palette or clipboard list, and release on any item to insert/paste it immediately.
+- **Dynamic Edge Auto-Scrolling**: Holding your finger near the top or bottom 15% edges during sliding selection smoothly scrolls through long lists.
 
 ---
 
@@ -253,11 +259,19 @@ Define custom abbreviations that instantly expand into rich text templates with 
 
 ---
 
-## 13. Searchable Clipboard & Undo
+## 13. Searchable Clipboard, Editing & Gestures
 
-- **Real-Time Search**: Search through stored clipboard history directly from the clipboard toolbar.
-- **Swipe-to-Delete with Undo**: Swiping away a snippet displays a timed undo bar to restore accidental deletions.
-- **Fold Pinned Items**: Optionally keep pinned snippets collapsed to maximize viewing area for recent clips.
+LeanType features a comprehensive, privacy-first clipboard manager with rich gestural editing:
+
+- **🔍 Real-Time Search**: Filter through your entire clipboard history instantly using the inline search bar on the toolbar.
+- **✏️ Swipe-Right Inline Editing**: Swipe right on any clipboard snippet to edit its text directly inside the keyboard toolbar (`[Text│] [✔] [✕]`):
+  - **Tap-to-Position Cursor**: Tap anywhere in the text strip to place the cursor accurately.
+  - **Gesture Support in Edit Buffer**: Swipe on the spacebar to glide the cursor horizontally, or swipe left from Backspace to delete words in the edit strip.
+  - **In-Place Layout Switching**: Toggle `?123` Symbols, `Shift`, and Caps Lock directly on the bottom row without losing your active edit session.
+- **🗑️ Swipe-Left to Delete with Undo**: Swipe left on any clip to remove it, backed by a 5-second timed undo bar to restore accidental deletions.
+- **📌 Pin / Unpin & Folding**: Long-press any snippet to pin it permanently. Enable **Fold pinned items** to keep pinned clips collapsed under an expandable `▶ Pinned (N)` header.
+- **👆 Sliding Clipboard Selection**: Hold the Clipboard key, slide your finger over the desired clip, and release to paste and return to typing immediately.
+- **🖼️ Image & Screenshot History**: Captures and displays copied images and screenshots with rich visual thumbnails.
 
 ---
 
@@ -284,11 +298,12 @@ Prevent offensive, sensitive, or unwanted words from ever appearing in the sugge
 
 ---
 
-## 17. Auto-Read OTP
+## 17. Privacy-First OTP Auto-Fill
 
-- Automatically detects incoming one-time verification codes (OTPs) from SMS notifications.
-- Displays the detected code in the suggestion strip for 1-tap pasting.
-- Enable via **Settings → Text correction → Suggest OTP from SMS**.
+- **Zero SMS Permissions (`RECEIVE_SMS`)**: Uses Android's secure `NotificationListenerService` to parse verification codes directly from incoming notifications without accessing private SMS message stores.
+- **Dynamic Messaging App Selector**: Choose which specific messaging apps (Google Messages, Signal, WhatsApp, Telegram, etc.) LeanType should monitor for OTP codes.
+- **1-Tap Insertion**: Automatically detects OTP codes and offers them in the suggestion strip for instant 1-tap pasting.
+- Manage via **Settings → Text correction → OTP Auto-Fill**.
 
 ---
 
