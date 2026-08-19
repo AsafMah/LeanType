@@ -655,6 +655,17 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             var dictionarySuggestions = dictionary.getSuggestions(composedData, ngramContext, proximityInfoHandle,
                 settingsValuesForSuggestion, sessionId, weightForLocale, weightOfLangModelVsSpatialModel
             )
+            // If next-word suggestions with multi-word ngram context yielded no results (e.g. main/history dict has no 3-gram/4-gram match),
+            // back off to single preceding word (bigram) context.
+            if (composedData.mTypedWord.isEmpty() && (dictionarySuggestions == null || dictionarySuggestions.isEmpty()) && ngramContext.prevWordCount > 1) {
+                val backoffContext = ngramContext.singlePrevWordContext
+                val backoffSuggestions = dictionary.getSuggestions(composedData, backoffContext, proximityInfoHandle,
+                    settingsValuesForSuggestion, sessionId, weightForLocale, weightOfLangModelVsSpatialModel
+                )
+                if (!backoffSuggestions.isNullOrEmpty()) {
+                    dictionarySuggestions = backoffSuggestions
+                }
+            }
             if (composedData.mTypedWord.isEmpty() && (dictionarySuggestions == null || dictionarySuggestions.isEmpty())
                 && dictType == Dictionary.TYPE_USER
             ) {
