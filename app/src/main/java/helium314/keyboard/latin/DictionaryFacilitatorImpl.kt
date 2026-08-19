@@ -374,10 +374,9 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         if (sv.mAddToPersonalDictionary // require the opt-in
             && sv.mAutoCorrectEnabled == sv.mAutoCorrectionEnabledPerUserSettings // don't add if user wants autocorrect but input field does not, see https://github.com/Helium314/HeliBoard/issues/427#issuecomment-1905438000
             && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER_HISTORY) // require personalized suggestions
-            && !wasAutoCapitalized // we can't be 100% sure about what the user intended to type, so better don't add it
             && words.size == 1 // only single words
         ) {
-            addToPersonalDictionaryIfInvalidButInHistory(suggestion)
+            addToPersonalDictionaryIfInvalidButInHistory(suggestion, wasAutoCapitalized)
         }
 
         var ngramContextForCurrentWord = ngramContext
@@ -459,27 +458,53 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         UserHistoryDictionary.addToDictionary(userHistoryDictionary, ngramContext, wordToUse, isValid, timeStampInSeconds)
     }
 
-    private fun addToPersonalDictionaryIfInvalidButInHistory(word: String) {
+    private fun addToPersonalDictionaryIfInvalidButInHistory(word: String, wasAutoCapitalized: Boolean) {
         if (word.length <= 1) return
-        val dictionaryGroup = clearlyPreferredDictionaryGroup ?: return
+        val dictionaryGroup = currentlyPreferredDictionaryGroup
         val userDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER) ?: return
         val userHistoryDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
-        if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup))
+
+        val wordToUse = if (wasAutoCapitalized) {
+            val decapitalized = word.decapitalize(dictionaryGroup.locale)
+            if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
+                && !isValidWord(decapitalized, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
+            ) {
+                word
+            } else {
+                decapitalized
+            }
+        } else {
+            word
+        }
+
+        if (isValidWord(wordToUse, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup))
             return // valid word, no reason to auto-add it to personal dict
-        if (userDict.isInDictionary(word))
+        if (userDict.isInDictionary(wordToUse))
             return // should never happen, but better be safe
 
-        // User history always reports words as invalid, so we check the frequency instead.
-        // Testing shows that after 2 times adding, the frequency is 111, and then rises slowly with usage (values vary slightly).
-        // 120 is after 3 uses of the word, so we simply require more than that. todo: Could be made configurable.
-        // Words added to dictionaries (user and history) seem to be found only after some delay.
-        // This is not too bad, but it delays adding in case a user wants to fill a dictionary using this functionality
-        if (userHistoryDict.getFrequency(word) > 120) {
+        val threshold = Settings.getValues().mAddToPersonalDictThreshold
+        val minRequiredFreq = when (threshold) {
+            1 -> 0
+            2 -> 110 // standard 2nd-use frequency in binary trie
+            3 -> 120 // 3rd-use
+            4 -> 130 // 4th-use
+            else -> 140
+        }
+
+        val canAdd = if (threshold <= 1) {
+            userHistoryDict.isInDictionary(wordToUse) || userHistoryDict.getFrequency(wordToUse) >= 0
+        } else {
+            userHistoryDict.getFrequency(wordToUse) >= minRequiredFreq
+        }
+
+        if (canAdd) {
             scope.launch {
-                // adding can throw IllegalArgumentException: Unknown URL content://user_dictionary/words
-                // https://stackoverflow.com/q/41474623 https://github.com/AnySoftKeyboard/AnySoftKeyboard/issues/490
-                // apparently some devices don't have a dictionary? or it's just sporadic hiccups?
-                runCatching { UserDictionary.Words.addWord(userDict.mContext, word, 250, null, dictionaryGroup.locale) }
+                runCatching {
+                    UserDictionary.Words.addWord(userDict.mContext, wordToUse, 250, null, dictionaryGroup.locale)
+                    Log.i(TAG, "Added word '$wordToUse' to personal dictionary for locale ${dictionaryGroup.locale}")
+                }.onFailure {
+                    Log.w(TAG, "Failed to add word '$wordToUse' to personal dictionary", it)
+                }
             }
         }
     }

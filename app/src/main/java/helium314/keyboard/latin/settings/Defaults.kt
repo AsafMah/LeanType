@@ -206,6 +206,7 @@ object Defaults {
     const val PREF_CLIPBOARD_FOLD_PINNED = false
     const val PREF_CLEAR_CLIPBOARD_ICON = "bin"
     const val PREF_ADD_TO_PERSONAL_DICTIONARY = true
+    const val PREF_ADD_TO_PERSONAL_DICT_THRESHOLD = 2
     @JvmField
     val PREF_NAVBAR_COLOR = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
     const val PREF_NARROW_KEY_GAPS = true

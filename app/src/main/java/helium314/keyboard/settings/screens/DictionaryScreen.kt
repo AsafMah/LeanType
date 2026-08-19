@@ -61,6 +61,7 @@ import helium314.keyboard.settings.previewDark
 import helium314.keyboard.settings.SettingsDestination
 import helium314.keyboard.settings.NextScreenIcon
 import helium314.keyboard.settings.preferences.SwitchPreference
+import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.utils.prefs
@@ -245,38 +246,57 @@ fun DictionaryScreen(
                     ),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .clickable {
-                                val newValue = !personalDictEnabled
-                                personalDictEnabled = newValue
-                                ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, newValue) }
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .clickable {
+                                    val newValue = !personalDictEnabled
+                                    personalDictEnabled = newValue
+                                    ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, newValue) }
+                                }
+                                .padding(all = 16.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                                Text(
+                                    stringResource(R.string.add_to_personal_dictionary),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    stringResource(R.string.add_to_personal_dictionary_summary),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                            .padding(all = 16.dp)
-                            .fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                            Text(
-                                stringResource(R.string.add_to_personal_dictionary),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                stringResource(R.string.add_to_personal_dictionary_summary),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            androidx.compose.material3.Switch(
+                                checked = personalDictEnabled,
+                                onCheckedChange = { 
+                                    personalDictEnabled = it
+                                    ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, it) } 
+                                }
                             )
                         }
-                        androidx.compose.material3.Switch(
-                            checked = personalDictEnabled,
-                            onCheckedChange = { 
-                                personalDictEnabled = it
-                                ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, it) } 
-                            }
-                        )
+                        if (personalDictEnabled) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            SliderPreference(
+                                name = stringResource(R.string.add_to_personal_dict_threshold),
+                                key = Settings.PREF_ADD_TO_PERSONAL_DICT_THRESHOLD,
+                                default = Defaults.PREF_ADD_TO_PERSONAL_DICT_THRESHOLD,
+                                range = 1f..5f,
+                                stepSize = 1,
+                                description = {
+                                    if (it == 1) {
+                                        stringResource(R.string.add_to_personal_dict_threshold_times_1)
+                                    } else {
+                                        stringResource(R.string.add_to_personal_dict_threshold_times_many, it)
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
 
