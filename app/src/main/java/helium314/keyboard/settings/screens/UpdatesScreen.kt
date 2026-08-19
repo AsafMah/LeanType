@@ -473,7 +473,54 @@ fun UpdatesScreen(
                     }
                 }
 
-                // Section 2: Changelog (Current Version Only)
+                // Section 2: Support & Sponsorship
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                            Text(
+                                text = stringResource(R.string.updates_support_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(R.string.updates_support_summary),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Preference(
+                            name = stringResource(R.string.updates_github_sponsor_title),
+                            description = stringResource(R.string.updates_github_sponsor_desc),
+                            icon = R.drawable.ic_settings_about_github,
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Links.SPONSOR.toUri())
+                                context.startActivity(intent)
+                            }
+                        )
+
+                        Preference(
+                            name = stringResource(R.string.updates_opencollective_title),
+                            description = stringResource(R.string.updates_opencollective_desc),
+                            icon = R.drawable.ic_dollar,
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Links.OPEN_COLLECTIVE.toUri())
+                                context.startActivity(intent)
+                            }
+                        )
+                    }
+                }
+
+                // Section 3: Changelog (Current Version Only)
                 var isChangelogExpanded by remember { mutableStateOf(false) }
                 Card(
                     modifier = Modifier
@@ -540,53 +587,6 @@ fun UpdatesScreen(
                                 }
                             }
                         }
-                    }
-                }
-
-                // Section 3: Support & Sponsorship
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            Text(
-                                text = stringResource(R.string.updates_support_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = stringResource(R.string.updates_support_summary),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Preference(
-                            name = stringResource(R.string.updates_github_sponsor_title),
-                            description = stringResource(R.string.updates_github_sponsor_desc),
-                            icon = R.drawable.ic_settings_about_github,
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Links.SPONSOR.toUri())
-                                context.startActivity(intent)
-                            }
-                        )
-
-                        Preference(
-                            name = stringResource(R.string.updates_opencollective_title),
-                            description = stringResource(R.string.updates_opencollective_desc),
-                            icon = R.drawable.ic_dollar,
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Links.OPEN_COLLECTIVE.toUri())
-                                context.startActivity(intent)
-                            }
-                        )
                     }
                 }
 
