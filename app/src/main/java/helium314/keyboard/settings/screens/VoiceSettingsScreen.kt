@@ -343,6 +343,21 @@ fun VoiceSettingsScreen(
         }
     }
 
+    val voiceLanguageItems = remember(context) { buildVoiceLanguageEntries(context) }
+    val voiceLanguageSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_LANGUAGE,
+            title = context.getString(R.string.pref_voice_language_title)
+        ) {
+            ListPreference(
+                setting = it,
+                items = voiceLanguageItems,
+                default = VoiceConstants.VOICE_LANG_FOLLOW_KEYBOARD,
+                icon = R.drawable.ic_settings_languages
+            )
+        }
+    }
+
     val silenceTimeoutSetting = remember {
         Setting(
             key = VoiceConstants.PREF_VOICE_SILENCE_TIMEOUT_SECONDS,
@@ -546,6 +561,7 @@ fun VoiceSettingsScreen(
                 }
             }
 
+            voiceLanguageSetting.Preference()
             silenceTimeoutSetting.Preference()
 
             // Models section
@@ -593,4 +609,30 @@ fun VoiceSettingsScreen(
             whisperKeepLoadedSetting.Preference()
         }
     }
+}
+
+private val WHISPER_LANGUAGE_CODES = arrayOf(
+    "af", "am", "ar", "as", "az", "ba", "be", "bg", "bn", "bo", "br", "bs", "ca", "cs", "cy", "da",
+    "de", "el", "en", "es", "et", "eu", "fa", "fi", "fo", "fr", "gl", "gu", "ha", "haw", "he", "hi",
+    "hr", "ht", "hu", "hy", "id", "is", "it", "ja", "jw", "ka", "kk", "km", "kn", "ko", "la", "lb",
+    "ln", "lo", "lt", "lv", "mg", "mi", "mk", "ml", "mn", "mr", "ms", "mt", "my", "ne", "nl", "nn",
+    "no", "oc", "pa", "pl", "ps", "pt", "ro", "ru", "sa", "sd", "si", "sk", "sl", "sn", "so", "sq",
+    "sr", "su", "sv", "sw", "ta", "te", "tg", "th", "tk", "tl", "tr", "tt", "uk", "ur", "uz", "vi",
+    "yi", "yo", "yue", "zh"
+)
+
+private fun buildVoiceLanguageEntries(context: android.content.Context): List<Pair<String, String>> {
+    val sysLocale = context.resources.configuration.locales[0]
+    val list = mutableListOf<Pair<String, String>>()
+    list.add(context.getString(R.string.voice_lang_follow_keyboard) to VoiceConstants.VOICE_LANG_FOLLOW_KEYBOARD)
+    list.add(context.getString(R.string.voice_lang_auto_detect) to VoiceConstants.VOICE_LANG_AUTO)
+
+    val langItems = WHISPER_LANGUAGE_CODES.map { code ->
+        val loc = java.util.Locale.forLanguageTag(code)
+        val name = loc.getDisplayName(sysLocale).replaceFirstChar { if (it.isLowerCase()) it.titlecase(sysLocale) else it.toString() }
+        "$name ($code)" to code
+    }.sortedBy { it.first.lowercase(sysLocale) }
+
+    list.addAll(langItems)
+    return list
 }

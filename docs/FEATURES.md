@@ -156,6 +156,7 @@ LeanType integrates high-accuracy, private speech-to-text powered by OpenAI's Wh
 2. Open **Settings → Voice typing → Whisper Speech Models**.
 3. Tap **Download** on your preferred model (e.g. *Multilingual Base* ~57 MB).
 4. Configure voice options:
+   - **Voice Recognition Language**: Choose **Follow keyboard language (Default)**, **Auto-detect spoken language (`auto`)**, or pick from 99+ specific Whisper languages.
    - **Audio Visualizer**: Displays a real-time sound waveform directly on the keyboard toolbar.
    - **Silence Detection**: Configurable auto-stop sensitivity slider.
    - **Keep Model in Memory**: Prevents model reload latency during consecutive voice typing sessions.

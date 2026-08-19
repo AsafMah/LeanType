@@ -474,6 +474,9 @@
     <string name="voice" tools:keep="@string/voice">Voice input</string>
     <string name="offline_voice_title">Offline Voice Input</string>
     <string name="pref_offline_voice_summary">Dictate text offline using local speech models</string>
+    <string name="pref_voice_language_title">Voice Recognition Language</string>
+    <string name="voice_lang_follow_keyboard">Follow keyboard language</string>
+    <string name="voice_lang_auto_detect">Auto-detect spoken language</string>
     <string name="voice_commands_title">Voice Commands</string>
     <string name="voice_commands_summary">Perform editing actions by voice (e.g. \"new line\", \"delete word\", \"clear all\", \"send\")</string>
     <string name="voice_smart_punctuation_title">Smart Spoken Punctuation</string>

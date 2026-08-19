@@ -171,10 +171,18 @@ class VoiceInputManager(
             return
         }
 
-        val languageTag = try {
-            RichInputMethodManager.getInstance().currentSubtypeLocale.toLanguageTag()
-        } catch (_: Exception) {
-            java.util.Locale.getDefault().toLanguageTag()
+        val prefLang = ims.prefs().getString(VoiceConstants.PREF_VOICE_LANGUAGE, VoiceConstants.VOICE_LANG_FOLLOW_KEYBOARD)
+            ?: VoiceConstants.VOICE_LANG_FOLLOW_KEYBOARD
+        val languageTag = when (prefLang) {
+            VoiceConstants.VOICE_LANG_AUTO -> "auto"
+            VoiceConstants.VOICE_LANG_FOLLOW_KEYBOARD, "" -> {
+                try {
+                    RichInputMethodManager.getInstance().currentSubtypeLocale.toLanguageTag()
+                } catch (_: Exception) {
+                    java.util.Locale.getDefault().toLanguageTag()
+                }
+            }
+            else -> prefLang
         }
 
         val config = VoiceSessionConfig(
