@@ -25,7 +25,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -158,7 +161,13 @@ fun SponsorDialog(
                             ),
                             contentPadding = PaddingValues(vertical = 12.dp)
                         ) {
-                            Text("💖", modifier = Modifier.padding(end = 8.dp))
+                            Icon(
+                                painter = painterResource(R.drawable.ic_settings_about_github),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp).padding(end = 6.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Sponsor on GitHub",
                                 fontWeight = FontWeight.Bold
@@ -167,7 +176,7 @@ fun SponsorDialog(
                         
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        androidx.compose.material3.OutlinedButton(
+                        OutlinedButton(
                             onClick = {
                                 if (neverShowAgain)
                                     prefs.edit { putBoolean(Settings.PREF_DONT_SHOW_SPONSOR_DIALOG, true) }
@@ -177,9 +186,15 @@ fun SponsorDialog(
                             shape = RoundedCornerShape(20.dp),
                             contentPadding = PaddingValues(vertical = 12.dp)
                         ) {
-                            Text("🌐", modifier = Modifier.padding(end = 8.dp))
+                            Icon(
+                                painter = painterResource(R.drawable.ic_opencollective),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp).padding(end = 6.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Support on Open Collective",
+                                text = "Donate on Open Collective",
                                 fontWeight = FontWeight.Bold
                             )
                         }

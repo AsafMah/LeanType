@@ -510,7 +510,7 @@ fun UpdatesScreen(
                         Preference(
                             name = stringResource(R.string.updates_opencollective_title),
                             description = stringResource(R.string.updates_opencollective_desc),
-                            icon = R.drawable.ic_dollar,
+                            icon = R.drawable.ic_opencollective,
                             onClick = {
                                 val intent = Intent(Intent.ACTION_VIEW, Links.OPEN_COLLECTIVE.toUri())
                                 context.startActivity(intent)

@@ -1,0 +1,13 @@
+<!--
+    Open Collective Logo
+    SPDX-License-Identifier: MIT
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@color/foreground"
+      android:pathData="M12,0C5.373,0 0,5.373 0,12s5.373,12 12,12c5.074,0 9.387,-3.151 11.082,-7.616 -0.76,0.242 -1.567,0.38 -2.404,0.38 -4.78,0 -8.654,-3.874 -8.654,-8.654 0,-1.897 0.613,-3.652 1.653,-5.083C13.195,0.367 12.607,0 12,0zM22.678,7.236A11.96,11.96 0 0,0 12,0C5.373,0 0,5.373 0,12c0,2.213 0.602,4.288 1.653,6.073A8.63,8.63 0,0,1 12,14.282c4.78,0 8.654,3.874 8.654,8.654 0,0.36 -0.027,0.713 -0.07,1.06C22.613,21.613 24,17.074 24,12c0,-1.72 -0.363,-3.356 -1.022,-4.836z"/>
+</vector>

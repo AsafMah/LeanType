@@ -1167,8 +1167,8 @@ New dictionary:
     <string name="updates_support_summary">LeanType is 100% free, open-source, and independent. Your support directly helps us continue active development!</string>
     <string name="updates_github_sponsor_title">GitHub Sponsors</string>
     <string name="updates_github_sponsor_desc">Sponsor monthly or one-time via GitHub Sponsors</string>
-    <string name="updates_opencollective_title">Open Collective</string>
-    <string name="updates_opencollective_desc">Support our open-source collective and fund development</string>
+    <string name="updates_opencollective_title">Donate on Open Collective</string>
+    <string name="updates_opencollective_desc">Support our open-source development via Open Collective</string>
     <string name="updates_offline_notice">Offline builds do not have internet permission to check for updates automatically.</string>
     <string name="updates_community_title">Community &amp; Socials</string>
     <string name="updates_community_summary">Join our official channels for updates, feedback, and discussions</string>
