@@ -72,7 +72,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 - **👆 Gesture / Glide Typing**: Smooth swipe typing powered by native C++ libraries (`libjni_latinime.so`).
 - **📐 Smart Auto-Spanning Toolbar**: Dynamically expands and balances toolbar keys symmetrically to prevent awkward gaps across portrait, landscape, and tablet widths.
 - **🧭 Dedicated Text Editing Panel**: Gboard-style precision DPAD arrow navigation, selection mode (Shift + arrows), select word, select all, and editing shortcuts.
-- **🖱️ Touchpad Mode & Sliding Input**: Swipe up on the spacebar for laptop-style touchpad mode; slide seamlessly from `?123` Symbols, `Emoji`, or `Clipboard` keys to insert items on release.
+- **🖱️ Touchpad Mode**: Swipe up on the spacebar to control the cursor freely across the screen, including full-screen laptop-style touchpad mode.
 - **🪟 Floating & Resizable Keyboard**: Detach into a moveable floating window with persistent positioning for multitasking.
 - **⌨️ Dual Toolbar / Split Suggestions**: Option to split suggestions from the quick-action toolbar.
 - **🎨 Custom Layout Profiles**: Save up to 5 custom layout profiles with persistent slot index tracking.

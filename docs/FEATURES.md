@@ -47,7 +47,7 @@ LeanType combines a lightweight, privacy-focused keyboard foundation with cuttin
 | **Handwriting Recognition** | Draw characters on a dedicated canvas with independent language selection (Standard Full flavor). | `Libraries > Handwriting Input Plugin` |
 | **Text Editing Panel** | Precision DPAD arrow navigation, Shift selection mode, and clipboard shortcuts. | Toolbar > Text Editing Icon |
 | **Auto-Spanning Toolbar** | Dynamically expands and balances toolbar keys symmetrically across device widths. | `Appearance > Toolbar auto-spacing` |
-| **Touchpad Mode & Sliding Gestures** | Spacebar swipe touchpad mode, plus "Touch -> Slide -> Select" on Symbols, Emoji, and Clipboard keys. | `Gesture typing > Vertical spacebar swipe` |
+| **Touchpad Mode** | Swipe up on Spacebar to activate full cursor control and laptop-style touchpad gestures. | `Gesture typing > Vertical spacebar swipe` |
 | **Floating Keyboard** | Detach keyboard into a draggable, resizable window with persistent positioning. | Toolbar > Floating Keyboard |
 | **Split Toolbar & Suggestions** | Separates suggestions from the toolbar into a dual-row view. | `Appearance > Split toolbar & suggestions` |
 | **Text Expander** | Expand custom shortcuts using dynamic placeholders (`%date%`, `%time%`, `%clipboard%`, `%cursor%`). | `Text correction > Text Expander` |
@@ -214,11 +214,6 @@ Turn the entire keyboard space into a fluid laptop-style trackpad:
 - **2-Finger Tap**: Inserts a space.
 - **2-Finger Double Tap**: Copies selected text (or Pastes if nothing is selected).
 - **2-Finger Long Press**: Continuous backspace deletion.
-
-### 👆 Touch → Slide → Select (Symbols, Emoji & Clipboard)
-- **Symbol Key (`?123`)**: Touch down on the `?123` key, slide your finger to any symbol, and release to insert it and return instantly to the alphabet layout.
-- **Emoji Key (`😊`) & Clipboard Key (`📋`)**: Hold the Emoji or Clipboard key, slide your finger into the opened palette or clipboard list, and release on any item to insert/paste it immediately.
-- **Dynamic Edge Auto-Scrolling**: Holding your finger near the top or bottom 15% edges during sliding selection smoothly scrolls through long lists.
 
 ---
 
