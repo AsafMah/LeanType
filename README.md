@@ -45,7 +45,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 | **Internet Permission** | 🌐 Required *(Opt-in features)* | 🌐 Required *(Opt-in features)* | 🚫 **None** *(OS-level blocked)* | 🚫 **None** *(OS-level blocked)* |
 | **Package ID** | `com.leanbitlab.leantype` | `com.leanbitlab.leantype` | `com.leanbitlab.leantype.offline` | `com.leanbitlab.leantype.offlinelite` |
 | **Min Android Version** | Android 6.0+ *(SDK 23)* | Android 6.0+ *(SDK 23)* | Android 8.0+ *(SDK 26)* | Android 5.0+ *(SDK 21)* |
-| **Approximate APK Size** | ~35 MB | ~25 MB | ~30 MB | ~18 MB |
+| **Approximate APK Size** | **~23 MB** | **~11 MB** | **~67 MB** | **~26 MB** |
 
 > [!TIP]
 > **Side-by-Side Installation**: The `offline` and `offlinelite` flavors use distinct application package IDs, allowing them to be installed **concurrently** with `standardfull` on the same device without conflicts!
