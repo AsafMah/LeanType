@@ -369,16 +369,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         if (words.size == 1) // ignore if more than a single word, which only happens with (badly working) spaceAwareGesture
             adjustConfidences(suggestion, wasAutoCapitalized)
 
-        // Add word to user dictionary if it is in no other dictionary except user history dictionary (i.e. typed again).
-        val sv = Settings.getValues()
-        if (sv.mAddToPersonalDictionary // require the opt-in
-            && sv.mAutoCorrectEnabled == sv.mAutoCorrectionEnabledPerUserSettings // don't add if user wants autocorrect but input field does not, see https://github.com/Helium314/HeliBoard/issues/427#issuecomment-1905438000
-            && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER_HISTORY) // require personalized suggestions
-            && words.size == 1 // only single words
-        ) {
-            addToPersonalDictionaryIfInvalidButInHistory(suggestion, wasAutoCapitalized)
-        }
-
         var ngramContextForCurrentWord = ngramContext
         val preferredGroup = currentlyPreferredDictionaryGroup
         for (i in words.indices) {
@@ -390,13 +380,15 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 wasCurrentWordAutoCapitalized, timeStampInSeconds.toInt(), blockPotentiallyOffensive
             )
             ngramContextForCurrentWord = ngramContextForCurrentWord.getNextNgramContext(WordInfo(currentWord))
+        }
 
-            // ponytail: do not automatically remove blacklisted words from blacklist on type
-            /*
-            dictionaryGroups.filter { it.confidence == preferredGroup.confidence }.forEach {
-                it.removeFromBlacklist(currentWord)
-            }
-            */
+        // Add word to user dictionary if it is in no other dictionary except user history dictionary (i.e. typed again).
+        val sv = Settings.getValues()
+        if (sv.mAddToPersonalDictionary // require the opt-in
+            && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER_HISTORY) // require personalized suggestions
+            && words.size == 1 // only single words
+        ) {
+            addToPersonalDictionaryIfInvalidButInHistory(suggestion, wasAutoCapitalized)
         }
     }
 
