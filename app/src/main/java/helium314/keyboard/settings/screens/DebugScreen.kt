@@ -104,6 +104,7 @@ private fun createDebugSettings(context: Context) = listOf(
                 intent.setPackage(context.packageName)
                 intent.putExtra(DictionaryDumpBroadcastReceiver.DICTIONARY_NAME_KEY, type)
                 ctx.sendBroadcast(intent)
+                android.widget.Toast.makeText(ctx, "Dumping $type dictionary to logcat...", android.widget.Toast.LENGTH_SHORT).show()
             }
         )
     }
