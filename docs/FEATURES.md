@@ -1,419 +1,356 @@
-# LeanType Features Guide
+# LeanType Features & Setup Guide
 
-LeanType integrates with AI providers to offer advanced proofreading and translation capabilities directly within the keyboard. This guide explains how to set up the supported providers.
+LeanType combines a lightweight, privacy-focused keyboard foundation with cutting-edge productivity tools: **Multi-Provider Cloud & Offline AI**, **On-Device Whisper Voice Typing**, **Handwriting Recognition**, **Dual-Engine In-Keyboard Translation**, **Rich Text Utilities**, and **Deep UI Customization**.
 
-## Index
+---
+
+## 📑 Index
 
 | Section | Description |
 | :--- | :--- |
-| 🆕 **[Summary of New Features](#summary-of-new-features)** | Quick overview of what's new. |
-| 🤖 **[Supported AI Providers](#supported-ai-providers)** | Start here to choose your AI backend. |
-| ⚡ **[Groq](#1-groq)** | Ultra-fast cloud inference. |
-| 🌟 **[Google Gemini](#2-google-gemini)** | Reliable general-purpose AI. |
-| ⚙️ **[HF/OpenAI-compatible](#3-hfopenai-compatible-generic-provider)** | Use Mistral, DeepSeek, OpenRouter, etc. |
-| 🧠 **[Custom AI Keys](#4-custom-ai-keys--keywords)** | Configure custom prompts and personas. |
-| 🛡️ **[Offline Proofreading](#5-offline-proofreading-privacy-focused)** | Privacy-first, on-device AI. |
-| 📝 **[Text Expander](#6-text-expander)** | Custom text shortcut expansion. |
-| 🖱️ **[Touchpad Mode](#7-touchpad-mode)** | Full-screen touchpad gestures and controls. |
-| ✍️ **[Handwriting Input](#8-handwriting-input)** | Use handwriting recognition to draw letters directly on a canvas. |
-| 👆 **[Gesture Typing](#9-gesture-typing)** | Swipe/glide typing powered by native C++ library. |
-| ⌨️ **[Direct Switch Target IME](#10-direct-switch-target-ime)** | Switch directly to another input method using custom keycode `-10076`. |
-| 🎨 **[Custom Layouts Customization](#11-custom-layouts-customization)** | Persistent custom layout profiles and management. |
+| 🆕 **[Summary of New Features](#-summary-of-new-features)** | Complete matrix of all features & settings locations |
+| 🤖 **[Multi-Provider Cloud AI](#1-multi-provider-cloud-ai)** | Google Gemini, Groq, and OpenAI-compatible inference |
+| 🧠 **[Custom AI Keys & Keywords](#2-custom-ai-keys--keywords)** | 10 custom toolbar prompt keys, personas, and themed capsules |
+| 🛡️ **[Offline Neural Proofreading (GGUF)](#3-offline-neural-proofreading-gguf)** | 100% on-device private LLM execution via `llama.cpp` |
+| 🌐 **[Dual-Engine In-Keyboard Translation](#4-dual-engine-in-keyboard-translation)** | AI Translation vs Google Translation Plugin with auto-fallback |
+| 🎙️ **[On-Device Whisper Voice Typing](#5-on-device-whisper-voice-typing)** | Fast speech-to-text with quantized multilingual Whisper models |
+| ✍️ **[Handwriting Input](#6-handwriting-input)** | Draw letters directly on a handwriting canvas (ML Kit) |
+| 🧭 **[Dedicated Text Editing Panel](#7-dedicated-text-editing-panel)** | Gboard-style precision DPAD arrow navigation & selection mode |
+| 📐 **[Smart Auto-Spanning Toolbar](#8-smart-auto-spanning-toolbar)** | Symmetrical dynamic toolbar key expansion across screen widths |
+| 🖱️ **[Touchpad Mode & Gestures](#9-touchpad-mode--gestures)** | Spacebar swipe gesture & full-screen laptop-style touchpad |
+| 🪟 **[Floating & Resizable Keyboard](#10-floating--resizable-keyboard)** | Draggable, resizable floating keyboard window |
+| ⌨️ **[Dual Toolbar & Split Suggestions](#11-dual-toolbar--split-suggestions)** | Split toolbar actions and word suggestions into separate rows |
+| 📝 **[Text Expander](#12-text-expander)** | Shortcut expansion with dynamic template placeholders |
+| 📋 **[Searchable Clipboard & Undo](#13-searchable-clipboard--undo)** | Search history, fold pinned items, and timed swipe-to-delete undo |
+| 📸 **[Screenshot Suggestions & Capture](#14-screenshot-suggestions--capture)** | Recent screenshot suggestion strip and clipboard storage |
+| 🔎 **[Emoji Search](#15-emoji-search)** | Search for emojis by keyword with an Emoji Dictionary |
+| 🚫 **[Blocked Words & Regex Blacklist](#16-blocked-words--regex-blacklist)** | Filter out offensive or unwanted words using custom regex patterns |
+| ✉️ **[Auto-Read OTP](#17-auto-read-otp)** | Automatically extracts and suggests OTP codes from SMS notifications |
+| 📚 **[Adaptive Personal Dictionary Learning](#18-adaptive-personal-dictionary-learning)** | Customizable repeat learning thresholds & session word boosting |
+| 👆 **[Gesture / Glide Typing](#19-gesture--glide-typing)** | Smooth swipe typing powered by native C++ library |
+| ⌨️ **[Direct Switch Target IME](#20-direct-switch-target-ime)** | Switch directly to a specific target keyboard with keycode `-10076` |
+| 🎨 **[Custom Layout Profiles](#21-custom-layout-profiles)** | Save up to 5 custom layout profiles with persistent slot tracking |
+| 🔄 **[In-App Streaming Self-Updater](#22-in-app-streaming-self-updater)** | Direct GitHub release checks and streaming APK installer |
+| 📦 **[Flavor Architecture & Privacy](#23-flavor-architecture--privacy)** | Breakdown of Standard Full, Standard FOSS, Offline, and Lite |
 
-## Summary of New Features
+---
 
-| Feature | Function | Settings Location |
+## 🆕 Summary of New Features
+
+| Feature | Description | Settings Location |
 | :--- | :--- | :--- |
-| **Multi-Provider AI** | Uses Gemini, Groq, or OpenAI to proofread/rewrite text. Fetch latest models dynamically. | `AI Integration > Set AI Provider` |
-| **Offline Proofreading** | Private, on-device AI for grammar (requires downloads). | `AI Integration > Offline Proofreading` |
-| **GGUF Model Support** | Load and run highly quantized, compact GGUF models on-device for offline proofreading/translation. | `Advanced > GGUF Model (.gguf)` |
-| **Custom AI Keys** | 10 toolbar keys with custom prompts, tags (themed capsules), and toggle settings (supports hashtags). | `AI Integration > Custom Keys` |
-| **AI Translation** | Translates selected text via your configured AI provider (includes separate model selector). | Toolbar > Translate Icon |
-| **Floating Keyboard** | Detach the keyboard into a draggable window with a persistent mode option. | Toolbar > Floating Keyboard |
-| **Touchpad Mode** | Swipe up on Spacebar to control cursor, including full-screen laptop-style touchpad. | `Gesture typing > Vertical spacebar swipe` |
-| **Split Suggestions** | Separates suggestions from toolbar for quicker access. | `Appearance > Split toolbar & suggestions` |
-| **Build Variants** | Choose Standard, Offline, or Offline Lite versions. | GitHub Releases |
-| **Clear Incognito** | Shows a clear "Hat & Glasses" icon when Incognito is active. | *Automatic (when Incognito)* |
-| **Clipboard Search** | Search history, undo swipe-delete, and optionally fold pinned items by default. | Clipboard Toolbar > Search Icon |
-| **Dictionary Import** | Import personal words from Google Gboard/other keyboards. | `Text correction > Dictionary > Import` |
-| **Force Auto-Caps** | Toggle to ensure automatic capitalization works reliably. | `Text correction > Auto-capitalization` |
-| **Emoji Search** | Search for emojis by name. | `Emoji Key > Search Icon` |
-| **Screenshot Suggestion** | Suggests recently taken screenshots for quick sharing. | `Text correction > Suggest recent screenshots` |
-| **Screenshot on Clipboard** | Automatically saves taken screenshots to your clipboard history. | *Automatic (when enabled)* |
-| **Clipboard Undo** | Undo swipe-to-delete on clipboard items with a timed undo bar. | *Automatic (on swipe delete)* |
-| **Text Expander** | Expand custom shortcuts using dynamic template variables (date, time, clipboard, custom placeholders). | `Text correction > Text Expander` |
-| **Handwriting Input** | Draw letters or words directly on the screen keyboard space to type (standard variant, requires plugin). | `Libraries > Handwriting Input Plugin` |
-| **Gesture Typing** | Gesture typing (swipe/glide typing) powered by the native C++ library (`libjni_latinime.so` / `libjni_latinimegoogle.so`). | `Gesture typing` |
-| **Direct Switch Target IME** | Direct input method switching using custom keycode `-10076` assigned to toolbar keys. | `Preferences > Direct Switch Target IME` |
-| **Custom Layouts** | Supports up to 5 custom layouts with persistent layout index tracking. | `Languages > Custom layouts` |
+| **Multi-Provider Cloud AI** | Proofread, rewrite, and fix grammar via Gemini, Groq, or OpenAI-compatible custom endpoints. | `AI Integration > Set AI Provider` |
+| **Custom AI Keys** | 10 customizable toolbar keys with prompt templates, hashtags (`#editor`, `#proofread`), and tag capsules. | `AI Integration > Custom Keys` |
+| **Offline Proofreading (GGUF)** | Zero-network, on-device neural proofreading powered by embedded `llama.cpp`. | `Advanced > GGUF Model (.gguf)` |
+| **Dual-Engine Translation** | Translate selected text via Cloud AI or dedicated Translation Plugin with auto-fallback. | `AI Integration / Text correction > Translation method` |
+| **Whisper Voice Typing** | On-device speech-to-text with quantized multilingual Whisper models and audio visualizer. | `Voice typing > Whisper Speech Models` |
+| **Handwriting Recognition** | Draw characters on a dedicated canvas (Standard Full flavor via Handwriting Plugin). | `Libraries > Handwriting Input Plugin` |
+| **Text Editing Panel** | Precision DPAD arrow navigation, Shift selection mode, and clipboard shortcuts. | Toolbar > Text Editing Icon |
+| **Auto-Spanning Toolbar** | Dynamically expands and balances toolbar keys symmetrically across device widths. | `Appearance > Toolbar auto-spacing` |
+| **Touchpad Mode** | Swipe up on Spacebar to activate full cursor control and laptop-style touchpad gestures. | `Gesture typing > Vertical spacebar swipe` |
+| **Floating Keyboard** | Detach keyboard into a draggable, resizable window with persistent positioning. | Toolbar > Floating Keyboard |
+| **Split Toolbar & Suggestions** | Separates suggestions from the toolbar into a dual-row view. | `Appearance > Split toolbar & suggestions` |
+| **Text Expander** | Expand custom shortcuts using dynamic placeholders (`%date%`, `%time%`, `%clipboard%`, `%cursor%`). | `Text correction > Text Expander` |
+| **Searchable Clipboard** | Real-time clipboard search, fold pinned items by default, and timed swipe-to-delete undo. | Clipboard Toolbar > Search Icon |
+| **Screenshot Suggestions** | Instant 1-tap sharing of recently taken screenshots via the suggestion strip. | `Text correction > Suggest recent screenshots` |
+| **Emoji Search** | Search emojis by name/keyword directly from the emoji palette. | `Emoji Key > Search Icon` |
+| **Blocked Words Blacklist** | Prevent unwanted words from being suggested with regex pattern matching. | `Text correction > Blocked words blacklist` |
+| **Auto-Read OTP** | Extracts and suggests verification OTP codes from incoming SMS notifications. | `Text correction > Suggest OTP from SMS` |
+| **Smart Learning & Boost** | Adjustable personal dictionary learning threshold (1-5 times) and temporary session word boost. | `Text correction > Dictionary learning threshold` |
+| **Gesture Typing** | Swipe typing powered by native C++ spatial scoring engine. | `Gesture typing > Enable gesture typing` |
+| **Direct Switch Target IME** | Fast 1-tap switching to another configured IME using custom keycode `-10076`. | `Preferences > Direct Switch Target IME` |
+| **Custom Layout Profiles** | Store up to 5 custom keyboard layouts with persistent slot tracking. | `Languages > Custom layouts` |
+| **In-App Self-Updater** | Checks GitHub releases and streams updates directly (`standardfull` flavor). | `About > Check for updates` |
 
 ---
 
-## Emoji Search
+## 1. Multi-Provider Cloud AI
 
-*   **Functionality**: Search for emojis by keyword/name directly from the emoji palette.
-*   **Requirement**: You must load an **Emoji Main Dictionary**.
-*   **How to Setup**:
-    1.  Go to **Settings > Text correction > Dictionary**.
-    2.  Tap on your language (e.g., **English**).
-    3.  Ensure the **Emoji English** (or relevant emoji dict) is available/downloaded.
-    4.  *Note*: Basic emoji search requires this dictionary to map words to emoji characters.
+LeanType connects directly with top AI providers for ultra-fast proofreading, grammar corrections, tone adjustments, and rewrites.
 
----
+### Supported Providers
 
-## Screenshot Suggestion
+| Provider | Privacy Level | Setup Speed | Free Tier | Best For |
+| :--- | :---: | :---: | :---: | :--- |
+| **Groq** | 🟡 Average | 🟢 Fast | High RPM | **Lightning-fast inference speeds** |
+| **Google Gemini** | 🔴 Standard | 🟢 Fast | Generous | **High-quality general reasoning** |
+| **OpenAI-Compatible** | ⚙️ *Custom* | 🟡 Moderate | *Custom* | **Any custom endpoint (OpenRouter, DeepSeek, Mistral)** |
 
-*   **Functionality**: When you take a screenshot, LeanType detects it and shows a suggestion in the suggestion strip for quick sharing. Tapping the suggestion inserts the screenshot as an image into the current input field (if the app supports image insertion).
-*   **Permissions**: Requires **storage/media access** (`READ_MEDIA_IMAGES` on Android 13+, or `READ_EXTERNAL_STORAGE` on older versions). The keyboard will prompt for permission when this feature is first enabled.
-*   **How to Enable** (Disabled by default):
-    1.  Go to **Settings > Text correction**.
-    2.  Enable **Suggest recent screenshots**.
-*   **Behavior**:
-    *   Screenshots taken within the last **4 minutes** are detected.
-    *   A thumbnail preview is shown in the suggestion strip.
-    *   Tapping the suggestion inserts the image; tapping the close button dismisses it.
+### Setup Instructions
+1. Obtain an API key:
+   - **Google Gemini**: [Google AI Studio](https://aistudio.google.com/apikey) (key starts with `AIzaSy...`).
+   - **Groq**: [Groq Console](https://console.groq.com/keys) (key starts with `gsk_...`).
+   - **OpenAI-compatible**: [OpenRouter](https://openrouter.ai/keys), [DeepSeek Platform](https://platform.deepseek.com), or your local LLM server.
+2. In LeanType, open **Settings → AI Integration → Set AI Provider**.
+3. Select your provider, paste your API token, and pick your preferred model and target language.
 
 ---
 
-## Screenshot on Clipboard
+## 2. Custom AI Keys & Keywords
 
-*   **Functionality**: Taken screenshots are automatically saved to your clipboard history for later use.
-*   **Requirement**: Clipboard history must be enabled.
-*   **How to Enable**: Ensure **Suggest recent screenshots** is enabled in Text correction.
+You can assign custom prompts, personas, and custom label tags to **10 dedicated toolbar keys**.
 
----
+### Custom Text Capsules
+- Assign custom labels (e.g. `French`, `Rephrase`, `Reply`) in **Settings → AI Integration → Custom Keys**.
+- Enable **Show tags on keyboard** to render them as themed pill capsules directly on the keyboard toolbar.
 
-## Clipboard Item Delete Undo
+### AI Persona Keywords (Hashtags)
+Include these hashtags in your custom prompts to enforce strict system roles:
 
-*   **Functionality**: When you swipe to delete an item from your clipboard history, a brief undo bar appears, allowing you to restore the deleted item.
-*   **Behavior**: Provides a safety net against accidental deletions of important clipboard content.
-
----
-
-## Supported AI Providers
-
-| Provider | Privacy | Setup | Free Tier | Best For |
-| :--- | :--- | :--- | :--- | :--- |
-| **Groq** | 🟡 Average | 🟢 Easy | High | **Speed** |
-| **Google Gemini** | 🔴 Low | 🟢 Easy | Generous | General Purpose |
-| **HF/OpenAI-compatible** | ⚙️ *Varies* | 🟡 Medium | *Varies* | **Fully Customizable** |
-| **Offline (Llama)** | 🟢 **Best** | 🟡 Medium | ∞ Unlimited | **Privacy** |
-
-> [!TIP]
-> The **HF/OpenAI-compatible** option is fully customizable—you can change the API endpoint, token, and model to use *any* OpenAI-compatible service (OpenRouter, Mistral, DeepSeek, HuggingFace, etc.).
-
-**Privacy Links:**
-- [Groq Privacy Policy](https://groq.com/privacy-policy)
-- [Google Gemini API Terms](https://ai.google.dev/gemini-api/terms)
-- [OpenRouter Privacy](https://openrouter.ai/privacy)
-- [HuggingFace Privacy](https://huggingface.co/privacy)
-
-> [!IMPORTANT]
-> **Sensitive Data**: **Do not process sensitive information** (passwords, credit card numbers, private addresses) using the AI Proofreading or Translation features.
->
-> **Offline Version Guarantee**: The **Offline Version** physically excludes all network code at build time. It is impossible for it to connect to the internet, making it safe for all data.
-
----
-
-## 1. Groq
-
-Groq is a cloud API provider that uses custom LPUs (Language Processing Units) to deliver **extremely fast** inference speeds, making it feel almost instant compared to other cloud providers.
-
-### Setup
-1.  **Get API Key**: Visit [Groq Console](https://console.groq.com/keys) and create a key (starts with `gsk_`).
-2.  **Configure in LeanType**:
-    *   **Provider**: Select **Groq**.
-    *   **API Token**: Paste your Groq API Key.
-
-### Available Models
-| Model ID | Context | Description |
-| :--- | :--- | :--- |
-| `llama-3.3-70b-versatile` | 128k | **Best Overall**. High intelligence. |
-| `llama-3.1-8b-instant` | 128k | **Fastest**. Quick grammar fixes. |
-| `meta-llama/llama-4-scout-17b-16e-instruct` | 128k | New scout model. Good balance. |
-| `meta-llama/llama-4-maverick-17b-128e-instruct`| 128k | New maverick model. Better reasoning. |
-| `qwen/qwen3-32b` | 128k | Good speed and logic. |
-| `openai/gpt-oss-120b` | 128k | Large OSS GPT model. |
-| `openai/gpt-oss-20b`  | 128k | Fast OSS GPT model. |
-| `groq/compound`| 128k | Deep-thinking internal model. |
-| `groq/compound-mini` | 128k | Optimized internal model. |
-| `moonshotai/kimi-k2-instruct` | 128k | Lightweight reasoning model. |
-| `moonshotai/kimi-k2-instruct-0905` | 128k | Specialized kimi instruction model. |
-| `canopylabs/orpheus-v1-english` | 128k | CanopyLabs English priority model. |
-| `canopylabs/orpheus-arabic-saudi` | 128k | CanopyLabs Arabic dialect model. |
-| `allam-2-7b` | 128k | Efficient 7B general use model. |
-
----
-
-## 2. Google Gemini
-
-### Get an API Key
-1.  Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
-2.  Click **Create API Key**.
-3.  Copy the key.
-
-### Configuration
-1.  Go to **Settings > AI Integration > Gemini API Key**.
-2.  Paste your API key.
-3.  Select a model.
-
-### Available Models
-| Model ID | Description |
-| :--- | :--- |
-| `gemini-2.5-flash` | **Fastest**. Great for quick tasks. |
-| `gemini-2.5-pro` | High intelligence. Best overall quality. |
-| `gemini-flash-latest` | Fast and capable (latest flash). |
-| `gemini-flash-lite-latest` | Lightweight flash variant. |
-| `gemini-pro-latest` | Latest pro model. |
-| `gemini-3.1-pro-preview` | Next-gen pro preview. |
-| `gemini-3.1-pro-preview-customtools` | Pro preview with custom tools support. |
-| `gemini-3-pro-preview` | Gemini 3 pro preview. |
-| `gemini-3-flash-preview` | Gemini 3 flash preview. |
-| `deep-research-pro-preview-12-2025` | Deep research specialized model. |
-| `gemma-3-27b-it` | Large Gemma model. High quality. |
-| `gemma-3-12b-it` | Mid-size Gemma model. Good balance. |
-| `gemma-3-4b-it` | Compact Gemma model. Fast. |
-| `gemma-3-1b-it` | Smallest Gemma model. Ultra-light. |
-| `gemma-3n-e4b-it` | Efficient Gemma variant (4B). |
-| `gemma-3n-e2b-it` | Efficient Gemma variant (2B). |
-
----
-
-## 3. HF/OpenAI-compatible (Generic Provider)
-
-This provider supports any service using the standard OpenAI Chat Completion API format.
-
-### A. HuggingFace Inference API
-
-#### Setup
-1.  **Get Token**: Go to [HuggingFace Settings](https://huggingface.co/settings/tokens) and create a 'Read' token.
-    *   *Note*: HuggingFace may require you to add a valid payment method to your account to "unlock" the Inference API, even for the free tier (to prevent abuse).
-2.  **Configure in LeanType**:
-    *   **Provider**: Select **HF/OpenAI-compatible**.
-    *   **API Token**: Paste your HF Access Token.
-    *   **API Endpoint**: `https://api-inference.huggingface.co/models/<USER>/<MODEL>/v1/chat/completions`
-    *   **Model Name**: `<USER>/<MODEL>` (e.g., `meta-llama/Meta-Llama-3-8B-Instruct`).
-
-### B. OpenRouter / Other Providers
-
-1.  **API Endpoint**: Enter the provider's completion URL.
-    *   *OpenRouter*: `https://openrouter.ai/api/v1/chat/completions`
-    *   *DeepSeek*: `https://api.deepseek.com/chat/completions`
-    *   *Mistral*: `https://api.mistral.ai/v1/chat/completions`
-    *   *OpenAI*: `https://api.openai.com/v1/chat/completions` (Default)
-2.  **API Token**: Enter your API Key from that provider.
-3.  **Model Name**: Enter the exact model ID from the provider's documentation (e.g., `deepseek-chat`, `mistral-large-latest`, `gpt-4o-mini`).
-
----
-
-## 4. Custom AI Keys & Keywords
-
-You can assign custom prompts to 10 specific keys in the toolbar. These keys can "act" differently based on the keywords (hashtags) you include in your prompt.
-
-### How to Use
-1.  Go to **Settings > AI Integration > Custom Keys**.
-2.  Tap a key (1-10) to configure it.
-3.  Enter your instructions. You can use the following hashtags to control the AI's behavior and output format.
-
-### Custom Text Labels / Tags
-You can assign custom text labels (up to 12 characters) to toolbar keys instead of displaying generic AI icons:
-1. Fill in the **Tag / Label** field when configuring a custom AI key (e.g. `French`, `Rewrite`, `Reply`).
-2. Toggle **Show tags on keyboard** under **Settings > AI Integration > Custom Keys**.
-3. Custom labels will display as sleek, themed capsules directly on the keyboard toolbar.
-
-### AI Persona Keywords
-Add these to your prompt to enforce a specific role.
-
-| Keyword | Persona / Behavior | System Instruction Added |
+| Keyword | Persona / Role | System Instruction Injected |
 | :--- | :--- | :--- |
 | `#editor` | **Text Editor** | "Output ONLY the edited text. Do not add any conversational filler." |
 | `#outputonly` | **Strict Output** | "Output ONLY the result. Do not add introductions or explanations." |
 | `#proofread` | **Proofreader** | "Fix grammar and spelling errors. Output ONLY the fixed text." |
-| `#paraphrase` | **Rewriter** | "Rewrite using different words while keeping the meaning." |
-| `#summarize` | **Summarizer** | "Provide a concise summary." |
-| `#expand` | **Writer** | "Expand on the text with more details." |
+| `#paraphrase` | **Rewriter** | "Rewrite using different words while preserving original meaning." |
+| `#summarize` | **Summarizer** | "Provide a concise, direct summary." |
+| `#expand` | **Content Writer** | "Expand on the text with more details." |
 | `#toneshift` | **Tone Adjuster** | "Adjust the tone as requested." |
-| `#generate` | **Content Generator** | "You are a creative content generator. Output ONLY content." |
+| `#append` | **Append Mode** | Adds output to the end of the text field instead of replacing. |
+| `#showthought` | **Show Thinking** | Preserves reasoning output (`<think>...</think>`) from reasoning models. |
 
-### Input Handling Keywords
-Control how the result is inserted.
+---
 
-| Keyword | Behavior | Use Case |
-| :--- | :--- | :--- |
-| **(Default)** | **Replace**: The AI output replaces the selected text or the entire text field content. | Proofreading, rewriting, summarizing. |
-| `#append` | **Append**: The AI output is added to the **end** of the text field (or selection) instead of replacing it. | Generating replies, continuing a story, adding a sign-off. |
-| `#showthought` | **Show Thinking**: Preserves the "thinking" process (e.g., `<think>...</think>`) from reasoning models like Qwen. | Debugging reasoning, seeing the AI's thought process. |
+## 3. Offline Neural Proofreading (GGUF)
 
-### Examples
+> [!IMPORTANT]
+> **Zero-Network Guarantee**: This feature runs 100% locally via embedded `llama.cpp` and is available in the **Offline** build flavor (`-offline-release.apk`). No internet permission exists in the manifest.
 
-**1. Standard Proofreading (Replace)**
-> Prompt: `Fix grammar #proofread`
-> *Result: Replaces your text with the corrected version.*
+### Setup Instructions
+1. Download a compact GGUF model:
+   - **Qwen 2.5 0.5B Instruct (Q4_K_M)**: Extremely lightweight & fast (~350 MB).
+   - **Llama 3.2 1B Instruct (Q4_K_M)**: High-quality compact reasoning (~900 MB).
+   - **Qwen 2.5 1.5B Instruct (Q4_K_M)**: High intelligence for modern devices (~1.1 GB).
+2. Open **Settings → Advanced → GGUF Model (.gguf)** and select the `.gguf` file from your storage.
+3. Configure sampling temperature, Top-K, Top-P, and custom system instructions.
 
-**2. Generate a Reply (Append)**
-> Prompt: `Generate a polite decline to this invitation #generate #append`
-> *Result: Keeps the original invitation text and adds your polite decline at the end.*
+---
 
-**3. Strict Rewriting**
-> Prompt: `Rewrite this to be more professional #editor`
-> *Result: Replaces text with professional version, guaranteeing no "Here is the text:" prefixes.*
+## 4. Dual-Engine In-Keyboard Translation
 
-**4. Tone Shift**
-> Prompt: `Make this sound more enthusiastic #toneshift`
-> *Result: Rewrites the text with high energy and exclamation points, keeping the core message.*
+LeanType offers a flexible translation architecture allowing you to toggle between:
+1. **AI Provider Translation**: Uses Gemini, Groq, OpenAI, or local GGUF models with customizable prompts.
+2. **Translation Plugin (Google / ML Kit)**: Instant, on-device translation engine powered by the [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin).
+3. **Auto Mode**: Prefers the fast Translation Plugin, with seamless automatic fallback to your configured AI provider.
+
+### How to Setup
+1. In LeanType, open **Settings → Text correction / AI Integration → Translation method**.
+2. Select **Auto**, **Translation Plugin**, or **AI Provider**.
+3. If using the plugin, tap **Download Plugin** to install the companion APK.
+4. Tap the **Translate** icon on the toolbar to translate selected text or entire input fields.
+
+---
+
+## 5. On-Device Whisper Voice Typing
+
+LeanType integrates high-accuracy, private speech-to-text powered by OpenAI's Whisper architecture via `whisper.cpp` and the [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin).
+
+### Available Multilingual Whisper Models
+- **Tiny** (`ggml-tiny-q5_1.bin`): **~32 MB** — Ultra-fast, minimal memory usage, 99+ languages.
+- **Base** (`ggml-base-q5_1.bin`): **~57 MB** — Best balance of accuracy and speed for daily typing.
+- **Small** (`ggml-small-q5_1.bin`): **~182 MB** — High accuracy for complex vocabulary and accents.
+- **Custom Model**: Import any standard `.bin` GGML Whisper model from device storage.
+
+### Setup Instructions
+1. Install the companion [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin/releases/latest).
+2. Open **Settings → Voice typing → Whisper Speech Models**.
+3. Tap **Download** on your preferred model (e.g. *Multilingual Base* ~57 MB).
+4. Configure voice options:
+   - **Audio Visualizer**: Displays a real-time sound waveform directly on the keyboard toolbar.
+   - **Silence Detection**: Configurable auto-stop sensitivity slider.
+   - **Keep Model in Memory**: Prevents model reload latency during consecutive voice typing sessions.
+5. Tap the **Microphone** icon on the toolbar to start voice typing.
+
+---
+
+## 6. Handwriting Input
+
+> [!NOTE]
+> Available in the **Standard Full** (`-standardfull-release.apk`) build flavor.
+
+Draw letters, words, or symbols directly on a handwriting recognition canvas using your finger or stylus.
+
+### Setup Instructions
+1. Open **Settings → Libraries → Handwriting Input Plugin**.
+2. Tap **Download** to install the companion [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin).
+3. Tap the **Handwriting (Pencil)** icon on the keyboard toolbar to open the drawing canvas.
+4. Draw characters naturally—the handwriting engine transcribes strokes into text in real-time.
+
+---
+
+## 7. Dedicated Text Editing Panel
+
+A Gboard-style precision editing panel designed for frictionless text manipulation:
+- **DPAD Arrow Keys**: Move cursor character-by-character or line-by-line.
+- **Selection Mode (Shift + DPAD)**: Highlight text with precision.
+- **Quick Selection**: 1-tap **Select Word** and **Select All**.
+- **Clipboard Actions**: Direct Cut, Copy, and Paste buttons within the panel.
+- **Line Navigation**: Jump directly to Start of Line or End of Line.
+
+---
+
+## 8. Smart Auto-Spanning Toolbar
+
+The **Auto-Spanning Toolbar** dynamically measures available screen width and proportionately balances toolbar keys symmetrically.
+- Eliminates awkward blank space on large screens, tablets, and landscape orientation.
+- Unifies alignment between standard toolbar keys and clipboard action rows.
+- Configure via **Settings → Appearance → Toolbar auto-spacing**.
+
+---
+
+## 9. Touchpad Mode & Gestures
+
+Turn the entire keyboard space into a fluid laptop-style trackpad:
+- **Activate via Swipe**: Swipe up on the **Spacebar** to toggle Touchpad Mode.
+- **Activate via Toolbar**: Tap the **Touchpad** icon in the toolbar.
+
+### Gestures Guide
+- **1-Finger Drag**: Smooth, pixel-perfect cursor movement.
+- **1-Finger Double Tap**: Selects the word under the cursor.
+- **1-Finger Long Press & Drag**: Starts continuous text selection.
+- **2-Finger Drag Left/Right**: Jumps word-by-word.
+- **2-Finger Swipe Up / Down**: Undo / Redo.
+- **2-Finger Tap**: Inserts a space.
+- **2-Finger Double Tap**: Copies selected text (or Pastes if nothing is selected).
+- **2-Finger Long Press**: Continuous backspace deletion.
+
+---
+
+## 10. Floating & Resizable Keyboard
+
+Detach LeanType into a moveable, resizable floating window:
+- Tap the **Floating Keyboard** icon on the toolbar.
+- Drag the bottom handle to reposition anywhere on the screen.
+- Drag corner handles to resize.
+- Enable **Persistent Floating Mode** to keep the keyboard floating across app switches.
+
+---
+
+## 11. Dual Toolbar & Split Suggestions
+
+Split your toolbar and suggestion strip into two independent rows for fast, unhindered access to both word predictions and quick actions.
+- Configure via **Settings → Appearance → Split toolbar & suggestions**.
+
+---
+
+## 12. Text Expander
+
+Define custom abbreviations that instantly expand into rich text templates with dynamic variables:
+
+### Supported Dynamic Placeholders
+- `%date%`: Inserts current date (YYYY-MM-DD).
+- `%time%`: Inserts current local time (HH:MM).
+- `%tomorrow%`: Inserts tomorrow's date.
+- `%clipboard%`: Inserts latest copied clipboard content.
+- `%cursor%`: Places typing cursor at this exact position after expansion.
+- `%greeting%`: Inserts time-appropriate greeting (*Good morning*, *Good afternoon*, *Good evening*).
+- `%bullets%` / `%list%`: Inserts templated bulleted or numbered lists.
+- `%custom_variable%`: Prompts an interactive popup to fill in custom text on the fly.
+
+### Setup Instructions
+1. Open **Settings → Text correction → Text Expander**.
+2. Tap **+ (Add)**, define the shortcut (e.g. `brb`), and enter your expansion template.
+
+---
+
+## 13. Searchable Clipboard & Undo
+
+- **Real-Time Search**: Search through stored clipboard history directly from the clipboard toolbar.
+- **Swipe-to-Delete with Undo**: Swiping away a snippet displays a timed undo bar to restore accidental deletions.
+- **Fold Pinned Items**: Optionally keep pinned snippets collapsed to maximize viewing area for recent clips.
+
+---
+
+## 14. Screenshot Suggestions & Capture
+
+- **Instant Suggestion**: Automatically detects newly captured screenshots (within 4 minutes) and presents a thumbnail preview in the suggestion strip for 1-tap insertion.
+- **Clipboard Sync**: Automatically saves captured screenshots into your clipboard image history.
+- Enable via **Settings → Text correction → Suggest recent screenshots**.
+
+---
+
+## 15. Emoji Search
+
+- Search through thousands of emojis by keyword or name directly inside the emoji palette.
+- **Setup**: Ensure an **Emoji Dictionary** (e.g. *Emoji English*) is enabled under **Settings → Text correction → Dictionary**.
+
+---
+
+## 16. Blocked Words & Regex Blacklist
+
+Prevent offensive, sensitive, or unwanted words from ever appearing in the suggestion strip:
+- Supports literal words and custom **regular expression (regex)** patterns.
+- Manage rules via **Settings → Text correction → Blocked words blacklist**.
+
+---
+
+## 17. Auto-Read OTP
+
+- Automatically detects incoming one-time verification codes (OTPs) from SMS notifications.
+- Displays the detected code in the suggestion strip for 1-tap pasting.
+- Enable via **Settings → Text correction → Suggest OTP from SMS**.
+
+---
+
+## 18. Adaptive Personal Dictionary Learning
+
+LeanType learns your vocabulary organically as you type:
+- **Adjustable Learning Threshold**: Choose how many times a new word must be typed (1 to 5 times) before it is automatically added to your personal dictionary.
+- **Session Word Boost**: Temporarily boosts recently typed, verified words for immediate next-word ranking during active typing sessions.
+- **Google Dictionary Import**: Import existing user dictionaries exported from Gboard.
+- Configure via **Settings → Text correction → Dictionary learning threshold**.
+
+---
+
+## 19. Gesture / Glide Typing
+
+- Smooth swipe typing powered by native C++ spatial scoring (`libjni_latinime.so`).
+- Supports floating preview text, customizable trail colors, and space-aware gesture input.
+- In `standard` and `standardfull` builds, the gesture library is downloaded automatically via **Settings → Gesture typing**.
+
+---
+
+## 20. Direct Switch Target IME
+
+Map the custom keycode `-10076` (`SWITCH_TO_USER_IME`) to any toolbar key:
+- Switches directly to a designated secondary input method (e.g. Japanese, Korean, or Voice IME) without opening the system IME selection dialog.
+- Configure via **Settings → Preferences → Direct Switch Target IME**.
+
+---
+
+## 21. Custom Layout Profiles
+
+- Create and save up to **5 persistent custom layout profiles**.
+- Switch between layout profiles seamlessly while preserving active slot indices across orientation and symbol states.
+- Manage via **Settings → Languages → Custom layouts**.
+
+---
+
+## 22. In-App Streaming Self-Updater
+
+> [!NOTE]
+> Available in the **Standard Full** (`-standardfull-release.apk`) build flavor.
+
+- Automatically checks GitHub releases for updates in the background.
+- Streams and installs updates directly without requiring third-party app stores.
+- View single-version changelogs directly inside the update dialog.
+- Configure check frequency under **Settings → About → Check for updates**.
+
+---
+
+## 23. Flavor Architecture & Privacy
+
+LeanType is published in **4 purpose-built flavors**:
+
+| Flavor | Cloud AI | Offline AI | Voice Input | Handwriting | In-App Updates | Internet Permission | Min SDK | Approx Size |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Standard Full** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ | 🌐 Required *(Opt-in)* | SDK 23 (6.0+) | **~23 MB** |
+| **Standard (FOSS)** | ✅ | ❌ | ✅ *(Plugin)* | ❌ | ❌ | 🌐 Required *(Opt-in)* | SDK 23 (6.0+) | **~11 MB** |
+| **Offline AI** | ❌ | ✅ *(GGUF)* | ✅ *(Plugin)* | ❌ | ❌ | 🚫 **None** | SDK 26 (8.0+) | **~67 MB** |
+| **Offline Lite** | ❌ | ❌ | ✅ *(Plugin)* | ❌ | ❌ | 🚫 **None** | SDK 21 (5.0+) | **~26 MB** |
 
 > [!TIP]
-> **Hashtags are Optional**: You can write purely custom prompts (e.g., "Translate to French"). However, without a hashtag like `#outputonly` or `#editor`, the AI might act like a chatbot (e.g., responding with "Sure! Here is the translation: ..."). Using these keywords automatically injects strict system instructions to ensure you get *only* the result you want.
+> **Concurrent Installation**: The `offline` (`com.leanbitlab.leantype.offline`) and `offlinelite` (`com.leanbitlab.leantype.offlinelite`) builds use unique package IDs, allowing you to install them alongside `standardfull` on the same device!
 
----
-
-## Privacy
-*   **Data**: Text is sent directly from your device to the chosen API provider. No intermediate servers are used.
-
-## 5. Offline Proofreading (Privacy Focused)
-
-**Note**: This feature is only available in the "Offline" build flavor of LeanType.
-
-Offline proofreading runs entirely on your device using the `llama.cpp` runtime. No data leaves your device.
-
-> [!NOTE]
-> **Status: Beta / Experimental**
-> Running large language models on device requires a modern smartphone with sufficient RAM (typically 6GB+). We recommend using highly quantized, compact GGUF models (e.g. Q4_K_M or IQ4_NL) for the best balance of speed, accuracy, and memory usage. The overall accuracy of proofreading and translations will depend entirely on the capabilities of the specific model you choose.
-
-### Setup Instructions
-
-1.  **Download a GGUF Model**: Download a compatible `.gguf` model file (see Recommended Models below).
-2.  **Configure App**:
-    *   Go to **Settings > Advanced**.
-    *   **GGUF Model**: Select the downloaded `.gguf` model file.
-    *   **System Instruction**: (Optional) Customize the prompt used to guide the model when proofreading text.
-    *   **Translate Instruction**: (Optional) Customize the prompt used for translation.
-    *   **Target Language**: Select the target language for offline translation.
-    *   **Sampling Settings**: Adjust temperature, Top-K, and Top-P to control model creativity.
-
-### Recommended Models
-
-*   **Llama 3.2 1B Instruct (Q4_K_M)**: Excellent general purpose compact model (~900 MB).
-*   **Qwen 2.5 1.5B Instruct (Q4_K_M)**: High accuracy and quality, fast on modern devices (~1.1 GB).
-*   **Qwen 2.5 0.5B Instruct (Q4_K_M)**: Extremely lightweight, very fast with minimal memory footprint (~350 MB).
-
-You can find and download these models in GGUF format on HuggingFace (e.g., from users like `bartowski` or `Qwen`).
-
----
-
-## 6. Text Expander
-
-Text Expander allows you to define custom shortcuts (abbreviations) that automatically expand into longer, structured text templates as you type.
-
-### Key Features
-*   **Custom Shortcuts**: Create abbreviations (e.g., `adr`) that expand immediately into complex blocks (e.g., your full postal address).
-*   **Dynamic Template Variables**: Enrich your expansions using dynamic variables:
-    *   `%date%` - Inserts the current local date.
-    *   `%time%` - Inserts the current local time.
-    *   `%clipboard%` - Appends the most recently copied text from your clipboard.
-    *   `%cursor%` - Positions the typing cursor here after expansion.
-    *   `%greeting%` - Inserts "Good morning", "Good afternoon", or "Good evening" depending on the hour.
-    *   `%tomorrow%` - Inserts tomorrow's date (YYYY-MM-DD).
-    *   `%bullets%` - Inserts a bullet list template (supports count suffix e.g. `%bullets_5%`).
-    *   `%list%` - Inserts a numbered list template (supports count suffix e.g. `%list_5%`).
-    *   **Custom Placeholders**: Create dynamic input fields (e.g., `%name%`) that prompt you to type a value during the expansion flow.
-
-### Configuration
-1.  Navigate to **Settings > Text correction > Text Expander**.
-2.  Tap the **+** (Add) button to create a new expansion rule.
-3.  Specify the **Shortcut** trigger and the **Expansion** template.
-4.  Include dynamic template variables in the template block.
-
----
-
-## 7. Touchpad Mode
-
-Touchpad Mode replaces the keyboard with a laptop-style touchpad overlay to control the cursor and edit text using fluid gestures.
-
-### How to Enable
-*   **Swipe gesture**: Swipe up on the **Spacebar** to temporarily toggle Touchpad Mode.
-*   **Toolbar shortcut**: Tap the **Touchpad** icon in the toolbar for a persistent touchpad overlay.
-
-### Touchpad Gestures
-
-#### 1 Finger (Navigation & Selection)
-*   **Drag**: Moves the cursor precisely character-by-character.
-*   **Double Tap**: Selects the word under the cursor.
-*   **Long Press & Drag**: Enters text selection mode and selects text as you drag.
-
-#### 2 Fingers (Navigation, Clipboard, History & Deletion)
-*   **Drag Left/Right**: Moves the cursor horizontally word-by-word.
-*   **Swipe Up**: Undo.
-*   **Swipe Down**: Redo.
-*   **Tap**: Inserts a space character.
-*   **Double Tap**: Copies selected text (or Pastes clipboard contents if no selection exists).
-*   **Triple Tap**: Cuts selected text (or Selects All if no selection exists).
-*   **Press & Hold (Long Press)**: Deletes (backspaces) selection / word to the left. Repeats automatically if held.
-
----
-
-## 8. Handwriting Input
-
-> [!NOTE]
-> **Availability**: This feature is only available in the **Standard** (`-standard-release.apk`) and **Standard Optimised** build flavors. It is excluded from the **Offline** and **Offline Lite** variants.
-
-LeanType integrates a handwriting recognition canvas that allows you to write characters directly on the keyboard using your finger or a stylus.
-
-### Setup Instructions
-
-1. **Install the Plugin**:
-   * Go to **Settings > Libraries**.
-   * Under **Handwriting Input Plugin**, tap **Download** to pull the latest plugin APK from the [Leantype-Handwriting-Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) GitHub repository.
-   * Alternatively, you can tap to load a locally downloaded plugin APK file.
-   * Review the security warning and confirm the installation. The app will verify and register the plugin.
-
-2. **Accessing the Handwriting Key**:
-   * The **Handwriting** icon (represented by a pencil/edit icon) is placed on your keyboard toolbar by default in supported variants.
-   * If it is not showing, you can customize the toolbar under **Settings > Preferences > Keyboard toolbar** to enable it.
-
-### How to Use
-
-1. Tap the **Handwriting** icon in the toolbar.
-2. The keyboard area will switch to a handwriting drawing canvas.
-3. Draw characters, words, or punctuation symbols on the canvas. The keyboard will automatically inputs recognized characters.
-4. Tap the **Clear (X)** button on the bottom row to clear the current drawing canvas.
-5. Tap the **Handwriting** icon again to toggle back to the standard keyboard layout.
-
----
-
-## 9. Gesture Typing
-
-*   **Functionality**: Gesture typing (swipe/glide typing) powered by the native C++ library (`libjni_latinime.so` / `libjni_latinimegoogle.so`).
-*   **Performance**: Pure native C++ path scoring and spatial model matching for zero-lag swipe input and low memory footprint.
-*   **Library Loading**: If using the Standard flavor, the gesture library can be downloaded or loaded on demand via **Settings > Gesture typing** or **Settings > Libraries Hub**.
-*   **Settings Configuration**:
-    1. Go to **Settings > Gesture typing** (or **Text Correction**).
-    2. Toggle **Enable gesture typing**.
-    3. Configure visual options (preview trail, floating preview text, trail fadeout) and behavior options (space-aware gesture, fast typing cooldown).
-
----
-
-## 10. Direct Switch Target IME
-
-*   **Functionality**: Switch directly to another configured input method (and subtype) instead of opening the system input method picker.
-*   **Behavior**:
-    *   Map the custom keycode `-10076` (`SWITCH_TO_USER_IME`) to any toolbar key (supports click or long-press).
-    *   Tapping/long-pressing the key immediately switches input methods.
-*   **How to Setup**:
-    1. Go to **Settings > Preferences**.
-    2. Tap **Direct Switch Target IME** and select the target keyboard/subtype from the list of enabled inputs.
-    3. Go to **Settings > Toolbar > Customize toolbar key codes** to map `-10076` to a toolbar key.
-
----
-
-## 11. Custom Layouts Customization
-
-*   **Functionality**: Save up to five custom layout profiles with persistent active slot tracking.
-*   **Behavior**:
-    *   The active custom layout slot index is preserved across orientation changes and switching between alphabet and symbol states.
-    *   Unused custom layout profiles can be directly deleted from settings.
-*   **How to Setup**:
-    1. Go to **Settings > Languages > Custom layouts**.
-    2. Manage custom layouts and slots as needed.
 
 
