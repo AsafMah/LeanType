@@ -4,9 +4,9 @@ As an open-source, community-funded project, we operate on a very limited budget
 ## 🚀 What's New in v4.1.2
 
 ### ✨ New Features & Enhancements
-- **Whisper Voice Recognition Overhaul**: Migrated offline voice input to Whisper AI with compact Q5_1 quantized models, in-toolbar waveform visualizer, smart spoken punctuation, hands-free voice commands, and in-app model management.
+- **Whisper Voice Recognition Overhaul**: Migrated offline voice input to Whisper AI with compact Q5_1 quantized models and in-toolbar waveform visualizer.
 - **Voice Recognition Language Selector**: Added language selection in Settings → Voice with Auto-Detection (`auto`), Follow Keyboard Language (Default), and support for 99+ Whisper languages.
-- **In-App Streaming Self-Updater & Community Links**: Added in-app updater for standardfull builds, collapsible changelog, and official community links (Telegram, Reddit, GitHub, Matrix, Discord).
+- **In-App Streaming Self-Updater & Community Links**: Added in-app updater for standardfull builds, collapsible changelog, and official community links.
 - **Personal Dictionary Learning Threshold**: Added a slider in Settings → Text Correction to customize how many times a word must be typed before it is auto-learned.
 - **Toolbar & Clipboard Key Alignment**: Added option to customize key alignment (*Start, Center, End, Auto-Span*) across the toolbar and clipboard views.
 
