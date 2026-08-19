@@ -1161,6 +1161,13 @@ New dictionary:
     <string name="updates_opencollective_title">Open Collective</string>
     <string name="updates_opencollective_desc">Support our open-source collective and fund development</string>
     <string name="updates_offline_notice">Offline builds do not have internet permission to check for updates automatically.</string>
+    <string name="updates_community_title">Community &amp; Socials</string>
+    <string name="updates_community_summary">Join our official channels for updates, feedback, and discussions</string>
+    <string name="social_website">Website</string>
+    <string name="social_telegram">Telegram</string>
+    <string name="social_reddit">Reddit</string>
+    <string name="social_x">X</string>
+    <string name="social_youtube">YouTube</string>
 
     <!-- Libraries Hub -->
     <string name="libraries_hub_title">Libraries</string>

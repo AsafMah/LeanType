@@ -24,6 +24,12 @@ object Links {
     // Voice Plugin Links
     const val VOICE_PLUGIN_REPO = "https://github.com/LeanBitLab/LeanType-Voice-Plugin"
     const val VOICE_PLUGIN_RELEASES_API = "https://api.github.com/repos/LeanBitLab/LeanType-Voice-Plugin/releases/latest"
+    // Social & Official Links
+    const val OFFICIAL_SITE = "https://leanbitlab.github.io/LeanBitLab/"
+    const val TELEGRAM = "https://t.me/LeanBitLab"
+    const val REDDIT = "https://www.reddit.com/r/LeanBitLab_/"
+    const val X_TWITTER = "https://x.com/LeanBitLab"
+    const val YOUTUBE = "https://www.youtube.com/@LeanBitLab"
 }
 
 val combiningRange = 0x300..0x35b
