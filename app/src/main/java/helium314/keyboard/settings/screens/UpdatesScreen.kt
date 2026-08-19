@@ -72,13 +72,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "✨ Offline Voice Input: Integrated Whisper speech recognition models (Base, Tiny, Small) with real-time waveform visualizer",
-    "✨ Keep Whisper in memory option with background retention strategies",
-    "🎨 Redesigned voice toolbar indicator, improved button contrast & dark/light theme tinting",
-    "🎨 Cleaned Speech Models download dialog with single-row custom model import",
-    "🌱 Added Open Collective support alongside GitHub Sponsors",
-    "🚀 In-app self-update downloading and installation for standard full releases",
-    "🐛 Fixed settings screen flickering on plugin status and model ready state"
+    "🎙️ Migrated offline voice typing to Whisper AI with compact Q5_1 models and in-toolbar waveform visualizer",
+    "🌐 Added Voice Recognition Language selector with Auto-Detect, Follow Keyboard Language, and 99+ Whisper languages",
+    "🚀 Added in-app streaming self-updater (standardfull), collapsible changelog, and official community links",
+    "🧠 Added Personal Dictionary auto-learn frequency threshold slider in Settings -> Text Correction",
+    "🎨 Added Toolbar & Clipboard key alignment setting (Start, Center, End, Auto-Span)",
+    "⚡ Added N-gram backoff and cache safeguards for continuous next-word predictions",
+    "🎨 Isolated key border theme setting strictly to keyboard letter keys"
 )
 
 @Composable
