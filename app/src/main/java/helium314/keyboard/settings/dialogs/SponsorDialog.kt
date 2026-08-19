@@ -164,10 +164,10 @@ fun SponsorDialog(
                             Icon(
                                 painter = painterResource(R.drawable.ic_settings_about_github),
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp).padding(end = 6.dp),
+                                modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Sponsor on GitHub",
                                 fontWeight = FontWeight.Bold
@@ -189,10 +189,10 @@ fun SponsorDialog(
                             Icon(
                                 painter = painterResource(R.drawable.ic_opencollective),
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp).padding(end = 6.dp),
+                                modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Donate on Open Collective",
                                 fontWeight = FontWeight.Bold
