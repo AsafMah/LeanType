@@ -431,14 +431,14 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     private fun getNextWordSuggestions(ngramContext: NgramContext, keyboard: Keyboard, inputStyle: Int,
                                        settingsValuesForSuggestion: SettingsValuesForSuggestion): SuggestionResults {
         val cachedResults = nextWordSuggestionsCache.get(ngramContext)
-        if (cachedResults != null) return cachedResults
+        if (cachedResults != null) return cachedResults.copy()
         val newResults = mDictionaryFacilitator.getSuggestionResults(ComposedData(InputPointers(1),
             false, ""), ngramContext, keyboard, settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyle)
         // ponytail: filter out multi-word suggestions if enabled
         if (Settings.getValues().mDisableMultiWordSuggestions) {
             newResults.removeAll { it.mWord.contains(' ') }
         }
-        nextWordSuggestionsCache.put(ngramContext, newResults)
+        nextWordSuggestionsCache.put(ngramContext, newResults.copy())
         return newResults
     }
 
