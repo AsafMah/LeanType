@@ -59,6 +59,7 @@ fun TwoThumbTypingScreen(
     val backspaceBehavior = currentBackspaceBehavior(prefs)
     val dualThumbHinting = prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING, Defaults.PREF_GESTURE_DUAL_THUMB_HINTING)
     val debugDrawPoints = prefs.getBoolean(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS, Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS)
+    val strokeAlignMode = prefs.getString(Settings.PREF_STROKE_ALIGN_MODE, Defaults.PREF_STROKE_ALIGN_MODE)
 
     val items = buildList {
         add(R.string.settings_category_two_thumb_typing_words)
@@ -82,6 +83,16 @@ fun TwoThumbTypingScreen(
         }
 
         add(R.string.settings_category_two_thumb_typing_recognition)
+        // DUAL_POINTER only means anything to the native decoder; the Java fallback engine
+        // ignores pointer ids entirely, so offering the choice there would be misleading.
+        if (JniUtils.sHaveNativeGestureLib) {
+            add(Settings.PREF_STROKE_ALIGN_MODE)
+        }
+        add(Settings.PREF_STROKE_IDEAL_PREFIX)
+        if (JniUtils.sHaveNativeGestureLib && strokeAlignMode == "dual_pointer") {
+            add(Settings.PREF_STROKE_ALIGN_INTERVAL_MS)
+            add(Settings.PREF_STROKE_ALIGN_GAP_MS)
+        }
         add(Settings.PREF_GESTURE_DUAL_THUMB_HINTING)
         if (dualThumbHinting) {
             add(Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT)
@@ -200,6 +211,37 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
         R.string.two_thumb_point_hinting, R.string.two_thumb_point_hinting_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_DUAL_THUMB_HINTING)
+    },
+    Setting(context, Settings.PREF_STROKE_ALIGN_MODE,
+        R.string.stroke_align_mode, R.string.stroke_align_mode_summary) { def ->        val items = listOf(
+            stringResource(R.string.stroke_align_mode_connector) to "connector",
+            stringResource(R.string.stroke_align_mode_dual_pointer) to "dual_pointer",
+        )
+        ListPreference(def, items, Defaults.PREF_STROKE_ALIGN_MODE)
+    },
+    Setting(context, Settings.PREF_STROKE_IDEAL_PREFIX,
+        R.string.stroke_ideal_prefix, R.string.stroke_ideal_prefix_summary) {
+        SwitchPreference(it, Defaults.PREF_STROKE_IDEAL_PREFIX)
+    },
+    Setting(context, Settings.PREF_STROKE_ALIGN_INTERVAL_MS,
+        R.string.stroke_align_interval, R.string.stroke_align_interval_summary) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_STROKE_ALIGN_INTERVAL_MS,
+            range = 5f..60f,
+            description = { value -> "${value.toInt()} ms" }
+        )
+    },
+    Setting(context, Settings.PREF_STROKE_ALIGN_GAP_MS,
+        R.string.stroke_align_gap, R.string.stroke_align_gap_summary) { def ->
+        SliderPreference(
+            name = def.title,
+            key = def.key,
+            default = Defaults.PREF_STROKE_ALIGN_GAP_MS,
+            range = 5f..200f,
+            description = { value -> "${value.toInt()} ms" }
+        )
     },
     Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT, R.string.gesture_dual_thumb_midline) { def ->
         SliderPreference(

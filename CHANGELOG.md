@@ -14,11 +14,16 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+- **Two separate thumb tracks (experimental)** — an opt-in gesture mode that feeds an earlier part of a word and the part you're swiping now to the recognizer as two *separate* thumb strokes instead of splicing them into one long trail, removing the invented connector movement between them. Under Two-Thumb Typing → Recognition. (#135)
+- **Redraw earlier word parts cleanly (experimental)** — optionally replaces the earlier part of a multi-part word with a tidy path through its key centres, and turns a single tap into a small swipe, so the recognizer sees one believable whole-word gesture. Includes tunable trail-speed and pause controls. (#135)
+
 ### Fixed
 - **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order onto the two per-pointer tracks the native decoder actually reads. (#135)
 
 ### Reliability & testing
 - Added a native gesture **two-pointer track harness** (`jni/tests/replay/two_pointer_track_test.cpp`) that drives the real AOSP `ProximityInfoState` on the host, with tunable pointer-id / time-policy / tap-promotion knobs and a printed sweep table. Runs in CI alongside the existing native suite. (#135)
+- The multi-part trail merge moved behind a pure, unit-tested `StrokeAligner` seam whose defaults reproduce the previous behaviour exactly. (#135)
 
 ### Changed
 - Documented the two-thumb decoder research in `docs/TWO_THUMB_TEMPORAL_ALIGNMENT.md`: the native decoder models two pointer tracks, track membership is decided by pointer id rather than timing, and deliberately overlapping stroke timestamps measurably corrupts the decoder's speed features. (#135)

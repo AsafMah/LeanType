@@ -210,6 +210,12 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // re-recognize the whole word, instead of literally appending it to a (possibly
     // mis-resolved) fragment. Makes a slow tap-after-swipe behave like a fast one. Default off.
     public static final String PREF_MULTIPART_RERECOGNIZE_TAPS = "multipart_rerecognize_taps";
+    // Stroke alignment (#135): how the prior-fragment base and the in-flight stroke are merged
+    // before the decoder sees them. See docs/TWO_THUMB_TEMPORAL_ALIGNMENT.md.
+    public static final String PREF_STROKE_ALIGN_MODE = "stroke_align_mode";
+    public static final String PREF_STROKE_ALIGN_INTERVAL_MS = "stroke_align_interval_ms";
+    public static final String PREF_STROKE_ALIGN_GAP_MS = "stroke_align_gap_ms";
+    public static final String PREF_STROKE_IDEAL_PREFIX = "stroke_ideal_prefix";
     public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREF_USE_CONTACTS = "use_contacts";
     public static final String PREF_USE_APPS = "use_apps";

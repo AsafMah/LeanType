@@ -3,6 +3,7 @@ package helium314.keyboard.settings
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -88,8 +89,31 @@ class SettingsContainerTest {
     }
 
     @Test
-    fun twoThumbFragmentBackspaceLabelMatchesBehavior() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+    fun strokeAlignmentSettingsAreRegistered() {
+        // All four are conditionally rendered on the Two-Thumb screen, so without an entry in the
+        // screen's Setting{} list they would silently vanish from settings search.
+        assertEquals(Settings.PREF_STROKE_ALIGN_MODE,
+            container[Settings.PREF_STROKE_ALIGN_MODE]?.key)
+        assertEquals(Settings.PREF_STROKE_IDEAL_PREFIX,
+            container[Settings.PREF_STROKE_IDEAL_PREFIX]?.key)
+        assertEquals(Settings.PREF_STROKE_ALIGN_INTERVAL_MS,
+            container[Settings.PREF_STROKE_ALIGN_INTERVAL_MS]?.key)
+        assertEquals(Settings.PREF_STROKE_ALIGN_GAP_MS,
+            container[Settings.PREF_STROKE_ALIGN_GAP_MS]?.key)
+    }
+
+    @Test
+    fun strokeAlignmentDefaultsPreserveHistoricalBehaviour() {
+        // The experimental modes must stay opt-in: DUAL_POINTER and the synthetic prefix trail
+        // both change what the recognizer sees.
+        assertEquals("connector", Defaults.PREF_STROKE_ALIGN_MODE)
+        assertEquals(false, Defaults.PREF_STROKE_IDEAL_PREFIX)
+        assertEquals(25, Defaults.PREF_STROKE_ALIGN_INTERVAL_MS)
+        assertEquals(60, Defaults.PREF_STROKE_ALIGN_GAP_MS)
+    }
+
+    @Test
+    fun twoThumbFragmentBackspaceLabelMatchesBehavior() {        val context = ApplicationProvider.getApplicationContext<Context>()
         assertEquals("Delete last fragment", context.getString(R.string.two_thumb_backspace_fragment))
     }
 

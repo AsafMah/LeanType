@@ -316,21 +316,44 @@ Recommended order instead:
 1. **Fix the pointer-id hazards regardless of any redesign** (cheap, independent, likely
    user-visible): guarantee at least one point carries id 0 and none carries id ≥ 2. Today a
    two-thumb sequence where thumb A lifts first leaves thumb B on id 1 ⇒ track 0 empty ⇒
-   `suggest.cpp:81-84` returns **no suggestions at all**.
-2. **Merge the stranded B7a + B7b work** (#98, #99). It is built, reviewed-by-use, and orthogonal —
-   tap→micro-stroke fixes a real, separate weakness.
-3. **Prototype `SPLIT_0_1` behind the existing `swipetest` build type**, for the *two-fragment*
-   case only, with global-monotonic timestamps, subject to the four constraints in §2.4. This is
-   the genuinely novel idea and it is a small change — but it must be judged on-device.
-4. **Keep the connector** for three-or-more fragments, and take #100's distance-aware re-timing for
-   its *own* merits (monotonicity, fewer `techcolony` hallucinations) — not as a simultaneity
-   mechanism.
+   `suggest.cpp:81-84` returns **no suggestions at all**. ✅ *done — `PointerIdNormalizer`.*
+2. **Merge the stranded B7a + B7b work** (#98, #99). ✅ *B7b done — `IdealPrefixTrailBuilder` is
+   ported and reachable at runtime via `PREF_STROKE_IDEAL_PREFIX` (default off).*
+3. **Prototype `SPLIT_0_1`** for the *two-fragment* case, with global-monotonic timestamps, subject
+   to the four constraints in §2.4. ✅ *done — `StrokeAligner`'s `DUAL_POINTER` mode, default off.*
+   **Still needs the on-device A/B to decide whether it ships as the default.**
+4. **Keep the connector** for three-or-more fragments (it remains the default), and take #100's
+   distance-aware re-timing for its *own* merits (monotonicity, fewer `techcolony` hallucinations)
+   — not as a simultaneity mechanism.
 5. **Reclassify #29.** It is not a "different problem" from #97; it is the same lever. Consider
    folding them.
 
 **Confidence:** high for §1–2 (measured against real code, in CI). Medium for the recommendation —
 whether two tracks *score* better than one merged trail is decided by the closed weighting policy
 and can only be settled on-device.
+
+---
+
+## 6a. What shipped, and how to try it
+
+Everything below defaults to **today's behaviour**, so nothing changes until a knob is moved.
+
+| Where | Knob | Default | Effect |
+| --- | --- | :---: | --- |
+| Two-Thumb Typing → Recognition | **Joining word parts** | One joined trail | `CONNECTOR` vs `DUAL_POINTER` (base → decoder track 0, current stroke → track 1) |
+| ” | **Redraw earlier word parts cleanly** | off | `IdealPrefixTrailBuilder`: key-centre prefix path + tap → micro-stroke |
+| ” | **Word-part trail speed** | 25 ms | base inter-point interval (`DUAL_POINTER` only) |
+| ” | **Pause before the new part** | 60 ms | base→stroke gap (`DUAL_POINTER` only) |
+
+Implementation: `latin/gesture/StrokeAligner.java` (the merge seam, called from
+`WordComposer.setBatchInputPointers`) and `latin/gesture/IdealPrefixTrailBuilder.java` (armed in
+`InputLogic.onStartBatchInput`). `keyboard/internal/PointerIdNormalizer.java` fixes the id hazard
+on the live gesture path independently of all of the above.
+
+**On-device A/B to run:** with two-thumb spacing on, compare *One joined trail* against *Two
+separate thumb tracks* on the `TWO_THUMB_TYPING_INTERNALS.md` §5 matrix — especially
+`tech`+`nology`, `te`+`chnology` and `s`+`ilo` — and watch for connector hallucinations
+(`techcolony`) disappearing or top-1 accuracy regressing.
 
 ---
 
