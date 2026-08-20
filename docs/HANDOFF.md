@@ -206,14 +206,19 @@ The seven that stopped failing were `SubtypeTest > subtypeStaysEnabledOnEdits`, 
 `ParserTest > backgroundType`, `XLinkTest > otherLinks`, and `StringUtilsTest` ×2
 (`detectEmojisAtEndFail`, `isEmojiDetectsAllAvailableEmojis`).
 
-**Attribute that carefully.** Both runs were on the same machine minutes apart, which controls
-for most environment drift, but not all of it. The first three are safely merge-attributable —
-deterministic logic tests, and the two §7 defects were separately confirmed fixed on a pristine
-v4.1.2 checkout. `StringUtilsTest` depends on the bundled emoji-data version, which this merge
-does update, so those two are plausibly merge-fixed but not independently confirmed.
-`XLinkTest > otherLinks` makes a live network call to Codeberg, so it can flip without any code
-change — don't count it as a fix. `ParserTest > backgroundType` sits with the other
-asset/locale-sensitive `ParserTest` cases.
+**Attribute that carefully**, in three tiers. Both runs were on the same machine minutes apart,
+which controls for toolchain, locale and machine state — but not for a remote host being
+reachable.
+
+- **Attributable:** `SubtypeTest > subtypeStaysEnabledOnEdits`, `InputLogicTest > immediate
+  regex expansion…`, and `insertLetterIntoWordHangulFails` — deterministic logic tests with no
+  external inputs, and the two §7 defects were separately confirmed fixed on a pristine v4.1.2
+  checkout.
+- **Plausible but unconfirmed:** `StringUtilsTest` ×2 and `ParserTest > backgroundType` — both
+  depend on bundled data/assets that this merge does change, so the merge is the likely cause,
+  but neither was isolated.
+- **Not attributable:** `XLinkTest > otherLinks` — a live network call to Codeberg, which can
+  flip with no code change at all. Don't count it as a fix.
 
 **Always diff failing test *names* against a baseline run of the merge base — never compare
 absolute pass counts.** Both the "12 failures" figure and a "5 failures" figure are correct —
