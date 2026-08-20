@@ -15,8 +15,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Fixed
-- **Backspace now deletes a paragraph break in rich-text editors** such as Microsoft Word and Notes. Those apps model paragraphs as separate blocks and silently ignore the delete request that would merge two of them, so backspace appeared dead at the start of a paragraph; it is now routed through a key event the way other keyboards do, while a genuinely empty field still sends nothing. (#133)
-- **Held backspace no longer mis-deletes emoji.** The accelerated second deletion measured the wrong character, so it could cut a multi-code-point emoji in half. (#133)
+- **Held backspace no longer mis-deletes emoji.** The accelerated second deletion measured the character from *before* the first deletion rather than the one it was about to remove, so it could cut a multi-code-point emoji in half. Present upstream too; reported as `LeanBitLab/LeanType#423`. (#133)
 
 ## [0.2.0] - 2026-08-06
 

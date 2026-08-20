@@ -122,12 +122,16 @@ class InputLogicTest {
         assertEquals("yu", composingText)
     }
 
-    // Backspace at the start of a paragraph does nothing in rich-text editors (MS Word,
-    // Samsung/Google Notes, Google Docs). Those model paragraphs as separate blocks and silently
-    // refuse a deleteSurroundingText that would merge two of them, but they do honour a real
-    // KEYCODE_DEL -- which is what every other keyboard sends.
-    // Mode B: the caret reached the paragraph start by typing, so RichInputConnection's cache
-    // still holds the '\n' and getCodePointBeforeCursor() returns it.
+    // Hypothesis test, currently PARKED -- the behaviour it asserts is not implemented.
+    // The theory: block-based editors (MS Word, Samsung/Google Notes) model paragraphs as
+    // separate blocks, silently ignore a deleteSurroundingText that would merge two of them
+    // (while still returning true, so the failure is invisible), and honour a real KEYCODE_DEL.
+    // Device testing on a Samsung SM-S936B did NOT confirm this: on the unfixed build both
+    // Word and Samsung Notes merged paragraphs correctly, via typed-Enter, via caret moved in
+    // by tap, with empty paragraphs, and under a held backspace. So the fix this test was
+    // written for is not justified yet. Un-ignore it together with the KEYCODE_DEL routing on
+    // `feat/backspace-paragraph-keyevent` once there is a reproduction from a real editor.
+    @Ignore("no device reproduction; the routing this asserts is parked, see #133")
     @Test fun `backspace merges paragraphs when the editor refuses deleteSurroundingText`() {
         reset()
         setText("hello\n") // caret at the start of the second paragraph
