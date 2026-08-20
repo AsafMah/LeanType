@@ -27,6 +27,7 @@ import helium314.keyboard.keyboard.internal.KeyVisualAttributes
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.ClipboardHistoryManager
+import helium314.keyboard.latin.ClipboardHistoryEntry
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.ColorType
@@ -208,6 +209,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         if (clipboardStripScrollView != null) {
             colors.setBackground(clipboardStripScrollView, ColorType.STRIP_BACKGROUND)
         }
+        clipboardStrip.removeAllViews()
         toolbarKeys.forEach {
             clipboardStrip.addView(it)
             val tag = it.tag
@@ -236,12 +238,31 @@ class ClipboardHistoryView @JvmOverloads constructor(
     private lateinit var searchBarTextView: TextView
     private var searchQuery = StringBuilder()
     private var backButton: ImageButton? = null
+    
+    // We reuse searchWatcher logic but applied manually or to a hidden text view if needed.
+    // Actually we just filter manually now.
+    private var searchCursorPos = 0
 
+    private fun configureInlineTextView(textView: TextView) {
+        textView.maxLines = 1
+        textView.setHorizontallyScrolling(true)
+        textView.isHorizontalScrollBarEnabled = false
+        textView.overScrollMode = View.OVER_SCROLL_ALWAYS
+    }
+
+    private fun ensureCursorVisible(textView: TextView, cursorPos: Int) {
+        if (textView.layout == null) {
+            textView.post { ensureCursorVisible(textView, cursorPos) }
+            return
+        }
+        val safePos = cursorPos.coerceIn(0, textView.text.length)
+        textView.bringPointIntoView(safePos)
+    }
+    
     private fun startSearchMode() {
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         clipboardStrip.removeAllViews()
         
-        // 1. Add Search Text View
         searchBarTextView = TextView(context).apply {
              layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
              gravity = android.view.Gravity.CENTER_VERTICAL or android.view.Gravity.START
@@ -251,9 +272,9 @@ class ClipboardHistoryView @JvmOverloads constructor(
              setHintTextColor(Settings.getValues().mColors.get(ColorType.KEY_TEXT) and 0x00FFFFFF or 0x80000000.toInt())
              setPadding(32, 0, 0, 0)
         }
+        configureInlineTextView(searchBarTextView)
         clipboardStrip.addView(searchBarTextView)
         
-        // 2. Add Close Button
         backButton = ImageButton(context).apply {
              layoutParams = LinearLayout.LayoutParams(
                  resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width), 
@@ -268,31 +289,22 @@ class ClipboardHistoryView @JvmOverloads constructor(
         clipboardStrip.addView(backButton)
         
         searchQuery.clear()
-        searchBarTextView.text = ""
+        searchCursorPos = 0
+        updateSearchDisplay()
 
-        // Switch to Alphabet Keyboard
         setBottomRowLayout(KeyboardId.ELEMENT_ALPHABET)
         
-        // HIDE Clipboard List while searching
         clipboardRecyclerView.visibility = View.GONE
         emptyViewContainer.visibility = View.GONE
+        updateClipboardGestureSuppression()
     }
 
     private fun stopSearchMode() {
-        // Restore toolbar
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         clipboardStrip.removeAllViews()
-        toolbarKeys.forEach { 
-             clipboardStrip.addView(it) 
-             // Restore state (enabled/disabled handling if needed)
-        }
+        toolbarKeys.forEach { clipboardStrip.addView(it) }
         applyClipboardToolbarKeyLayoutParams()
         clipboardStrip.post { applyClipboardToolbarKeyLayoutParams() }
-        
-        // Keep the filter if we have query?
-        // User said: "redirected to the clipboard with filtered items"
-        // So we keep the filter!
-        // If searchQuery is empty, we clear filter.
         
         if (searchQuery.isNotEmpty()) {
              clipboardAdapter.filter(searchQuery.toString())
@@ -300,73 +312,341 @@ class ClipboardHistoryView @JvmOverloads constructor(
              clipboardAdapter.filter("")
         }
         
-        // Switch back to Clipboard Keyboard
         setBottomRowLayout(KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW)
         
-        // SHOW Clipboard List
         clipboardRecyclerView.visibility = View.VISIBLE
         updateEmptyView(clipboardAdapter.isFiltering)
+        updateClipboardGestureSuppression()
     }
 
     private fun updateEmptyView(isSearch: Boolean) {
-        val isEmpty = clipboardAdapter.itemCount == 0 // Since we removed header, 0 is truly empty
+        val isEmpty = clipboardAdapter.itemCount == 0
         emptyViewContainer.visibility = if (isEmpty) View.VISIBLE else View.GONE
         if (isEmpty) {
             emptyViewText.setText(if (isSearch) R.string.clipboard_no_search_results else R.string.clipboard_empty_text)
         }
     }
 
-    // Intercept Input - Implements KeyboardActionListener
+    private var editEntry: ClipboardHistoryEntry? = null
+    private var editText = StringBuilder()
+    private var editCursorPos = 0
+    private var deleteSwipeStartPos = -1
+    private var currentDeleteSwipePos = -1
+    private lateinit var editTextView: TextView
+
+    val inEditMode: Boolean
+        get() = editEntry != null
+
+    fun startEditMode(entry: ClipboardHistoryEntry) {
+        clipboardRecyclerView.dismissUndoBar()
+        dismissConfirmationBar()
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if (inSearchMode) {
+            stopSearchMode()
+        }
+
+        editEntry = entry
+        editText = StringBuilder(entry.text)
+        editCursorPos = editText.length
+
+        clipboardStrip.removeAllViews()
+
+        val colors = Settings.getValues().mColors
+        val btnWidth = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
+
+        editTextView = TextView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            textSize = 16f
+            setTextColor(colors.get(ColorType.KEY_TEXT))
+            setPadding(32, 0, 0, 0)
+            setOnTouchListener { _, event ->
+                if (event.action == android.view.MotionEvent.ACTION_UP) {
+                    val layout = layout
+                    if (layout != null) {
+                        val x = event.x - totalPaddingLeft + scrollX
+                        val y = event.y - totalPaddingTop + scrollY
+                        val line = layout.getLineForVertical(y.toInt().coerceIn(0, (layout.height - 1).coerceAtLeast(0)))
+                        var offset = layout.getOffsetForHorizontal(line, x)
+                        if (offset > editCursorPos) {
+                            offset = (offset - 1).coerceAtLeast(0)
+                        }
+                        editCursorPos = offset.coerceIn(0, editText.length)
+                        updateEditDisplay()
+                    }
+                }
+                true
+            }
+        }
+        configureInlineTextView(editTextView)
+        clipboardStrip.addView(editTextView)
+
+        val saveButton = ImageButton(context).apply {
+            layoutParams = LinearLayout.LayoutParams(btnWidth, LinearLayout.LayoutParams.MATCH_PARENT)
+            setImageResource(R.drawable.ic_setup_check)
+            setBackgroundResource(R.drawable.toolbar_key_background)
+            setColorFilter(colors.get(ColorType.KEY_ICON))
+            colors.setColor(background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
+            setOnClickListener { stopEditMode(save = true) }
+        }
+        clipboardStrip.addView(saveButton)
+
+        val cancelButton = ImageButton(context).apply {
+            layoutParams = LinearLayout.LayoutParams(btnWidth, LinearLayout.LayoutParams.MATCH_PARENT)
+            setImageResource(R.drawable.ic_close)
+            setBackgroundResource(R.drawable.toolbar_key_background)
+            setColorFilter(colors.get(ColorType.KEY_ICON))
+            colors.setColor(background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
+            setOnClickListener { stopEditMode(save = false) }
+        }
+        clipboardStrip.addView(cancelButton)
+
+        clipboardRecyclerView.visibility = View.GONE
+        emptyViewContainer.visibility = View.GONE
+
+        updateEditDisplay()
+
+        setBottomRowLayout(KeyboardId.ELEMENT_ALPHABET)
+        updateClipboardGestureSuppression()
+    }
+
+    private fun stopEditMode(save: Boolean) {
+        val entry = editEntry ?: return
+
+        if (save) {
+            val newText = editText.toString().trim()
+            if (newText.isNotEmpty() && newText != entry.text) {
+                clipboardHistoryManager.updateClipText(entry.id, newText)
+            }
+        }
+
+        editEntry = null
+        deleteSwipeStartPos = -1
+        currentDeleteSwipePos = -1
+
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        clipboardStrip.removeAllViews()
+        toolbarKeys.forEach { clipboardStrip.addView(it) }
+        applyClipboardToolbarKeyLayoutParams()
+        clipboardStrip.post { applyClipboardToolbarKeyLayoutParams() }
+
+        setBottomRowLayout(KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW)
+
+        clipboardRecyclerView.visibility = View.VISIBLE
+        updateEmptyView(clipboardAdapter.isFiltering)
+        updateClipboardGestureSuppression()
+    }
+
+    private fun updateEditDisplay() {
+        updateEditDisplayWithSelection(-1, -1)
+    }
+
+    private fun updateEditDisplayWithSelection(selStart: Int, selEnd: Int) {
+        if (!this::editTextView.isInitialized) return
+        val colors = Settings.getValues().mColors
+        val textColor = colors.get(ColorType.KEY_TEXT)
+
+        if (selStart >= 0 && selEnd > selStart && selEnd <= editText.length) {
+            val sb = android.text.SpannableStringBuilder(editText)
+            val highlightColor = (textColor and 0x00FFFFFF) or 0x50000000
+            sb.setSpan(
+                android.text.style.BackgroundColorSpan(highlightColor),
+                selStart,
+                selEnd,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            editTextView.text = sb
+            ensureCursorVisible(editTextView, selEnd)
+        } else {
+            val sb = android.text.SpannableStringBuilder(editText)
+            val pos = editCursorPos.coerceIn(0, sb.length)
+            sb.insert(pos, "|")
+            sb.setSpan(
+                android.text.style.ForegroundColorSpan(textColor),
+                pos,
+                pos + 1,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            editTextView.text = sb
+            ensureCursorVisible(editTextView, pos + 1)
+        }
+    }
+
+    private fun updateSearchDisplay() {
+        updateSearchDisplayWithSelection(-1, -1)
+    }
+
+    private fun updateSearchDisplayWithSelection(selStart: Int, selEnd: Int) {
+        if (!this::searchBarTextView.isInitialized) return
+        val colors = Settings.getValues().mColors
+        val textColor = colors.get(ColorType.KEY_TEXT)
+
+        if (selStart >= 0 && selEnd > selStart && selEnd <= searchQuery.length) {
+            val sb = android.text.SpannableStringBuilder(searchQuery)
+            val highlightColor = (textColor and 0x00FFFFFF) or 0x50000000
+            sb.setSpan(
+                android.text.style.BackgroundColorSpan(highlightColor),
+                selStart,
+                selEnd,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            searchBarTextView.text = sb
+            ensureCursorVisible(searchBarTextView, selEnd)
+        } else {
+            val sb = android.text.SpannableStringBuilder(searchQuery)
+            val pos = searchCursorPos.coerceIn(0, sb.length)
+            sb.insert(pos, "|")
+            sb.setSpan(
+                android.text.style.ForegroundColorSpan(textColor),
+                pos,
+                pos + 1,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            searchBarTextView.text = sb
+            ensureCursorVisible(searchBarTextView, pos + 1)
+        }
+    }
+
+    private val currentBottomRowLayout: Int
+        get() {
+            val keyboardView = findViewById<MainKeyboardView>(R.id.bottom_row_keyboard) ?: return KeyboardId.ELEMENT_ALPHABET
+            return keyboardView.keyboard?.mId?.mElementId ?: KeyboardId.ELEMENT_ALPHABET
+        }
+
+    private fun isLayoutSwitchCode(code: Int): Boolean {
+        return code == KeyCode.SYMBOL || code == KeyCode.SYMBOL_ALPHA || code == KeyCode.ALPHA
+                || code == KeyCode.SHIFT || code == KeyCode.CAPS_LOCK
+    }
+
+    private fun handleLayoutSwitchInEditOrSearch(primaryCode: Int): Boolean {
+        if (primaryCode == KeyCode.SYMBOL || primaryCode == KeyCode.SYMBOL_ALPHA || primaryCode == KeyCode.ALPHA) {
+            val isOnSymbols = currentBottomRowLayout == KeyboardId.ELEMENT_SYMBOLS
+                    || currentBottomRowLayout == KeyboardId.ELEMENT_SYMBOLS_SHIFTED
+            val targetId = if (isOnSymbols) KeyboardId.ELEMENT_ALPHABET else KeyboardId.ELEMENT_SYMBOLS
+            setBottomRowLayout(targetId)
+            return true
+        }
+        if (primaryCode == KeyCode.SHIFT || primaryCode == KeyCode.CAPS_LOCK) {
+            val targetId = when (currentBottomRowLayout) {
+                KeyboardId.ELEMENT_SYMBOLS -> KeyboardId.ELEMENT_SYMBOLS_SHIFTED
+                KeyboardId.ELEMENT_SYMBOLS_SHIFTED -> KeyboardId.ELEMENT_SYMBOLS
+                KeyboardId.ELEMENT_ALPHABET -> KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED
+                KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED,
+                KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED,
+                KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED -> KeyboardId.ELEMENT_ALPHABET
+                else -> KeyboardId.ELEMENT_ALPHABET
+            }
+            setBottomRowLayout(targetId)
+            return true
+        }
+        return false
+    }
+
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        
+        if (inEditMode) {
+            if (handleLayoutSwitchInEditOrSearch(primaryCode)) {
+                return
+            }
+
+            val char = if (primaryCode > 0) primaryCode.toChar() else null
+
+            if (primaryCode == KeyCode.DELETE) {
+                if (editCursorPos > 0) {
+                    editText.deleteCharAt(editCursorPos - 1)
+                    editCursorPos--
+                    updateEditDisplay()
+                }
+            } else if (primaryCode == Constants.CODE_ENTER) {
+                editText.insert(editCursorPos, "\n")
+                editCursorPos++
+                updateEditDisplay()
+            } else if (primaryCode == Constants.CODE_SPACE) {
+                editText.insert(editCursorPos, " ")
+                editCursorPos++
+                updateEditDisplay()
+            } else if (primaryCode == KeyCode.ARROW_LEFT) {
+                if (editCursorPos > 0) {
+                    editCursorPos--
+                    updateEditDisplay()
+                }
+            } else if (primaryCode == KeyCode.ARROW_RIGHT) {
+                if (editCursorPos < editText.length) {
+                    editCursorPos++
+                    updateEditDisplay()
+                }
+            } else if (char != null) {
+                editText.insert(editCursorPos, char.toString())
+                editCursorPos++
+                updateEditDisplay()
+            }
+            return
+        }
 
         if (inSearchMode) {
+            if (handleLayoutSwitchInEditOrSearch(primaryCode)) {
+                return
+            }
+
             val char = if (primaryCode > 0) primaryCode.toChar() else null
             
             if (primaryCode == KeyCode.DELETE) {
-                if (searchQuery.isNotEmpty()) {
-                    searchQuery.deleteCharAt(searchQuery.length - 1)
-                    searchBarTextView.text = searchQuery.toString()
-                    // Filter live or deferred? User requested deferred but also "auto complete". 
-                    // Since list is HIDDEN, live filtering is useless visually but keeps state correct.
-                    // Doing it live is safer.
+                if (searchCursorPos > 0) {
+                    searchQuery.deleteCharAt(searchCursorPos - 1)
+                    searchCursorPos--
+                    updateSearchDisplay()
                     clipboardAdapter.filter(searchQuery.toString()) 
                 }
             } else if (primaryCode == Constants.CODE_ENTER) {
                 stopSearchMode()
             } else if (primaryCode == Constants.CODE_SPACE) {
-                 searchQuery.append(" ")
-                 searchBarTextView.text = searchQuery.toString()
-                 clipboardAdapter.filter(searchQuery.toString())
+                searchQuery.insert(searchCursorPos, " ")
+                searchCursorPos++
+                updateSearchDisplay()
+                clipboardAdapter.filter(searchQuery.toString())
+            } else if (primaryCode == KeyCode.ARROW_LEFT) {
+                if (searchCursorPos > 0) {
+                    searchCursorPos--
+                    updateSearchDisplay()
+                }
+            } else if (primaryCode == KeyCode.ARROW_RIGHT) {
+                if (searchCursorPos < searchQuery.length) {
+                    searchCursorPos++
+                    updateSearchDisplay()
+                }
             } else if (char != null) {
-                 searchQuery.append(char)
-                 searchBarTextView.text = searchQuery.toString()
-                 clipboardAdapter.filter(searchQuery.toString())
+                searchQuery.insert(searchCursorPos, char.toString())
+                searchCursorPos++
+                updateSearchDisplay()
+                clipboardAdapter.filter(searchQuery.toString())
             } else {
-                 // Any other key (like Symbols ?123 or Settings) should close search 
-                 // and pass through to original listener
                  stopSearchMode()
                  keyboardActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat)
             }
-            // Block sending to app
             return 
         }
         
-        // Pass through if not search mode
-        if (Settings.getValues().mAlphaAfterClipHistoryEntry)
-            keyboardActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat)
-        else
-            keyboardActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat)
+        keyboardActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat)
     }
     
     override fun onTextInput(text: String) {
+         if (inEditMode) {
+              editText.insert(editCursorPos, text)
+              editCursorPos += text.length
+              updateEditDisplay()
+              return
+         }
+
          val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
          val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
 
          if (inSearchMode) {
-             searchQuery.append(text)
-             searchBarTextView.text = searchQuery.toString()
+             searchQuery.insert(searchCursorPos, text)
+             searchCursorPos += text.length
+             updateSearchDisplay()
              clipboardAdapter.filter(searchQuery.toString())
              updateEmptyView(true)
              return
@@ -379,11 +659,16 @@ class ClipboardHistoryView @JvmOverloads constructor(
          keyboardActionListener.onImageSelected(imageUri)
     }
 
-    // Delegate other KeyboardActionListener methods
     override fun onPressKey(primaryCode: Int, repeatCount: Int, isSinglePointer: Boolean, hapticEvent: HapticEvent?) {
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if ((inEditMode || inSearchMode) && isLayoutSwitchCode(primaryCode)) return
         keyboardActionListener.onPressKey(primaryCode, repeatCount, isSinglePointer, hapticEvent)
     }
     override fun onReleaseKey(primaryCode: Int, withSliding: Boolean) {
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if ((inEditMode || inSearchMode) && isLayoutSwitchCode(primaryCode)) return
         keyboardActionListener.onReleaseKey(primaryCode, withSliding)
     }
     override fun onLongPressKey(primaryCode: Int) {
@@ -403,17 +688,92 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onFinishSlidingInput() { keyboardActionListener.onFinishSlidingInput() }
     override fun onCustomRequest(requestCode: Int): Boolean { return keyboardActionListener.onCustomRequest(requestCode) }
     override fun onHorizontalSpaceSwipe(steps: Int): Boolean {
+        if (inEditMode) {
+            val newPos = (editCursorPos + steps).coerceIn(0, editText.length)
+            if (newPos != editCursorPos) {
+                editCursorPos = newPos
+                updateEditDisplay()
+            }
+            return true
+        }
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if (inSearchMode) {
+            val newPos = (searchCursorPos + steps).coerceIn(0, searchQuery.length)
+            if (newPos != searchCursorPos) {
+                searchCursorPos = newPos
+                updateSearchDisplay()
+            }
+            return true
+        }
         return keyboardActionListener.onHorizontalSpaceSwipe(steps)
     }
-    override fun onVerticalSpaceSwipe(steps: Int): Boolean {
-        return keyboardActionListener.onVerticalSpaceSwipe(steps)
-    }
-    override fun onEndSpaceSwipe() {
-        keyboardActionListener.onEndSpaceSwipe()
-    }
+    override fun onVerticalSpaceSwipe(steps: Int): Boolean { return keyboardActionListener.onVerticalSpaceSwipe(steps) }
+    override fun onEndSpaceSwipe() { keyboardActionListener.onEndSpaceSwipe() }
     override fun toggleNumpad(w: Boolean, f: Boolean): Boolean { return keyboardActionListener.toggleNumpad(w, f) }
-    override fun onMoveDeletePointer(steps: Int) { keyboardActionListener.onMoveDeletePointer(steps) }
-    override fun onUpWithDeletePointerActive() { keyboardActionListener.onUpWithDeletePointerActive() }
+    override fun onMoveDeletePointer(steps: Int) {
+        if (inEditMode) {
+            if (deleteSwipeStartPos == -1) {
+                deleteSwipeStartPos = editCursorPos
+                currentDeleteSwipePos = editCursorPos
+            }
+            currentDeleteSwipePos = (currentDeleteSwipePos + steps).coerceIn(0, editText.length)
+            updateEditDisplayWithSelection(
+                minOf(deleteSwipeStartPos, currentDeleteSwipePos),
+                maxOf(deleteSwipeStartPos, currentDeleteSwipePos)
+            )
+            return
+        }
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if (inSearchMode) {
+            if (deleteSwipeStartPos == -1) {
+                deleteSwipeStartPos = searchCursorPos
+                currentDeleteSwipePos = searchCursorPos
+            }
+            currentDeleteSwipePos = (currentDeleteSwipePos + steps).coerceIn(0, searchQuery.length)
+            updateSearchDisplayWithSelection(
+                minOf(deleteSwipeStartPos, currentDeleteSwipePos),
+                maxOf(deleteSwipeStartPos, currentDeleteSwipePos)
+            )
+            return
+        }
+        keyboardActionListener.onMoveDeletePointer(steps)
+    }
+    override fun onUpWithDeletePointerActive() {
+        if (inEditMode) {
+            if (deleteSwipeStartPos != -1 && currentDeleteSwipePos != -1) {
+                val start = minOf(deleteSwipeStartPos, currentDeleteSwipePos)
+                val end = maxOf(deleteSwipeStartPos, currentDeleteSwipePos)
+                if (start < end) {
+                    editText.delete(start, end)
+                    editCursorPos = start
+                }
+            }
+            deleteSwipeStartPos = -1
+            currentDeleteSwipePos = -1
+            updateEditDisplay()
+            return
+        }
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if (inSearchMode) {
+            if (deleteSwipeStartPos != -1 && currentDeleteSwipePos != -1) {
+                val start = minOf(deleteSwipeStartPos, currentDeleteSwipePos)
+                val end = maxOf(deleteSwipeStartPos, currentDeleteSwipePos)
+                if (start < end) {
+                    searchQuery.delete(start, end)
+                    searchCursorPos = start
+                }
+            }
+            deleteSwipeStartPos = -1
+            currentDeleteSwipePos = -1
+            updateSearchDisplay()
+            clipboardAdapter.filter(searchQuery.toString())
+            return
+        }
+        keyboardActionListener.onUpWithDeletePointerActive()
+    }
     override fun resetMetaState() { keyboardActionListener.resetMetaState() }
     
     private fun setupClipKey(params: KeyDrawParams) {
@@ -650,6 +1010,11 @@ class ClipboardHistoryView @JvmOverloads constructor(
     fun stopClipboardHistory() {
         if (!this::clipboardAdapter.isInitialized) return
 
+        // Stop edit mode if active
+        if (inEditMode && isAttachedToWindow) {
+            stopEditMode(save = false)
+        }
+        
         // Also ensure search mode is stopped if we explicitly leave clipboard history
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
         val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
@@ -664,6 +1029,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
         clipboardRecyclerView.adapter = null
         clipboardHistoryManager.setHistoryChangeListener(null)
         clipboardAdapter.clipboardHistoryManager = null
+
+        PointerTracker.setClipboardInlineInputActive(false)
     }
 
     fun showClearAllConfirmationBar() {
@@ -748,10 +1115,16 @@ class ClipboardHistoryView @JvmOverloads constructor(
         }
     }
 
+    override fun onClipChanged(position: Int) {
+        confirmationHandler.post {
+            clipboardAdapter.refresh()
+        }
+    }
+
     override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
         setToolbarButtonsActivatedStateOnPrefChange(KeyboardSwitcher.getInstance().clipboardStrip, key)
 
-        if (key == Settings.PREF_AUTO_SPAN_TOOLBAR_KEYS || key == Settings.PREF_CLIPBOARD_TOOLBAR_KEYS) {
+        if (key == Settings.PREF_AUTO_SPAN_TOOLBAR_KEYS || key == Settings.PREF_TOOLBAR_KEYS_ALIGNMENT || key == Settings.PREF_CLIPBOARD_KEYS_ALIGNMENT || key == Settings.PREF_CLIPBOARD_TOOLBAR_KEYS) {
             applyClipboardToolbarKeyLayoutParams()
             KeyboardSwitcher.getInstance().clipboardStrip?.post { applyClipboardToolbarKeyLayoutParams() }
         }
@@ -771,35 +1144,79 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip ?: return
         val count = clipboardStrip.childCount
         if (count == 0) return
-        val parentView = (clipboardStrip.parent as? View)
-        val containerWidth = parentView?.width?.takeIf { it > 0 }
-            ?: parentView?.measuredWidth?.takeIf { it > 0 }
-            ?: clipboardStrip.width.takeIf { it > 0 }
-            ?: clipboardStrip.measuredWidth.takeIf { it > 0 }
-            ?: context.resources.displayMetrics.widthPixels
+
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        if (inEditMode || inSearchMode) return
+
         val singleKeyWidth = kotlin.math.min(
             context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
             context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
         )
-        val totalKeysWidth = count * singleKeyWidth
+
+        val visibleCount = (0 until count).count {
+            val child = clipboardStrip.getChildAt(it)
+            child != null && child.visibility != View.GONE
+        }
+        if (visibleCount == 0) return
+
+        val keyboardWidth = ResourceUtils.getKeyboardWidth(context, Settings.getValues())
+        val parentView = (clipboardStrip.parent as? View)
+        val containerWidth = parentView?.width?.takeIf { it > 0 }
+            ?: parentView?.measuredWidth?.takeIf { it > 0 }
+            ?: keyboardWidth
 
         val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
-        val useEqualSpacing = isAutoSpan && containerWidth > 0 && totalKeysWidth <= containerWidth
+        val minSpannedKeyWidth = (singleKeyWidth * 1.25f).toInt()
+        val canSpan = containerWidth > 0 && (containerWidth / visibleCount >= minSpannedKeyWidth)
+        val useEqualSpacing = isAutoSpan && canSpan
 
-        clipboardStrip.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else Gravity.END
+        val alignmentGravity = when (Settings.getValues().mToolbarKeysAlignment) {
+            "left" -> Gravity.START or Gravity.CENTER_VERTICAL
+            "center" -> Gravity.CENTER
+            else -> Gravity.END or Gravity.CENTER_VERTICAL
+        }
+        clipboardStrip.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else alignmentGravity
 
         val toolbarKeyLayoutParams = LinearLayout.LayoutParams(
             singleKeyWidth,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
+            singleKeyWidth
+        ).apply {
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val spannedLayoutParams = LinearLayout.LayoutParams(0, singleKeyWidth, 1f).apply {
+            gravity = Gravity.CENTER_VERTICAL
+        }
 
         for (i in 0 until count) {
             val child = clipboardStrip.getChildAt(i) ?: continue
+            if (child.visibility == View.GONE) continue
             child.layoutParams = if (useEqualSpacing) {
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+                spannedLayoutParams
             } else {
                 toolbarKeyLayoutParams
             }
+        }
+    }
+
+    private fun updateClipboardGestureSuppression() {
+        val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
+        val inSearchMode = this::searchBarTextView.isInitialized && searchBarTextView.parent == clipboardStrip
+        val active = inEditMode || inSearchMode
+        PointerTracker.setClipboardInlineInputActive(active)
+    }
+
+    override fun onDetachedFromWindow() {
+        PointerTracker.setClipboardInlineInputActive(false)
+        super.onDetachedFromWindow()
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (!isShown) {
+            PointerTracker.setClipboardInlineInputActive(false)
+        } else {
+            updateClipboardGestureSuppression()
         }
     }
 }

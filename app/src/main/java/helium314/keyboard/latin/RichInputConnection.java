@@ -736,9 +736,15 @@ public final class RichInputConnection implements PrivateCommandPerformer {
 
     public void performEditorAction(final int actionId) {
         mIC = mParent.getCurrentInputConnection();
-        if (isConnected()) {
-            mIC.performEditorAction(actionId);
+        if (!isConnected()) {
+            return;
         }
+
+        if (mComposingText.length() > 0) {
+            finishComposingText();
+        }
+
+        mIC.performEditorAction(actionId);
     }
 
     public void sendKeyEvent(final KeyEvent keyEvent) {

@@ -39,7 +39,10 @@
 -dontwarn java.lang.management.**
 -dontwarn org.joda.time.**
 
-# Keep handwriting plugin interface and listener to prevent parameter removal/signature optimization
+# Keep offline voice plugin AIDL interface and parcelable classes
+-keep class com.leanbitlab.leantype.voice.** { *; }
+-keep interface com.leanbitlab.leantype.voice.** { *; }
+
 -keep interface helium314.keyboard.latin.handwriting.HandwritingRecognizer {
     <methods>;
 }

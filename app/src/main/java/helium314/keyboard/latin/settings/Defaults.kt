@@ -51,6 +51,8 @@ object Defaults {
     
     const val PREF_SPLIT_TOOLBAR = false
     const val PREF_AUTO_SPAN_TOOLBAR_KEYS = true
+    const val PREF_TOOLBAR_KEYS_ALIGNMENT = "right"
+    const val PREF_CLIPBOARD_KEYS_ALIGNMENT = "right"
     const val PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR = true
     const val PREF_USE_SYSTEM_EMOJI = false
 
@@ -116,7 +118,7 @@ object Defaults {
     @JvmField
     val PREF_SPLIT_SPACER_SCALE = Array(2) { DEFAULT_SIZE_SCALE }
     @JvmField
-    val PREF_KEYBOARD_HEIGHT_SCALE = Array(2) { 0.77f }
+    val PREF_KEYBOARD_HEIGHT_SCALE = arrayOf(0.77f, 0.45f)
     @JvmField
     val PREF_BOTTOM_PADDING_SCALE = arrayOf(1.05f, 0f)
     @JvmField
@@ -151,6 +153,7 @@ object Defaults {
     const val PREF_SUGGEST_SCREENSHOTS = false
     const val PREF_COMPRESS_SCREENSHOTS = true
     const val PREF_AUTO_READ_OTP = false
+    const val PREF_OTP_ALLOWED_SMS_PACKAGE = ""
     const val PREF_GESTURE_INPUT = true
     // ponytail: gesture method default value
     const val PREF_GESTURE_METHOD = "fallback"
@@ -244,6 +247,7 @@ object Defaults {
     const val PREF_ADD_TO_PERSONAL_DICTIONARY = true
     const val PREF_FLAG_UNKNOWN_WORDS = true
     const val PREF_GRADUATED_TRUST = true
+    const val PREF_ADD_TO_PERSONAL_DICT_THRESHOLD = 2
     @JvmField
     val PREF_NAVBAR_COLOR = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
     const val PREF_NARROW_KEY_GAPS = true

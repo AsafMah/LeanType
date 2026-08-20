@@ -70,6 +70,7 @@ fun AppearanceScreen(
         // ponytail: persist text edit mode settings item
         Settings.PREF_PERSIST_TEXT_EDIT_MODE,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD,
+        Settings.PREF_FOLDABLE_MODE,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE,
         if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE)
             || prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD, Defaults.PREF_ENABLE_SPLIT_KEYBOARD))
@@ -202,6 +203,12 @@ fun createAppearanceSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_ENABLE_SPLIT_KEYBOARD, R.string.enable_split_keyboard) {
         SwitchPreference(it, Defaults.PREF_ENABLE_SPLIT_KEYBOARD) { KeyboardSwitcher.getInstance().reloadKeyboard() }
+    },
+    Setting(context, Settings.PREF_FOLDABLE_MODE, R.string.pref_foldable_mode_title, R.string.pref_foldable_mode_summary) {
+        SwitchPreference(it, false) {
+            helium314.keyboard.latin.utils.ScreenProfileProvider.invalidateCache()
+            KeyboardSwitcher.getInstance().reloadKeyboard()
+        }
     },
     Setting(context, Settings.PREF_PERSIST_FLOATING_KEYBOARD, R.string.persist_floating_keyboard_title, R.string.persist_floating_keyboard_summary) {
         SwitchPreference(it, Defaults.PREF_PERSIST_FLOATING_KEYBOARD)

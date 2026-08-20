@@ -14,12 +14,23 @@ public final class GestureEnabler {
     private boolean mMainDictionaryAvailable;
     private boolean mGestureHandlingEnabledByInputField;
     private boolean mGestureHandlingEnabledByUser;
+    private boolean mClipboardInlineInputActive;
 
     private void updateGestureHandlingMode() {
         mShouldHandleGesture = mMainDictionaryAvailable
                 && mGestureHandlingEnabledByInputField
                 && mGestureHandlingEnabledByUser
+                && !mClipboardInlineInputActive
                 && !AccessibilityUtils.Companion.getInstance().isTouchExplorationEnabled();
+    }
+
+    public boolean setClipboardInlineInputActive(final boolean active) {
+        if (mClipboardInlineInputActive == active) {
+            return false;
+        }
+        mClipboardInlineInputActive = active;
+        updateGestureHandlingMode();
+        return true;
     }
 
     // Note that this method is called from a non-UI thread.

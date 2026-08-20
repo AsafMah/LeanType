@@ -132,6 +132,17 @@ public class NgramContext {
         return new NgramContext(mMaxPrevWordCount, prevWordsInfo);
     }
 
+    /**
+     * Returns a 1-gram context containing only the immediately preceding word.
+     */
+    @NonNull
+    public NgramContext getSinglePrevWordContext() {
+        if (mPrevWordsCount <= 1) {
+            return this;
+        }
+        return new NgramContext(mMaxPrevWordCount, mPrevWordsInfo[0]);
+    }
+
 
     /**
      * Extracts the previous words context.

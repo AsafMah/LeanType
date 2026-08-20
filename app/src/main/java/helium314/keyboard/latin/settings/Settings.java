@@ -105,6 +105,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_ENABLE_CLIPBOARD_LISTENER = "enable_clipboard_listener";
     public static final String PREF_ENABLE_SMS_OTP_RECEIVER = "enable_sms_otp_receiver";
     public static final String PREF_ENABLE_APP_SYNC_LISTENER = "enable_app_sync_listener";
+    public static final String PREF_FOLDABLE_MODE = "pref_foldable_mode";
     public static final String PREF_ENABLE_SPLIT_KEYBOARD = "split_keyboard";
     public static final String PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE = "split_keyboard_landscape";
     public static final String PREF_SPLIT_SPACER_SCALE_PREFIX = "split_spacer_scale";
@@ -265,6 +266,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SUGGEST_SCREENSHOTS = "suggest_screenshots";
     public static final String PREF_COMPRESS_SCREENSHOTS = "compress_screenshots";
     public static final String PREF_AUTO_READ_OTP = "auto_read_otp";
+    public static final String PREF_OTP_ALLOWED_SMS_PACKAGE = "otp_allowed_sms_package";
     public static final String PREF_CLIPBOARD_HISTORY_RETENTION_TIME = "clipboard_history_retention_time";
     public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
     public static final String PREF_CLIPBOARD_FOLD_PINNED = "clipboard_fold_pinned";
@@ -273,6 +275,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_ADD_TO_PERSONAL_DICTIONARY = "add_to_personal_dictionary";
     public static final String PREF_FLAG_UNKNOWN_WORDS = "flag_unknown_words";
     public static final String PREF_GRADUATED_TRUST = "graduated_trust";
+    public static final String PREF_ADD_TO_PERSONAL_DICT_THRESHOLD = "add_to_personal_dict_threshold";
     public static final String PREF_NAVBAR_COLOR = "navbar_color";
     public static final String PREF_NARROW_KEY_GAPS = "narrow_key_gaps";
     public static final String PREF_NARROW_KEY_GAPS_LEVEL = "narrow_key_gaps_level";
@@ -305,6 +308,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SPLIT_TOOLBAR = "split_toolbar";
     public static final String PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE = "toolbar_swipe_down_to_hide";
     public static final String PREF_AUTO_SPAN_TOOLBAR_KEYS = "auto_span_toolbar_keys";
+    public static final String PREF_TOOLBAR_KEYS_ALIGNMENT = "toolbar_keys_alignment";
+    public static final String PREF_CLIPBOARD_KEYS_ALIGNMENT = "clipboard_keys_alignment";
     public static final String PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR = "show_download_button_in_toolbar";
 
     // Emoji

@@ -14,19 +14,26 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Upstream
+- Merged **LeanBitLab/LeanType v4.1.2** (pinned at `8720abeb`, covering v4.0.9–v4.1.2, 200 commits) — adds a clipboard edit mode, a personal-dictionary learning threshold, physical-keyboard and suggestion fixes, and Compose localization. LeanTypeDual retains its distinct `applicationId`, fork version, privacy tiers, Java fallback gesture engine, two-thumb typing, and persistent custom layout slots. (#137)
+
 ### Added
 - **Two separate thumb tracks (experimental)** — an opt-in gesture mode that feeds an earlier part of a word and the part you're swiping now to the recognizer as two *separate* thumb strokes instead of splicing them into one long trail, removing the invented connector movement between them. Under Two-Thumb Typing → Recognition. (#135)
 - **Redraw earlier word parts cleanly (experimental)** — optionally replaces the earlier part of a multi-part word with a tidy path through its key centres, and turns a single tap into a small swipe, so the recognizer sees one believable whole-word gesture. Includes tunable trail-speed and pause controls. (#135)
 
 ### Fixed
 - **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order onto the two per-pointer tracks the native decoder actually reads. (#135)
+- **Whole-word backspace keeps working after the upstream merge.** Upstream's fix for single-click backspace bulk-deleting numeric sequences was auto-merged in a way that stopped the two-thumb whole-word delete from clearing the composing span, leaving partial words behind. Both behaviours now coexist. (#137)
+- **Custom layouts still restore after leaving symbol mode.** Upstream resets the remembered custom layout when switching back to the alphabet, which conflicted with this fork's persistent custom layout slots. (#137)
+
+### Changed
+- Documented the two-thumb decoder research in `docs/TWO_THUMB_TEMPORAL_ALIGNMENT.md`: the native decoder models two pointer tracks, track membership is decided by pointer id rather than timing, and deliberately overlapping stroke timestamps measurably corrupts the decoder's speed features. (#135)
 
 ### Reliability & testing
 - Added a native gesture **two-pointer track harness** (`jni/tests/replay/two_pointer_track_test.cpp`) that drives the real AOSP `ProximityInfoState` on the host, with tunable pointer-id / time-policy / tap-promotion knobs and a printed sweep table. Runs in CI alongside the existing native suite. (#135)
 - The multi-part trail merge moved behind a pure, unit-tested `StrokeAligner` seam whose defaults reproduce the previous behaviour exactly. (#135)
-
-### Changed
-- Documented the two-thumb decoder research in `docs/TWO_THUMB_TEMPORAL_ALIGNMENT.md`: the native decoder models two pointer tracks, track membership is decided by pointer id rather than timing, and deliberately overlapping stroke timestamps measurably corrupts the decoder's speed features. (#135)
+- **Dropped both `runTests` skip guards for defects inherited from upstream** — subtype edit persistence and symbol-prefixed regex expansion are both fixed in upstream v4.1.2. Verified twice: on a pristine upstream checkout at the tag, and in the merged tree. Those two tests now actually execute on CI instead of returning early. (#137)
+- **Fixed a latent test-harness bug** where `setText` accepted a `requireIdle` parameter it never passed through, so `reset()` could not tolerate leftover delayed messages. Harmless until the merge shifted JUnit's hash-based test ordering, at which point it failed an unrelated backspace test. (#137)
 
 ## [0.2.0] - 2026-08-06
 

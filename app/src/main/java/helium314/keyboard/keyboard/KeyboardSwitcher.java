@@ -42,6 +42,7 @@ import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.RichInputMethodSubtype;
 import helium314.keyboard.latin.WordComposer;
+import helium314.keyboard.latin.handwriting.HandwritingLoader;
 import helium314.keyboard.latin.handwriting.HandwritingView;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.settings.Settings;
@@ -363,7 +364,10 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     public boolean isImeSuppressedByHardwareKeyboard(
             @NonNull final SettingsValues settingsValues,
             @NonNull final KeyboardSwitchState toggleState) {
-        return settingsValues.mHasHardwareKeyboard && toggleState == KeyboardSwitchState.HIDDEN;
+        if (toggleState == KeyboardSwitchState.EMOJI || toggleState == KeyboardSwitchState.CLIPBOARD) {
+            return false;
+        }
+        return settingsValues.mHasHardwareKeyboard && (toggleState == KeyboardSwitchState.HIDDEN || settingsValues.mShowToolbarOnly);
     }
 
     private void setMainKeyboardFrame(
@@ -475,7 +479,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mEmojiTabStripView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(View.GONE);
         mStripContainer.setVisibility(getSecondaryStripVisibility());
-        mClipboardStripScrollView.post(() -> mClipboardStripScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT));
+        mClipboardStripScrollView.post(() -> mClipboardStripScrollView.scrollTo(0, 0));
         Settings.getValues().mColors.setBackground(mClipboardStripScrollView, ColorType.STRIP_BACKGROUND);
         mClipboardStripScrollView.setVisibility(View.VISIBLE);
         mEmojiPalettesView.setVisibility(View.GONE);
@@ -505,11 +509,12 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
         if (mHandwritingView != null) {
             final RichInputMethodSubtype subtype = mRichImm.getCurrentSubtype();
-            final String language = subtype.getLocale().toLanguageTag();
+            final String subtypeLanguage = subtype.getLocale().toLanguageTag();
+            final String effectiveLanguage = HandwritingLoader.getEffectiveLanguage(mLatinIME, subtypeLanguage);
             mHandwritingView.startHandwriting(
                     mLatinIME.getCurrentInputEditorInfo(),
                     mLatinIME.mKeyboardActionListener,
-                    language
+                    effectiveLanguage
             );
             mHandwritingView.setVisibility(View.VISIBLE);
         }

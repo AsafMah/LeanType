@@ -134,6 +134,10 @@
     <string name="blocklist_empty">No blocked words</string>
     <!-- Content description for the button that removes a word from the blocklist -->
     <string name="blocklist_remove">Remove from blocklist</string>
+    <!-- Option name for threshold before adding words to personal dictionary -->
+    <string name="add_to_personal_dict_threshold">Learning threshold</string>
+    <string name="add_to_personal_dict_threshold_times_1">Add after typing 1 time</string>
+    <string name="add_to_personal_dict_threshold_times_many">Add after typing %d times</string>
     <!-- Option name for enabling or disabling the double-space period feature that lets double tap on spacebar insert a period followed by a space -->
     <string name="use_double_space_period">Double-space period</string>
     <!-- Description for option enabling or disabling the double-space period feature that lets double tap on spacebar insert a period followed by a space -->
@@ -225,6 +229,8 @@
 
     <string name="immediate_auto_space">Immediate auto-space</string>
     <string name="immediate_auto_space_summary">Commit space instantly when picking a suggestion to prevent delay on next typed letter</string>
+    <string name="pref_foldable_mode_title">Foldable screen profile</string>
+    <string name="pref_foldable_mode_summary">Enable automatic screen profile detection and split keyboard scaling for foldable devices</string>
 
     <!-- Option to show first-word suggestions when there is no input at the start of a sentence. -->
     <string name="first_word_prediction">First-word suggestions</string>
@@ -642,6 +648,22 @@
     <string name="download_failed">Download failed</string>
     <string name="installed">Installed</string>
     <string name="voice" tools:keep="@string/voice">Voice input</string>
+    <string name="offline_voice_title">Offline Voice Input</string>
+    <string name="pref_offline_voice_summary">Dictate text offline using local speech models</string>
+    <string name="pref_voice_language_title">Voice Recognition Language</string>
+    <string name="voice_lang_follow_keyboard">Follow keyboard language</string>
+    <string name="voice_lang_auto_detect">Auto-detect spoken language</string>
+    <string name="voice_commands_title">Voice Commands</string>
+    <string name="voice_commands_summary">Perform editing actions by voice (e.g. \"new line\", \"delete word\", \"clear all\", \"send\")</string>
+    <string name="voice_smart_punctuation_title">Smart Spoken Punctuation</string>
+    <string name="voice_smart_punctuation_summary">Convert spoken words (\"comma\", \"question mark\", \"period\") into punctuation symbols</string>
+    <string name="voice_command_executed">Voice command executed</string>
+    <string name="voice_status_connecting">Connecting speech engine…</string>
+    <string name="voice_status_listening">Listening… speak now</string>
+    <string name="voice_status_processing">Processing…</string>
+    <string name="voice_action_done">Done</string>
+    <string name="voice_action_cancel">Cancel</string>
+
     <string name="numpad" tools:keep="@string/numpad" translatable="false">@string/layout_numpad</string>
     <string name="settings" tools:keep="@string/settings">Settings</string>
     <string name="select_all" tools:keep="@string/select_all" translatable="false">@android:string/selectAll</string>
@@ -854,6 +876,15 @@
     </string-array>
     <!-- Title of the setting to set clipboard toolbar keys -->
     <string name="clipboard_toolbar_keys">Select clipboard toolbar keys</string>
+    <string name="toolbar_keys_alignment">Toolbar keys alignment</string>
+    <string name="toolbar_keys_alignment_summary">Align keys in toolbar and clipboard strip</string>
+    <string name="toolbar_keys_alignment_left">Left</string>
+    <string name="toolbar_keys_alignment_center">Center</string>
+    <string name="toolbar_keys_alignment_right">Right</string>
+    <string name="clipboard_keys_alignment">Toolbar keys alignment</string>
+    <string name="clipboard_keys_alignment_left">Left</string>
+    <string name="clipboard_keys_alignment_center">Center</string>
+    <string name="clipboard_keys_alignment_right">Right</string>
     <!-- Title of the setting to set pinned toolbar keys -->
     <string name="pinned_toolbar_keys">Select pinned toolbar keys</string>
     <!-- Title of the setting to quick-pin toolbar keys -->
@@ -973,6 +1004,7 @@ language, hence "No language". -->
     <string name="remove">Remove</string>
     <!-- Title of the button to save a custom style entry in the settings dialog. Preferably 10 characters or less. -->
     <string name="save">Save</string>
+    <string name="edit">Edit</string>
     <!-- Title of the button to load a custom style entry in the settings dialog. Preferably 10 characters or less. -->
     <string name="load">Load</string>
     <!-- Title of the spinner for choosing a language of custom style in the settings dialog. Preferably 10 characters or less. -->
@@ -1302,6 +1334,31 @@ New dictionary:
     <!-- description for features.md link -->
     <string name="about_features_link_description">List of main features and keyboard manual</string>
 
+    <!-- Updates Screen -->
+    <string name="settings_screen_updates">Updates</string>
+    <string name="updates_check_title">Check for updates</string>
+    <string name="updates_checking">Checking for updates…</string>
+    <string name="updates_up_to_date">You are using the latest version</string>
+    <string name="updates_available">New version available: %s</string>
+    <string name="updates_auto_check_title">Auto check for updates</string>
+    <string name="updates_auto_check_summary">Periodically check for new releases in the background</string>
+    <string name="updates_frequency_title">Check frequency</string>
+    <string name="updates_changelog_title">Changelog</string>
+    <string name="updates_support_title">Support development</string>
+    <string name="updates_support_summary">LeanType is 100% free, open-source, and independent. Your support directly helps us continue active development!</string>
+    <string name="updates_github_sponsor_title">GitHub Sponsors</string>
+    <string name="updates_github_sponsor_desc">Sponsor monthly or one-time via GitHub Sponsors</string>
+    <string name="updates_opencollective_title">Donate on Open Collective</string>
+    <string name="updates_opencollective_desc">Support our open-source development via Open Collective</string>
+    <string name="updates_offline_notice">Offline builds do not have internet permission to check for updates automatically.</string>
+    <string name="updates_community_title">Community &amp; Socials</string>
+    <string name="updates_community_summary">Join our official channels for updates, feedback, and discussions</string>
+    <string name="social_website">Website</string>
+    <string name="social_telegram">Telegram</string>
+    <string name="social_reddit">Reddit</string>
+    <string name="social_x">X</string>
+    <string name="social_youtube">YouTube</string>
+
     <!-- Libraries Hub -->
     <string name="libraries_hub_title">Libraries</string>
     <string name="libraries_hub_summary">Manage gesture typing library, dictionaries, and emoji libraries.</string>
@@ -1309,6 +1366,9 @@ New dictionary:
     <string name="libraries_hub_dictionary_title">Main Dictionaries</string>
     <string name="libraries_hub_emoji_title">Emoji Libraries</string>
     <string name="libraries_hub_handwriting_title">Handwriting Input Plugin</string>
+    <string name="pref_handwriting_language_title">Handwriting Language</string>
+    <string name="pref_handwriting_language_summary">Select a dedicated language for handwriting recognition</string>
+    <string name="handwriting_lang_follow_keyboard">Follow keyboard language</string>
     <string name="libraries_hub_dict_guide_title">Dictionary Loading Guide</string>
     <string name="libraries_hub_dict_guide_text">To add a new dictionary:\n1. Obtain a .dict file for your language.\n2. Tap \"Manage Dictionaries\".\n3. Use the plus (+) button to import the file.</string>
     <string name="libraries_status_active">Active</string>
@@ -1561,4 +1621,40 @@ New dictionary:
     <string name="dictionary_update_available">Update available</string>
     <string name="dictionary_source_title">Dictionary repository</string>
     <string name="dictionary_source_summary">Browse or download dictionaries directly in your browser</string>
+    <!-- Text Expander -->
+    <string name="text_expander_title">Text Expander</string>
+    <string name="text_expander_enable_title">Enable Text Expander</string>
+    <string name="text_expander_enable_summary">Auto-expand shortcuts on space or punctuation natively and securely.</string>
+    <string name="text_expander_immediate_title">Expand immediately</string>
+    <string name="text_expander_immediate_summary">Expand shortcuts immediately without pressing space.</string>
+    <string name="text_expander_backspace_undo_title">Backspace undoes expansion</string>
+    <string name="text_expander_backspace_undo_summary">Revert expanded text back to shortcut on backspace.</string>
+    <string name="text_expander_custom_shortcuts_title">Custom Shortcuts</string>
+    <string name="text_expander_add_shortcut">Add Shortcut</string>
+    <string name="text_expander_edit_shortcut">Edit Shortcut</string>
+    <string name="text_expander_quick_guide">💡 Quick Feature Guide</string>
+    <string name="text_expander_template_placeholders_title">Supported Template Placeholders:</string>
+    <string name="text_expander_prefix_title">Prefix (optional)</string>
+    <string name="text_expander_shortcut_title">Shortcut (e.g. \'brb\')</string>
+    <string name="text_expander_regex_pattern_title">Regex Pattern</string>
+    <string name="text_expander_regex_title">Regular Expression</string>
+    <string name="text_expander_regex_invalid">⚠️ Invalid regular expression pattern</string>
+    <string name="text_expander_template_title">Template Expansion</string>
+    <string name="text_expander_template_hint">Be right back! or My email is %clipboard%</string>
+    <string name="text_expander_quick_placeholders_title">Quick Placeholders (tap to insert at cursor):</string>
+    <string name="text_expander_save">Save</string>
+    <string name="text_expander_add">Add</string>
+    <string name="text_expander_delete">Delete</string>
+
+    <!-- Custom AI Keys Screen -->
+    <string name="custom_ai_keys_what_are_keywords">What are Keywords?</string>
+    <string name="custom_ai_keys_keywords_description">Keywords (like #proofread or #summarize) act as quick instructions for the AI. Select them when configuring a key to define its behavior. You must also add your own custom prompt to create the key.</string>
+    <string name="custom_ai_keys_show_tags_title">Show tags on keyboard</string>
+    <string name="custom_ai_keys_show_tags_summary">When enabled, custom tags will show as themed capsules on the keyboard toolbar instead of the default AI icon.</string>
+    <string name="custom_ai_keys_not_configured">Not configured</string>
+    <string name="custom_ai_keys_configure_title">Configure Key %1$d</string>
+    <string name="custom_ai_keys_config_instruction">Select keywords to define behavior, and combine them with your custom instructions.\n\nExample: Choose #editor and type "Translate to French" to create a specialized translation key.\n\nNote: You must provide both a custom prompt and select at least one keyword to save.</string>
+    <string name="custom_ai_keys_prompt_label">Custom Prompt for Key %1$d</string>
+    <string name="custom_ai_keys_tag_label">Tag / Label (e.g. \'French\', \'Grammar\', \'Rewrite\')</string>
+    <string name="custom_ai_keys_selected_functions">Selected Keyword Functions:</string>
 </resources>
