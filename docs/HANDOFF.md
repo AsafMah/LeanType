@@ -28,9 +28,8 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Open PRs | **#106** (`issue37-slide-target-actions`), **#134** (backspace paragraph merge), **#136** (two-thumb native second pointer track), **#137** (upstream v4.1.2) |
 
 **No release work is outstanding** — v0.2.0 shipped signed on 2026-08-20. Open items are now
-device verification of #134 and #137, re-pointing `LeanType-check-upstream-main` to v4.1.2 to
-re-check the two guarded upstream defects (§7), and reporting the emoji accelerated-delete bug
-upstream. See §12.
+device verification of #134 and #137, re-checking §7's two guarded upstream defects against
+v4.1.2 (in flight in #137), and reporting the emoji accelerated-delete bug upstream. See §12.
 
 ---
 
@@ -115,9 +114,10 @@ The outage signature, so it is recognised rather than re-debugged:
 - `steps: []` (never started) and `timing.billable.UBUNTU.total_ms == 0`
 - Affected runs were `31126300886`, `31126946237` (Unit tests) and `31128410212` (Release)
 
-This is **infrastructure, not code**. Do not "fix" tests in response to it. Two zombie runs
-(`31128410212`, `31126946237`) are still stuck in `queued` from that outage and can be
-cancelled with `gh run cancel <id> --repo AsafMah/LeanType`.
+This is **infrastructure, not code**. Do not "fix" tests in response to it. The two runs that
+stayed stuck in `queued` after the outage (`31128410212`, `31126946237`) have since been
+cancelled; if it recurs, clear the stragglers with
+`gh run cancel <id> --repo AsafMah/LeanType`.
 
 ### Cut the release
 
@@ -197,9 +197,10 @@ absolute pass counts.**
 
 ## 7. Upstream bugs we inherited (worth reporting upstream)
 
-Both fail on a **pristine upstream `v4.0.8` checkout**, verified by checking out the tag in
-`C:/Users/mahle/programming/LeanType-check-upstream-main` and running the tests there. They
-are *not* merge damage. Both are guarded with the repo's `runTests` skip so CI gates on real failures:
+Both fail on a **pristine upstream `v4.0.8` checkout**, verified at the time by checking out
+that tag in `C:/Users/mahle/programming/LeanType-check-upstream-main` and running the tests
+there. They are *not* merge damage. Both are guarded with the repo's `runTests` skip so CI
+gates on real failures:
 
 1. **`SubtypeTest > subtypeStaysEnabledOnEdits`**
    `IllegalArgumentException: List has more than one element` at `SubtypeTest.kt:84` —
@@ -217,6 +218,10 @@ Guards look like:
 ```kotlin
 if (BuildConfig.BUILD_TYPE == "runTests") return // fails at upstream tag v4.0.8 as well; inherited upstream defect
 ```
+
+**Both are being re-checked against `v4.1.2`** as part of PR #137 (the merge is where the
+guards live). Drop each guard whose defect turns out to be fixed upstream, and report to
+LeanBitLab any that still reproduce — neither has been reported yet.
 
 ---
 
@@ -361,12 +366,12 @@ Kept deliberately:
 | `LeanType-two-thumb-pr` | `pr/upstream-two-thumb-step1` | backs **LeanBitLab PR #240** (open) |
 | `LeanType-check-origin-dev` | detached at `origin/dev` | baseline test runs |
 | `LeanType-check-origin-main` | detached at `origin/main` | baseline for the released tree |
-| `LeanType-check-upstream-main` | detached at upstream `v4.0.8` | "does this fail upstream too?" checks |
+| `LeanType-check-upstream-main` | detached at upstream `v4.1.2` | "does this fail upstream too?" checks |
 
-`check-upstream-main` is intentionally pinned at `v4.0.8` because §7's two upstream-bug
-reproductions were verified there. Whoever does the next upstream merge should re-point it to
-the tag being merged (upstream is at `v4.1.2` as of this writing) and re-check whether those
-two defects still reproduce.
+`check-upstream-main` tracks the upstream tag currently being integrated; it was moved from
+`v4.0.8` to `v4.1.2` for the #137 merge. §7's two upstream-bug reproductions were originally
+verified at `v4.0.8`, so re-point this worktree whenever the merge target changes and re-check
+whether those defects still reproduce on the new tag.
 
 Unfinished work — each of these holds commits that exist on **no remote ref**, so this disk is
 the only copy. Push or discard them deliberately; don't let them rot:
@@ -422,9 +427,11 @@ background trim level on a foreground process") and refuses to *raise* a level t
    editors) and **#137** (upstream v4.1.2 merge). Both need a real-editor smoke, not just a
    green test run; see the anti-regression note that "tests pass" ≠ "feature works" for input
    and integration code.
-2. **Re-point `LeanType-check-upstream-main` to v4.1.2** (§11) and re-check §7's two guarded
-   upstream defects. If either is fixed upstream, drop its `runTests` skip guard. If not,
-   **report them to LeanBitLab** — they are still unreported.
+2. **Re-check §7's two guarded upstream defects on v4.1.2.** `LeanType-check-upstream-main` has
+   already been re-pointed from `v4.0.8` to `v4.1.2` for this; the re-check is in flight as part
+   of PR #137, which is where the `runTests` skip guards live. Drop each guard whose defect is
+   fixed upstream, and **report to LeanBitLab** any that still reproduce — neither has been
+   reported yet.
 3. **Report the emoji accelerated-delete bug** upstream.
 4. **Install signed 0.2.0** over the phone's production package and do a real-editor smoke
    (typing, direct IME switching, custom-layout restoration, unshifted `to`/`no`/`meet`
@@ -434,5 +441,5 @@ background trim level on a foreground process") and refuses to *raise* a level t
    against the fork's own fallback gesture engine; likely the highest-value functional work.
 7. Decide the fate of the six unfinished worktrees in §11 — their commits exist on no remote,
    so they are one disk failure from gone.
-8. Optional: cancel the two zombie `queued` workflow runs (§5), and refresh `AGENTS.md`'s JDK
-   path (`jdk-21.0.11.10-hotspot` → `jdk-21.0.12.8-hotspot`).
+8. Optional: refresh `AGENTS.md`'s JDK path
+   (`jdk-21.0.11.10-hotspot` → `jdk-21.0.12.8-hotspot`).
