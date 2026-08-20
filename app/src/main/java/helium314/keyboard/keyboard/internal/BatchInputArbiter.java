@@ -35,6 +35,13 @@ public class BatchInputArbiter {
     private static int sLastRecognitionPointSize = 0; // synchronized using sAggregatedPointers
     private static long sLastRecognitionTime = 0; // synchronized using sAggregatedPointers
 
+    // Renumbers raw MotionEvent pointer ids onto the dense track slots the native decoder reads.
+    // Without this, a gesture whose points never carry id 0 (e.g. thumb A down, thumb B down,
+    // thumb A lifts, thumb B swipes on with id 1) leaves the decoder's track 0 unused and
+    // Suggest::initializeSearch bails out with zero suggestions. Guarded by sAggregatedPointers
+    // like the other statics here.
+    private static final PointerIdNormalizer sPointerIdNormalizer = new PointerIdNormalizer();
+
     // ---- Two-thumb typing: autospace grace period (#1.2) ----
     // When the last finger of a gesture lifts and the user has configured a non-zero grace
     // window, we delay the actual commit (the "autospace grace period"). If another finger
@@ -75,8 +82,10 @@ public class BatchInputArbiter {
     }
 
     private final GestureStrokeRecognitionPoints mRecognitionPoints;
+    private final int mPointerId;
 
     public BatchInputArbiter(final int pointerId, final GestureStrokeRecognitionParams params) {
+        mPointerId = pointerId;
         mRecognitionPoints = new GestureStrokeRecognitionPoints(pointerId, params);
     }
 
@@ -154,6 +163,7 @@ public class BatchInputArbiter {
             sAggregatedPointers.reset();
             sLastRecognitionPointSize = 0;
             sLastRecognitionTime = 0;
+            sPointerIdNormalizer.reset();
             listener.onStartBatchInput();
         }
         return true;
@@ -184,7 +194,8 @@ public class BatchInputArbiter {
     public void updateBatchInput(final long moveEventTime,
             final BatchInputArbiterListener listener) {
         synchronized (sAggregatedPointers) {
-            mRecognitionPoints.appendIncrementalBatchPoints(sAggregatedPointers);
+            mRecognitionPoints.appendIncrementalBatchPoints(sAggregatedPointers,
+                    sPointerIdNormalizer.slotFor(mPointerId));
             final int size = sAggregatedPointers.getPointerSize();
             if (size > sLastRecognitionPointSize && mRecognitionPoints.hasRecognitionTimePast(
                     moveEventTime, sLastRecognitionTime)) {
@@ -229,7 +240,8 @@ public class BatchInputArbiter {
             final int graceMs, final BatchInputArbiterListener listener,
             final DeferredCommit deferredCommit) {
         synchronized (sAggregatedPointers) {
-            mRecognitionPoints.appendAllBatchPoints(sAggregatedPointers);
+            mRecognitionPoints.appendAllBatchPoints(sAggregatedPointers,
+                    sPointerIdNormalizer.slotFor(mPointerId));
             if (activePointerCount != 1) {
                 // Other fingers are still down — gesture continues, no commit yet.
                 return false;

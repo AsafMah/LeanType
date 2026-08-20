@@ -14,6 +14,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+- **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order onto the two per-pointer tracks the native decoder actually reads. (#135)
+
+### Reliability & testing
+- Added a native gesture **two-pointer track harness** (`jni/tests/replay/two_pointer_track_test.cpp`) that drives the real AOSP `ProximityInfoState` on the host, with tunable pointer-id / time-policy / tap-promotion knobs and a printed sweep table. Runs in CI alongside the existing native suite. (#135)
+
+### Changed
+- Documented the two-thumb decoder research in `docs/TWO_THUMB_TEMPORAL_ALIGNMENT.md`: the native decoder models two pointer tracks, track membership is decided by pointer id rather than timing, and deliberately overlapping stroke timestamps measurably corrupts the decoder's speed features. (#135)
+
 ## [0.2.0] - 2026-08-06
 
 ### Upstream

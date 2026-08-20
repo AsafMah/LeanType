@@ -303,20 +303,36 @@ public final class GestureStrokeRecognitionPoints {
 
     // TODO: Make this package private
     public void appendAllBatchPoints(final InputPointers out) {
-        appendBatchPoints(out, getLength());
+        appendBatchPoints(out, getLength(), mPointerId);
+    }
+
+    /**
+     * Same as {@link #appendAllBatchPoints(InputPointers)} but stamps the points with an explicit
+     * track slot instead of the raw MotionEvent pointer id. See {@link PointerIdNormalizer}.
+     */
+    public void appendAllBatchPoints(final InputPointers out, final int pointerIdOverride) {
+        appendBatchPoints(out, getLength(), pointerIdOverride);
     }
 
     // TODO: Make this package private
     public void appendIncrementalBatchPoints(final InputPointers out) {
-        appendBatchPoints(out, mIncrementalRecognitionSize);
+        appendBatchPoints(out, mIncrementalRecognitionSize, mPointerId);
     }
 
-    private void appendBatchPoints(final InputPointers out, final int size) {
+    /**
+     * Same as {@link #appendIncrementalBatchPoints(InputPointers)} but stamps the points with an
+     * explicit track slot instead of the raw MotionEvent pointer id.
+     */
+    public void appendIncrementalBatchPoints(final InputPointers out, final int pointerIdOverride) {
+        appendBatchPoints(out, mIncrementalRecognitionSize, pointerIdOverride);
+    }
+
+    private void appendBatchPoints(final InputPointers out, final int size, final int pointerId) {
         final int length = size - mLastIncrementalBatchSize;
         if (length <= 0) {
             return;
         }
-        out.append(mPointerId, mEventTimes, mXCoordinates, mYCoordinates,
+        out.append(pointerId, mEventTimes, mXCoordinates, mYCoordinates,
                 mLastIncrementalBatchSize, length);
         mLastIncrementalBatchSize = size;
     }
