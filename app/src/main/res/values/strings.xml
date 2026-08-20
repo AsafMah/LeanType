@@ -384,6 +384,21 @@
     <string name="two_thumb_backspace_word">Delete whole word</string>
     <string name="two_thumb_point_hinting">Improve two-thumb recognition (experimental)</string>
     <string name="two_thumb_point_hinting_summary">Adds synthetic hints for the recognizer when both thumbs are used. It may help two-thumb gestures, but can hurt accuracy if the hand split is wrong.</string>
+    <!-- Shown above the recognition settings when multi-part composition is not armed -->
+    <string name="two_thumb_recognition_needs_multipart">Not active at this spacing mode</string>
+    <string name="two_thumb_recognition_needs_multipart_summary">These settings only apply while a word is being built from more than one swipe. That happens when the spacing mode above is set to manual spacing, or when the autospace delay is above zero. At the default spacing mode they have no effect.</string>
+    <!-- Shown in place of the recognition settings when no native gesture library is loaded -->
+    <string name="two_thumb_recognition_needs_lib">Needs the gesture library</string>
+    <string name="two_thumb_recognition_needs_lib_summary">These settings shape the touch points sent to the native gesture decoder. The built-in fallback engine scores a single trail and ignores which thumb drew it, so they would make recognition worse rather than better. Load a gesture library under Gesture typing to enable them.</string>
+    <string name="stroke_align_mode">Joining word parts</string>
+    <string name="stroke_align_mode_summary">How an earlier part of the word is fed to the recognizer together with the part you are swiping now.</string>
+    <string name="stroke_align_mode_connector">One joined trail</string>
+    <string name="stroke_align_mode_dual_pointer">Two separate thumb tracks (experimental)</string>
+    <string name="stroke_align_interval">Word-part trail speed</string>    <string name="stroke_align_interval_summary">Spacing between the replayed points of the earlier word part. Lower is a faster imagined swipe.</string>
+    <string name="stroke_align_gap">Pause before the new part</string>
+    <string name="stroke_align_gap_summary">Imagined pause between the earlier word part and the part you are swiping now.</string>
+    <string name="stroke_ideal_prefix">Redraw earlier word parts cleanly</string>
+    <string name="stroke_ideal_prefix_summary">Replaces the earlier part of the word with a tidy path through its key centres, and turns a single tap into a small swipe, so the recognizer sees one believable whole-word gesture.</string>
     <string name="gesture_debug_accumulate_fragments">Keep insight across word parts</string>
     <string name="gesture_debug_accumulate_fragments_summary">Keep the trail visible across the parts of one word, clearing when the next word starts. Turn off to clear at each new swipe.</string>
 

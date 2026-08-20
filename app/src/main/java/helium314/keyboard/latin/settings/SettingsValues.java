@@ -25,6 +25,7 @@ import helium314.keyboard.latin.InputAttributes;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.common.Colors;
+import helium314.keyboard.latin.gesture.StrokeAligner;
 import helium314.keyboard.latin.permissions.PermissionsUtil;
 import helium314.keyboard.latin.utils.InputTypeUtils;
 import helium314.keyboard.latin.utils.JniUtils;
@@ -158,6 +159,9 @@ public class SettingsValues {
         public final boolean mMultipartFullWordSuggestions;
         public final boolean mMultipartTapSeedGesture;
         public final boolean mMultipartRerecognizeTaps;
+        // Stroke alignment (#135): pre-built so the input path never parses prefs per gesture.
+        public final StrokeAligner.Params mStrokeAlignParams;
+        public final boolean mStrokeIdealPrefix;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final boolean mRecordInputTraces;
         public final int mKeyLongpressTimeout;
@@ -485,6 +489,16 @@ public class SettingsValues {
                 mMultipartRerecognizeTaps = prefs.getBoolean(
                                 Settings.PREF_MULTIPART_RERECOGNIZE_TAPS,
                                 Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS);
+                mStrokeAlignParams = new StrokeAligner.Params(
+                                StrokeAligner.Mode.fromPrefValue(prefs.getString(
+                                                Settings.PREF_STROKE_ALIGN_MODE,
+                                                Defaults.PREF_STROKE_ALIGN_MODE)),
+                                prefs.getInt(Settings.PREF_STROKE_ALIGN_INTERVAL_MS,
+                                                Defaults.PREF_STROKE_ALIGN_INTERVAL_MS),
+                                prefs.getInt(Settings.PREF_STROKE_ALIGN_GAP_MS,
+                                                Defaults.PREF_STROKE_ALIGN_GAP_MS));
+                mStrokeIdealPrefix = prefs.getBoolean(Settings.PREF_STROKE_IDEAL_PREFIX,
+                                Defaults.PREF_STROKE_IDEAL_PREFIX);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
                 final boolean moreAutoCorrection = prefs.getBoolean(Settings.PREF_MORE_AUTO_CORRECTION,

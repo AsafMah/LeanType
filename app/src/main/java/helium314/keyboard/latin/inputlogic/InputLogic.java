@@ -54,6 +54,7 @@ import helium314.keyboard.latin.common.StringUtils;
 import helium314.keyboard.latin.common.StringUtilsKt;
 import helium314.keyboard.latin.common.SuggestionSpanUtilsKt;
 import helium314.keyboard.latin.define.DebugFlags;
+import helium314.keyboard.latin.gesture.IdealPrefixTrailBuilder;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.settings.SpacingAndPunctuations;
@@ -821,7 +822,17 @@ public final class InputLogic {
                 // word simply stays open until the user taps space), see
                 // SettingsValues#isMultipartComposeActive.
                 if (settingsValues.isMultipartComposeActive()) {
-                    mWordComposer.setExtendBatchInputBase(mWordComposer.getInputPointers());
+                    // With the ideal-prefix knob on, replace the raw prior trail with a clean
+                    // key-centre path for the composing prefix (and promote a one-letter prefix
+                    // to a micro-stroke). Falls back to the raw trail whenever the synthetic one
+                    // can't be built, so a fragment is never lost.
+                    InputPointers base = null;
+                    if (settingsValues.mStrokeIdealPrefix) {
+                        base = IdealPrefixTrailBuilder.build(mWordComposer.getTypedWord(),
+                                keyboardSwitcher.getKeyboard());
+                    }
+                    mWordComposer.setExtendBatchInputBase(
+                            base != null ? base : mWordComposer.getInputPointers());
                 }
             } else if (mWordComposer.isSingleLetter() && !isInlineEmojiSearchAction()) {
                 // We auto-correct the previous (typed, not gestured) string iff it's one

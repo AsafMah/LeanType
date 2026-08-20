@@ -107,6 +107,19 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
         }
+        // Side-by-side experimental build. Its own applicationId suffix so it installs
+        // ALONGSIDE the normal debug build rather than replacing it, which is the point:
+        // experimental input changes have to be A/B'd against a working daily driver, and
+        // you cannot do that if installing one uninstalls the other. The IME picker label is
+        // overridden in src/experimental/res so the two are distinguishable there too.
+        create("experimental") {
+            isDebuggable = true
+            isMinifyEnabled = false
+            isJniDebuggable = false
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".exp"
+            versionNameSuffix = "-exp"
+        }
         // base.archivesBaseName = "HeliboardL_" + defaultConfig.versionName // replaced by dynamic naming below
         applicationVariants.all {
             val flavor = productFlavors.firstOrNull()?.name ?: ""

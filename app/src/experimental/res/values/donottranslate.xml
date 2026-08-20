@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Build-type resource overrides for the "experimental" variant.
+
+    This build installs alongside the normal one (applicationId suffix ".exp"), so the two
+    keyboards appear together in the system input-method picker and in Settings. Without a
+    distinct label they are indistinguishable there, which makes an A/B test useless.
+-->
+<resources>
+    <string name="english_ime_name" translatable="false">LeanTypeDual EXP</string>
+</resources>

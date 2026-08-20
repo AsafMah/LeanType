@@ -14,6 +14,21 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+- **Side-by-side experimental build** — an `experimental` build type (`com.asafmah.leantypedual.exp`, shown as "LeanTypeDual EXP") that installs alongside the normal build instead of replacing it, so input experiments can be compared against a working daily driver. (#141)
+
+### Fixed
+- **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order. (#135)
+- **The two-thumb recognition settings no longer appear when they cannot work.** They synthesise touch points for the native gesture decoder; the built-in fallback engine scores a single trail and ignores which thumb drew it, so applying them there corrupted the trail and produced nonsense words. The group is now gated on a loaded gesture library, and explains itself when the spacing mode leaves it inert, instead of showing controls that structurally cannot take effect. (#141)
+
+### Changed
+- Two experimental recognition modes exist behind settings — feeding the two thumbs as separate decoder tracks, and redrawing earlier word parts through key centres — but they are **off by default and not currently recommended**. On a device with a user-supplied gesture library they produce incorrect words: the decoder that actually runs is a closed third-party library, not the in-repo AOSP engine whose two-pointer-track behaviour the research measured. (#135, #144)
+- Documented the two-thumb decoder research in `docs/TWO_THUMB_TEMPORAL_ALIGNMENT.md`, including the measurement that deliberately overlapping stroke timestamps corrupts the decoder's speed features rather than helping. (#135)
+
+### Reliability & testing
+- Added a native gesture **two-pointer track harness** (`jni/tests/replay/two_pointer_track_test.cpp`) that drives the real AOSP `ProximityInfoState` on the host, with tunable knobs and a printed sweep table. Runs in CI alongside the existing native suite. Note that it exercises the in-repo engine, which is not the decoder used when a gesture library is loaded. (#135, #144)
+- The multi-part trail merge moved behind a pure, unit-tested `StrokeAligner` seam whose defaults reproduce the previous behaviour exactly. (#135)
+
 ## [0.3.0] - 2026-08-20
 
 ### Upstream
