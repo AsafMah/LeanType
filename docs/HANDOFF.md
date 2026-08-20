@@ -25,7 +25,7 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Upstream integrated | LeanBitLab/LeanType **v4.0.8** (`dec87806`), covering v4.0.3–v4.0.8 |
 | Phone (SM-S936B) | `com.asafmah.leantypedual` = signed **0.1.0/4100**; `…debug` = **0.2.0/4200** |
 | Tablet | Never verified — still outstanding, low risk |
-| Open PRs | **#106** (`issue37-slide-target-actions`), **#134** (backspace paragraph merge), **#137** (upstream v4.1.2) |
+| Open PRs | **#106** (`issue37-slide-target-actions`), **#134** (backspace paragraph merge), **#136** (two-thumb native second pointer track), **#137** (upstream v4.1.2) |
 
 **No release work is outstanding** — v0.2.0 shipped signed on 2026-08-20. Open items are now
 device verification of #134 and #137, re-pointing `LeanType-check-upstream-main` to v4.1.2 to
