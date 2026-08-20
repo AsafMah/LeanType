@@ -2934,8 +2934,12 @@ public final class InputLogic {
                                 inputTransaction.getSettingsValues());
                         final int codePointBeforeCursorToDeleteAgain = mConnection.getCodePointBeforeCursor();
                         if (codePointBeforeCursorToDeleteAgain != Constants.NOT_A_CODE) {
-                            final int lengthToDeleteAgain = codePointBeforeCursor > 0xFE00
-                                    || StringUtils.mightBeEmoji(codePointBeforeCursor)
+                            // Measure the character we are actually about to delete. This used to
+                            // test codePointBeforeCursor -- the one from before the first deletion --
+                            // which could pick the wrong length and cut a multi-code-point emoji in
+                            // half. Also present upstream; reported as LeanBitLab/LeanType#423.
+                            final int lengthToDeleteAgain = codePointBeforeCursorToDeleteAgain > 0xFE00
+                                    || StringUtils.mightBeEmoji(codePointBeforeCursorToDeleteAgain)
                                             ? mConnection.getCharCountToDeleteBeforeCursor()
                                             : 1;
                             mConnection.deleteTextBeforeCursor(lengthToDeleteAgain);
