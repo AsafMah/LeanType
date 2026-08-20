@@ -2884,40 +2884,56 @@ public final class InputLogic {
                 } else {
                     final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
                     if (codePointBeforeCursor == Constants.NOT_A_CODE) {
-                        // HACK for backward compatibility with broken apps that haven't realized
-                        // yet that hardware keyboards are not the only way of inputting text.
-                        // Nothing to delete before the cursor. We should not do anything, but many
-                        // broken apps expect something to happen in this case so that they can
-                        // catch it and have their broken interface react. If you need the keyboard
-                        // to do this, you're doing it wrong -- please fix your app.
-                        // To make this more interesting, web browsers, and apps that are basically
-                        // browsers under the hood, in too many cases don't understand
-                        // "deleteSurroundingText".
-                        // So we try to send a backspace keypress instead.
-                        if ((getCurrentInputEditorInfo().inputType
-                                & InputType.TYPE_MASK_VARIATION) == InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT)
+                        // The editor reports no text before the cursor. That covers two very
+                        // different situations, and they need opposite handling:
+                        //  - We really are at the start of the document. Deleting is a genuine
+                        //    no-op. Keep poking the editor with deleteSurroundingText (many broken
+                        //    apps rely on *something* arriving) but do NOT fire a key event at the
+                        //    app: recipient chips, search boxes and web views act on KEYCODE_DEL.
+                        //  - The editor is hiding context from us. Browsers do this, and so do
+                        //    block-based rich editors (MS Word, Samsung/Google Notes, Docs), which
+                        //    expose only the current paragraph. There, deleteSurroundingText is
+                        //    silently ignored and backspace appears dead at a paragraph start,
+                        //    while a real KEYCODE_DEL — what every other keyboard sends — works.
+                        // A known cursor position greater than zero is what tells them apart.
+                        if (mConnection.getExpectedSelectionStart() > 0
+                                || (getCurrentInputEditorInfo().inputType
+                                        & InputType.TYPE_MASK_VARIATION) == InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT)
                             sendDownUpKeyEvent(KeyEvent.KEYCODE_DEL);
                         else
                             mConnection.deleteTextBeforeCursor(1);
                         // TODO: Add a new StatsUtils method onBackspaceWhenNoText()
                         return;
                     }
+                    // Deleting a paragraph break: block-based editors model paragraphs as separate
+                    // blocks and refuse to merge them via deleteSurroundingText, so route it
+                    // through a key event. In a plain EditText this is equivalent.
+                    final boolean deletingParagraphBreak = codePointBeforeCursor == Constants.CODE_ENTER;
                     final int lengthToDelete = codePointBeforeCursor > 0xFE00
                             || StringUtils.mightBeEmoji(codePointBeforeCursor)
                                     ? mConnection.getCharCountToDeleteBeforeCursor()
                                     : 1;
-                    mConnection.deleteTextBeforeCursor(lengthToDelete);
+                    if (deletingParagraphBreak)
+                        sendDownUpKeyEvent(KeyEvent.KEYCODE_DEL);
+                    else
+                        mConnection.deleteTextBeforeCursor(lengthToDelete);
                     int totalDeletedLength = lengthToDelete;
-                    if (mDeleteCount > Constants.DELETE_ACCELERATE_AT) {
+                    // Never chain the accelerated second delete onto a key event: key events take
+                    // an asynchronous route that ignores batch edits, so a deleteSurroundingText
+                    // issued right after would race ahead of it and act on the pre-merge text while
+                    // the connection cache optimistically counts both. Acceleration resumes on the
+                    // next repeat.
+                    if (!deletingParagraphBreak && mDeleteCount > Constants.DELETE_ACCELERATE_AT) {
                         // If this is an accelerated (i.e., double) deletion, then we need to
                         // consider unlearning here because we may have already reached
                         // the previous word, and will lose it after next deletion.
                         hasUnlearnedWordBeingDeleted |= unlearnWordBeingDeleted(
                                 inputTransaction.getSettingsValues());
                         final int codePointBeforeCursorToDeleteAgain = mConnection.getCodePointBeforeCursor();
-                        if (codePointBeforeCursorToDeleteAgain != Constants.NOT_A_CODE) {
-                            final int lengthToDeleteAgain = codePointBeforeCursor > 0xFE00
-                                    || StringUtils.mightBeEmoji(codePointBeforeCursor)
+                        if (codePointBeforeCursorToDeleteAgain != Constants.NOT_A_CODE
+                                && codePointBeforeCursorToDeleteAgain != Constants.CODE_ENTER) {
+                            final int lengthToDeleteAgain = codePointBeforeCursorToDeleteAgain > 0xFE00
+                                    || StringUtils.mightBeEmoji(codePointBeforeCursorToDeleteAgain)
                                             ? mConnection.getCharCountToDeleteBeforeCursor()
                                             : 1;
                             mConnection.deleteTextBeforeCursor(lengthToDeleteAgain);

@@ -122,6 +122,91 @@ class InputLogicTest {
         assertEquals("yu", composingText)
     }
 
+    // Backspace at the start of a paragraph does nothing in rich-text editors (MS Word,
+    // Samsung/Google Notes, Google Docs). Those model paragraphs as separate blocks and silently
+    // refuse a deleteSurroundingText that would merge two of them, but they do honour a real
+    // KEYCODE_DEL -- which is what every other keyboard sends.
+    // Mode B: the caret reached the paragraph start by typing, so RichInputConnection's cache
+    // still holds the '\n' and getCodePointBeforeCursor() returns it.
+    @Test fun `backspace merges paragraphs when the editor refuses deleteSurroundingText`() {
+        reset()
+        setText("hello\n") // caret at the start of the second paragraph
+        paragraphBlockedDelete = true
+        try {
+            functionalKeyPress(KeyCode.DELETE)
+            assertEquals("hello", text)
+        } finally {
+            paragraphBlockedDelete = false
+        }
+    }
+
+    // Mode A of the same bug: the caret got there by tapping, so RichInputConnection reloaded its
+    // cache from the editor -- which, being paragraph-scoped, reports no text before the cursor at
+    // all. getCodePointBeforeCursor() is then NOT_A_CODE and we fall into the "broken app" branch,
+    // which only sends KEYCODE_DEL when the field is a browser text field.
+    // Mode A of the same bug, currently NOT fixed -- kept as executable documentation.
+    // If the caret reached the paragraph start by tapping, RichInputConnection reloads its cache
+    // from the editor; a paragraph-scoped editor reports no text before the cursor, so
+    // getCodePointBeforeCursor() is NOT_A_CODE. The obvious discriminator against a genuinely
+    // empty field would be "expected cursor position > 0", but this test measured
+    // expectedSelectionStart == 0 in exactly this situation: fixLyingCursorPosition normalises the
+    // expected position to match the truncated text it can see. Mode A is therefore
+    // indistinguishable from a true document start with the signals we have, and "just send
+    // KEYCODE_DEL anyway" would fire key events at apps on every backspace in an empty field
+    // (recipient chips, search boxes, web views react to those).
+    // Un-ignore this once we have a device trace showing what Word/Notes actually report.
+    @Ignore("mode A is indistinguishable from an empty field; needs a device trace first")
+    @Test fun `backspace merges paragraphs when the editor hides the preceding paragraph`() {
+        reset()
+        currentInputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        setText("hello\n")
+        paragraphScopedReads = true
+        paragraphBlockedDelete = true
+        try {
+            // simulate tapping into the new paragraph: the connection reloads its cache
+            val ei = EditorInfo()
+            ei.inputType = currentInputType
+            ei.initialSelStart = selectionStart
+            ei.initialSelEnd = selectionEnd
+            latinIME.mHandler.onStartInput(ei, true)
+            latinIME.mHandler.onStartInputView(ei, true)
+            handleMessages(requireIdle = false)
+            assertEquals(Constants.NOT_A_CODE, connection.codePointBeforeCursor,
+                "precondition: the editor reports no text before the cursor")
+
+            latinIME.onEvent(Event.createSoftwareKeypressEvent(Event.NOT_A_CODE_POINT, KeyCode.DELETE,
+                0, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false))
+            handleMessages(requireIdle = false)
+            assertEquals("hello", text)
+        } finally {
+            paragraphScopedReads = false
+            paragraphBlockedDelete = false
+        }
+    }
+
+    // Guard on the broadened fallback: at a genuine document start there is nothing to delete, and
+    // we must NOT dispatch a real key event at the app -- recipient chips, search boxes and web
+    // views all act on KEYCODE_DEL.
+    @Test fun `backspace at a genuine document start dispatches no key event`() {
+        reset()
+        setText("")
+        sentKeyEvents.clear()
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+        assertFalse(sentKeyEvents.contains(KeyEvent.KEYCODE_DEL),
+            "must not poke the app with a key event at document start")
+    }
+
+    // Regression guard: a newline now goes through a key event, so make sure it still deletes
+    // correctly in an ordinary editor and leaves the connection cache consistent.
+    @Test fun `backspace deletes a newline in a plain editor`() {
+        reset()
+        setText("hello\nworld")
+        setCursorPosition(6) // start of "world", right after the newline
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("helloworld", text)
+    }
+
     @Test fun insertLetterIntoWord() {
         reset()
         setText("hello")
@@ -1888,6 +1973,9 @@ class InputLogicTest {
         // Drop messages left by asynchronous service setup or a previous scenario.
         messages.clear()
         delayedMessages.clear()
+        sentKeyEvents.clear()
+        paragraphScopedReads = false
+        paragraphBlockedDelete = false
 
         // reset input connection & facilitator
         currentScript = ScriptUtils.SCRIPT_LATIN
@@ -2028,7 +2116,7 @@ class InputLogicTest {
         ei.inputType = currentInputType
         latinIME.mHandler.onStartInput(ei, false)
         latinIME.mHandler.onStartInputView(ei, false)
-        handleMessages() // this is important so the composing span is set correctly
+        handleMessages(requireIdle) // this is important so the composing span is set correctly
         checkConnectionConsistency()
     }
 
@@ -2200,6 +2288,16 @@ private var selectionStart = 0
 private var selectionEnd = 0
 private var composingStart = -1
 private var composingEnd = -1
+// Rich-text editor simulation (MS Word, Samsung/Google Notes, Google Docs). Those editors model
+// paragraphs as separate blocks: they expose only the current paragraph to the IME, and they
+// refuse a deleteSurroundingText that would merge two blocks -- while handling a real KEYCODE_DEL
+// correctly. A plain EditText does neither, which is why the bug only shows up in such apps.
+// paragraphScopedReads   -> getTextBeforeCursor returns only the current paragraph
+// paragraphBlockedDelete -> deleteSurroundingText crossing a '\n' is rejected and changes nothing
+private var paragraphScopedReads = false
+private var paragraphBlockedDelete = false
+// key codes the IME dispatched at the app via sendKeyEvent (ACTION_DOWN only)
+private val sentKeyEvents = mutableListOf<Int>()
 // convenience for access
 private val textBeforeCursor get() = text.substring(0, selectionStart)
 private val textAfterCursor get() = text.substring(selectionEnd)
@@ -2214,7 +2312,8 @@ private val composingText get() = if (composingStart == -1 || composingEnd == -1
 private val ic = object : InputConnection {
     // pretty clear (though this may be slow depending on the editor)
     // bad return value here is likely the cause for that weird bug improved/fixed by fixIncorrectLength
-    override fun getTextBeforeCursor(p0: Int, p1: Int): CharSequence = textBeforeCursor.take(p0)
+    override fun getTextBeforeCursor(p0: Int, p1: Int): CharSequence =
+        (if (paragraphScopedReads) textBeforeCursor.substringAfterLast('\n') else textBeforeCursor).take(p0)
     // pretty clear (though this may be slow depending on the editor)
     override fun getTextAfterCursor(p0: Int, p1: Int): CharSequence = textAfterCursor.take(p0)
     // pretty clear
@@ -2297,31 +2396,41 @@ private val ic = object : InputConnection {
     // chars, not codepoints or glyphs
     // todo: may delete only one half of a surrogate pair, but this should be avoided by RichInputConnection (maybe throw error)
     override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
+        // a real editor clamps to the available text instead of throwing
+        val before = minOf(beforeLength, selectionStart)
+        val after = minOf(afterLength, text.length - selectionEnd)
+        if (paragraphBlockedDelete && before > 0
+                && selectionStart - before < textBeforeCursor.lastIndexOf('\n') + 1) {
+            // A block-based editor will not merge two paragraphs this way. Note it still reports
+            // success -- the return value cannot be used to detect that nothing happened.
+            return true
+        }
         // delete only before or after selection
-        text = textBeforeCursor.substring(0, textBeforeCursor.length - beforeLength) +
+        text = textBeforeCursor.substring(0, textBeforeCursor.length - before) +
                 text.substring(selectionStart, selectionEnd) +
-                textAfterCursor.substring(afterLength)
+                textAfterCursor.substring(after)
 
         // if parts of the composing span are deleted, shorten the span (set end to shorter)
         if (selectionStart <= composingStart) {
-            composingStart -= beforeLength // is this correct?
-            composingEnd -= beforeLength
+            composingStart -= before // is this correct?
+            composingEnd -= before
         } else if (selectionStart <= composingEnd) {
-            composingEnd -= beforeLength // is this correct?
+            composingEnd -= before // is this correct?
         }
         if (selectionEnd <= composingStart) {
-            composingStart -= afterLength
-            composingEnd -= afterLength
+            composingStart -= after
+            composingEnd -= after
         } else if (selectionEnd <= composingEnd) {
-            composingEnd -= afterLength
+            composingEnd -= after
         }
         // update selection
-        selectionStart -= beforeLength
-        selectionEnd -= beforeLength
+        selectionStart -= before
+        selectionEnd -= before
         return true
     }
     override fun sendKeyEvent(p0: KeyEvent): Boolean {
         if (p0.action != KeyEvent.ACTION_DOWN) return true // only change the text on key down, like RichInputConnection does
+        sentKeyEvents.add(p0.keyCode)
         if (p0.keyCode == KeyEvent.KEYCODE_DEL) {
             if (selectionEnd == 0) return true // nothing to delete
             if (selectedText.isEmpty()) {
