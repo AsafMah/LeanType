@@ -206,15 +206,18 @@ The seven that stopped failing were `SubtypeTest > subtypeStaysEnabledOnEdits`, 
 `ParserTest > backgroundType`, `XLinkTest > otherLinks`, and `StringUtilsTest` ×2
 (`detectEmojisAtEndFail`, `isEmojiDetectsAllAvailableEmojis`).
 
-**Attribute that carefully.** The first three are safely merge-attributable — they are
+**Attribute that carefully.** Both runs were on the same machine minutes apart, which controls
+for most environment drift, but not all of it. The first three are safely merge-attributable —
 deterministic logic tests, and the two §7 defects were separately confirmed fixed on a pristine
-v4.1.2 checkout. The rest are the environment-sensitive ones: `XLinkTest` makes real network
-calls and `StringUtilsTest` depends on the bundled emoji-data version, so a run-to-run
-difference there is not by itself evidence the merge fixed anything.
+v4.1.2 checkout. `StringUtilsTest` depends on the bundled emoji-data version, which this merge
+does update, so those two are plausibly merge-fixed but not independently confirmed.
+`XLinkTest > otherLinks` makes a live network call to Codeberg, so it can flip without any code
+change — don't count it as a fix. `ParserTest > backgroundType` sits with the other
+asset/locale-sensitive `ParserTest` cases.
 
 **Always diff failing test *names* against a baseline run of the merge base — never compare
-absolute pass counts.** The old "12 failures" note in this section was correct for `dev` and
-wrong for the merge branch, which is exactly the trap this rule exists to prevent.
+absolute pass counts.** Both the "12 failures" figure and a "5 failures" figure are correct —
+for different baselines. Quote neither without saying which tree it came from.
 
 ---
 
