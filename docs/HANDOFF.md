@@ -28,8 +28,9 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Open PRs | **#106** (`issue37-slide-target-actions`), **#134** (backspace paragraph merge), **#136** (two-thumb native second pointer track), **#137** (upstream v4.1.2) |
 
 **No release work is outstanding** — v0.2.0 shipped signed on 2026-08-20. Open items are now
-device verification of #134 and #137, and reporting the emoji accelerated-delete bug upstream.
-§7's two inherited upstream defects were fixed by v4.1.2 and their guards removed. See §12.
+device verification of #134 and #137. §7's two inherited upstream defects were fixed by v4.1.2
+and their guards removed; the emoji accelerated-delete bug is reported as
+`LeanBitLab/LeanType#423`. See §12.
 
 ---
 
@@ -185,19 +186,35 @@ count …`). These are asset/locale-ordering issues that **pass on Linux CI**. U
 v4.1.2 merge.
 
 `:app:testOfflineDebugUnitTest` (full debug) — **the baseline moved with the v4.1.2 merge**
-(#137), so use the right one:
+(#137), so compare against the right one. Both measured on the same Windows machine on
+2026-08-20, minutes apart:
 
-- on `origin/dev`: `InputLogicTest` + `SubtypeTest` fail **4** —
-  `tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`,
-  `insertLetterIntoWordHangulFails`, and §7's two inherited upstream defects
-- on the v4.1.2 merge branch: only **1** — the autospace-indicator test. v4.1.2 fixed the
-  Hangul case and both inherited defects.
+| Baseline | Result |
+|---|---|
+| `origin/dev` (`6ac372de3`) | 320 tests, **12 failed** |
+| v4.1.2 merge branch | 324 tests, **5 failed** |
 
-Beyond those, the long-standing debug-variant failures are `ParserTest` ×5,
-`XLinkTest > otherLinks`, and `StringUtilsTest` ×2.
+Still failing on the merge branch — treat these as the current expected set:
+
+- `InputLogicTest > tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`
+- `ParserTest` ×4 — `canLoadKeyboard`, `de_DE has extra keys`, `dvorak has 4 rows`,
+  `popup key count does not depend on shift for (for simple layout)` (the same four as the CI
+  variant)
+
+The seven that stopped failing were `SubtypeTest > subtypeStaysEnabledOnEdits`, `InputLogicTest
+> immediate regex expansion…`, `InputLogicTest > insertLetterIntoWordHangulFails`,
+`ParserTest > backgroundType`, `XLinkTest > otherLinks`, and `StringUtilsTest` ×2
+(`detectEmojisAtEndFail`, `isEmojiDetectsAllAvailableEmojis`).
+
+**Attribute that carefully.** The first three are safely merge-attributable — they are
+deterministic logic tests, and the two §7 defects were separately confirmed fixed on a pristine
+v4.1.2 checkout. The rest are the environment-sensitive ones: `XLinkTest` makes real network
+calls and `StringUtilsTest` depends on the bundled emoji-data version, so a run-to-run
+difference there is not by itself evidence the merge fixed anything.
 
 **Always diff failing test *names* against a baseline run of the merge base — never compare
-absolute pass counts.**
+absolute pass counts.** The old "12 failures" note in this section was correct for `dev` and
+wrong for the merge branch, which is exactly the trap this rule exists to prevent.
 
 ---
 
@@ -440,8 +457,9 @@ background trim level on a foreground process") and refuses to *raise* a level t
    editors) and **#137** (upstream v4.1.2 merge). Both need a real-editor smoke, not just a
    green test run; see the anti-regression note that "tests pass" ≠ "feature works" for input
    and integration code.
-2. **Report the emoji accelerated-delete bug** upstream (surfaced by #134). §7's two inherited
-   defects need no report — v4.1.2 fixed both.
+2. **Emoji accelerated-delete bug is reported** — `LeanBitLab/LeanType#423`, confirmed still
+   present at upstream `f0ff166ae`. Don't file it twice; track that issue instead. §7's two
+   inherited defects need no report — v4.1.2 fixed both.
 3. **Install signed 0.2.0** over the phone's production package and do a real-editor smoke
    (typing, direct IME switching, custom-layout restoration, unshifted `to`/`no`/`meet`
    staying lowercase).
