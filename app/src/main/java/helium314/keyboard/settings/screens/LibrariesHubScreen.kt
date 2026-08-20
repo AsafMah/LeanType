@@ -42,6 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 fun LibrariesHubScreen(
     onClickBack: () -> Unit,
     onClickDictionaries: () -> Unit,
+    onClickOfflineVoice: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val gestureInstalled = JniUtils.sHaveNativeGestureLib
@@ -86,6 +87,9 @@ fun LibrariesHubScreen(
                                 icon = R.drawable.ic_edit,
                                 onSuccess = { handwritingInstalled = HandwritingLoader.hasPlugin(context) }
                             )
+                            if (handwritingInstalled) {
+                                helium314.keyboard.settings.preferences.HandwritingLanguagePreference()
+                            }
                         }
 
                         // Translation Plugin (available on standard and standardfull)
@@ -98,6 +102,14 @@ fun LibrariesHubScreen(
                                 onSuccess = { translationInstalled = helium314.keyboard.latin.translation.TranslationLoader.hasPlugin(context) }
                             )
                         }
+
+                        // Offline Voice Input
+                        Preference(
+                            name = stringResource(R.string.offline_voice_title),
+                            description = stringResource(R.string.pref_offline_voice_summary),
+                            onClick = onClickOfflineVoice,
+                            icon = R.drawable.sym_keyboard_voice_holo
+                        ) { NextScreenIcon() }
 
                         // Handwriting Input Plugin
                         if (BuildConfig.FLAVOR == "standard") {

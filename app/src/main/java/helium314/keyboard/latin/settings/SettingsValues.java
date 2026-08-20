@@ -50,6 +50,7 @@ public class SettingsValues {
         public final Locale mLocale;
         public final String mCurrentKeyboardScript;
         public final boolean mHasHardwareKeyboard;
+        public final boolean mShowToolbarOnly;
         public final String mPhysicalKeyboardSuggestionShortcuts;
         public final int mDisplayOrientation;
         public final helium314.keyboard.latin.utils.ScreenProfile mScreenProfile;
@@ -168,6 +169,7 @@ public class SettingsValues {
         public final boolean mAddToPersonalDictionary;
         public final boolean mFlagUnknownWords;
         public final boolean mGraduatedTrust;
+        public final int mAddToPersonalDictThreshold;
         public final boolean mUseContactsDictionary;
         public final boolean mUseAppsDictionary;
         public final boolean mEnableSpellCheckerService;
@@ -184,6 +186,8 @@ public class SettingsValues {
         public final boolean mToolbarHidingGlobal;
         public final boolean mSplitToolbar;
         public final boolean mAutoSpanToolbarKeys;
+        public final String mToolbarKeysAlignment;
+        public final String mClipboardKeysAlignment;
         public final boolean mShowDownloadButtonInToolbar;
         public final boolean mAutoShowToolbar;
         public final boolean mAutoShowToolbarOnSelect;
@@ -237,6 +241,8 @@ public class SettingsValues {
         public final boolean mIncognitoModeEnabled;
         public final boolean mLongPressSymbolsForNumpad;
 
+        public final boolean mFoldableMode;
+
         // User-defined colors
         public final Colors mColors;
 
@@ -247,7 +253,8 @@ public class SettingsValues {
                 mLocale = ConfigurationCompatKt.locale(res.getConfiguration());
                 mCurrentKeyboardScript = currentKeyboardScript;
                 mDisplayOrientation = res.getConfiguration().orientation;
-                mScreenProfile = helium314.keyboard.latin.utils.ScreenProfileProvider.getScreenProfile(context, res.getConfiguration());
+                mFoldableMode = prefs.getBoolean(Settings.PREF_FOLDABLE_MODE, false);
+                mScreenProfile = helium314.keyboard.latin.utils.ScreenProfileProvider.getScreenProfile(context, res.getConfiguration(), this);
                 final InputMethodSubtype selectedSubtype = SubtypeSettings.INSTANCE.getSelectedSubtype(prefs);
 
                 // Store the input attributes
@@ -260,6 +267,9 @@ public class SettingsValues {
                                 Defaults.PREF_TOOLBAR_HIDING_GLOBAL);
                 mSplitToolbar = prefs.getBoolean(Settings.PREF_SPLIT_TOOLBAR, Defaults.PREF_SPLIT_TOOLBAR);
                 mAutoSpanToolbarKeys = prefs.getBoolean(Settings.PREF_AUTO_SPAN_TOOLBAR_KEYS, Defaults.PREF_AUTO_SPAN_TOOLBAR_KEYS);
+                mToolbarKeysAlignment = prefs.getString(Settings.PREF_TOOLBAR_KEYS_ALIGNMENT,
+                                prefs.getString(Settings.PREF_CLIPBOARD_KEYS_ALIGNMENT, Defaults.PREF_TOOLBAR_KEYS_ALIGNMENT));
+                mClipboardKeysAlignment = mToolbarKeysAlignment;
                 mShowDownloadButtonInToolbar = prefs.getBoolean(Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR,
                                 Defaults.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR);
                 mAutoCap = prefs.getBoolean(Settings.PREF_AUTO_CAP, Defaults.PREF_AUTO_CAP)
@@ -377,6 +387,7 @@ public class SettingsValues {
                                 Defaults.PREF_COMPRESS_SCREENSHOTS);
                 mDoubleSpacePeriodTimeout = 1100; // ms
                 mHasHardwareKeyboard = Settings.readHasHardwareKeyboard(res.getConfiguration());
+                mShowToolbarOnly = mHasHardwareKeyboard && prefs.getBoolean(Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD, Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD);
                 final boolean isLandscape = mDisplayOrientation == Configuration.ORIENTATION_LANDSCAPE;
                 final float displayWidthDp = TypedValueCompat.pxToDp(res.getDisplayMetrics().widthPixels,
                                 res.getDisplayMetrics());
@@ -476,9 +487,13 @@ public class SettingsValues {
                                 Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS);
                 mSuggestionStripHiddenPerUserSettings = mToolbarMode == ToolbarMode.HIDDEN
                                 || mToolbarMode == ToolbarMode.TOOLBAR_KEYS;
+                final boolean moreAutoCorrection = prefs.getBoolean(Settings.PREF_MORE_AUTO_CORRECTION,
+                                Defaults.PREF_MORE_AUTO_CORRECTION);
+                final boolean isUriOrEmail = InputTypeUtils.isUriOrEmailType(mInputAttributes.mInputType);
                 mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions
-                                && prefs.getBoolean(Settings.PREF_ALWAYS_SHOW_SUGGESTIONS,
+                                && (prefs.getBoolean(Settings.PREF_ALWAYS_SHOW_SUGGESTIONS,
                                                 Defaults.PREF_ALWAYS_SHOW_SUGGESTIONS)
+                                                || (moreAutoCorrection && !isUriOrEmail))
                                 && ((inputAttributes.mInputType
                                                 & InputType.TYPE_MASK_VARIATION) != InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
                                                 || !prefs.getBoolean(
@@ -561,6 +576,8 @@ public class SettingsValues {
                                 Defaults.PREF_FLAG_UNKNOWN_WORDS);
                 mGraduatedTrust = prefs.getBoolean(Settings.PREF_GRADUATED_TRUST,
                                 Defaults.PREF_GRADUATED_TRUST);
+                mAddToPersonalDictThreshold = prefs.getInt(Settings.PREF_ADD_TO_PERSONAL_DICT_THRESHOLD,
+                                Defaults.PREF_ADD_TO_PERSONAL_DICT_THRESHOLD);
                 mUseContactsDictionary = SettingsValues.readUseContactsEnabled(prefs, context);
                 mUseAppsDictionary = prefs.getBoolean(Settings.PREF_USE_APPS, Defaults.PREF_USE_APPS);
                 mCustomNavBarColor = prefs.getBoolean(Settings.PREF_NAVBAR_COLOR, Defaults.PREF_NAVBAR_COLOR);

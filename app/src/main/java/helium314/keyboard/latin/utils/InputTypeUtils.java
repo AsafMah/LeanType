@@ -76,7 +76,15 @@ public final class InputTypeUtils implements InputType {
             return IME_ACTION_CUSTOM_LABEL;
         } else {
             // Note: this is different from editorInfo.actionId, hence "ImeOptionsActionId"
-            return imeOptions & EditorInfo.IME_MASK_ACTION;
+            final int actionId = imeOptions & EditorInfo.IME_MASK_ACTION;
+            if (actionId == EditorInfo.IME_ACTION_UNSPECIFIED) {
+                if ((imeOptions & EditorInfo.IME_FLAG_NAVIGATE_NEXT) != 0) {
+                    return EditorInfo.IME_ACTION_NEXT;
+                } else if ((imeOptions & EditorInfo.IME_FLAG_NAVIGATE_PREVIOUS) != 0) {
+                    return EditorInfo.IME_ACTION_PREVIOUS;
+                }
+            }
+            return actionId;
         }
     }
 }

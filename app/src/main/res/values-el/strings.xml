@@ -139,4 +139,781 @@
     <string name="label_search_key">"Αναζήτηση"</string>
     <string name="label_pause_key">"Παύση"</string>
     <string name="label_wait_key">"Αναμονή"</string>
+
+    <string name="ime_name">LeanType</string>
+    <string name="vibrate_in_dnd_mode">Δόνηση σε λειτουργία μην ενοχλείτε</string>
+    <string name="suggest_emojis">Πρόταση emoji</string>
+    <string name="suggest_emojis_summary">Χρήση λεξικού emoji στις κανονικές προτάσεις</string>
+    <string name="inline_emoji_search">Ενσωματωμένη αναζήτηση emoji</string>
+    <string name="inline_emoji_search_summary">Πρόταση μόνο emoji όταν μια λέξη προηγείται από άνω και κάτω τελεία</string>
+    <string name="emoji_dictionary_required">Απαιτείται λεξικό emoji για να λειτουργήσει αυτή η δυνατότητα. Λεξικά σε μορφή .dict μπορούν να ληφθούν %s.</string>
+    <string name="show_emoji_descriptions">Εμφάνιση περιγραφής emoji με παρατεταμένο πάτημα</string>
+    <string name="settings_category_space">Διάστημα</string>
+    <string name="settings_category_configuration">Διαμόρφωση</string>
+    <string name="settings_category_visuals">Γραφικά και προεπισκόπηση</string>
+    <string name="settings_category_behavior">Συμπεριφορά</string>
+    <string name="settings_category_gestures_advanced">Προηγμένες χειρονομίες</string>
+    <string name="settings_category_touchpad">Επιφάνεια αφής</string>
+    <string name="enable_split_keyboard_landscape">Ενεργοποίηση διαιρεμένου πληκτρολογίου (οριζόντιος προσανατολισμός)</string>
+    <string name="split_spacer_scale">Απόσταση διαχωρισμού</string>
+    <string name="switch_language">Αλλαγή γλώσσας</string>
+    <string name="language_switch_key_switch_both">Αλλαγή και των δύο</string>
+    <string name="language_switch_key_behavior">Συμπεριφορά πλήκτρου αλλαγής γλώσσας</string>
+    <string name="use_apps_dict">Αναζήτηση ονομάτων εφαρμογών</string>
+    <string name="use_apps_dict_summary">Χρήση ονομάτων εγκατεστημένων εφαρμογών για προτάσεις και διορθώσεις</string>
+    <string name="disable_personalized_dicts_message">Προειδοποίηση: Η απενεργοποίηση αυτής της ρύθμισης θα διαγράψει τα δεδομένα που έχουν μάθει</string>
+    <string name="add_to_personal_dictionary">Προσθήκη λέξεων στο προσωπικό λεξικό</string>
+    <string name="add_to_personal_dictionary_summary">Χρήση προσωπικού λεξικού συσκευής για αποθήκευση μαθημένων λέξεων</string>
+    <string name="edit_blocked_words">Αποκλεισμένες λέξεις</string>
+    <string name="blocked_words_summary">Διαχείριση λέξεων που αποκλείονται από προτάσεις</string>
+    <string name="add_blocked_word">Αποκλεισμός λέξης</string>
+    <string name="blocked_word_already_present">Η λέξη είναι ήδη αποκλεισμένη</string>
+    <string name="clear_all_blocked_words_confirmation">Είστε βέβαιοι ότι θέλετε να ξεμπλοκάρετε όλες τις λέξεις;</string>
+    <string name="prefs_always_show_suggestions">Πάντα εμφάνιση προτάσεων</string>
+    <string name="prefs_always_show_suggestions_summary">Αγνόηση αιτήματος άλλων εφαρμογών για απενεργοποίηση προτάσεων (μπορεί να προκαλέσει προβλήματα)</string>
+    <string name="prefs_always_show_suggestions_except_web_text">Να μην εμφανίζονται πάντα προτάσεις για πεδία επεξεργασίας ιστού</string>
+    <string name="prefs_always_show_suggestions_except_web_text_summary">Τα πεδία επεξεργασίας ιστού (κυρίως σε προγράμματα περιήγησης) είναι πολύ συχνή αιτία προβλημάτων με τη ρύθμιση πάντα εμφάνισης προτάσεων</string>
+    <string name="auto_correction_trigger">Αυτόματη διόρθωση στο</string>
+    <string name="auto_correction_trigger_both">Πλήκτρο διαστήματος και σημεία στίξης</string>
+    <string name="auto_correction_trigger_space">Μόνο πλήκτρο διαστήματος</string>
+    <string name="auto_correction_trigger_punctuation">Μόνο σημεία στίξης</string>
+    <string name="more_autocorrect">Περισσότερη αυτόματη διόρθωση</string>
+    <string name="more_autocorrect_summary">Αυτόματη διόρθωση ακόμη και όταν δεν ζητείται ρητά από το πεδίο εισαγωγής</string>
+    <string name="auto_correct_shortcuts">Συντομεύσεις αυτόματης διόρθωσης</string>
+    <string name="auto_correct_shortcuts_summary">Όταν ενεργοποιηθεί, οι συντομεύσεις μπορεί να επεκταθούν από την αυτόματη διόρθωση</string>
+    <string name="prefs_physical_keyboard_suggestion_shortcuts">Συντομεύσεις προτάσεων φυσικού πληκτρολογίου</string>
+    <string name="prefs_physical_keyboard_suggestion_shortcuts_summary">Επιλέξτε υποψήφιες προτάσεις χρησιμοποιώντας συντομεύσεις πληκτρολογίου και εμφάνιση αριθμητικών εμβλημάτων</string>
+    <string name="physical_keyboard_shortcut_disabled">Απενεργοποιημένο</string>
+    <string name="physical_keyboard_shortcut_alt">Alt + Αριθμός (Alt+1, Alt+2, Alt+3)</string>
+    <string name="physical_keyboard_shortcut_ctrl">Ctrl + Αριθμός (Ctrl+1, Ctrl+2, Ctrl+3)</string>
+    <string name="physical_keyboard_shortcut_number">Αριθμητικό πλήκτρο (1, 2, 3 κατά τη σύνθεση)</string>
+    <string name="large_screen_layout_note">Οι ρυθμίσεις αυτής της οθόνης ισχύουν για διάταξη μεγάλης οθόνης</string>
+    <string name="backspace_reverts_autocorrect">Το backspace αναιρεί την αυτόματη διόρθωση</string>
+    <string name="center_suggestion_text_to_enter">Πάντα χρήση της μεσαίας πρότασης</string>
+    <string name="center_suggestion_text_to_enter_summary">Με το πάτημα του διαστήματος ή σημείων στίξης, θα εισαχθεί η μεσαία πρόταση</string>
+    <string name="prioritize_personal_suggestions">Προτεραιότητα σε προσωπικές και μαθημένες λέξεις</string>
+    <string name="prioritize_personal_suggestions_summary">Δώστε υψηλότερη προτεραιότητα βαθμολογίας στο προσωπικό λεξικό και τις μαθημένες λέξεις κατά την πρόβλεψη επόμενης λέξης</string>
+    <string name="next_word_boost_level">Επίπεδο ενίσχυσης μαθημένης λέξης</string>
+    <string name="next_word_boost_level_summary">Ορίστε την ισχύ ενίσχυσης προτεραιότητας βαθμολογίας για καταχωρίσεις μαθημένου και προσωπικού λεξικού</string>
+    <string name="next_word_strict_ngram">Απαίτηση αντιστοίχισης περιβάλλοντος για μαθημένες λέξεις</string>
+    <string name="next_word_strict_ngram_summary">Πρόταση μαθημένων λέξεων μόνο όταν το προηγούμενο λεκτικό περιβάλλον ταιριάζει</string>
+    <string name="immediate_auto_space">Άμεσο αυτόματο διάστημα</string>
+    <string name="immediate_auto_space_summary">Εισαγωγή διαστήματος αμέσως κατά την επιλογή πρότασης για αποφυγή καθυστέρησης στο επόμενο γράμμα</string>
+    <string name="first_word_prediction">Προτάσεις πρώτης λέξης</string>
+    <string name="first_word_prediction_summary">Εμφάνιση προτάσεων όταν δεν υπάρχει εισαγωγή στην αρχή μιας πρότασης</string>
+    <string name="suggest_punctuation">Προτάσεις σημείων στίξης</string>
+    <string name="suggest_punctuation_summary">Εμφάνιση σημείων στίξης όταν δεν υπάρχουν άλλες διαθέσιμες προτάσεις</string>
+    <string name="suggest_clipboard_content">Πρόταση περιεχομένου προχείρου</string>
+    <string name="suggest_clipboard_content_summary">Εμφάνιση πρόσφατα αντιγραμμένου περιεχομένου προχείρου ως πρόταση</string>
+    <string name="suggest_screenshots">Πρόταση πρόσφατων στιγμιότυπων οθόνης</string>
+    <string name="suggest_screenshots_summary">Εμφάνιση πρόσφατα ληφθέντων στιγμιότυπων οθόνης ως πρόταση</string>
+    <string name="auto_read_otp">Αυτόματη ανάγνωση OTP από SMS</string>
+    <string name="auto_read_otp_summary">Εμφάνιση του κωδικού από εισερχόμενο SMS ως πρόταση που μπορείτε να πατήσετε για εισαγωγή</string>
+    <string name="spoken_otp_suggestion">Απόρριψη πρότασης OTP</string>
+    <string name="compress_screenshots">Συμπίεση προτάσεων στιγμιότυπων</string>
+    <string name="compress_screenshots_summary">Μείωση ποιότητας και μεγέθους προτάσεων στιγμιότυπων για εξοικονόμηση χώρου</string>
+    <string name="gesture_floating_preview_static">Αιωρούμενη προεπισκόπηση</string>
+    <string name="gesture_floating_preview_static_summary">Δείτε την προτεινόμενη λέξη ενώ κάνετε χειρονομία</string>
+    <string name="gesture_floating_preview_dynamic_summary">Μετακινήστε την προεπισκόπηση κατά τη διάρκεια μιας χειρονομίας</string>
+    <string name="gesture_fast_typing_cooldown">Περίοδος χάριτος γρήγορης πληκτρολόγησης</string>
+    <string name="gesture_fast_typing_cooldown_instant">Πάντα άμεση έναρξη</string>
+    <string name="gesture_trail_fadeout_duration">Διάρκεια ίχνους χειρονομίας</string>
+    <string name="clipboard_history_pinned_first">Εμφάνιση καρφιτσωμένων στοιχείων στην κορυφή</string>
+    <string name="clipboard_fold_pinned">Δίπλωμα καρφιτσωμένων στοιχείων από προεπιλογή</string>
+    <string name="clear_clipboard_icon">Εικονίδιο εκκαθάρισης προχείρου</string>
+    <string name="clear_clipboard_icon_summary">Επιλέξτε το στυλ εικονιδίου για το κουμπί εκκαθάρισης προχείρου</string>
+    <string name="clear_clipboard_icon_bin">Κάδος απορριμμάτων</string>
+    <string name="clear_clipboard_icon_sweep">Σάρωμα / Εκκαθάριση όλων</string>
+    <string name="clear_clipboard_icon_sweep_slanted">Κεκλιμένες γραμμές</string>
+    <string name="clear_clipboard_icon_clipboard_slash">Περίγραμμα προχείρου με κάθετο</string>
+    <string name="clear_clipboard_icon_legacy">Κλασικό πρόχειρο</string>
+    <string name="clipboard_pinned">Καρφιτσωμένο</string>
+    <string name="clipboard_search_hint">Αναζήτηση αποκομμάτων...</string>
+    <string name="clipboard_empty_text">Δεν βρέθηκαν στοιχεία</string>
+    <string name="clipboard_item_deleted">Το στοιχείο διαγράφηκε</string>
+    <string name="clipboard_no_search_results">Δεν βρέθηκαν αποτελέσματα</string>
+    <string name="clipboard_clear_all_confirmation">Είστε βέβαιοι ότι θέλετε να εκκαθαρίσετε όλο το ιστορικό;</string>
+    <string name="clear_all">Εκκαθάριση όλων</string>
+    <string name="backup_restore_title">Δημιουργία αντιγράφων ασφαλείας και επαναφορά</string>
+    <string name="backup_restore_message">Αποθήκευση ή φόρτωση από αρχείο. Προειδοποίηση: η επαναφορά θα αντικαταστήσει τα υπάρχοντα δεδομένα</string>
+    <string name="backup_error">Σφάλμα δημιουργίας αντιγράφου ασφαλείας: %s</string>
+    <string name="restore_error">Σφάλμα επαναφοράς του αντιγράφου ασφαλείας: %s</string>
+    <string name="button_backup">Δημιουργία αντιγράφου</string>
+    <string name="button_restore">Επαναφορά</string>
+    <string name="backup_restored">Το αντίγραφο ασφαλείας επαναφέρθηκε</string>
+    <string name="timestamp_format_title">Μορφή για πλήκτρο χρονικής σήμανσης</string>
+    <string name="secondary_locale">Πολύγλωσση πληκτρολόγηση</string>
+    <string name="locales_with_dict">Γλώσσες με λεξικά</string>
+    <string name="load_gesture_library">Φόρτωση βιβλιοθήκης πληκτρολόγησης με χειρονομίες</string>
+    <string name="load_gesture_library_summary">Παρέχετε μια εγγενή βιβλιοθήκη για ενεργοποίηση της πληκτρολόγησης με χειρονομίες</string>
+    <string name="gesture_method">Μέθοδος πληκτρολόγησης με χειρονομίες</string>
+    <string name="gesture_method_summary">Επιλέξτε αλγόριθμο για πληκτρολόγηση με σάρωση</string>
+    <string name="gesture_method_native">Εγγενής βιβλιοθήκη (απαιτεί swypelib)</string>
+    <string name="gesture_method_fallback">Εφεδρική μηχανή (καθαρή Java)</string>
+    <string name="load_gesture_library_message">Θα χρειαστείτε τη βιβλιοθήκη για \'%s\'. Μη συμβατές βιβλιοθήκες μπορεί να προκαλέσουν κατάρρευση κατά την πληκτρολόγηση με χειρονομίες.
+        \n\nΠροειδοποίηση: η φόρτωση εξωτερικού κώδικα μπορεί να αποτελέσει κίνδυνο ασφαλείας. Χρησιμοποιήστε μόνο μια βιβλιοθήκη από πηγή που εμπιστεύεστε.</string>
+    <string name="checksum_mismatch_message">Άγνωστο αρχείο βιβλιοθήκης. Είστε βέβαιοι ότι το πήρατε από αξιόπιστη πηγή και ότι είναι για \'%s\';</string>
+    <string name="load_gesture_library_button_load">Φόρτωση βιβλιοθήκης</string>
+    <string name="load_gesture_library_button_delete">Διαγραφή βιβλιοθήκης</string>
+    <string name="load_gesture_library_button_download">Λήψη βιβλιοθήκης</string>
+    <string name="load_gesture_library_downloading">Λήψη βιβλιοθήκης χειρονομιών…</string>
+    <string name="load_gesture_library_download_success">Η λήψη ολοκληρώθηκε! Επανεκκίνηση…</string>
+    <string name="load_gesture_library_download_failed">Η λήψη απέτυχε: %s</string>
+    <string name="load_handwriting_plugin">Φόρτωση προσθέτου γραφής</string>
+    <string name="load_handwriting_plugin_summary">Παρέχετε ένα APK προσθέτου για ενεργοποίηση εισαγωγής γραφής</string>
+    <string name="load_handwriting_plugin_message">Παρέχετε ένα APK προσθέτου γραφής.\n\nΠροειδοποίηση: η φόρτωση εξωτερικού κώδικα μπορεί να αποτελέσει κίνδυνο ασφαλείας. Χρησιμοποιήστε μόνο ένα πρόσθετο από πηγή που εμπιστεύεστε.</string>
+    <string name="load_handwriting_plugin_button_load">Φόρτωση APK προσθέτου</string>
+    <string name="load_handwriting_plugin_button_delete">Διαγραφή προσθέτου</string>
+    <string name="load_handwriting_plugin_success">Το πρόσθετο γραφής εισήχθη επιτυχώς</string>
+    <string name="load_handwriting_plugin_failed">Αποτυχία φόρτωσης APK προσθέτου γραφής</string>
+    <string name="load_translation_plugin">Φόρτωση προσθέτου μετάφρασης</string>
+    <string name="load_translation_plugin_summary">Παρέχετε ένα APK προσθέτου για ενεργοποίηση μηχανής μετάφρασης</string>
+    <string name="load_translation_plugin_button_delete">Διαγραφή προσθέτου</string>
+    <string name="load_translation_plugin_success">Το πρόσθετο μετάφρασης εισήχθη επιτυχώς</string>
+    <string name="load_translation_plugin_failed">Αποτυχία φόρτωσης APK προσθέτου μετάφρασης</string>
+    <string name="handwriting">Γραφή</string>
+    <string name="delete_handwriting_model">Διαγραφή μοντέλου που λήφθηκε</string>
+    <string name="handwriting_model_deleted">Το μοντέλο γραφής διαγράφηκε</string>
+    <string name="handwriting_plugin_required">Απαιτείται πρόσθετο γραφής</string>
+    <string name="handwriting_plugin_summary_text">Παρακαλώ φορτώστε τη βιβλιοθήκη προσθέτου γραφής για να ενεργοποιήσετε την αναγνώριση σχεδίασης.</string>
+    <string name="handwriting_plugin_load_button">Φόρτωση Προσθέτου</string>
+    <string name="autospace_after_emoji">Αυτόματο διάστημα μετά από emoji</string>
+    <string name="autospace_after_emoji_summary">Αυτόματη εισαγωγή διαστήματος μετά από emoji κατά την πληκτρολόγηση νέας λέξης</string>
+    <string name="autospace_after_suggestion">Αυτόματο διάστημα μετά την επιλογή πρότασης</string>
+    <string name="autospace_before_gesture_typing">Αυτόματο διάστημα πριν από πληκτρολόγηση λέξης με χειρονομία</string>
+    <string name="autospace_after_gesture_typing">Αυτόματο διάστημα μετά από πληκτρολόγηση λέξης με χειρονομία</string>
+    <string name="shift_removes_autospace">Κανένα αυτόματο διάστημα κατά το πάτημα του shift</string>
+    <string name="shift_removes_autospace_summary">Το shift αφαιρεί το εκκρεμές αυτόματο διάστημα</string>
+    <string name="preserve_space_before_punctuation">Διατήρηση διαστήματος πριν από σημεία στίξης</string>
+    <string name="preserve_space_before_punctuation_summary">Να μην διαγράφεται αυτόματα το διάστημα πριν από σημεία στίξης: ]}):;!?,.</string>
+    <string name="show_popup_keys_title">Εμφάνιση περισσότερων γραμμάτων με διακριτικά σε αναδυόμενο παράθυρο</string>
+    <string name="show_popup_keys_normal">Εμφάνιση παραλλαγών που ορίζονται στις γλώσσες πληκτρολογίου</string>
+    <string name="show_popup_keys_main">Προσθήκη πολύ κοινών παραλλαγών (προεπιλογή)</string>
+    <string name="show_popup_keys_more">Προσθήκη κοινών παραλλαγών</string>
+    <string name="show_popup_keys_all">Προσθήκη όλων των διαθέσιμων παραλλαγών</string>
+    <string name="url_detection_title">Ανίχνευση URL</string>
+    <string name="url_detection_summary">Προσπάθεια ανίχνευσης URLs και παρόμοιων ως μίας λέξης</string>
+    <string name="touchpad">Επιφάνεια αφής</string>
+    <string name="text_edit">Επεξεργασία κειμένου</string>
+    <string name="select_mode">Λειτουργία επιλογής</string>
+    <string name="touchpad_fullscreen">Επιφάνεια αφής πλήρους οθόνης</string>
+    <string name="touchpad_fullscreen_summary">Απόκρυψη γραμμής προτάσεων και γραμμής εργαλείων όταν η λειτουργία επιφάνειας αφής είναι ενεργή</string>
+    <string name="language_and_layouts_title">Γλώσσες &amp; Διατάξεις</string>
+    <string name="languages_title">Γλώσσες</string>
+    <string name="number_row_in_symbols">Εμφάνιση σειράς αριθμών στην προβολή συμβόλων</string>
+    <string name="compact_number_row_in_symbols">Συμπαγής σειρά αριθμών συμβόλων</string>
+    <string name="compact_number_row_in_symbols_summary">Αντικατάσταση της πρώτης σειράς συμβόλων αντί για προσθήκη ξεχωριστής σειράς</string>
+    <string name="localized_number_row">Τοπικοποίηση σειράς αριθμών</string>
+    <string name="localized_number_row_summary">Προτίμηση τοπικών έναντι λατινικών αριθμών</string>
+    <string name="number_row_hints">Εμφάνιση υποδείξεων στη σειρά αριθμών</string>
+    <string name="save_subtype_per_app">Απομνημόνευση γλώσσας ανά εφαρμογή</string>
+    <string name="popup_order_and_hint_source">Σειρά αναδυόμενων πλήκτρων και πηγή υποδείξεων</string>
+    <string name="hint_source">Επιλογή πηγής υποδείξεων</string>
+    <string name="popup_order">Επιλογή σειράς αναδυόμενων πλήκτρων</string>
+    <string name="show_tld_popup_keys">Εμφάνιση αναδυόμενων πλήκτρων TLD</string>
+    <string name="show_tld_popup_keys_summary">Αντικατάσταση αναδυόμενων πλήκτρων τελείας με τομείς ανωτάτου επιπέδου κατά την πληκτρολόγηση URLs και διευθύνσεων email</string>
+    <string name="popup_keys_number">Σειρά αριθμών</string>
+    <string name="popup_keys_language">@string/subtype_locale</string>
+    <string name="popup_keys_language_priority">Γλώσσα (προτεραιότητα)</string>
+    <string name="popup_keys_layout">Διάταξη</string>
+    <string name="popup_keys_symbols">Σύμβολα</string>
+    <string name="toolbar_mode">Λειτουργία γραμμής εργαλείων</string>
+    <string name="toolbar_mode_expandable">Πλήκτρα γραμμής εργαλείων και προτάσεις</string>
+    <string name="toolbar_mode_toolbar_keys">Μόνο πλήκτρα γραμμής εργαλείων</string>
+    <string name="toolbar_mode_suggestion_strip">Μόνο προτάσεις</string>
+    <string name="toolbar_mode_hidden">Κρυφό</string>
+    <string name="toolbar_hiding_global">Απόκρυψη και των γραμμών εργαλείων προχείρου και emoji</string>
+    <string name="toolbar_keys">Επιλογή πλήκτρων γραμμής εργαλείων</string>
+    <string name="paste">@android:string/paste</string>
+    <string name="copy">@android:string/copy</string>
+    <string name="cut">@android:string/cut</string>
+    <string name="clipboard">Πρόχειρο</string>
+    <string name="clear_clipboard">Εκκαθάριση προχείρου</string>
+    <string name="clipboard_search">Αναζήτηση προχείρου</string>
+    <string name="download">Λήψη</string>
+    <string name="downloading">Λήψη…</string>
+    <string name="download_failed">Η λήψη απέτυχε</string>
+    <string name="installed">Εγκατεστημένο</string>
+    <string name="voice">Φωνητική εισαγωγή</string>
+    <string name="numpad">@string/layout_numpad</string>
+    <string name="select_all">@android:string/selectAll</string>
+    <string name="select_word">Επιλογή λέξης</string>
+    <string name="one_handed">Λειτουργία με το ένα χέρι</string>
+    <string name="floating">Αιώρηση</string>
+    <string name="split">Διαιρεμένο πληκτρολόγιο</string>
+    <string name="full_left">Πλήρης αριστερά</string>
+    <string name="full_right">Πλήρης δεξιά</string>
+    <string name="page_start">Αρχή σελίδας</string>
+    <string name="page_end">Τέλος σελίδας</string>
+    <string name="left">Αριστερά</string>
+    <string name="right">Δεξιά</string>
+    <string name="up">Πάνω</string>
+    <string name="down">Κάτω</string>
+    <string name="word_left">Λέξη αριστερά</string>
+    <string name="word_right">Λέξη δεξιά</string>
+    <string name="page_up">Σελίδα πάνω</string>
+    <string name="page_down">Σελίδα κάτω</string>
+    <string name="close_history">Κλείσιμο ιστορικού προχείρου</string>
+    <string name="emoji">Emoji</string>
+    <string name="proofread">Διόρθωση κειμένου</string>
+    <string name="proofread_loading">Διόρθωση κειμένου…</string>
+    <string name="proofread_success">Το κείμενο διορθώθηκε</string>
+    <string name="proofread_error">Η διόρθωση κειμένου απέτυχε: %s</string>
+    <string name="proofread_no_text">Κανένα κείμενο για διόρθωση</string>
+    <string name="proofread_no_api_key">Το κλειδί API Gemini δεν έχει οριστεί. Μεταβείτε στις Ρυθμίσεις → Ενσωμάτωση AI.</string>
+    <string name="gemini_api_key_title">Κλειδί API Gemini</string>
+    <string name="gemini_api_key_summary">Εισαγάγετε το κλειδί API Google Gemini για διόρθωση κειμένου</string>
+    <string name="gemini_api_key_hint">Εισαγωγή κλειδιού API</string>
+    <string name="get_api_key">Λήψη κλειδιού API</string>
+    <string name="gemini_model_title">Μοντέλο Gemini</string>
+    <string name="gemini_model_summary">Επιλέξτε το μοντέλο AI για διόρθωση κειμένου</string>
+    <string name="gemini_test_api_key">Δοκιμή κλειδιού API</string>
+    <string name="gemini_api_key_valid">Το κλειδί API είναι έγκυρο!</string>
+    <string name="gemini_api_key_invalid">Η δοκιμή κλειδιού API απέτυχε: %s</string>
+    <string name="gemini_testing_api_key">Δοκιμή κλειδιού API…</string>
+    <string name="disable_network_title">Απενεργοποίηση όλης της πρόσβασης δικτύου</string>
+    <string name="disable_network_summary">Εσωτερικό κλείδωμα: Αποκλείει όλα τα αιτήματα δικτύου από αυτήν την εφαρμογή. Για πλήρη ανάκληση της άδειας, χρησιμοποιήστε τις ρυθμίσεις Πληροφοριών εφαρμογής συστήματος.</string>
+    <string name="open_app_info">Άνοιγμα Πληροφοριών εφαρμογής συστήματος</string>
+    <string name="open_app_info_summary">Διαχείριση αδειών και χρήσης μπαταρίας στις ρυθμίσεις Android</string>
+    <string name="gemini_network_disabled">Η πρόσβαση δικτύου είναι απενεργοποιημένη στις ρυθμίσεις του LeanType</string>
+    <string name="ai_provider_title">Πάροχος AI</string>
+    <string name="ai_provider_summary">Επιλέξτε υπηρεσία AI για διόρθωση κειμένου</string>
+    <string name="ai_provider_gemini">Google Gemini</string>
+    <string name="split_toolbar">Διαιρεμένη γραμμή εργαλείων</string>
+    <string name="split_toolbar_summary">Διαχωρισμός προτάσεων από τη γραμμή εργαλείων</string>
+    <string name="auto_span_toolbar_keys">Αυτόματη επέκταση πλήκτρων γραμμής εργαλείων</string>
+    <string name="auto_span_toolbar_keys_summary">Επέκταση πλήκτρων γραμμής εργαλείων για πλήρωση του διαθέσιμου ελεύθερου χώρου</string>
+    <string name="show_download_button_in_toolbar">Εμφάνιση κουμπιού λήψης στη γραμμή εργαλείων</string>
+    <string name="show_download_button_in_toolbar_summary">Εμφάνιση εικονιδίου λήψης λεξικού στη γραμμή προτάσεων όταν λείπει το κύριο λεξικό</string>
+    <string name="ai_provider_huggingface">Groq</string>
+    <string name="ai_provider_openai">Συμβατό με HF/OpenAI</string>
+    <string name="huggingface_token_title">Διακριτικό API</string>
+    <string name="huggingface_token_summary">Εισαγάγετε το κλειδί API σας για HuggingFace ή συμβατό με OpenAI</string>
+    <string name="groq_token_title">Διακριτικό API</string>
+    <string name="groq_token_summary">Εισαγάγετε το κλειδί API σας για Groq</string>
+    <string name="groq_token_hint">Εισαγωγή κλειδιού API</string>
+    <string name="huggingface_token_hint">Εισαγωγή κλειδιού API</string>
+    <string name="get_groq_key">Λήψη κλειδιού Groq</string>
+    <string name="get_huggingface_key">Λήψη Διακριτικού API</string>
+    <string name="huggingface_no_token">Το διακριτικό API δεν έχει οριστεί. Μεταβείτε στις Ρυθμίσεις → Ενσωμάτωση AI.</string>
+    <string name="huggingface_model_title">Μοντέλο</string>
+    <string name="huggingface_model_summary">Επιλογή μοντέλου Groq</string>
+    <string name="huggingface_model_hint">όνομα-μοντέλου</string>
+    <string name="huggingface_no_model">Κανένα μοντέλο δεν έχει διαμορφωθεί. Μεταβείτε στις Ρυθμίσεις → Ενσωμάτωση AI.</string>
+    <string name="huggingface_endpoint_title">Τελικό σημείο API</string>
+    <string name="huggingface_endpoint_summary">URL τελικού σημείου API</string>
+    <string name="huggingface_endpoint_hint">https://api.groq.com/openai/v1/chat/completions</string>
+    <string name="insecure_connection_blocked">Η μη ασφαλής σύνδεση HTTP αποκλείστηκε. Ενεργοποιήστε το \'Να επιτρέπονται μη ασφαλείς συνδέσεις\' στις ρυθμίσεις AI.</string>
+    <string name="ai_allow_insecure_connections_title">Να επιτρέπονται μη ασφαλείς συνδέσεις</string>
+    <string name="ai_allow_insecure_connections_summary">Να επιτρέπονται οι συνδέσεις HTTP και να αγνοούνται τα σφάλματα πιστοποιητικού SSL. Προειδοποίηση: εκθέτει την είσοδο σε υποκλοπή από τοπικό δίκτυο.</string>
+    <string name="backup_category_layouts">Διατάξεις</string>
+    <string name="backup_category_theme">Θέμα &amp; Προσαρμοσμένα φόντα</string>
+    <string name="backup_category_dictionary">Λεξικά &amp; Ιστορικό πληκτρολόγησης</string>
+    <string name="backup_category_clipboard">Ιστορικό προχείρου</string>
+    <string name="backup_category_general">Γενικές ρυθμίσεις</string>
+    <string name="backup_select_items">Επιλέξτε στοιχεία προς συμπερίληψη:</string>
+    <string name="config_gemini_models_endpoint">https://generativelanguage.googleapis.com/v1beta/models?key=%1$s</string>
+    <string name="config_groq_models_endpoint">https://api.groq.com/openai/v1/models</string>
+    <string name="config_default_hf_endpoint">https://api.openai.com/v1/chat/completions</string>
+    <string name="config_groq_chat_endpoint">https://api.groq.com/openai/v1/chat/completions</string>
+    <string name="offline_keep_model_loaded_title">Διατήρηση φορτωμένου μοντέλου</string>
+    <string name="offline_keep_model_loaded_summary">Διατήρηση του μοντέλου AI εκτός σύνδεσης στη μνήμη για αποφυγή καθυστέρησης επαναφόρτωσης (χρησιμοποιεί περισσότερη RAM)</string>
+    <string name="translate">Μετάφραση</string>
+    <string name="translate_loading">Μετάφραση…</string>
+    <string name="translate_success">Το κείμενο μεταφράστηκε</string>
+    <string name="translate_error">Η μετάφραση απέτυχε: %s</string>
+    <string name="translate_no_text">Κανένα κείμενο για μετάφραση</string>
+    <string name="translate_target_language_title">Γλώσσα-στόχος μετάφρασης</string>
+    <string name="translate_target_language_summary">Επιλέξτε τη γλώσσα στην οποία θα μεταφραστεί</string>
+    <string name="translate_model_title">Μοντέλο μετάφρασης</string>
+    <string name="translate_model_summary">Επιλέξτε το μοντέλο AI για μετάφραση. Αφήστε κενό για χρήση του μοντέλου διόρθωσης κειμένου.</string>
+    <string name="translation_engine_title">Μηχανή μετάφρασης</string>
+    <string name="translation_engine_summary">Επιλέξτε backend για μετάφραση (Πρόσθετο ή AI)</string>
+    <string-array name="translate_language_names">
+  <item>Αγγλικά</item>
+  <item>Ισπανικά</item>
+  <item>Γαλλικά</item>
+  <item>Γερμανικά</item>
+  <item>Ιταλικά</item>
+  <item>Πορτογαλικά</item>
+  <item>Κινεζικά (Απλοποιημένα)</item>
+  <item>Κινεζικά (Παραδοσιακά)</item>
+  <item>Ιαπωνικά</item>
+  <item>Κορεατικά</item>
+  <item>Αραβικά</item>
+  <item>Ρωσικά</item>
+  <item>Χίντι</item>
+  <item>Μπενγκάλι</item>
+  <item>Ινδονησιακά</item>
+  <item>Ολλανδικά</item>
+  <item>Τουρκικά</item>
+  <item>Πολωνικά</item>
+  <item>Ουκρανικά</item>
+  <item>Σουηδικά</item>
+  <item>Δανικά</item>
+  <item>Νορβηγικά</item>
+  <item>Φινλανδικά</item>
+  <item>Ελληνικά</item>
+  <item>Εβραϊκά</item>
+  <item>Ταϊλανδικά</item>
+  <item>Βιετναμέζικα</item>
+  <item>Ταμίλ</item>
+  <item>Τελούγκου</item>
+  <item>Μαράθι</item>
+  <item>Γκουτζαράτι</item>
+  <item>Κανάντα</item>
+  <item>Μαλαγιαλάμ</item>
+  <item>Ούρντου</item>
+  <item>Περσικά (Φαρσί)</item>
+  <item>Σουαχίλι</item>
+  <item>Ρουμανικά</item>
+  <item>Τσέχικα</item>
+  <item>Ουγγρικά</item>
+  <item>Φιλιππινέζικα (Τάγκαλογκ)</item>
+  <item>Μαλαισιανά</item>
+  <item>Σερβικά</item>
+  <item>Κροατικά</item>
+  <item>Βουλγαρικά</item>
+  <item>Σλοβακικά</item>
+  <item>Σλοβενικά</item>
+  <item>Λιθουανικά</item>
+  <item>Λετονικά</item>
+  <item>Εσθονικά</item>
+  <item>Καταλανικά</item>
+  <item>Βασκικά</item>
+</string-array>
+    <string-array name="translate_language_codes">
+  <item>Αγγλικά</item>
+  <item>Ισπανικά</item>
+  <item>Γαλλικά</item>
+  <item>Γερμανικά</item>
+  <item>Ιταλικά</item>
+  <item>Πορτογαλικά</item>
+  <item>Κινεζικά (Απλοποιημένα)</item>
+  <item>Κινεζικά (Παραδοσιακά)</item>
+  <item>Ιαπωνικά</item>
+  <item>Κορεατικά</item>
+  <item>Αραβικά</item>
+  <item>Ρωσικά</item>
+  <item>Χίντι</item>
+  <item>Μπενγκάλι</item>
+  <item>Ινδονησιακά</item>
+  <item>Ολλανδικά</item>
+  <item>Τουρκικά</item>
+  <item>Πολωνικά</item>
+  <item>Ουκρανικά</item>
+  <item>Σουηδικά</item>
+  <item>Δανικά</item>
+  <item>Νορβηγικά</item>
+  <item>Φινλανδικά</item>
+  <item>Ελληνικά</item>
+  <item>Εβραϊκά</item>
+  <item>Ταϊλανδικά</item>
+  <item>Βιετναμέζικα</item>
+  <item>Ταμίλ</item>
+  <item>Τελούγκου</item>
+  <item>Μαράθι</item>
+  <item>Γκουτζαράτι</item>
+  <item>Κανάντα</item>
+  <item>Μαλαγιαλάμ</item>
+  <item>Ούρντου</item>
+  <item>Περσικά (Φαρσί)</item>
+  <item>Σουαχίλι</item>
+  <item>Ρουμανικά</item>
+  <item>Τσέχικα</item>
+  <item>Ουγγρικά</item>
+  <item>Φιλιππινέζικα (Τάγκαλογκ)</item>
+  <item>Μαλαισιανά</item>
+  <item>Σερβικά</item>
+  <item>Κροατικά</item>
+  <item>Βουλγαρικά</item>
+  <item>Σλοβακικά</item>
+  <item>Σλοβενικά</item>
+  <item>Λιθουανικά</item>
+  <item>Λετονικά</item>
+  <item>Εσθονικά</item>
+  <item>Καταλανικά</item>
+  <item>Βασκικά</item>
+</string-array>
+    <string name="clipboard_toolbar_keys">Επιλογή πλήκτρων γραμμής εργαλείων προχείρου</string>
+    <string name="pinned_toolbar_keys">Επιλογή καρφιτσωμένων πλήκτρων γραμμής εργαλείων</string>
+    <string name="quick_pin_toolbar_keys">Καρφίτσωμα πλήκτρου γραμμής εργαλείων με παρατεταμένο πάτημα</string>
+    <string name="quick_pin_toolbar_keys_summary">Αυτό θα απενεργοποιήσει άλλες ενέργειες παρατεταμένου πατήματος για πλήκτρα γραμμής εργαλείων που δεν είναι καρφιτσωμένα</string>
+    <string name="toolbar_long_press_hint">Εμφάνιση κουκκίδων υπόδειξης παρατεταμένου πατήματος</string>
+    <string name="toolbar_long_press_hint_summary">Εμφάνιση κουκκίδων σε πλήκτρα γραμμής εργαλείων που έχουν ενέργεια παρατεταμένου πατήματος</string>
+    <string name="show_popup_hints">Εμφάνιση λειτουργικών υποδείξεων</string>
+    <string name="show_popup_hints_summary">Εμφάνιση υποδείξεων εάν το παρατεταμένο πάτημα ενός πλήκτρου ενεργοποιεί πρόσθετη λειτουργικότητα</string>
+    <string name="remove_redundant_popups">Αφαίρεση περιττών αναδυόμενων πλήκτρων</string>
+    <string name="remove_redundant_popups_summary">Καταστολή αναδυόμενων πλήκτρων που υπάρχουν ήδη στη βασική διάταξη</string>
+    <string name="prefs_long_press_symbol_for_numpad">Παρατεταμένο πάτημα πλήκτρου συμβόλων για αριθμητικό πληκτρολόγιο</string>
+    <string name="prefs_narrow_key_gaps">Στενά κενά πλήκτρων</string>
+    <string name="prefs_narrow_key_gaps_level">Επίπεδο στενότητας</string>
+    <string name="narrowness_level_low">Μικρότερο</string>
+    <string name="narrowness_level_medium_low">Μικρό</string>
+    <string name="narrowness_level_medium">Μεσαίο</string>
+    <string name="narrowness_level_medium_high">Μεγάλο</string>
+    <string name="narrowness_level_high">Μεγαλύτερο</string>
+    <string name="prefs_bottom_padding_scale">Κλίμακα κάτω περιθωρίου</string>
+    <string name="prefs_side_padding_scale">Κλίμακα πλευρικού περιθωρίου</string>
+    <string name="prefs_font_scale">Κλίμακα γραμματοσειράς πληκτρολογίου</string>
+    <string name="prefs_emoji_font_scale">Κλίμακα γραμματοσειράς προβολής emoji</string>
+    <string name="prefs_emoji_key_fit">Κλιμάκωση μεγέθους πλήκτρου emoji με το μέγεθος γραμματοσειράς</string>
+    <string name="prefs_emoji_skin_tone">Προεπιλεγμένος τόνος δέρματος emoji</string>
+    <string name="prefs_emoji_skin_tone_neutral">Ουδέτερο</string>
+    <string name="prefs_space_bar_text">Προσαρμοσμένο κείμενο στη μπάρα διαστήματος</string>
+    <string name="custom_font">Ορισμός προσαρμοσμένης γραμματοσειράς από αρχείο</string>
+    <string name="custom_emoji_font">Ορισμός προσαρμοσμένης γραμματοσειράς emoji από αρχείο</string>
+    <string name="prefs_use_system_emoji">Χρήση γραμματοσειράς emoji συστήματος</string>
+    <string name="prefs_use_system_emoji_summary">Χρήση γραμματοσειράς emoji συστήματος στις ρυθμίσεις και την αναζήτηση (επανεκκίνηση εφαρμογής)</string>
+    <string name="subtype_mns">Μάνσι</string>
+    <string name="subtype_xdq">Καϊτάγκ</string>
+    <string name="subtype_dag">Νταγκμπάνι</string>
+    <string name="subtype_st">Σεσότο</string>
+    <string name="subtype_dru">Ντάργκουα (Ουράχι)</string>
+    <string name="subtype_mhr">Μάρι (Ανατολική)</string>
+    <string name="subtype_with_layout_generic">%1$s (%2$s)</string>
+    <string name="subtype_generic_extended">%s (Εκτεταμένη)</string>
+    <string name="subtype_probhat_bn_BD">%s (Probhat)</string>
+    <string name="subtype_baishakhi_bn_IN">%s (Baishakhi)</string>
+    <string name="subtype_khipro_bn">%s (Khipro)</string>
+    <string name="subtype_generic_phonetic">%s (Φωνητικό)</string>
+    <string name="subtype_generic_sebeolsik_390">%s (Sebeolsik 390)</string>
+    <string name="subtype_generic_sebeolsik_final">%s (Sebeolsik Final)</string>
+    <string name="subtype_generic_student">%s (Μαθητικό)</string>
+    <string name="load">Φόρτωση</string>
+    <string name="button_title_add_custom_layout">Προσθήκη προσαρμοσμένης διάταξης</string>
+    <string name="message_add_custom_layout">Επιλέξτε ένα αρχείο σε συμβατή μορφή. Πληροφορίες σχετικά με τις μορφές είναι διαθέσιμες %s.</string>
+    <string name="button_load_custom">Φόρτωση αρχείου</string>
+    <string name="button_save_file">Αποθήκευση σε αρχείο</string>
+    <string name="copy_to_clipboard">Αντιγραφή στο Πρόχειρο</string>
+    <string name="file_read_error">Δεν είναι δυνατή η ανάγνωση του αρχείου</string>
+    <string name="delete_layout">Πραγματικά διαγραφή προσαρμοσμένης διάταξης %s;</string>
+    <string name="layout_in_use">Προειδοποίηση: η διάταξη είναι σε χρήση</string>
+    <string name="add_custom_layout">Προσθήκη προσαρμοσμένης διάταξης</string>
+    <string name="layout_error">Σφάλμα διάταξης: %s</string>
+    <string name="edit_layout">Πατήστε για επεξεργασία ακατέργαστης διάταξης</string>
+    <string name="settings_screen_secondary_layouts">Δευτερεύουσες διατάξεις</string>
+    <string name="layout_custom1">Προσαρμοσμένη διάταξη 1</string>
+    <string name="layout_custom2">Προσαρμοσμένη διάταξη 2</string>
+    <string name="layout_custom3">Προσαρμοσμένη διάταξη 3</string>
+    <string name="layout_custom4">Προσαρμοσμένη διάταξη 4</string>
+    <string name="layout_custom5">Προσαρμοσμένη διάταξη 5</string>
+    <string name="layout_functional_keys">Λειτουργικά πλήκτρα</string>
+    <string name="layout_functional_keys_tablet">Λειτουργικά πλήκτρα (μεγάλη οθόνη)</string>
+    <string name="layout_functional_keys_khipro">Λειτουργικά πλήκτρα (Khipro)</string>
+    <string name="layout_functional_keys_symbols">Λειτουργικά πλήκτρα (Σύμβολα)</string>
+    <string name="layout_functional_keys_symbols_shifted">Λειτουργικά πλήκτρα (Περισσότερα σύμβολα)</string>
+    <string name="layout_symbols">Σύμβολα</string>
+    <string name="layout_symbols_arabic">Σύμβολα (Αραβικά)</string>
+    <string name="layout_symbols_shifted">Περισσότερα σύμβολα</string>
+    <string name="layout_phone">Τηλέφωνο</string>
+    <string name="layout_phone_symbols">Σύμβολα τηλεφώνου</string>
+    <string name="layout_number">Αριθμοί</string>
+    <string name="layout_numpad">Αριθμητικό πληκτρολόγιο</string>
+    <string name="layout_numpad_landscape">Αριθμητικό πληκτρολόγιο (οριζόντιος)</string>
+    <string name="layout_number_row">Σειρά αριθμών</string>
+    <string name="layout_number_row_basic">Σειρά αριθμών (βασική)</string>
+    <string name="layout_emoji_bottom_row">Κάτω σειρά emoji</string>
+    <string name="layout_emoji_bottom_row_with_action">Κάτω σειρά emoji με πλήκτρο ενέργειας</string>
+    <string name="layout_clip_bottom_row">Κάτω σειρά προχείρου</string>
+    <string name="layout_clip_bottom_row_with_action">Κάτω σειρά προχείρου με πλήκτρο ενέργειας</string>
+    <string name="customize_background_image">Ορισμός εικόνας φόντου</string>
+    <string name="customize_background_image_landscape">Ορισμός εικόνας φόντου (οριζόντιος)</string>
+    <string name="summary_customize_background_image_landscape">Αν δεν οριστεί, θα χρησιμοποιηθεί η εικόνα πορτρέτου</string>
+    <string name="customize_currencies">Προσαρμογή νομισμάτων</string>
+    <string name="customize_currencies_detail">Ορίστε το κύριο και έως 6 δευτερεύοντα σύμβολα νομισμάτων, διαχωρισμένα με κενό</string>
+    <string name="switch_keyboard_after">Μετάβαση στο κύριο πληκτρολόγιο μετά από…</string>
+    <string name="after_emoji">Επιλογή emoji στην προβολή emoji</string>
+    <string name="after_clip">Επιλογή καταχώρισης ιστορικού προχείρου</string>
+    <string name="after_symbol_and_space">Πάτημα Enter ή διαστήματος μετά από άλλα πλήκτρα στην προβολή συμβόλων</string>
+    <string name="after_numpad_and_space">Πάτημα Enter ή διαστήματος μετά από άλλα πλήκτρα στο αριθμητικό πληκτρολόγιο</string>
+    <string name="day_or_night_image">Ορισμός εικόνας για λειτουργία ημέρας ή νύχτας;</string>
+    <string name="day_or_night_day">Ημέρα</string>
+    <string name="day_or_night_night">Νύχτα</string>
+    <string name="prefs_keypress_vibration_amplitude_settings">Ένταση δόνησης πατήματος πλήκτρου</string>
+    <string name="prefs_key_emoji_max_sdk">Παράκαμψη έκδοσης Emoji</string>
+    <string name="setup_step3_action">Ρύθμιση του πληκτρολογίου</string>
+    <string name="dictionary_settings_category">Λεξικά</string>
+    <string name="internal_dictionary_summary">Εσωτερικό κύριο λεξικό</string>
+    <string name="add_new_dictionary_title">"Προσθήκη λεξικού από αρχείο"</string>
+    <string name="button_select_language">"Επιλογή γλώσσας"</string>
+    <string name="replace_dictionary_message">"Πραγματικά αντικατάσταση του λεξικού που προστέθηκε από τον χρήστη \"%1$s\";\n
+Τρέχον λεξικό:
+%2$s\n
+Νέο λεξικό:
+%3$s"</string>
+    <string name="replace_dictionary">"Αντικατάσταση λεξικού"</string>
+    <string name="remove_dictionary_message">"Πραγματικά αφαίρεση του λεξικού που προστέθηκε από τον χρήστη \"%s\";"</string>
+    <string name="no_dictionary_message">"Χωρίς λεξικό, θα λαμβάνετε προτάσεις μόνο για κείμενο που έχετε εισαγάγει στο παρελθόν.<br />
+        Μπορείτε να κατεβάσετε λεξικά %1$s."</string>
+    <string name="no_dictionary_dont_show_again_button">"Να μην εμφανιστεί ξανά"</string>
+    <string name="add_dictionary">"Επιλέξτε ένα λεξικό για προσθήκη. Λεξικά σε μορφή .dict μπορούν να ληφθούν %s."</string>
+    <string name="dictionary_link_text">"εδώ"</string>
+    <string name="available_dictionary_experimental">"%s (πειραματικό)"</string>
+    <string name="dictionary_file_error">"Σφάλμα: Το επιλεγμένο αρχείο δεν είναι έγκυρο αρχείο λεξικού"</string>
+    <string name="dictionary_file_wrong_script">"Σφάλμα: η γραφή δεν είναι συμβατή με αυτό το πληκτρολόγιο"</string>
+    <string name="dictionary_load_error">"Σφάλμα φόρτωσης αρχείου λεξικού"</string>
+    <string name="user_dict_settings_add_weight_value">Βάρος:</string>
+    <string name="user_dict_word_already_present">Αυτή η λέξη υπάρχει ήδη στο λεξικό χρήστη %s. Πληκτρολογήστε μια άλλη.</string>
+    <string name="user_dict_add_word_button">Προσθήκη λέξης</string>
+    <string name="user_dict_clear_all_confirmation">Είστε βέβαιοι ότι θέλετε να διαγράψετε όλες τις λέξεις από αυτό το λεξικό;</string>
+    <string name="theme_style">Στυλ</string>
+    <string name="icon_style">Στυλ εικονιδίου</string>
+    <string name="style_name_Rounded">Στρογγυλεμένο</string>
+    <string name="theme_colors">Χρώματα</string>
+    <string name="theme_colors_night">Χρώματα (νύχτα)</string>
+    <string name="theme_navbar">Χρωματισμός γραμμής πλοήγησης</string>
+    <string name="theme_name_light">Ανοιχτό</string>
+    <string name="theme_name_holo_white">Holo Λευκό</string>
+    <string name="theme_name_dark">Σκούρο</string>
+    <string name="theme_name_darker">Πιο σκούρο</string>
+    <string name="theme_name_black">Μαύρο</string>
+    <string name="theme_name_dynamic">Δυναμικά χρώματα</string>
+    <string name="theme_name_blue_gray">Μπλε Γκρι</string>
+    <string name="theme_name_brown">Καφέ</string>
+    <string name="theme_name_chocolate">Σοκολατί</string>
+    <string name="theme_name_cloudy">Συννεφιασμένο</string>
+    <string name="theme_name_forest">Δάσος</string>
+    <string name="theme_name_indigo">Λουλακί</string>
+    <string name="theme_name_mint_and_pink">Μέντα και Ροζ</string>
+    <string name="theme_name_pink">Ροζ</string>
+    <string name="theme_name_sand">Άμμος</string>
+    <string name="theme_name_violette">Βιολετί</string>
+    <string name="theme_name_user">Καθορισμένο από τον χρήστη</string>
+    <string name="theme_name_leanbitlab_light">LeanBitLab Ανοιχτό</string>
+    <string name="theme_name_leanbitlab_dark">LeanBitLab Σκούρο</string>
+    <string name="auto_user_color">Αυτόματη επιλογή χρώματος</string>
+    <string name="main_colors">Εμφάνιση μόνο κύριων χρωμάτων</string>
+    <string name="more_colors">Εμφάνιση περισσότερων χρωμάτων</string>
+    <string name="all_colors">Εμφάνιση όλων των χρωμάτων</string>
+    <string name="all_colors_warning">Αυτή η ρύθμιση αποκαλύπτει όλα τα χρώματα που χρησιμοποιούνται εσωτερικά. Η λίστα των χρωμάτων μπορεί να αλλάξει ανά πάσα στιγμή. Η προεπιλογή προέρχεται από τα κανονικά χρώματα και τα ονόματα δεν θα μεταφραστούν.</string>
+    <string name="select_color_background">Φόντο πληκτρολογίου</string>
+    <string name="select_color_key">Κείμενο πλήκτρου</string>
+    <string name="select_color_key_hint">Κείμενο υπόδειξης πλήκτρου</string>
+    <string name="select_color_suggestion">Κείμενο γραμμής προτάσεων</string>
+    <string name="select_color_key_background">Φόντο πλήκτρου</string>
+    <string name="select_color_functional_key_background">Φόντο λειτουργικού πλήκτρου</string>
+    <string name="select_color_spacebar_background">Φόντο μπάρας διαστήματος</string>
+    <string name="select_color_spacebar_text">Κείμενο μπάρας διαστήματος</string>
+    <string name="select_color_accent">Τονισμός</string>
+    <string name="select_color_gesture">Εισαγωγή χειρονομίας</string>
+    <string name="get_colors_message">"Μπορείτε να βρείτε και να μοιραστείτε χρώματα στο %s."</string>
+    <string name="get_layouts_message">"Μπορείτε να βρείτε και να μοιραστείτε διατάξεις στο %s."</string>
+    <string name="discussion_section_link">"ενότητα συζητήσεων"</string>
+    <string name="settings_screen_about">Σχετικά</string>
+    <string name="version">Έκδοση</string>
+    <string name="about_github_link">Προβολή στο GitHub</string>
+    <string name="about_sponsor_link">Χορηγία έργου</string>
+    <string name="about_sponsor_link_description">Υποστηρίξτε την ανάπτυξη του LeanType</string>
+    <string name="sponsor_dialog_title">Χορηγία αυτού του έργου</string>
+    <string name="sponsor_dialog_message">Αυτό το έργο είναι αποκλειστικά κοινοτικής υποστήριξης και βασίζεται σε δωρεές για να διατηρηθεί η ανάπτυξη. Αν βρίσκετε χρήσιμο αυτό το πληκτρολόγιο, παρακαλούμε σκεφτείτε να γίνετε χορηγός!</string>
+    <string name="sponsor_dialog_never_show_again">Να μην εμφανιστεί ξανά</string>
+    <string name="sponsor_dialog_sponsor">Χορηγός</string>
+    <string name="sponsor_dialog_not_now">Όχι τώρα</string>
+    <string name="about_features_link">Μετάβαση στο FEATURES.md</string>
+    <string name="about_features_link_description">Λίστα κύριων χαρακτηριστικών και εγχειρίδιο πληκτρολογίου</string>
+    <string name="libraries_hub_title">Βιβλιοθήκες</string>
+    <string name="libraries_hub_summary">Διαχείριση βιβλιοθήκης πληκτρολόγησης με χειρονομίες, λεξικών και βιβλιοθηκών emoji.</string>
+    <string name="libraries_hub_gesture_title">Βιβλιοθήκη Πληκτρολόγησης με Χειρονομίες</string>
+    <string name="libraries_hub_dictionary_title">Κύρια Λεξικά</string>
+    <string name="libraries_hub_emoji_title">Βιβλιοθήκες Emoji</string>
+    <string name="libraries_hub_handwriting_title">Πρόσθετο Εισαγωγής Γραφής</string>
+    <string name="libraries_hub_dict_guide_title">Οδηγός Φόρτωσης Λεξικού</string>
+    <string name="libraries_hub_dict_guide_text">Για να προσθέσετε ένα νέο λεξικό:\n1. Αποκτήστε ένα αρχείο .dict για τη γλώσσα σας.\n2. Πατήστε \"Διαχείριση Λεξικών\".\n3. Χρησιμοποιήστε το κουμπί συν (+) για να εισαγάγετε το αρχείο.</string>
+    <string name="libraries_status_active">Ενεργό</string>
+    <string name="libraries_status_not_installed">Μη εγκατεστημένο</string>
+    <string name="save_log">Αποθήκευση αρχείου καταγραφής</string>
+    <string name="log_options_title">Επιλογές αρχείου καταγραφής</string>
+    <string name="save_log_to_file">Αποθήκευση σε αρχείο</string>
+    <string name="clear_log">Εκκαθάριση αρχείου καταγραφής</string>
+    <string name="share_log">Κοινοποίηση αρχείου καταγραφής</string>
+    <string name="log_cleared">Το αρχείο καταγραφής εκκαθαρίστηκε</string>
+    <string name="license">Άδεια ανοιχτού κώδικα</string>
+    <string name="gnu_gpl">GNU Γενική Δημόσια Άδεια v3.0</string>
+    <string name="dialog_close">Κλείσιμο</string>
+    <string name="text_tap_languages">Πατήστε τη γλώσσα για να ανοίξετε τις ρυθμίσεις</string>
+    <string name="direct_ime_switch_title">IME Άμεσης Εναλλαγής Στόχου</string>
+    <string name="direct_ime_switch_summary">Μέθοδος εισαγωγής για άμεση εναλλαγή κατά τη χρήση της επιλογής προσαρμοσμένου κωδικού πλήκτρου</string>
+    <string name="direct_ime_switch_none">Κανένα</string>
+    <string name="app_language_title">Γλώσσα εφαρμογής</string>
+    <string name="app_language_summary">Αλλάξτε τη γλώσσα της οθόνης ρυθμίσεων και της διεπαφής πληκτρολογίου</string>
+    <string name="app_language_system">Προεπιλογή συστήματος</string>
+    <string name="settings_screen_appearance">Εμφάνιση</string>
+    <string name="settings_screen_toolbar">Γραμμή εργαλείων</string>
+    <string name="settings_screen_ai_integration">Ενσωμάτωση AI</string>
+    <string name="custom_ai_keys_title">Προσαρμοσμένα Πλήκτρα AI</string>
+    <string name="custom_ai_keys_summary">Προσαρμόστε τα αριθμημένα πλήκτρα της γραμμής εργαλείων με τις δικές σας προτροπές</string>
+    <string name="hidden_features_title">Περιγραφή κρυφών χαρακτηριστικών</string>
+    <string name="hidden_features_summary">Εμφάνιση χαρακτηριστικών που μπορεί να περάσουν απαρατήρητα</string>
+    <string name="hidden_features_text">προστατευμένη αποθήκευση συσκευής</string>
+    <string name="hidden_features_message">► Το παρατεταμένο πάτημα των καρφιτσωμένων πλήκτρων της γραμμής εργαλείων οδηγεί σε πρόσθετη λειτουργικότητα: <br />
+\n\t• πρόχειρο ￫ επικόλληση <br />
+\n\t• μετακίνηση αριστερά/δεξιά ￫ λέξη αριστερά/δεξιά <br />
+\n\t• μετακίνηση πάνω/κάτω ￫ σελίδα πάνω/κάτω <br />
+\n\t• λέξη αριστερά/δεξιά ￫ αρχή/τέλος γραμμής <br />
+\n\t• σελίδα πάνω/κάτω ￫ αρχή/τέλος σελίδας <br />
+\n\t• αντιγραφή ￫ αποκοπή <br />
+\n\t• επιλογή λέξης ↔ επιλογή όλων <br />
+\n\t• αναίρεση ↔ επανάληψη <br /> <br />
+\n► Το παρατεταμένο πάτημα πλήκτρων στη γραμμή εργαλείων της λωρίδας προτάσεων τα καρφιτσώνει στη λωρίδα προτάσεων. <br /> <br />
+\n► Πατήστε παρατεταμένα το πλήκτρο κόμματος για πρόσβαση στην Προβολή Προχείρου, Προβολή Emoji, Λειτουργία με το Ένα Χέρι, Ρυθμίσεις ή Αλλαγή Γλώσσας: <br />
+\n\t• Η Προβολή Emoji και η Αλλαγή Γλώσσας θα εξαφανιστούν αν έχετε ενεργοποιημένο το αντίστοιχο πλήκτρο· <br />
+\n\t• Για ορισμένες διατάξεις δεν είναι το πλήκτρο κόμματος, αλλά το πλήκτρο στην ίδια θέση (π.χ. είναι το \\\'q\\\' για τη διάταξη Dvorak). <br /> <br />
+\n► Όταν η λειτουργία ανώνυμης περιήγησης είναι ενεργοποιημένη, δεν θα μαθαίνονται λέξεις και δεν θα προστίθενται emoji στα πρόσφατα. <br /> <br />
+\n► Πατήστε το εικονίδιο Ανώνυμης περιήγησης για πρόσβαση στη γραμμή εργαλείων. <br /> <br />
+\n► Εισαγωγή με ολίσθηση πλήκτρου: Σαρώστε από το shift σε ένα άλλο πλήκτρο για να πληκτρολογήσετε ένα μόνο κεφαλαίο γράμμα: <br />
+\n\t• Αυτό λειτουργεί επίσης για το πλήκτρο \\\'?123\\\' για να πληκτρολογήσετε ένα μόνο σύμβολο από το πληκτρολόγιο συμβόλων, και για σχετικά πλήκτρα. <br /> <br />
+\n► Κρατήστε πατημένο το shift ή το πλήκτρο συμβόλων, πατήστε ένα ή περισσότερα πλήκτρα και, στη συνέχεια, αφήστε το shift ή το πλήκτρο συμβόλων για να επιστρέψετε στο προηγούμενο πληκτρολόγιο. <br /> <br />
+\n► Πατήστε παρατεταμένα μια πρόταση στη λωρίδα προτάσεων για να εμφανίσετε περισσότερες προτάσεις και ένα κουμπί διαγραφής για να αφαιρέσετε αυτήν την πρόταση. <br /> <br />
+\n► Σαρώστε προς τα πάνω από μια πρόταση για να ανοίξετε περισσότερες προτάσεις και αφήστε την πρόταση για να την επιλέξετε. <br /> <br />
+\n► Πατήστε παρατεταμένα μια καταχώριση στο ιστορικό του προχείρου για να την καρφιτσώσετε (διατηρήστε την στο πρόχειρο μέχρι να την ξεκαρφιτσώσετε). <br /> <br />
+\n► Σαρώστε αριστερά στην προβολή προχείρου για να αφαιρέσετε μια καταχώριση (εκτός αν είναι καρφιτσωμένη) <br /> <br />
+\n► Επιλέξτε κείμενο και πατήστε shift για εναλλαγή μεταξύ κεφαλαίων, πεζών και κεφαλαιοποίησης λέξεων. <br /> <br />
+\n► Μπορείτε να προσθέσετε λεξικά ανοίγοντάς τα σε έναν εξερευνητή αρχείων: <br />
+\n\t• Αυτό λειτουργεί μόνο με <i>content-uris</i> και όχι με <i>file-uris</i>, που σημαίνει ότι μπορεί να μην λειτουργεί με ορισμένους εξερευνητές αρχείων. <br /> <br />
+\n► Για χρήστες που κάνουν χειροκίνητα αντίγραφα ασφαλείας με πρόσβαση root: <br />
+\n\t• Ξεκινώντας από το Android 7, το αρχείο κοινόχρηστων προτιμήσεων δεν βρίσκεται στην προεπιλεγμένη τοποθεσία, επειδή η εφαρμογή χρησιμοποιεί %s. Αυτό είναι απαραίτητο για να μπορούν να διαβαστούν οι ρυθμίσεις πριν ξεκλειδωθεί η συσκευή, π.χ. κατά την εκκίνηση· <br />
+\n\t• Το αρχείο βρίσκεται στη διαδρομή /data/user_de/0/package_id/shared_prefs/ αν και αυτό μπορεί να εξαρτάται από τη συσκευή και την έκδοση Android. <br /> <br />
+\n<i><b>Λειτουργία εντοπισμού σφαλμάτων / APK εντοπισμού σφαλμάτων</b></i> <br /> <br />
+\n► Πατήστε παρατεταμένα μια πρόταση για να εμφανίσετε το λεξικό προέλευσης. <br /> <br />
+\n► Όταν χρησιμοποιείτε APK εντοπισμού σφαλμάτων, μπορείτε να βρείτε τις Ρυθμίσεις εντοπισμού σφαλμάτων εντός των Προηγμένων προτιμήσεων, αν και η χρησιμότητα είναι περιορισμένη εκτός από την απόρριψη λεξικών στο αρχείο καταγραφής. <br />
+\n\t• Για ένα APK έκδοσης, πρέπει να πατήσετε την έκδοση στην ενότητα <i>Σχετικά</i> αρκετές φορές, και μετά μπορείτε να βρείτε τις ρυθμίσεις εντοπισμού σφαλμάτων στις <i>Προηγμένες προτιμήσεις</i>. <br />
+\n\t• Όταν ενεργοποιείτε το <i>Εμφάνιση πληροφοριών πρότασης</i>, οι προτάσεις θα έχουν μερικούς μικρούς αριθμούς στην κορυφή που δείχνουν κάποια εσωτερική βαθμολογία και το λεξικό προέλευσης. <br /> <br />
+\n► Σε περίπτωση κατάρρευσης της εφαρμογής, θα ερωτηθείτε αν θέλετε τα αρχεία καταγραφής σφαλμάτων όταν ανοίξετε τις Ρυθμίσεις. <br /> <br />
+\n► Κατά τη χρήση πολύγλωσσης πληκτρολόγησης, η μπάρα διαστήματος θα εμφανίζει μια τιμή εμπιστοσύνης που χρησιμοποιείται για τον προσδιορισμό της γλώσσας που χρησιμοποιείται αυτήν τη στιγμή. <br /> <br />
+\n► Οι προτάσεις θα έχουν μερικούς μικρούς αριθμούς στην κορυφή που δείχνουν κάποια εσωτερική βαθμολογία και το λεξικό προέλευσης (μπορεί να απενεργοποιηθεί).</string>
+    <string name="label_enter_key">Enter</string>
+    <string name="label_tab_key">Tab</string>
+    <string name="label_delete_key">Διαγραφή</string>
+    <string name="label_shift_key">Shift</string>
+    <string name="label_shift_key_shifted">Shift (πατημένο)</string>
+    <string name="label_shift_key_locked">Caps lock</string>
+    <string name="label_space_key_for_number_layout">Διάστημα (διάταξη αριθμών)</string>
+    <string name="label_stop_onehanded_mode_key">Τερματισμός λειτουργίας με το ένα χέρι</string>
+    <string name="label_resize_onehanded_key">Αλλαγή μεγέθους λειτουργίας με το ένα χέρι</string>
+    <string name="label_switch_onehanded_key">Αλλαγή πλευράς λειτουργίας με το ένα χέρι</string>
+    <string name="label_shortcut_key_disabled">Η φωνητική εισαγωγή είναι απενεργοποιημένη</string>
+    <string name="label_toolbar_key">Εμφάνιση / απόκρυψη γραμμής εργαλείων</string>
+    <string name="label_language_switch_key">@string/show_language_switch_key</string>
+    <string name="label_zwj_key">Ενωτικό μηδενικού πλάτους</string>
+    <string name="label_zwnj_key">Μη ενωτικό μηδενικού πλάτους</string>
+    <string name="label_bin">Κάδος</string>
+    <string name="show_horizontal_space_swipe">Οριζόντια χειρονομία σάρωσης στη μπάρα διαστήματος</string>
+    <string name="show_vertical_space_swipe">Κάθετη χειρονομία σάρωσης στη μπάρα διαστήματος</string>
+    <string name="action_none">Καμία</string>
+    <string name="space_swipe_move_cursor_entry">Μετακίνηση δρομέα</string>
+    <string name="space_swipe_toggle_numpad_entry">Εναλλαγή αριθμητικού πληκτρολογίου</string>
+    <string name="space_swipe_hide_keyboard_entry">Απόκρυψη πληκτρολογίου</string>
+    <string name="space_swipe_touchpad_mode_entry">Λειτουργία επιφάνειας αφής</string>
+    <string name="touchpad_sensitivity">Ευαισθησία επιφάνειας αφής</string>
+    <string name="force_auto_caps_title">Εξαναγκασμός αυτόματης κεφαλαιοποίησης</string>
+    <string name="force_auto_caps_summary">Εξαναγκασμός κεφαλαιοποίησης προτάσεων σε όλα τα πεδία κειμένου εκτός από κωδικούς πρόσβασης</string>
+    <string name="var_toolbar_direction">Μεταβλητή κατεύθυνση γραμμής εργαλείων</string>
+    <string name="var_toolbar_direction_summary">Αντιστροφή κατεύθυνσης όταν επιλέγεται υποτύπος πληκτρολογίου από δεξιά προς τα αριστερά</string>
+    <string name="toolbar_only_with_hw_keyboard">Εμφάνιση μόνο γραμμής εργαλείων με φυσικό πληκτρολόγιο</string>
+    <string name="toolbar_only_with_hw_keyboard_summary">Πρέπει ακόμα να ενεργοποιήσετε την εμφάνιση εικονικού πληκτρολογίου στις ρυθμίσεις συστήματος</string>
+    <string name="prefs_language_swipe_distance">Απόσταση σάρωσης αλλαγής γλώσσας</string>
+    <string name="customize_toolbar_key_codes">Προσαρμογή κωδικών πλήκτρων γραμμής εργαλείων</string>
+    <string name="customize_toolbar_key_code_reset_message">Πραγματικά εκκαθάριση όλων των προσαρμοσμένων κωδικών πλήκτρων;</string>
+    <string name="key_code">Κωδικός πλήκτρου</string>
+    <string name="long_press_code">Κωδικός παρατεταμένου πατήματος</string>
+    <string name="auto_show_toolbar">Αυτόματη εμφάνιση γραμμής εργαλείων</string>
+    <string name="auto_show_toolbar_open">Αυτόματη εμφάνιση γραμμής εργαλείων κατά το άνοιγμα</string>
+    <string name="auto_show_toolbar_select">Αυτόματη εμφάνιση γραμμής εργαλείων κατά την επιλογή</string>
+    <string name="auto_show_toolbar_summary">Εμφάνιση της γραμμής εργαλείων όταν ανοίγει το πληκτρολόγιο</string>
+    <string name="auto_show_toolbar_select_summary">Εμφάνιση της γραμμής εργαλείων κατά την επιλογή κειμένου</string>
+    <string name="auto_hide_toolbar">Αυτόματη απόκρυψη γραμμής εργαλείων</string>
+    <string name="auto_hide_toolbar_summary">Απόκρυψη της γραμμής εργαλείων όταν γίνονται διαθέσιμες προτάσεις</string>
+    <string name="toolbar_swipe_down_dismiss">Σάρωση προς τα κάτω για κλείσιμο</string>
+    <string name="toolbar_swipe_down_dismiss_summary">Σάρωση προς τα κάτω στη γραμμή εργαλείων για απόκρυψη του πληκτρολογίου</string>
+    <string name="auto_hide_pinned_keys">Αυτόματη απόκρυψη καρφιτσωμένων πλήκτρων</string>
+    <string name="auto_hide_pinned_keys_summary">Απόκρυψη καρφιτσωμένων πλήκτρων όταν η γραμμή εργαλείων είναι αναπτυγμένη</string>
+    <string name="remember_toolbar_state">Απομνημόνευση κατάστασης γραμμής εργαλείων</string>
+    <string name="remember_toolbar_state_summary">Διατήρηση της γραμμής εργαλείων αναπτυγμένης ή συμπτυγμένης μεταξύ των συνεδριών και κατά την πληκτρολόγηση</string>
+    <string name="close_translate_language_selector">Κλείσιμο επιλογέα γλώσσας</string>
+    <string name="toast_msg_clipboard_copy">Το περιεχόμενο αντιγράφηκε</string>
+    <string name="customize_icons">Προσαρμογή εικονιδίων</string>
+    <string name="customize_icons_reset_message">Πραγματικά επαναφορά όλων των προσαρμοσμένων εικονιδίων;</string>
+    <string name="delete_confirmation">Πραγματικά διαγραφή %s;</string>
+    <string name="name_invalid">Μη έγκυρο όνομα</string>
+    <string name="custom_subtype">Προσαρμοσμένος υποτύπος</string>
+    <string name="landscape">Οριζόντιος προσανατολισμός</string>
+    <string name="offline_model_title">Μοντέλο εκτός σύνδεσης</string>
+    <string name="offline_model_summary">Διαχείριση τοπικού LLM</string>
+    <string name="offline_max_tokens_title">Μέγιστα Tokens AI εκτός σύνδεσης</string>
+    <string name="offline_max_tokens_summary">Μέγιστο μήκος της παραγόμενης διόρθωσης</string>
+    <string name="offline_max_tokens_custom_option">Προσαρμοσμένο…</string>
+    <string name="offline_max_tokens_custom_desc">Προσαρμοσμένο (%1$d tokens)</string>
+    <string name="offline_temp_title">Θερμοκρασία</string>
+    <string name="offline_temp_summary">Ελέγχει την τυχαιότητα: χαμηλότερη είναι πιο εστιασμένη και ντετερμινιστική</string>
+    <string name="offline_top_p_title">Top-P (Nucleus Sampling)</string>
+    <string name="offline_top_p_summary">Ελέγχει την ποικιλομορφία του λεξιλογίου: χαμηλότερο αποκόπτει λιγότερο πιθανές επιλογές</string>
+    <string name="offline_top_k_title">Top-K</string>
+    <string name="offline_top_k_summary">Περιορίζει τις επιλογές στα K πιο πιθανά tokens</string>
+    <string name="offline_min_p_title">Min-P</string>
+    <string name="offline_min_p_summary">Κατώφλι ελάχιστης πιθανότητας σε σχέση με το πιο πιθανό token</string>
+    <string name="offline_show_thinking_title">Εμφάνιση Σκέψης</string>
+    <string name="offline_show_thinking_summary">Εμφάνιση διαδικασίας συλλογισμού και εσωτερικών tokens σκέψης αν το μοντέλο τα παράγει</string>
+    <string-array name="offline_max_tokens_entries">
+  <item>Εξαιρετικά Γρήγορο (12 tokens)</item>
+  <item>Γρήγορο (20 tokens)</item>
+  <item>Ισορροπημένο (32 tokens)</item>
+  <item>Ακριβές (64 tokens)</item>
+  <item>Βαθύ (128 tokens)</item>
+</string-array>
+    <string-array name="offline_max_tokens_values">
+  <item>12</item>
+  <item>20</item>
+  <item>32</item>
+  <item>64</item>
+  <item>128</item>
+</string-array>
+    <string name="image_pasting_not_supported">Αυτή η εφαρμογή δεν υποστηρίζει επικόλληση εικόνων</string>
+    <string name="clear_emoji_history_title">Εκκαθάριση ιστορικού emoji</string>
+    <string name="clear_emoji_history_message">Είστε βέβαιοι ότι θέλετε να διαγράψετε τα emoji που χρησιμοποιήσατε πρόσφατα;</string>
+    <string name="floating_keyboard_drag_handle">Σύρετε για να μετακινήσετε το πληκτρολόγιο</string>
+    <string name="floating_keyboard_resize_handle">Σύρετε για να αλλάξετε το μέγεθος του πληκτρολογίου</string>
+    <string name="persist_floating_keyboard_title">Διατήρηση αιωρούμενου πληκτρολογίου</string>
+    <string name="persist_floating_keyboard_summary">Να μην αποκρύπτεται το αιωρούμενο πληκτρολόγιο όταν ολοκληρώνεται η εισαγωγή</string>
+    <string name="persist_text_edit_mode_title">Διατήρηση λειτουργίας επεξεργασίας κειμένου</string>
+    <string name="persist_text_edit_mode_summary">Να μην γίνεται έξοδος από τη λειτουργία επεξεργασίας κειμένου όταν ολοκληρώνεται η εισαγωγή</string>
+    <string name="disable_multi_word_suggestions_title">Απενεργοποίηση προτάσεων πολλαπλών λέξεων</string>
+    <string name="disable_multi_word_suggestions_summary">Αποτροπή προτάσεων που αποτελούνται από πολλαπλές συνδυασμένες λέξεις (συνιστάται για Τουρκικά)</string>
+    <string name="upgrade">Αναβάθμιση</string>
+    <string name="dictionary_update_available">Διαθέσιμη ενημέρωση</string>
+    <string name="dictionary_source_title">Αποθετήριο λεξικών</string>
+    <string name="dictionary_source_summary">Περιήγηση ή λήψη λεξικών απευθείας στο πρόγραμμα περιήγησής σας</string>
+    <string name="text_expander_title">Επέκταση Κειμένου</string>
+    <string name="text_expander_enable_title">Ενεργοποίηση Επέκτασης Κειμένου</string>
+    <string name="text_expander_enable_summary">Αυτόματη επέκταση συντομεύσεων με διάστημα ή σημεία στίξης εγγενώς και με ασφάλεια.</string>
+    <string name="text_expander_immediate_title">Άμεση επέκταση</string>
+    <string name="text_expander_immediate_summary">Επέκταση συντομεύσεων αμέσως χωρίς πάτημα διαστήματος.</string>
+    <string name="text_expander_backspace_undo_title">Το backspace αναιρεί την επέκταση</string>
+    <string name="text_expander_backspace_undo_summary">Επαναφορά του επεκταμένου κειμένου πίσω στη συντόμευση με το backspace.</string>
+    <string name="text_expander_custom_shortcuts_title">Προσαρμοσμένες Συντομεύσεις</string>
+    <string name="text_expander_add_shortcut">Προσθήκη Συντόμευσης</string>
+    <string name="text_expander_edit_shortcut">Επεξεργασία Συντόμευσης</string>
+    <string name="text_expander_quick_guide">💡 Γρήγορος Οδηγός Λειτουργίας</string>
+    <string name="text_expander_template_placeholders_title">Υποστηριζόμενα Σύμβολα Κράτησης Θέσης Προτύπου:</string>
+    <string name="text_expander_prefix_title">Πρόθεμα (προαιρετικό)</string>
+    <string name="text_expander_shortcut_title">Συντόμευση (π.χ. \'brb\')</string>
+    <string name="text_expander_regex_pattern_title">Μοτίβο Regex</string>
+    <string name="text_expander_regex_title">Κανονική Έκφραση</string>
+    <string name="text_expander_regex_invalid">⚠️ Μη έγκυρο μοτίβο κανονικής έκφρασης</string>
+    <string name="text_expander_template_title">Επέκταση Προτύπου</string>
+    <string name="text_expander_template_hint">Be right back! ή My email is %clipboard%</string>
+    <string name="text_expander_quick_placeholders_title">Γρήγορα Σύμβολα Κράτησης Θέσης (πατήστε για εισαγωγή στον δρομέα):</string>
+    <string name="text_expander_save">Αποθήκευση</string>
+    <string name="text_expander_add">Προσθήκη</string>
+    <string name="text_expander_delete">Διαγραφή</string>
+    <string name="custom_ai_keys_what_are_keywords">Τι είναι οι Λέξεις-Κλειδιά;</string>
+    <string name="custom_ai_keys_keywords_description">Οι λέξεις-κλειδιά (όπως #proofread ή #summarize) λειτουργούν ως γρήγορες οδηγίες για το AI. Επιλέξτε τις κατά τη διαμόρφωση ενός πλήκτρου για να καθορίσετε τη συμπεριφορά του. Πρέπει επίσης να προσθέσετε τη δική σας προσαρμοσμένη προτροπή για να δημιουργήσετε το πλήκτρο.</string>
+    <string name="custom_ai_keys_show_tags_title">Εμφάνιση ετικετών στο πληκτρολόγιο</string>
+    <string name="custom_ai_keys_show_tags_summary">Όταν είναι ενεργοποιημένο, οι προσαρμοσμένες ετικέτες θα εμφανίζονται ως θεματικές κάψουλες στη γραμμή εργαλείων του πληκτρολογίου αντί για το προεπιλεγμένο εικονίδιο AI.</string>
+    <string name="custom_ai_keys_not_configured">Μη διαμορφωμένο</string>
+    <string name="custom_ai_keys_configure_title">Διαμόρφωση Πλήκτρου %1$d</string>
+    <string name="custom_ai_keys_config_instruction">Επιλέξτε λέξεις-κλειδιά για να ορίσετε τη συμπεριφορά και συνδυάστε τις με τις προσαρμοσμένες οδηγίες σας.\n\nΠαράδειγμα: Επιλέξτε #editor και πληκτρολογήστε "Μετάφραση στα γαλλικά" για να δημιουργήσετε ένα εξειδικευμένο πλήκτρο μετάφρασης.\n\nΣημείωση: Πρέπει να παρέχετε μια προσαρμοσμένη προτροπή και να επιλέξετε τουλάχιστον μία λέξη-κλειδί για αποθήκευση.</string>
+    <string name="custom_ai_keys_prompt_label">Προσαρμοσμένη Προτροπή για το Πλήκτρο %1$d</string>
+    <string name="custom_ai_keys_tag_label">Ετικέτα / Ταμπέλα (π.χ. \'Γαλλικά\', \'Γραμματική\', \'Επανεγγραφή\')</string>
+    <string name="custom_ai_keys_selected_functions">Επιλεγμένες Λειτουργίες Λέξεων-Κλειδιών:</string>
 </resources>

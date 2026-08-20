@@ -220,6 +220,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             prevSymbolsKeyboardWasShifted = false
         } else {
             prevSymbolsKeyboardWasShifted = isSymbolShifted
+            lastCustomIndex = 0
             setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
             if (prevMainKeyboardWasShiftLocked) setShiftLocked(true)
             prevMainKeyboardWasShiftLocked = false

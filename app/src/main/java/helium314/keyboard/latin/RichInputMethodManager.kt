@@ -11,6 +11,7 @@ import android.os.Build
 import android.view.inputmethod.InputMethodInfo
 import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.InputMethodSubtype
+import com.leanbitlab.leantype.voice.VoiceConstants
 import helium314.keyboard.compat.locale
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.LocaleUtils.getBestMatch
@@ -59,7 +60,12 @@ class RichInputMethodManager private constructor() {
 
     private var shortcuts = listOf<Shortcut>()
 
-    val isShortcutImeReady get() = shortcuts.isNotEmpty()
+    val isOfflineVoiceEnabled: Boolean
+        get() = if (this::context.isInitialized) {
+            context.prefs().getBoolean(VoiceConstants.PREF_VOICE_OFFLINE_ENABLED, false)
+        } else false
+
+    val isShortcutImeReady get() = shortcuts.isNotEmpty() || isOfflineVoiceEnabled
 
     fun getEnabledInputMethodSubtypes(imi: InputMethodInfo, allowsImplicitlySelectedSubtypes: Boolean) =
         inputMethodInfoCache.getEnabledInputMethodSubtypeList(imi, allowsImplicitlySelectedSubtypes)

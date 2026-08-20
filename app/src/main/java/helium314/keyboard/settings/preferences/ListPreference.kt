@@ -21,6 +21,7 @@ fun <T: Any> ListPreference(
     items: List<Pair<String, T>>,
     default: T,
     @DrawableRes icon: Int? = null,
+    allowSearch: Boolean = items.size > 10,
     onChanged: (T) -> Unit = { }
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
@@ -44,7 +45,8 @@ fun <T: Any> ListPreference(
             },
             selectedItem = selected,
             title = { Text(setting.title) },
-            getItemName = { it.first }
+            getItemName = { it.first },
+            allowSearch = allowSearch
         )
     }
 }

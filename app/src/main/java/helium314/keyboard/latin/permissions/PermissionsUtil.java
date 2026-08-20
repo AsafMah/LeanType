@@ -6,11 +6,14 @@
 
 package helium314.keyboard.latin.permissions;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 
 import androidx.core.content.ContextCompat;
+
+import helium314.keyboard.latin.OtpNotificationListenerService;
 
 /**
  * Utility class for permissions.
@@ -32,5 +35,22 @@ public class PermissionsUtil {
             }
         }
         return true;
+    }
+
+    public static boolean isNotificationListenerEnabled(Context context) {
+        if (context == null) return false;
+        ComponentName component = new ComponentName(context, OtpNotificationListenerService.class);
+        String requiredComponent = component.flattenToString();
+
+        String enabledListeners = android.provider.Settings.Secure.getString(
+                context.getContentResolver(), "enabled_notification_listeners");
+        if (enabledListeners == null) return false;
+
+        for (String listener : enabledListeners.split(":")) {
+            if (listener.equals(requiredComponent) || listener.contains(context.getPackageName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }
