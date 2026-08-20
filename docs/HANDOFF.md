@@ -1,11 +1,15 @@
 # LeanTypeDual — Session Handoff (2026-08-06)
 
 This document lets a new agent/session resume without re-deriving context. It records
-**what shipped, exactly where everything sits, the one open task, and the traps that cost
+**what shipped, exactly where everything sits, what is still open, and the traps that cost
 time**. Everything here was verified against the repo, GitHub, and a physical device during
 the session — no assumptions.
 
 Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
+
+> **Amended 2026-08-20:** §5 (v0.2.0 published, release-blocker removed), §11 (worktree paths
+> corrected after the tree moved to `C:/Users/mahle/programming/`, plus the worktree cleanup),
+> and §12 (current open items).
 
 ---
 
@@ -14,16 +18,19 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Thing | State |
 |---|---|
 | `main` | `caed9f65a` — "Release LeanTypeDual 0.2.0 (#130)" |
-| `dev` | `2c1c828c4` — "Release LeanTypeDual 0.2.0 (#129)" |
+| `dev` | `6ac372de3` — "docs: session handoff (#132)" |
 | Current version | `0.2.0` / versionCode `4200` on both `main` and `dev` |
 | Tag `v0.1.0` | Pushed **and published** with 4 signed APKs |
-| Tag `v0.2.0` | Pushed, **no GitHub Release yet** — blocked on CI runners |
+| Tag `v0.2.0` | **Published and latest** with 4 signed APKs |
 | Upstream integrated | LeanBitLab/LeanType **v4.0.8** (`dec87806`), covering v4.0.3–v4.0.8 |
 | Phone (SM-S936B) | `com.asafmah.leantypedual` = signed **0.1.0/4100**; `…debug` = **0.2.0/4200** |
 | Tablet | Never verified — still outstanding, low risk |
-| Open PRs | Only **#106** (`issue37-slide-target-actions`, DIRTY, unrelated/pre-existing) |
+| Open PRs | **#106** (`issue37-slide-target-actions`), **#134** (backspace paragraph merge), **#137** (upstream v4.1.2) |
 
-**The single open task:** publish the signed **v0.2.0** release. See §5.
+**No release work is outstanding** — v0.2.0 shipped signed on 2026-08-20. Open items are now
+device verification of #134 and #137, re-pointing `LeanType-check-upstream-main` to v4.1.2 to
+re-check the two guarded upstream defects (§7), and reporting the emoji accelerated-delete bug
+upstream. See §12.
 
 ---
 
@@ -48,10 +55,11 @@ physical-keyboard suggestion shortcuts, translation plugin + engine selector, a 
 drag-to-resize, key-gap narrowness scale, auto-spanning toolbar keys, text-expander regex
 fixes, and many emoji/clipboard layout fixes.
 
-### 2.3 Released 0.2.0 (partially)
+### 2.3 Released 0.2.0
 - Version bumped to `0.2.0`/`4200` (PR #129 → `dev`, #130 → `main`), tag `v0.2.0` pushed.
 - Debug APK built, installed, and smoke-tested on the phone.
-- **Signed artifacts were never produced** — runners went down (see §5).
+- Signed artifacts were delayed by a runner outage (§5) and **published on 2026-08-20**:
+  four signed APKs, release marked latest, all four verified after download.
 
 ---
 
@@ -90,22 +98,31 @@ git grep -n "android.permission.INTERNET" -- app/src
 
 ---
 
-## 5. THE OPEN TASK — publish signed v0.2.0
+## 5. Release procedure (v0.2.0 shipped — this is the recipe for the next one)
 
-### Why it's blocked
-GitHub-hosted runners stopped picking up jobs for this repo. Signature of the failure:
+**Status: done.** `v0.2.0` was published on **2026-08-20** with all four signed APKs and is
+marked latest: https://github.com/AsafMah/LeanType/releases/tag/v0.2.0
+
+The runner outage that blocked it resolved on its own — Release run **31128748928** succeeded
+at 2026-08-06 22:04 UTC and produced the draft. Everything below is the verified procedure,
+kept because it is what the next release should follow.
+
+### If runners stall again
+
+The outage signature, so it is recognised rather than re-debugged:
 
 - Job status `cancelled` after **exactly ~15 minutes**
 - `steps: []` (never started) and `timing.billable.UBUNTU.total_ms == 0`
-- Affected runs: `31126300886`, `31126946237` (Unit tests) and `31128410212` (Release)
-- The **v0.1.0** release run at 19:04 UTC succeeded, so the outage began after that
+- Affected runs were `31126300886`, `31126946237` (Unit tests) and `31128410212` (Release)
 
-This is **infrastructure, not code**. Do not "fix" tests in response to it.
+This is **infrastructure, not code**. Do not "fix" tests in response to it. Two zombie runs
+(`31128410212`, `31126946237`) are still stuck in `queued` from that outage and can be
+cancelled with `gh run cancel <id> --repo AsafMah/LeanType`.
 
-### What to do when runners recover
+### Cut the release
 
 ```bash
-gh workflow run release.yml --repo AsafMah/LeanType --ref v0.2.0
+gh workflow run release.yml --repo AsafMah/LeanType --ref vX.Y.Z
 gh run list --repo AsafMah/LeanType --workflow release.yml --limit 3
 ```
 
@@ -116,15 +133,15 @@ Release with the APKs attached.
 Then verify the artifacts **after download** (do not trust the build alone):
 
 ```bash
-gh release download v0.2.0 --repo AsafMah/LeanType --pattern "*.apk" --dir build/release-v0.2.0
+gh release download vX.Y.Z --repo AsafMah/LeanType --pattern "*.apk" --dir build/release-vX.Y.Z
 # for each APK:
 #   apkanalyzer manifest application-id | version-name | version-code | min-sdk | permissions
 #   apksigner verify --print-certs
 ```
 
-Expected for every APK:
+Expected for every APK (all four **verified passing** for 0.2.0):
 - signer SHA-256 `c032eafcd7ce9197fd9e636f2c86b1590f0a84f8f73016c66d63c1382af81554`
-- version `0.2.0` / `4200`
+- matching version name / versionCode (`0.2.0` / `4200` for that release)
 - `INTERNET` only in standard + standardfull
 - v1/JAR `true` for standard (minSdk 23), standardfull (23), offlinelite (21); offline is
   minSdk 26 and legitimately reports `v1=false` by default
@@ -132,8 +149,8 @@ Expected for every APK:
 Publish:
 
 ```bash
-gh release edit v0.2.0 --repo AsafMah/LeanType --draft=false --latest \
-  --title "LeanTypeDual 0.2.0" --notes-file docs/releasenote/release_notes_v0.2.0.md
+gh release edit vX.Y.Z --repo AsafMah/LeanType --draft=false --latest \
+  --title "LeanTypeDual X.Y.Z" --notes-file docs/releasenote/release_notes_vX.Y.Z.md
 ```
 
 Then set PR/issue items to **Done** on Project #3 (§8) and, ideally, install the signed
@@ -401,17 +418,21 @@ background trim level on a foreground process") and refuses to *raise* a level t
 
 ## 12. Suggested next steps
 
-1. **Publish signed v0.2.0** once runners recover (§5). Highest priority; the tag is already
-   public without artifacts.
-2. **Install signed 0.2.0** over the phone's production package and do a real-editor smoke
+1. **Device-verify the two open PRs** — **#134** (backspace paragraph merge in block-based
+   editors) and **#137** (upstream v4.1.2 merge). Both need a real-editor smoke, not just a
+   green test run; see the anti-regression note that "tests pass" ≠ "feature works" for input
+   and integration code.
+2. **Re-point `LeanType-check-upstream-main` to v4.1.2** (§11) and re-check §7's two guarded
+   upstream defects. If either is fixed upstream, drop its `runTests` skip guard. If not,
+   **report them to LeanBitLab** — they are still unreported.
+3. **Report the emoji accelerated-delete bug** upstream.
+4. **Install signed 0.2.0** over the phone's production package and do a real-editor smoke
    (typing, direct IME switching, custom-layout restoration, unshifted `to`/`no`/`meet`
    staying lowercase).
-3. **Tablet smoke** — the only never-executed release gate.
-4. **Issue #131 — "Java gesture not working with custom layouts"** is an open bug filed
+5. **Tablet smoke** — the only never-executed release gate.
+6. **Issue #131 — "Java gesture not working with custom layouts"** is an open bug filed
    against the fork's own fallback gesture engine; likely the highest-value functional work.
-5. **Report the two upstream defects** (§7) to LeanBitLab, then drop the `runTests` guards
-   once fixed upstream.
-6. Optional: refresh `AGENTS.md`'s JDK path
-   (`jdk-21.0.11.10-hotspot` → `jdk-21.0.12.8-hotspot`).
 7. Decide the fate of the six unfinished worktrees in §11 — their commits exist on no remote,
    so they are one disk failure from gone.
+8. Optional: cancel the two zombie `queued` workflow runs (§5), and refresh `AGENTS.md`'s JDK
+   path (`jdk-21.0.11.10-hotspot` → `jdk-21.0.12.8-hotspot`).
