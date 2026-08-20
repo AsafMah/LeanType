@@ -86,3 +86,7 @@ docs/superpowers/
 
 # Temporary generated files
 docs/releasenote/release_notes_temp.md
+
+# Python bytecode from tools/
+__pycache__/
+*.pyc

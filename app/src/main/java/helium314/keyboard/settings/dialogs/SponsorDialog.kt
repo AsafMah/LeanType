@@ -25,7 +25,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -54,7 +57,8 @@ import helium314.keyboard.latin.settings.Settings
 @Composable
 fun SponsorDialog(
     onDismissRequest: () -> Unit,
-    onSponsor: () -> Unit,
+    onSponsorGitHub: () -> Unit,
+    onSponsorOpenCollective: () -> Unit,
     prefs: SharedPreferences
 ) {
     var neverShowAgain by remember { mutableStateOf(false) }
@@ -148,7 +152,7 @@ fun SponsorDialog(
                             onClick = {
                                 if (neverShowAgain)
                                     prefs.edit { putBoolean(Settings.PREF_DONT_SHOW_SPONSOR_DIALOG, true) }
-                                onSponsor()
+                                onSponsorGitHub()
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(20.dp),
@@ -157,14 +161,45 @@ fun SponsorDialog(
                             ),
                             contentPadding = PaddingValues(vertical = 12.dp)
                         ) {
-                            Text("💖", modifier = Modifier.padding(end = 8.dp))
+                            Icon(
+                                painter = painterResource(R.drawable.ic_settings_about_github),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Sponsor on GitHub",
                                 fontWeight = FontWeight.Bold
                             )
                         }
                         
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedButton(
+                            onClick = {
+                                if (neverShowAgain)
+                                    prefs.edit { putBoolean(Settings.PREF_DONT_SHOW_SPONSOR_DIALOG, true) }
+                                onSponsorOpenCollective()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_opencollective),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Donate on Open Collective",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(10.dp))
                         
                         TextButton(
                             onClick = {

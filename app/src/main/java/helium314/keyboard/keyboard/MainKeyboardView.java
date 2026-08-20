@@ -59,6 +59,7 @@ import helium314.keyboard.latin.common.Colors;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.CoordinateUtils;
 import helium314.keyboard.latin.define.DebugFlags;
+import helium314.keyboard.latin.handwriting.HandwritingLoader;
 import helium314.keyboard.latin.settings.DebugSettings;
 import helium314.keyboard.latin.settings.Defaults;
 import helium314.keyboard.latin.settings.Settings;
@@ -971,6 +972,12 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private String layoutLanguageOnSpacebar(final Paint paint,
             final RichInputMethodSubtype subtype, final int width) {
         // Choose appropriate language name to fit into the width.
+        if (KeyboardSwitcher.getInstance().isHandwritingShowing()) {
+            final String hwName = HandwritingLoader.getEffectiveDisplayName(getContext(), subtype.getLocale().toLanguageTag());
+            if (fitsTextIntoWidth(width, hwName, paint)) {
+                return hwName;
+            }
+        }
 
         final List<Locale> secondaryLocales = Settings.getValues().mSecondaryLocales;
         // avoid showing same language twice

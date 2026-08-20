@@ -138,4 +138,781 @@
     <string name="label_search_key">"തിരയുക"</string>
     <string name="label_pause_key">"താൽക്കാലികമായി നിർത്തുക"</string>
     <string name="label_wait_key">"കാത്തിരിക്കുക"</string>
+
+    <string name="ime_name">LeanType</string>
+    <string name="vibrate_in_dnd_mode">ശല്യം ചെയ്യാതിരിക്കുക മോഡിൽ വൈബ്രേറ്റ് ചെയ്യുക</string>
+    <string name="suggest_emojis">ഇമോജികൾ നിർദ്ദേശിക്കുക</string>
+    <string name="suggest_emojis_summary">സാധാരണ നിർദ്ദേശങ്ങളിൽ ഇമോജി നിഘണ്ടു ഉപയോഗിക്കുക</string>
+    <string name="inline_emoji_search">ഇൻലൈൻ ഇമോജി തിരയൽ</string>
+    <string name="inline_emoji_search_summary">ഒരു വാക്കിനു മുന്നിൽ കോളൻ ഉണ്ടെങ്കിൽ ഇമോജികൾ മാത്രം നിർദ്ദേശിക്കുക</string>
+    <string name="emoji_dictionary_required">ഈ ഫീച്ചർ പ്രവർത്തിക്കാൻ ഒരു ഇമോജി നിഘണ്ടു ആവശ്യമാണ്. .dict ഫോർമാറ്റിലുള്ള നിഘണ്ടുക്കൾ %s എന്നതിൽ നിന്ന് ഡൗൺലോഡ് ചെയ്യാം.</string>
+    <string name="show_emoji_descriptions">ദീർഘമർത്തുമ്പോൾ ഇമോജി വിവരണം കാണിക്കുക</string>
+    <string name="settings_category_space">സ്പേസ്</string>
+    <string name="settings_category_configuration">കോൺഫിഗറേഷൻ</string>
+    <string name="settings_category_visuals">വിഷ്വലുകളും പ്രിവ്യൂവും</string>
+    <string name="settings_category_behavior">പെരുമാറ്റം</string>
+    <string name="settings_category_gestures_advanced">അഡ്വാൻസ്ഡ് ജെസ്റ്ററുകൾ</string>
+    <string name="settings_category_touchpad">ടച്ച്പാഡ്</string>
+    <string name="enable_split_keyboard_landscape">വിഭജിത കീബോർഡ് പ്രവർത്തനക്ഷമമാക്കുക (ലാൻഡ്സ്കേപ്പ്)</string>
+    <string name="split_spacer_scale">വിഭജന ദൂരം</string>
+    <string name="switch_language">ഭാഷ മാറ്റുക</string>
+    <string name="language_switch_key_switch_both">രണ്ടും മാറ്റുക</string>
+    <string name="language_switch_key_behavior">ഭാഷ മാറ്റുക കീ പെരുമാറ്റം</string>
+    <string name="use_apps_dict">ആപ്പ് പേരുകൾ തിരയുക</string>
+    <string name="use_apps_dict_summary">ഇൻസ്റ്റാൾ ചെയ്ത ആപ്പുകളുടെ പേരുകൾ നിർദ്ദേശങ്ങൾക്കും തിരുത്തലുകൾക്കും ഉപയോഗിക്കുക</string>
+    <string name="disable_personalized_dicts_message">മുന്നറിയിപ്പ്: ഈ ക്രമീകരണം പ്രവർത്തനരഹിതമാക്കുന്നത് പഠിച്ച ഡാറ്റ മായ്ക്കും</string>
+    <string name="add_to_personal_dictionary">സ്വകാര്യ നിഘണ്ടുവിൽ വാക്കുകൾ ചേർക്കുക</string>
+    <string name="add_to_personal_dictionary_summary">പഠിച്ച വാക്കുകൾ സംഭരിക്കാൻ ഉപകരണ സ്വകാര്യ നിഘണ്ടു ഉപയോഗിക്കുക</string>
+    <string name="edit_blocked_words">തടഞ്ഞ വാക്കുകൾ</string>
+    <string name="blocked_words_summary">നിർദ്ദേശങ്ങളിൽ നിന്ന് തടഞ്ഞ വാക്കുകൾ നിയന്ത്രിക്കുക</string>
+    <string name="add_blocked_word">ഒരു വാക്ക് തടയുക</string>
+    <string name="blocked_word_already_present">വാക്ക് ഇതിനകം തടഞ്ഞിട്ടുണ്ട്</string>
+    <string name="clear_all_blocked_words_confirmation">എല്ലാ വാക്കുകളും അൺബ്ലോക്ക് ചെയ്യണമെന്ന് ഉറപ്പാണോ?</string>
+    <string name="prefs_always_show_suggestions">എപ്പോഴും നിർദ്ദേശങ്ങൾ കാണിക്കുക</string>
+    <string name="prefs_always_show_suggestions_summary">നിർദ്ദേശങ്ങൾ പ്രവർത്തനരഹിതമാക്കാനുള്ള മറ്റ് ആപ്പുകളുടെ അഭ്യർത്ഥന അവഗണിക്കുക (പ്രശ്നങ്ങൾ ഉണ്ടാക്കാം)</string>
+    <string name="prefs_always_show_suggestions_except_web_text">വെബ് എഡിറ്റ് ഫീൽഡുകൾക്കായി എപ്പോഴും നിർദ്ദേശങ്ങൾ കാണിക്കരുത്</string>
+    <string name="prefs_always_show_suggestions_except_web_text_summary">വെബ് എഡിറ്റ് ഫീൽഡുകൾ (മിക്കവാറും ബ്രൗസറുകളിൽ കാണപ്പെടുന്നു) എപ്പോഴും നിർദ്ദേശങ്ങൾ കാണിക്കുക ക്രമീകരണത്തിൽ പ്രശ്നങ്ങൾ ഉണ്ടാക്കുന്നതിന് വളരെ സാധാരണ കാരണമാണ്</string>
+    <string name="auto_correction_trigger">ഓട്ടോ-കറക്റ്റ് ഓൺ</string>
+    <string name="auto_correction_trigger_both">സ്പേസ്ബാറും ചിഹ്നനവും</string>
+    <string name="auto_correction_trigger_space">സ്പേസ്ബാർ മാത്രം</string>
+    <string name="auto_correction_trigger_punctuation">ചിഹ്നനം മാത്രം</string>
+    <string name="more_autocorrect">കൂടുതൽ ഓട്ടോ-തിരുത്തൽ</string>
+    <string name="more_autocorrect_summary">ഇൻപുട്ട് ഫീൽഡ് വ്യക്തമായി അഭ്യർത്ഥിക്കാത്തപ്പോഴും ഓട്ടോ-തിരുത്തുക</string>
+    <string name="auto_correct_shortcuts">ഓട്ടോ-കറക്റ്റ് കുറുക്കുവഴികൾ</string>
+    <string name="auto_correct_shortcuts_summary">പ്രവർത്തനക്ഷമമാകുമ്പോൾ കുറുക്കുവഴികൾ ഓട്ടോകറക്റ്റ് വഴി വികസിപ്പിക്കപ്പെടാം</string>
+    <string name="prefs_physical_keyboard_suggestion_shortcuts">ഫിസിക്കൽ കീബോർഡ് നിർദ്ദേശ കുറുക്കുവഴികൾ</string>
+    <string name="prefs_physical_keyboard_suggestion_shortcuts_summary">കീബോർഡ് കുറുക്കുവഴികൾ ഉപയോഗിച്ച് നിർദ്ദേശ സ്ഥാനാർത്ഥികളെ തിരഞ്ഞെടുത്ത് നമ്പർ ബാഡ്ജുകൾ കാണിക്കുക</string>
+    <string name="physical_keyboard_shortcut_disabled">പ്രവർത്തനരഹിതമാക്കി</string>
+    <string name="physical_keyboard_shortcut_alt">Alt + നമ്പർ (Alt+1, Alt+2, Alt+3)</string>
+    <string name="physical_keyboard_shortcut_ctrl">Ctrl + നമ്പർ (Ctrl+1, Ctrl+2, Ctrl+3)</string>
+    <string name="physical_keyboard_shortcut_number">നമ്പർ കീ (രചിക്കുമ്പോൾ 1, 2, 3)</string>
+    <string name="large_screen_layout_note">ഈ സ്ക്രീനിലെ ക്രമീകരണങ്ങൾ വലിയ സ്ക്രീൻ ലേഔട്ടിന് ബാധകമാണ്</string>
+    <string name="backspace_reverts_autocorrect">ബാക്ക്സ്പേസ് ഓട്ടോകറക്റ്റ് പിൻവലിക്കുന്നു</string>
+    <string name="center_suggestion_text_to_enter">എപ്പോഴും മധ്യ നിർദ്ദേശം ഉപയോഗിക്കുക</string>
+    <string name="center_suggestion_text_to_enter_summary">സ്പേസ് അല്ലെങ്കിൽ ചിഹ്നനം അമർത്തുമ്പോൾ, മധ്യ നിർദ്ദേശം നൽകപ്പെടും</string>
+    <string name="prioritize_personal_suggestions">വ്യക്തിപരവും പഠിച്ചതുമായ വാക്കുകൾക്ക് മുൻഗണന നൽകുക</string>
+    <string name="prioritize_personal_suggestions_summary">അടുത്ത-പദ പ്രവചന സമയത്ത് സ്വകാര്യ നിഘണ്ടുവിനും പഠിച്ച വാക്കുകൾക്കും ഉയർന്ന സ്കോർ മുൻഗണന നൽകുക</string>
+    <string name="next_word_boost_level">പഠിച്ച വാക്കിന്റെ ബൂസ്റ്റ് ലെവൽ</string>
+    <string name="next_word_boost_level_summary">പഠിച്ചതും സ്വകാര്യ നിഘണ്ടു എൻട്രികൾക്കുമായി സ്കോർ മുൻഗണന ബൂസ്റ്റ് ശക്തി സജ്ജമാക്കുക</string>
+    <string name="next_word_strict_ngram">പഠിച്ച വാക്കുകൾക്ക് സന്ദർഭ പൊരുത്തം ആവശ്യമാണ്</string>
+    <string name="next_word_strict_ngram_summary">മുമ്പത്തെ വാക്ക് സന്ദർഭം പൊരുത്തപ്പെടുമ്പോൾ മാത്രം പഠിച്ച വാക്കുകൾ നിർദ്ദേശിക്കുക</string>
+    <string name="immediate_auto_space">ഉടനടി ഓട്ടോ-സ്പേസ്</string>
+    <string name="immediate_auto_space_summary">അടുത്തതായി ടൈപ്പ് ചെയ്യുന്ന അക്ഷരത്തിലുള്ള കാലതാമസം തടയാൻ ഒരു നിർദ്ദേശം തിരഞ്ഞെടുക്കുമ്പോൾ തൽക്ഷണം സ്പേസ് ചേർക്കുക</string>
+    <string name="first_word_prediction">ആദ്യ-പദ നിർദ്ദേശങ്ങൾ</string>
+    <string name="first_word_prediction_summary">വാക്യത്തിന്റെ തുടക്കത്തിൽ ഇൻപുട്ട് ഇല്ലാത്തപ്പോൾ നിർദ്ദേശങ്ങൾ കാണിക്കുക</string>
+    <string name="suggest_punctuation">ചിഹ്നന നിർദ്ദേശങ്ങൾ</string>
+    <string name="suggest_punctuation_summary">മറ്റ് നിർദ്ദേശങ്ങൾ ലഭ്യമല്ലാത്തപ്പോൾ ചിഹ്നനം കാണിക്കുക</string>
+    <string name="suggest_clipboard_content">ക്ലിപ്പ്ബോർഡ് ഉള്ളടക്കം നിർദ്ദേശിക്കുക</string>
+    <string name="suggest_clipboard_content_summary">അടുത്തിടെ പകർത്തിയ ക്ലിപ്പ്ബോർഡ് ഉള്ളടക്കം ഒരു നിർദ്ദേശമായി കാണിക്കുക</string>
+    <string name="suggest_screenshots">അടുത്തിടെ എടുത്ത സ്ക്രീൻഷോട്ടുകൾ നിർദ്ദേശിക്കുക</string>
+    <string name="suggest_screenshots_summary">അടുത്തിടെ എടുത്ത സ്ക്രീൻഷോട്ടുകൾ ഒരു നിർദ്ദേശമായി കാണിക്കുക</string>
+    <string name="auto_read_otp">SMS-ൽ നിന്ന് OTP സ്വയം വായിക്കുക</string>
+    <string name="auto_read_otp_summary">വരുന്ന SMS-ൽ നിന്നുള്ള കോഡ് ടാപ്പുചെയ്ത് ചേർക്കാവുന്ന ഒരു നിർദ്ദേശമായി കാണിക്കുക</string>
+    <string name="spoken_otp_suggestion">OTP നിർദ്ദേശം ഒഴിവാക്കുക</string>
+    <string name="compress_screenshots">സ്ക്രീൻഷോട്ട് നിർദ്ദേശങ്ങൾ കംപ്രസ്സ് ചെയ്യുക</string>
+    <string name="compress_screenshots_summary">ഇടം ലാഭിക്കാൻ സ്ക്രീൻഷോട്ട് നിർദ്ദേശങ്ങളുടെ ഗുണനിലവാരവും വലുപ്പവും കുറയ്ക്കുക</string>
+    <string name="gesture_floating_preview_static">ഫ്ലോട്ടിംഗ് പ്രിവ്യൂ</string>
+    <string name="gesture_floating_preview_static_summary">ആംഗ്യം കാണിക്കുമ്പോൾ നിർദ്ദേശിച്ച വാക്ക് കാണുക</string>
+    <string name="gesture_floating_preview_dynamic_summary">ഒരു ആംഗ്യ സമയത്ത് പ്രിവ്യൂ നീക്കുക</string>
+    <string name="gesture_fast_typing_cooldown">വേഗത്തിലുള്ള ടൈപ്പിംഗ് കൂൾഡൗൺ</string>
+    <string name="gesture_fast_typing_cooldown_instant">എപ്പോഴും തൽക്ഷണം ആരംഭിക്കുക</string>
+    <string name="gesture_trail_fadeout_duration">ആംഗ്യ ട്രയൽ ആയുസ്സ്</string>
+    <string name="clipboard_history_pinned_first">പിൻ ചെയ്ത ഇനങ്ങൾ മുകളിൽ കാണിക്കുക</string>
+    <string name="clipboard_fold_pinned">സ്ഥിരസ്ഥിതിയായി പിൻ ചെയ്ത ഇനങ്ങൾ ചുരുക്കുക</string>
+    <string name="clear_clipboard_icon">ക്ലിപ്പ്ബോർഡ് ഐക്കൺ മായ്ക്കുക</string>
+    <string name="clear_clipboard_icon_summary">ക്ലിപ്പ്ബോർഡ് മായ്ക്കുക ബട്ടണിനായി ഐക്കൺ ശൈലി തിരഞ്ഞെടുക്കുക</string>
+    <string name="clear_clipboard_icon_bin">ട്രാഷ് ബിൻ</string>
+    <string name="clear_clipboard_icon_sweep">സ്വീപ്പ് / എല്ലാം മായ്ക്കുക</string>
+    <string name="clear_clipboard_icon_sweep_slanted">ചരിഞ്ഞ വരകൾ</string>
+    <string name="clear_clipboard_icon_clipboard_slash">സ്ലാഷോടുകൂടിയ ഔട്ട്ലൈൻ ക്ലിപ്പ്ബോർഡ്</string>
+    <string name="clear_clipboard_icon_legacy">ക്ലാസിക് ക്ലിപ്പ്ബോർഡ്</string>
+    <string name="clipboard_pinned">പിൻ ചെയ്തു</string>
+    <string name="clipboard_search_hint">ക്ലിപ്പുകൾ തിരയുക...</string>
+    <string name="clipboard_empty_text">ഇനങ്ങളൊന്നും കണ്ടെത്തിയില്ല</string>
+    <string name="clipboard_item_deleted">ഇനം ഇല്ലാതാക്കി</string>
+    <string name="clipboard_no_search_results">ഫലങ്ങളൊന്നും കണ്ടെത്തിയില്ല</string>
+    <string name="clipboard_clear_all_confirmation">എല്ലാ ചരിത്രവും മായ്ക്കണമെന്ന് ഉറപ്പാണോ?</string>
+    <string name="clear_all">എല്ലാം മായ്ക്കുക</string>
+    <string name="backup_restore_title">ബാക്കപ്പും പുനഃസ്ഥാപിക്കലും</string>
+    <string name="backup_restore_message">ഫയലിൽ നിന്ന് സംരക്ഷിക്കുകയോ ലോഡുചെയ്യുകയോ ചെയ്യുക. മുന്നറിയിപ്പ്: പുനഃസ്ഥാപിക്കുന്നത് നിലവിലുള്ള ഡാറ്റ തിരുത്തിയെഴുതും</string>
+    <string name="backup_error">ബാക്കപ്പ് പിശക്: %s</string>
+    <string name="restore_error">ബാക്കപ്പ് പുനഃസ്ഥാപിക്കുന്നതിൽ പിശക്: %s</string>
+    <string name="button_backup">ബാക്കപ്പ്</string>
+    <string name="button_restore">പുനഃസ്ഥാപിക്കുക</string>
+    <string name="backup_restored">ബാക്കപ്പ് പുനഃസ്ഥാപിച്ചു</string>
+    <string name="timestamp_format_title">ടൈംസ്റ്റാമ്പ് കീ ഫോർമാറ്റ്</string>
+    <string name="secondary_locale">ബഹുഭാഷാ ടൈപ്പിംഗ്</string>
+    <string name="locales_with_dict">നിഘണ്ടുക്കളുള്ള ഭാഷകൾ</string>
+    <string name="load_gesture_library">ജെസ്റ്റർ ടൈപ്പിംഗ് ലൈബ്രറി ലോഡ് ചെയ്യുക</string>
+    <string name="load_gesture_library_summary">ജെസ്റ്റർ ടൈപ്പിംഗ് പ്രവർത്തനക്ഷമമാക്കാൻ ഒരു നേറ്റീവ് ലൈബ്രറി നൽകുക</string>
+    <string name="gesture_method">ജെസ്റ്റർ ടൈപ്പിംഗ് രീതി</string>
+    <string name="gesture_method_summary">സ്വൈപ്പ് ടൈപ്പിംഗിനുള്ള അൽഗോരിതം തിരഞ്ഞെടുക്കുക</string>
+    <string name="gesture_method_native">നേറ്റീവ് ലൈബ്രറി (swypelib ആവശ്യമാണ്)</string>
+    <string name="gesture_method_fallback">ഫാൾബാക്ക് എഞ്ചിൻ (ശുദ്ധ ജാവ)</string>
+    <string name="load_gesture_library_message">നിങ്ങൾക്ക് \'%s\'-നുള്ള ലൈബ്രറി ആവശ്യമുണ്ട്. പൊരുത്തമില്ലാത്ത ലൈബ്രറികൾ ജെസ്റ്റർ ടൈപ്പിംഗ് ഉപയോഗിക്കുമ്പോൾ ക്രാഷ് ആയേക്കാം.
+        \n\nമുന്നറിയിപ്പ്: ബാഹ്യ കോഡ് ലോഡുചെയ്യുന്നത് ഒരു സുരക്ഷാ അപകടമാകാം. നിങ്ങൾ വിശ്വസിക്കുന്ന ഒരു ഉറവിടത്തിൽ നിന്നുള്ള ലൈബ്രറി മാത്രം ഉപയോഗിക്കുക.</string>
+    <string name="checksum_mismatch_message">അജ്ഞാത ലൈബ്രറി ഫയൽ. ഇത് വിശ്വസനീയമായ ഉറവിടത്തിൽ നിന്നാണെന്നും \'%s\'-നുള്ളതാണെന്നും ഉറപ്പാണോ?</string>
+    <string name="load_gesture_library_button_load">ലൈബ്രറി ലോഡ് ചെയ്യുക</string>
+    <string name="load_gesture_library_button_delete">ലൈബ്രറി ഇല്ലാതാക്കുക</string>
+    <string name="load_gesture_library_button_download">ലൈബ്രറി ഡൗൺലോഡ് ചെയ്യുക</string>
+    <string name="load_gesture_library_downloading">ജെസ്റ്റർ ലൈബ്രറി ഡൗൺലോഡുചെയ്യുന്നു…</string>
+    <string name="load_gesture_library_download_success">ഡൗൺലോഡ് പൂർത്തിയായി! പുനരാരംഭിക്കുന്നു…</string>
+    <string name="load_gesture_library_download_failed">ഡൗൺലോഡ് പരാജയപ്പെട്ടു: %s</string>
+    <string name="load_handwriting_plugin">ഹാൻഡ്റൈറ്റിംഗ് പ്ലഗിൻ ലോഡ് ചെയ്യുക</string>
+    <string name="load_handwriting_plugin_summary">ഹാൻഡ്റൈറ്റിംഗ് ഇൻപുട്ട് പ്രവർത്തനക്ഷമമാക്കാൻ ഒരു APK പ്ലഗിൻ നൽകുക</string>
+    <string name="load_handwriting_plugin_message">ഒരു ഹാൻഡ്റൈറ്റിംഗ് പ്ലഗിൻ APK നൽകുക.\n\nമുന്നറിയിപ്പ്: ബാഹ്യ കോഡ് ലോഡുചെയ്യുന്നത് ഒരു സുരക്ഷാ അപകടമാകാം. നിങ്ങൾ വിശ്വസിക്കുന്ന ഒരു ഉറവിടത്തിൽ നിന്നുള്ള പ്ലഗിൻ മാത്രം ഉപയോഗിക്കുക.</string>
+    <string name="load_handwriting_plugin_button_load">പ്ലഗിൻ APK ലോഡ് ചെയ്യുക</string>
+    <string name="load_handwriting_plugin_button_delete">പ്ലഗിൻ ഇല്ലാതാക്കുക</string>
+    <string name="load_handwriting_plugin_success">ഹാൻഡ്റൈറ്റിംഗ് പ്ലഗിൻ വിജയകരമായി ഇറക്കുമതി ചെയ്തു</string>
+    <string name="load_handwriting_plugin_failed">ഹാൻഡ്റൈറ്റിംഗ് പ്ലഗിൻ APK ലോഡുചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു</string>
+    <string name="load_translation_plugin">വിവർത്തന പ്ലഗിൻ ലോഡ് ചെയ്യുക</string>
+    <string name="load_translation_plugin_summary">വിവർത്തന എഞ്ചിൻ പ്രവർത്തനക്ഷമമാക്കാൻ ഒരു APK പ്ലഗിൻ നൽകുക</string>
+    <string name="load_translation_plugin_button_delete">പ്ലഗിൻ ഇല്ലാതാക്കുക</string>
+    <string name="load_translation_plugin_success">വിവർത്തന പ്ലഗിൻ വിജയകരമായി ഇറക്കുമതി ചെയ്തു</string>
+    <string name="load_translation_plugin_failed">വിവർത്തന പ്ലഗിൻ APK ലോഡുചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു</string>
+    <string name="handwriting">കൈയക്ഷരം</string>
+    <string name="delete_handwriting_model">ഡൗൺലോഡ് ചെയ്ത മോഡൽ ഇല്ലാതാക്കുക</string>
+    <string name="handwriting_model_deleted">ഹാൻഡ്റൈറ്റിംഗ് മോഡൽ ഇല്ലാതാക്കി</string>
+    <string name="handwriting_plugin_required">ഹാൻഡ്റൈറ്റിംഗ് പ്ലഗിൻ ആവശ്യമാണ്</string>
+    <string name="handwriting_plugin_summary_text">ഡ്രോയിംഗ് തിരിച്ചറിയൽ പ്രവർത്തനക്ഷമമാക്കാൻ ഹാൻഡ്റൈറ്റിംഗ് പ്ലഗിൻ ലൈബ്രറി ലോഡ് ചെയ്യുക.</string>
+    <string name="handwriting_plugin_load_button">പ്ലഗിൻ ലോഡ് ചെയ്യുക</string>
+    <string name="autospace_after_emoji">ഇമോജിക്ക് ശേഷം ഓട്ടോ-സ്പേസ്</string>
+    <string name="autospace_after_emoji_summary">ഒരു പുതിയ വാക്ക് ടൈപ്പ് ചെയ്യുമ്പോൾ ഇമോജിക്ക് ശേഷം സ്വയമേവ സ്പേസ് ചേർക്കുക</string>
+    <string name="autospace_after_suggestion">ഒരു നിർദ്ദേശം തിരഞ്ഞെടുത്തതിന് ശേഷം ഓട്ടോ-സ്പേസ്</string>
+    <string name="autospace_before_gesture_typing">ഒരു വാക്ക് ജെസ്റ്റർ ടൈപ്പ് ചെയ്യുന്നതിന് മുമ്പ് ഓട്ടോ-സ്പേസ്</string>
+    <string name="autospace_after_gesture_typing">ഒരു വാക്ക് ജെസ്റ്റർ ടൈപ്പ് ചെയ്തതിന് ശേഷം ഓട്ടോ-സ്പേസ്</string>
+    <string name="shift_removes_autospace">ഷിഫ്റ്റ് അമർത്തുമ്പോൾ ഓട്ടോ-സ്പേസ് ഇല്ല</string>
+    <string name="shift_removes_autospace_summary">ഷിഫ്റ്റ് തീരുമാനമാകാത്ത ഓട്ടോ-സ്പേസ് നീക്കംചെയ്യുന്നു</string>
+    <string name="preserve_space_before_punctuation">ചിഹ്നനത്തിന് മുമ്പുള്ള സ്പേസ് സൂക്ഷിക്കുക</string>
+    <string name="preserve_space_before_punctuation_summary">ചിഹ്നന ചിഹ്നങ്ങൾക്കും മുമ്പുള്ള സ്പേസ് സ്വയമേവ ഇല്ലാതാക്കരുത്: ]}):;!?,.</string>
+    <string name="show_popup_keys_title">പോപ്പപ്പിൽ ഡയാക്രിറ്റിക്കുകളുള്ള കൂടുതൽ അക്ഷരങ്ങൾ കാണിക്കുക</string>
+    <string name="show_popup_keys_normal">കീബോർഡ് ഭാഷകളിൽ നിർവചിച്ചിരിക്കുന്ന വകഭേദങ്ങൾ കാണിക്കുക</string>
+    <string name="show_popup_keys_main">വളരെ സാധാരണ വകഭേദങ്ങൾ ചേർക്കുക (സ്ഥിരസ്ഥിതി)</string>
+    <string name="show_popup_keys_more">സാധാരണ വകഭേദങ്ങൾ ചേർക്കുക</string>
+    <string name="show_popup_keys_all">ലഭ്യമായ എല്ലാ വകഭേദങ്ങളും ചേർക്കുക</string>
+    <string name="url_detection_title">URL കണ്ടെത്തൽ</string>
+    <string name="url_detection_summary">URL-കളും സമാനമായവയും ഒരൊറ്റ വാക്കായി കണ്ടെത്താൻ ശ്രമിക്കുക</string>
+    <string name="touchpad">ടച്ച്പാഡ്</string>
+    <string name="text_edit">ടെക്സ്റ്റ് എഡിറ്റിംഗ്</string>
+    <string name="select_mode">തിരഞ്ഞെടുക്കൽ മോഡ്</string>
+    <string name="touchpad_fullscreen">പൂർണ്ണ-സ്ക്രീൻ ടച്ച്പാഡ്</string>
+    <string name="touchpad_fullscreen_summary">ടച്ച്പാഡ് മോഡ് സജീവമാകുമ്പോൾ നിർദ്ദേശ സ്ട്രിപ്പും ടൂൾബാറും മറയ്ക്കുക</string>
+    <string name="language_and_layouts_title">ഭാഷകളും ലേഔട്ടുകളും</string>
+    <string name="languages_title">ഭാഷകൾ</string>
+    <string name="number_row_in_symbols">ചിഹ്ന ദൃശ്യത്തിൽ നമ്പർ വരി കാണിക്കുക</string>
+    <string name="compact_number_row_in_symbols">കോംപാക്റ്റ് ചിഹ്ന നമ്പർ വരി</string>
+    <string name="compact_number_row_in_symbols_summary">ഒരു പ്രത്യേക വരി ചേർക്കുന്നതിന് പകരം ചിഹ്നങ്ങളുടെ ആദ്യ വരി മാറ്റിസ്ഥാപിക്കുക</string>
+    <string name="localized_number_row">നമ്പർ വരി പ്രാദേശികവൽക്കരിക്കുക</string>
+    <string name="localized_number_row_summary">ലാറ്റിൻ സംഖ്യകളേക്കാൾ പ്രാദേശികവൽക്കരിച്ച സംഖ്യകൾ തിരഞ്ഞെടുക്കുക</string>
+    <string name="number_row_hints">നമ്പർ വരിയിൽ സൂചനകൾ കാണിക്കുക</string>
+    <string name="save_subtype_per_app">ഓരോ ആപ്പിനും ഭാഷ ഓർമ്മിക്കുക</string>
+    <string name="popup_order_and_hint_source">പോപ്പപ്പ് കീ ക്രമവും സൂചന ഉറവിടവും</string>
+    <string name="hint_source">സൂചന ഉറവിടം തിരഞ്ഞെടുക്കുക</string>
+    <string name="popup_order">പോപ്പപ്പ് കീ ക്രമം തിരഞ്ഞെടുക്കുക</string>
+    <string name="show_tld_popup_keys">TLD പോപ്പപ്പ് കീകൾ കാണിക്കുക</string>
+    <string name="show_tld_popup_keys_summary">URL-കളും ഇമെയിൽ വിലാസങ്ങളും ടൈപ്പ് ചെയ്യുമ്പോൾ പീരിയഡ് കീ പോപ്പപ്പുകൾ ടോപ്പ് ലെവൽ ഡൊമെയ്നുകൾ ഉപയോഗിച്ച് മാറ്റിസ്ഥാപിക്കുക</string>
+    <string name="popup_keys_number">നമ്പർ വരി</string>
+    <string name="popup_keys_language">@string/subtype_locale</string>
+    <string name="popup_keys_language_priority">ഭാഷ (മുൻഗണന)</string>
+    <string name="popup_keys_layout">ലേഔട്ട്</string>
+    <string name="popup_keys_symbols">ചിഹ്നങ്ങൾ</string>
+    <string name="toolbar_mode">ടൂൾബാർ മോഡ്</string>
+    <string name="toolbar_mode_expandable">ടൂൾബാർ കീകളും നിർദ്ദേശങ്ങളും</string>
+    <string name="toolbar_mode_toolbar_keys">ടൂൾബാർ കീകൾ മാത്രം</string>
+    <string name="toolbar_mode_suggestion_strip">നിർദ്ദേശങ്ങൾ മാത്രം</string>
+    <string name="toolbar_mode_hidden">മറഞ്ഞിരിക്കുന്നു</string>
+    <string name="toolbar_hiding_global">ക്ലിപ്പ്ബോർഡ്, ഇമോജി ടൂൾബാറുകളും മറയ്ക്കുക</string>
+    <string name="toolbar_keys">ടൂൾബാർ കീകൾ തിരഞ്ഞെടുക്കുക</string>
+    <string name="paste">@android:string/paste</string>
+    <string name="copy">@android:string/copy</string>
+    <string name="cut">@android:string/cut</string>
+    <string name="clipboard">ക്ലിപ്പ്ബോർഡ്</string>
+    <string name="clear_clipboard">ക്ലിപ്പ്ബോർഡ് മായ്ക്കുക</string>
+    <string name="clipboard_search">ക്ലിപ്പ്ബോർഡ് തിരയൽ</string>
+    <string name="download">ഡൗൺലോഡ്</string>
+    <string name="downloading">ഡൗൺലോഡുചെയ്യുന്നു…</string>
+    <string name="download_failed">ഡൗൺലോഡ് പരാജയപ്പെട്ടു</string>
+    <string name="installed">ഇൻസ്റ്റാൾ ചെയ്തു</string>
+    <string name="voice">വോയ്സ് ഇൻപുട്ട്</string>
+    <string name="numpad">@string/layout_numpad</string>
+    <string name="select_all">@android:string/selectAll</string>
+    <string name="select_word">വാക്ക് തിരഞ്ഞെടുക്കുക</string>
+    <string name="one_handed">ഒറ്റക്കൈ മോഡ്</string>
+    <string name="floating">ഫ്ലോട്ട്</string>
+    <string name="split">വിഭജിത കീബോർഡ്</string>
+    <string name="full_left">പൂർണ്ണ ഇടത്</string>
+    <string name="full_right">പൂർണ്ണ വലത്</string>
+    <string name="page_start">പേജ് ആരംഭം</string>
+    <string name="page_end">പേജ് അവസാനം</string>
+    <string name="left">ഇടത്</string>
+    <string name="right">വലത്</string>
+    <string name="up">മുകളിലേക്ക്</string>
+    <string name="down">താഴേക്ക്</string>
+    <string name="word_left">വാക്ക് ഇടത്</string>
+    <string name="word_right">വാക്ക് വലത്</string>
+    <string name="page_up">പേജ് മുകളിലേക്ക്</string>
+    <string name="page_down">പേജ് താഴേക്ക്</string>
+    <string name="close_history">ക്ലിപ്പ്ബോർഡ് ചരിത്രം അടയ്ക്കുക</string>
+    <string name="emoji">ഇമോജി</string>
+    <string name="proofread">പ്രൂഫ് റീഡ്</string>
+    <string name="proofread_loading">പ്രൂഫ് റീഡിംഗ്…</string>
+    <string name="proofread_success">ടെക്സ്റ്റ് പ്രൂഫ് റീഡ് ചെയ്തു</string>
+    <string name="proofread_error">പ്രൂഫ് റീഡിംഗ് പരാജയപ്പെട്ടു: %s</string>
+    <string name="proofread_no_text">പ്രൂഫ് റീഡ് ചെയ്യാൻ ടെക്സ്റ്റ് ഇല്ല</string>
+    <string name="proofread_no_api_key">Gemini API കീ സജ്ജമാക്കിയിട്ടില്ല. ക്രമീകരണങ്ങൾ → AI സംയോജനം എന്നതിലേക്ക് പോകുക.</string>
+    <string name="gemini_api_key_title">Gemini API കീ</string>
+    <string name="gemini_api_key_summary">പ്രൂഫ് റീഡിംഗിനായി നിങ്ങളുടെ Google Gemini API കീ നൽകുക</string>
+    <string name="gemini_api_key_hint">API കീ നൽകുക</string>
+    <string name="get_api_key">API കീ നേടുക</string>
+    <string name="gemini_model_title">Gemini മോഡൽ</string>
+    <string name="gemini_model_summary">പ്രൂഫ് റീഡിംഗിനായി AI മോഡൽ തിരഞ്ഞെടുക്കുക</string>
+    <string name="gemini_test_api_key">API കീ പരിശോധിക്കുക</string>
+    <string name="gemini_api_key_valid">API കീ സാധുവാണ്!</string>
+    <string name="gemini_api_key_invalid">API കീ പരിശോധന പരാജയപ്പെട്ടു: %s</string>
+    <string name="gemini_testing_api_key">API കീ പരിശോധിക്കുന്നു…</string>
+    <string name="disable_network_title">എല്ലാ നെറ്റ്വർക്ക് ആക്സസ്സും പ്രവർത്തനരഹിതമാക്കുക</string>
+    <string name="disable_network_summary">ആന്തരിക ലോക്ക്: ഈ ആപ്പിൽ നിന്നുള്ള എല്ലാ നെറ്റ്വർക്ക് അഭ്യർത്ഥനകളും തടയുന്നു. അനുമതി പൂർണ്ണമായും റദ്ദാക്കാൻ, സിസ്റ്റം ആപ്പ് വിവര ക്രമീകരണങ്ങൾ ഉപയോഗിക്കുക.</string>
+    <string name="open_app_info">സിസ്റ്റം ആപ്പ് വിവരം തുറക്കുക</string>
+    <string name="open_app_info_summary">Android ക്രമീകരണങ്ങളിൽ അനുമതികളും ബാറ്ററി ഉപയോഗവും നിയന്ത്രിക്കുക</string>
+    <string name="gemini_network_disabled">LeanType ക്രമീകരണങ്ങളിൽ നെറ്റ്വർക്ക് ആക്സസ് പ്രവർത്തനരഹിതമാക്കിയിരിക്കുന്നു</string>
+    <string name="ai_provider_title">AI ദാതാവ്</string>
+    <string name="ai_provider_summary">പ്രൂഫ് റീഡിംഗിനായി AI സേവനം തിരഞ്ഞെടുക്കുക</string>
+    <string name="ai_provider_gemini">Google Gemini</string>
+    <string name="split_toolbar">ടൂൾബാർ വിഭജിക്കുക</string>
+    <string name="split_toolbar_summary">നിർദ്ദേശങ്ങൾ ടൂൾബാറിൽ നിന്ന് വേർതിരിക്കുക</string>
+    <string name="auto_span_toolbar_keys">ടൂൾബാർ കീകൾ ഓട്ടോ-സ്പാൻ ചെയ്യുക</string>
+    <string name="auto_span_toolbar_keys_summary">ലഭ്യമായ ശൂന്യ ഇടം നികത്താൻ ടൂൾബാർ കീകൾ വികസിപ്പിക്കുക</string>
+    <string name="show_download_button_in_toolbar">ടൂൾബാറിൽ ഡൗൺലോഡ് ബട്ടൺ കാണിക്കുക</string>
+    <string name="show_download_button_in_toolbar_summary">പ്രധാന നിഘണ്ടു ഇല്ലാത്തപ്പോൾ നിർദ്ദേശ സ്ട്രിപ്പിൽ നിഘണ്ടു ഡൗൺലോഡ് ഐക്കൺ കാണിക്കുക</string>
+    <string name="ai_provider_huggingface">Groq</string>
+    <string name="ai_provider_openai">HF/OpenAI-അനുയോജ്യം</string>
+    <string name="huggingface_token_title">API ടോക്കൺ</string>
+    <string name="huggingface_token_summary">നിങ്ങളുടെ HuggingFace അല്ലെങ്കിൽ OpenAI-അനുയോജ്യ API കീ നൽകുക</string>
+    <string name="groq_token_title">API ടോക്കൺ</string>
+    <string name="groq_token_summary">നിങ്ങളുടെ Groq API കീ നൽകുക</string>
+    <string name="groq_token_hint">API കീ നൽകുക</string>
+    <string name="huggingface_token_hint">API കീ നൽകുക</string>
+    <string name="get_groq_key">Groq കീ നേടുക</string>
+    <string name="get_huggingface_key">API ടോക്കൺ നേടുക</string>
+    <string name="huggingface_no_token">API ടോക്കൺ സജ്ജമാക്കിയിട്ടില്ല. ക്രമീകരണങ്ങൾ → AI സംയോജനം എന്നതിലേക്ക് പോകുക.</string>
+    <string name="huggingface_model_title">മോഡൽ</string>
+    <string name="huggingface_model_summary">Groq മോഡൽ തിരഞ്ഞെടുക്കുക</string>
+    <string name="huggingface_model_hint">മോഡൽ-പേര്</string>
+    <string name="huggingface_no_model">ഒരു മോഡലും കോൺഫിഗർ ചെയ്തിട്ടില്ല. ക്രമീകരണങ്ങൾ → AI സംയോജനം എന്നതിലേക്ക് പോകുക.</string>
+    <string name="huggingface_endpoint_title">API എൻഡ്പോയിന്റ്</string>
+    <string name="huggingface_endpoint_summary">API എൻഡ്പോയിന്റ് URL</string>
+    <string name="huggingface_endpoint_hint">https://api.groq.com/openai/v1/chat/completions</string>
+    <string name="insecure_connection_blocked">അസുരക്ഷിത HTTP കണക്ഷൻ തടഞ്ഞു. AI ക്രമീകരണങ്ങളിൽ \'അസുരക്ഷിത കണക്ഷനുകൾ അനുവദിക്കുക\' പ്രവർത്തനക്ഷമമാക്കുക.</string>
+    <string name="ai_allow_insecure_connections_title">അസുരക്ഷിത കണക്ഷനുകൾ അനുവദിക്കുക</string>
+    <string name="ai_allow_insecure_connections_summary">HTTP കണക്ഷനുകൾ അനുവദിക്കുകയും SSL സർട്ടിഫിക്കറ്റ് പിശകുകൾ അവഗണിക്കുകയും ചെയ്യുക. മുന്നറിയിപ്പ്: ഇൻപുട്ട് പ്രാദേശിക നെറ്റ്വർക്ക് ചോർത്തലിന് വിധേയമാക്കുന്നു.</string>
+    <string name="backup_category_layouts">ലേഔട്ടുകൾ</string>
+    <string name="backup_category_theme">തീമും ഇഷ്ടാനുസൃത പശ്ചാത്തലങ്ങളും</string>
+    <string name="backup_category_dictionary">നിഘണ്ടുക്കളും ടൈപ്പിംഗ് ചരിത്രവും</string>
+    <string name="backup_category_clipboard">ക്ലിപ്പ്ബോർഡ് ചരിത്രം</string>
+    <string name="backup_category_general">പൊതു ക്രമീകരണങ്ങൾ</string>
+    <string name="backup_select_items">ഉൾപ്പെടുത്തേണ്ട ഇനങ്ങൾ തിരഞ്ഞെടുക്കുക:</string>
+    <string name="config_gemini_models_endpoint">https://generativelanguage.googleapis.com/v1beta/models?key=%1$s</string>
+    <string name="config_groq_models_endpoint">https://api.groq.com/openai/v1/models</string>
+    <string name="config_default_hf_endpoint">https://api.openai.com/v1/chat/completions</string>
+    <string name="config_groq_chat_endpoint">https://api.groq.com/openai/v1/chat/completions</string>
+    <string name="offline_keep_model_loaded_title">മോഡൽ ലോഡുചെയ്ത് സൂക്ഷിക്കുക</string>
+    <string name="offline_keep_model_loaded_summary">വീണ്ടും ലോഡുചെയ്യുന്നതിലെ കാലതാമസം ഒഴിവാക്കാൻ ഓഫ്ലൈൻ AI മോഡൽ മെമ്മറിയിൽ സൂക്ഷിക്കുക (കൂടുതൽ RAM ഉപയോഗിക്കുന്നു)</string>
+    <string name="translate">വിവർത്തനം ചെയ്യുക</string>
+    <string name="translate_loading">വിവർത്തനം ചെയ്യുന്നു…</string>
+    <string name="translate_success">ടെക്സ്റ്റ് വിവർത്തനം ചെയ്തു</string>
+    <string name="translate_error">വിവർത്തനം പരാജയപ്പെട്ടു: %s</string>
+    <string name="translate_no_text">വിവർത്തനം ചെയ്യാൻ ടെക്സ്റ്റ് ഇല്ല</string>
+    <string name="translate_target_language_title">വിവർത്തന ലക്ഷ്യ ഭാഷ</string>
+    <string name="translate_target_language_summary">ഏത് ഭാഷയിലേക്ക് വിവർത്തനം ചെയ്യണമെന്ന് തിരഞ്ഞെടുക്കുക</string>
+    <string name="translate_model_title">വിവർത്തന മോഡൽ</string>
+    <string name="translate_model_summary">വിവർത്തനത്തിനായി AI മോഡൽ തിരഞ്ഞെടുക്കുക. പ്രൂഫ് റീഡിംഗ് മോഡൽ ഉപയോഗിക്കാൻ ശൂന്യമായി ഇടുക.</string>
+    <string name="translation_engine_title">വിവർത്തന എഞ്ചിൻ</string>
+    <string name="translation_engine_summary">വിവർത്തനത്തിനുള്ള ബാക്കെൻഡ് തിരഞ്ഞെടുക്കുക (പ്ലഗിൻ അല്ലെങ്കിൽ AI)</string>
+    <string-array name="translate_language_names">
+  <item>ഇംഗ്ലീഷ്</item>
+  <item>സ്പാനിഷ്</item>
+  <item>ഫ്രഞ്ച്</item>
+  <item>ജർമ്മൻ</item>
+  <item>ഇറ്റാലിയൻ</item>
+  <item>പോർച്ചുഗീസ്</item>
+  <item>ചൈനീസ് (ലളിതം)</item>
+  <item>ചൈനീസ് (പാരമ്പര്യം)</item>
+  <item>ജാപ്പനീസ്</item>
+  <item>കൊറിയൻ</item>
+  <item>അറബിക്</item>
+  <item>റഷ്യൻ</item>
+  <item>ഹിന്ദി</item>
+  <item>ബംഗാളി</item>
+  <item>ഇന്തോനേഷ്യൻ</item>
+  <item>ഡച്ച്</item>
+  <item>ടർക്കിഷ്</item>
+  <item>പോളിഷ്</item>
+  <item>ഉക്രേനിയൻ</item>
+  <item>സ്വീഡിഷ്</item>
+  <item>ഡാനിഷ്</item>
+  <item>നോർവീജിയൻ</item>
+  <item>ഫിന്നിഷ്</item>
+  <item>ഗ്രീക്ക്</item>
+  <item>ഹീബ്രു</item>
+  <item>തായ്</item>
+  <item>വിയറ്റ്നാമീസ്</item>
+  <item>തമിഴ്</item>
+  <item>തെലുങ്ക്</item>
+  <item>മറാത്തി</item>
+  <item>ഗുജറാത്തി</item>
+  <item>കന്നഡ</item>
+  <item>മലയാളം</item>
+  <item>ഉർദു</item>
+  <item>പേർഷ്യൻ (ഫാർസി)</item>
+  <item>സ്വാഹിലി</item>
+  <item>റൊമാനിയൻ</item>
+  <item>ചെക്ക്</item>
+  <item>ഹംഗേറിയൻ</item>
+  <item>ഫിലിപ്പിനോ (ടാഗലോഗ്)</item>
+  <item>മലായ്</item>
+  <item>സെർബിയൻ</item>
+  <item>ക്രൊയേഷ്യൻ</item>
+  <item>ബൾഗേറിയൻ</item>
+  <item>സ്ലോവാക്</item>
+  <item>സ്ലൊവേനിയൻ</item>
+  <item>ലിത്വാനിയൻ</item>
+  <item>ലാത്വിയൻ</item>
+  <item>എസ്റ്റോണിയൻ</item>
+  <item>കറ്റാലൻ</item>
+  <item>ബാസ്ക്</item>
+</string-array>
+    <string-array name="translate_language_codes">
+  <item>ഇംഗ്ലീഷ്</item>
+  <item>സ്പാനിഷ്</item>
+  <item>ഫ്രഞ്ച്</item>
+  <item>ജർമ്മൻ</item>
+  <item>ഇറ്റാലിയൻ</item>
+  <item>പോർച്ചുഗീസ്</item>
+  <item>ചൈനീസ് (ലളിതം)</item>
+  <item>ചൈനീസ് (പാരമ്പര്യം)</item>
+  <item>ജാപ്പനീസ്</item>
+  <item>കൊറിയൻ</item>
+  <item>അറബിക്</item>
+  <item>റഷ്യൻ</item>
+  <item>ഹിന്ദി</item>
+  <item>ബംഗാളി</item>
+  <item>ഇന്തോനേഷ്യൻ</item>
+  <item>ഡച്ച്</item>
+  <item>ടർക്കിഷ്</item>
+  <item>പോളിഷ്</item>
+  <item>ഉക്രേനിയൻ</item>
+  <item>സ്വീഡിഷ്</item>
+  <item>ഡാനിഷ്</item>
+  <item>നോർവീജിയൻ</item>
+  <item>ഫിന്നിഷ്</item>
+  <item>ഗ്രീക്ക്</item>
+  <item>ഹീബ്രു</item>
+  <item>തായ്</item>
+  <item>വിയറ്റ്നാമീസ്</item>
+  <item>തമിഴ്</item>
+  <item>തെലുങ്ക്</item>
+  <item>മറാത്തി</item>
+  <item>ഗുജറാത്തി</item>
+  <item>കന്നഡ</item>
+  <item>മലയാളം</item>
+  <item>ഉർദു</item>
+  <item>പേർഷ്യൻ (ഫാർസി)</item>
+  <item>സ്വാഹിലി</item>
+  <item>റൊമാനിയൻ</item>
+  <item>ചെക്ക്</item>
+  <item>ഹംഗേറിയൻ</item>
+  <item>ഫിലിപ്പിനോ (ടാഗലോഗ്)</item>
+  <item>മലായ്</item>
+  <item>സെർബിയൻ</item>
+  <item>ക്രൊയേഷ്യൻ</item>
+  <item>ബൾഗേറിയൻ</item>
+  <item>സ്ലോവാക്</item>
+  <item>സ്ലൊവേനിയൻ</item>
+  <item>ലിത്വാനിയൻ</item>
+  <item>ലാത്വിയൻ</item>
+  <item>എസ്റ്റോണിയൻ</item>
+  <item>കറ്റാലൻ</item>
+  <item>ബാസ്ക്</item>
+</string-array>
+    <string name="clipboard_toolbar_keys">ക്ലിപ്പ്ബോർഡ് ടൂൾബാർ കീകൾ തിരഞ്ഞെടുക്കുക</string>
+    <string name="pinned_toolbar_keys">പിൻ ചെയ്ത ടൂൾബാർ കീകൾ തിരഞ്ഞെടുക്കുക</string>
+    <string name="quick_pin_toolbar_keys">ദീർഘമർത്തുമ്പോൾ ടൂൾബാർ കീ പിൻ ചെയ്യുക</string>
+    <string name="quick_pin_toolbar_keys_summary">ഇത് പിൻ ചെയ്യാത്ത ടൂൾബാർ കീകളുടെ മറ്റ് ദീർഘമർത്തൽ പ്രവർത്തനങ്ങൾ പ്രവർത്തനരഹിതമാക്കും</string>
+    <string name="toolbar_long_press_hint">ദീർഘമർത്തൽ സൂചന ഡോട്ടുകൾ കാണിക്കുക</string>
+    <string name="toolbar_long_press_hint_summary">ദീർഘമർത്തൽ പ്രവർത്തനമുള്ള ടൂൾബാർ കീകളിൽ ഡോട്ടുകൾ കാണിക്കുക</string>
+    <string name="show_popup_hints">ഫങ്ഷണൽ സൂചനകൾ കാണിക്കുക</string>
+    <string name="show_popup_hints_summary">ഒരു കീ ദീർഘമർത്തുന്നത് അധിക പ്രവർത്തനം ട്രിഗർ ചെയ്യുകയാണെങ്കിൽ സൂചനകൾ കാണിക്കുക</string>
+    <string name="remove_redundant_popups">അനാവശ്യ പോപ്പപ്പുകൾ നീക്കം ചെയ്യുക</string>
+    <string name="remove_redundant_popups_summary">അടിസ്ഥാന ലേഔട്ടിൽ ഇതിനകം ഉള്ള പോപ്പപ്പ് കീകൾ അടിച്ചമർത്തുക</string>
+    <string name="prefs_long_press_symbol_for_numpad">നമ്പാഡിനായി ചിഹ്ന കീ ദീർഘമർത്തുക</string>
+    <string name="prefs_narrow_key_gaps">ഇടുങ്ങിയ കീ വിടവുകൾ</string>
+    <string name="prefs_narrow_key_gaps_level">ഇടുക്ക നില</string>
+    <string name="narrowness_level_low">ഏറ്റവും ചെറുത്</string>
+    <string name="narrowness_level_medium_low">ചെറുത്</string>
+    <string name="narrowness_level_medium">ഇടത്തരം</string>
+    <string name="narrowness_level_medium_high">വലുത്</string>
+    <string name="narrowness_level_high">ഏറ്റവും വലുത്</string>
+    <string name="prefs_bottom_padding_scale">താഴത്തെ പാഡിംഗ് സ്കെയിൽ</string>
+    <string name="prefs_side_padding_scale">വശത്തെ പാഡിംഗ് സ്കെയിൽ</string>
+    <string name="prefs_font_scale">കീബോർഡ് ഫോണ്ട് സ്കെയിൽ</string>
+    <string name="prefs_emoji_font_scale">ഇമോജി കാഴ്ച ഫോണ്ട് സ്കെയിൽ</string>
+    <string name="prefs_emoji_key_fit">ഫോണ്ട് വലുപ്പത്തിനനുസരിച്ച് ഇമോജി കീ വലുപ്പം സ്കെയിൽ ചെയ്യുക</string>
+    <string name="prefs_emoji_skin_tone">സ്ഥിരസ്ഥിതി ഇമോജി സ്കിൻ ടോൺ</string>
+    <string name="prefs_emoji_skin_tone_neutral">ന്യൂട്രൽ</string>
+    <string name="prefs_space_bar_text">സ്പേസ് ബാറിൽ ഇഷ്ടാനുസൃത വാചകം</string>
+    <string name="custom_font">ഫയലിൽ നിന്ന് ഇഷ്ടാനുസൃത ഫോണ്ട് സജ്ജമാക്കുക</string>
+    <string name="custom_emoji_font">ഫയലിൽ നിന്ന് ഇഷ്ടാനുസൃത ഇമോജി ഫോണ്ട് സജ്ജമാക്കുക</string>
+    <string name="prefs_use_system_emoji">സിസ്റ്റം ഇമോജി ഫോണ്ട് ഉപയോഗിക്കുക</string>
+    <string name="prefs_use_system_emoji_summary">ക്രമീകരണങ്ങളിലും തിരയലിലും സിസ്റ്റം ഇമോജി ഫോണ്ട് ഉപയോഗിക്കുക (ആപ്പ് പുനരാരംഭിക്കുന്നു)</string>
+    <string name="subtype_mns">മാൻസി</string>
+    <string name="subtype_xdq">കൈറ്റാഗ്</string>
+    <string name="subtype_dag">ഡാഗ്ബാനി</string>
+    <string name="subtype_st">സെസോത്തോ</string>
+    <string name="subtype_dru">ഡാർഗ്വ (ഉറാഖി)</string>
+    <string name="subtype_mhr">മാരി (കിഴക്കൻ)</string>
+    <string name="subtype_with_layout_generic">%1$s (%2$s)</string>
+    <string name="subtype_generic_extended">%s (വിപുലീകരിച്ചത്)</string>
+    <string name="subtype_probhat_bn_BD">%s (പ്രോഭാട്ട്)</string>
+    <string name="subtype_baishakhi_bn_IN">%s (ബൈശാഖി)</string>
+    <string name="subtype_khipro_bn">%s (ഖിപ്രോ)</string>
+    <string name="subtype_generic_phonetic">%s (ഫൊണറ്റിക്)</string>
+    <string name="subtype_generic_sebeolsik_390">%s (സെബിയോൾസിക് 390)</string>
+    <string name="subtype_generic_sebeolsik_final">%s (സെബിയോൾസിക് ഫൈനൽ)</string>
+    <string name="subtype_generic_student">%s (വിദ്യാർത്ഥി)</string>
+    <string name="load">ലോഡ്</string>
+    <string name="button_title_add_custom_layout">ഇഷ്ടാനുസൃത ലേഔട്ട് ചേർക്കുക</string>
+    <string name="message_add_custom_layout">അനുയോജ്യമായ ഫോർമാറ്റിലുള്ള ഒരു ഫയൽ തിരഞ്ഞെടുക്കുക. ഫോർമാറ്റുകളെക്കുറിച്ചുള്ള വിവരങ്ങൾ %s ൽ ലഭ്യമാണ്.</string>
+    <string name="button_load_custom">ഫയൽ ലോഡ് ചെയ്യുക</string>
+    <string name="button_save_file">ഫയലിലേക്ക് സംരക്ഷിക്കുക</string>
+    <string name="copy_to_clipboard">ക്ലിപ്പ്ബോർഡിലേക്ക് പകർത്തുക</string>
+    <string name="file_read_error">ഫയൽ വായിക്കാൻ കഴിയുന്നില്ല</string>
+    <string name="delete_layout">ഇഷ്ടാനുസൃത ലേഔട്ട് %s തീർച്ചയായും ഇല്ലാതാക്കണോ?</string>
+    <string name="layout_in_use">മുന്നറിയിപ്പ്: ലേഔട്ട് നിലവിൽ ഉപയോഗത്തിലാണ്</string>
+    <string name="add_custom_layout">ഇഷ്ടാനുസൃത ലേഔട്ട് ചേർക്കുക</string>
+    <string name="layout_error">ലേഔട്ട് പിശക്: %s</string>
+    <string name="edit_layout">റോ ലേഔട്ട് എഡിറ്റുചെയ്യാൻ ടാപ്പുചെയ്യുക</string>
+    <string name="settings_screen_secondary_layouts">ദ്വിതീയ ലേഔട്ടുകൾ</string>
+    <string name="layout_custom1">ഇഷ്ടാനുസൃത ലേഔട്ട് 1</string>
+    <string name="layout_custom2">ഇഷ്ടാനുസൃത ലേഔട്ട് 2</string>
+    <string name="layout_custom3">ഇഷ്ടാനുസൃത ലേഔട്ട് 3</string>
+    <string name="layout_custom4">ഇഷ്ടാനുസൃത ലേഔട്ട് 4</string>
+    <string name="layout_custom5">ഇഷ്ടാനുസൃത ലേഔട്ട് 5</string>
+    <string name="layout_functional_keys">ഫങ്ഷണൽ കീകൾ</string>
+    <string name="layout_functional_keys_tablet">ഫങ്ഷണൽ കീകൾ (വലിയ സ്ക്രീൻ)</string>
+    <string name="layout_functional_keys_khipro">ഫങ്ഷണൽ കീകൾ (ഖിപ്രോ)</string>
+    <string name="layout_functional_keys_symbols">ഫങ്ഷണൽ കീകൾ (ചിഹ്നങ്ങൾ)</string>
+    <string name="layout_functional_keys_symbols_shifted">ഫങ്ഷണൽ കീകൾ (കൂടുതൽ ചിഹ്നങ്ങൾ)</string>
+    <string name="layout_symbols">ചിഹ്നങ്ങൾ</string>
+    <string name="layout_symbols_arabic">ചിഹ്നങ്ങൾ (അറബിക്)</string>
+    <string name="layout_symbols_shifted">കൂടുതൽ ചിഹ്നങ്ങൾ</string>
+    <string name="layout_phone">ഫോൺ</string>
+    <string name="layout_phone_symbols">ഫോൺ ചിഹ്നങ്ങൾ</string>
+    <string name="layout_number">അക്കങ്ങൾ</string>
+    <string name="layout_numpad">നമ്പാഡ്</string>
+    <string name="layout_numpad_landscape">നമ്പാഡ് (ലാൻഡ്സ്കേപ്പ്)</string>
+    <string name="layout_number_row">നമ്പർ വരി</string>
+    <string name="layout_number_row_basic">നമ്പർ വരി (അടിസ്ഥാനം)</string>
+    <string name="layout_emoji_bottom_row">ഇമോജി താഴത്തെ വരി</string>
+    <string name="layout_emoji_bottom_row_with_action">ആക്ഷൻ കീയോടുകൂടിയ ഇമോജി താഴത്തെ വരി</string>
+    <string name="layout_clip_bottom_row">ക്ലിപ്പ്ബോർഡ് താഴത്തെ വരി</string>
+    <string name="layout_clip_bottom_row_with_action">ആക്ഷൻ കീയോടുകൂടിയ ക്ലിപ്പ്ബോർഡ് താഴത്തെ വരി</string>
+    <string name="customize_background_image">പശ്ചാത്തല ചിത്രം സജ്ജമാക്കുക</string>
+    <string name="customize_background_image_landscape">പശ്ചാത്തല ചിത്രം സജ്ജമാക്കുക (ലാൻഡ്സ്കേപ്പ്)</string>
+    <string name="summary_customize_background_image_landscape">സജ്ജമാക്കിയില്ലെങ്കിൽ, പോർട്രെയിറ്റ് ചിത്രം ഉപയോഗിക്കും</string>
+    <string name="customize_currencies">കറൻസികൾ ഇഷ്ടാനുസൃതമാക്കുക</string>
+    <string name="customize_currencies_detail">പ്രധാനവും 6 വരെ ദ്വിതീയ കറൻസി ചിഹ്നങ്ങളും സ്പേസ് ഉപയോഗിച്ച് വേർതിരിച്ച് സജ്ജമാക്കുക</string>
+    <string name="switch_keyboard_after">ഇതിനുശേഷം പ്രധാന കീബോർഡിലേക്ക് മാറുക…</string>
+    <string name="after_emoji">ഇമോജി കാഴ്ചയിൽ ഇമോജി തിരഞ്ഞെടുക്കുമ്പോൾ</string>
+    <string name="after_clip">ക്ലിപ്പ്ബോർഡ് ചരിത്ര എൻട്രി തിരഞ്ഞെടുക്കുമ്പോൾ</string>
+    <string name="after_symbol_and_space">ചിഹ്ന കാഴ്ചയിൽ മറ്റ് കീകൾക്ക് ശേഷം എന്റർ അല്ലെങ്കിൽ സ്പേസ് അമർത്തുമ്പോൾ</string>
+    <string name="after_numpad_and_space">നമ്പാഡിൽ മറ്റ് കീകൾക്ക് ശേഷം എന്റർ അല്ലെങ്കിൽ സ്പേസ് അമർത്തുമ്പോൾ</string>
+    <string name="day_or_night_image">പകൽ അല്ലെങ്കിൽ രാത്രി മോഡിനായി ചിത്രം സജ്ജമാക്കണോ?</string>
+    <string name="day_or_night_day">പകൽ</string>
+    <string name="day_or_night_night">രാത്രി</string>
+    <string name="prefs_keypress_vibration_amplitude_settings">കീ അമർത്തൽ വൈബ്രേഷൻ ശക്തി</string>
+    <string name="prefs_key_emoji_max_sdk">ഇമോജി പതിപ്പ് അസാധുവാക്കുക</string>
+    <string name="setup_step3_action">കീബോർഡ് കോൺഫിഗർ ചെയ്യുക</string>
+    <string name="dictionary_settings_category">നിഘണ്ടുക്കൾ</string>
+    <string name="internal_dictionary_summary">ആന്തരിക പ്രധാന നിഘണ്ടു</string>
+    <string name="add_new_dictionary_title">ഫയലിൽ നിന്ന് നിഘണ്ടു ചേർക്കുക</string>
+    <string name="button_select_language">ഭാഷ തിരഞ്ഞെടുക്കുക</string>
+    <string name="replace_dictionary_message">ഉപയോക്താവ് ചേർത്ത \"%1$s\" നിഘണ്ടു ശരിക്കും മാറ്റിസ്ഥാപിക്കണോ?\n
+നിലവിലെ നിഘണ്ടു:
+%2$s\n
+പുതിയ നിഘണ്ടു:
+%3$s</string>
+    <string name="replace_dictionary">നിഘണ്ടു മാറ്റിസ്ഥാപിക്കുക</string>
+    <string name="remove_dictionary_message">ഉപയോക്താവ് ചേർത്ത \"%s\" നിഘണ്ടു ശരിക്കും നീക്കംചെയ്യണോ?</string>
+    <string name="no_dictionary_message">ഒരു നിഘണ്ടു ഇല്ലാതെ, നിങ്ങൾ മുമ്പ് നൽകിയ വാചകത്തിന് മാത്രമേ നിർദ്ദേശങ്ങൾ ലഭിക്കൂ.<br />
+        നിങ്ങൾക്ക് നിഘണ്ടുക്കൾ %1$s ഡൗൺലോഡ് ചെയ്യാം.</string>
+    <string name="no_dictionary_dont_show_again_button">ഇനി കാണിക്കരുത്</string>
+    <string name="add_dictionary">ചേർക്കാൻ ഒരു നിഘണ്ടു തിരഞ്ഞെടുക്കുക. .dict ഫോർമാറ്റിലുള്ള നിഘണ്ടുക്കൾ %s ഡൗൺലോഡ് ചെയ്യാം.</string>
+    <string name="dictionary_link_text">ഇവിടെ</string>
+    <string name="available_dictionary_experimental">%s (പരീക്ഷണാത്മകം)</string>
+    <string name="dictionary_file_error">പിശക്: തിരഞ്ഞെടുത്ത ഫയൽ സാധുവായ നിഘണ്ടു ഫയലല്ല</string>
+    <string name="dictionary_file_wrong_script">പിശക്: ഈ കീബോർഡുമായി പൊരുത്തപ്പെടാത്ത ലിപി</string>
+    <string name="dictionary_load_error">നിഘണ്ടു ഫയൽ ലോഡുചെയ്യുന്നതിൽ പിശക്</string>
+    <string name="user_dict_settings_add_weight_value">വെയിറ്റ്:</string>
+    <string name="user_dict_word_already_present">ഈ വാക്ക് ഇതിനകം %s ഉപയോക്തൃ നിഘണ്ടുവിൽ ഉണ്ട്. ദയവായി മറ്റൊന്ന് ടൈപ്പ് ചെയ്യുക.</string>
+    <string name="user_dict_add_word_button">ഒരു വാക്ക് ചേർക്കുക</string>
+    <string name="user_dict_clear_all_confirmation">ഈ നിഘണ്ടുവിൽ നിന്ന് എല്ലാ വാക്കുകളും മായ്ക്കണമെന്ന് ഉറപ്പാണോ?</string>
+    <string name="theme_style">ശൈലി</string>
+    <string name="icon_style">ഐക്കൺ ശൈലി</string>
+    <string name="style_name_Rounded">റൗണ്ടഡ്</string>
+    <string name="theme_colors">നിറങ്ങൾ</string>
+    <string name="theme_colors_night">നിറങ്ങൾ (രാത്രി)</string>
+    <string name="theme_navbar">നാവിഗേഷൻ ബാർ നിറം</string>
+    <string name="theme_name_light">ലൈറ്റ്</string>
+    <string name="theme_name_holo_white">ഹോളോ വൈറ്റ്</string>
+    <string name="theme_name_dark">ഡാർക്ക്</string>
+    <string name="theme_name_darker">ഡാർക്കർ</string>
+    <string name="theme_name_black">ബ്ലാക്ക്</string>
+    <string name="theme_name_dynamic">ഡൈനാമിക് നിറങ്ങൾ</string>
+    <string name="theme_name_blue_gray">ബ്ലൂ ഗ്രേ</string>
+    <string name="theme_name_brown">ബ്രൗൺ</string>
+    <string name="theme_name_chocolate">ചോക്ലേറ്റ്</string>
+    <string name="theme_name_cloudy">ക്ലൗഡി</string>
+    <string name="theme_name_forest">ഫോറസ്റ്റ്</string>
+    <string name="theme_name_indigo">ഇൻഡിഗോ</string>
+    <string name="theme_name_mint_and_pink">മിന്റ് ആൻഡ് പിങ്ക്</string>
+    <string name="theme_name_pink">പിങ്ക്</string>
+    <string name="theme_name_sand">സാൻഡ്</string>
+    <string name="theme_name_violette">വയലെറ്റ്</string>
+    <string name="theme_name_user">ഉപയോക്തൃ-നിർവചിതം</string>
+    <string name="theme_name_leanbitlab_light">LeanBitLab Light</string>
+    <string name="theme_name_leanbitlab_dark">LeanBitLab Dark</string>
+    <string name="auto_user_color">നിറം സ്വയമേവ തിരഞ്ഞെടുക്കുക</string>
+    <string name="main_colors">പ്രധാന നിറങ്ങൾ മാത്രം കാണിക്കുക</string>
+    <string name="more_colors">കൂടുതൽ നിറങ്ങൾ കാണിക്കുക</string>
+    <string name="all_colors">എല്ലാ നിറങ്ങളും കാണിക്കുക</string>
+    <string name="all_colors_warning">ഈ ക്രമീകരണം ആന്തരികമായി ഉപയോഗിക്കുന്ന എല്ലാ നിറങ്ങളും വെളിപ്പെടുത്തുന്നു. നിറങ്ങളുടെ പട്ടിക എപ്പോൾ വേണമെങ്കിലും മാറാം. സ്ഥിരസ്ഥിതി സാധാരണ നിറങ്ങളിൽ നിന്ന് ഉരുത്തിരിഞ്ഞതാണ്, പേരുകൾ വിവർത്തനം ചെയ്യപ്പെടുകയില്ല.</string>
+    <string name="select_color_background">കീബോർഡ് പശ്ചാത്തലം</string>
+    <string name="select_color_key">കീ ടെക്സ്റ്റ്</string>
+    <string name="select_color_key_hint">കീ സൂചന ടെക്സ്റ്റ്</string>
+    <string name="select_color_suggestion">നിർദ്ദേശ സ്ട്രിപ്പ് ടെക്സ്റ്റ്</string>
+    <string name="select_color_key_background">കീ പശ്ചാത്തലം</string>
+    <string name="select_color_functional_key_background">ഫങ്ഷണൽ കീ പശ്ചാത്തലം</string>
+    <string name="select_color_spacebar_background">സ്പേസ് ബാർ പശ്ചാത്തലം</string>
+    <string name="select_color_spacebar_text">സ്പേസ് ബാർ ടെക്സ്റ്റ്</string>
+    <string name="select_color_accent">ആക്സന്റ്</string>
+    <string name="select_color_gesture">ജെസ്റ്റർ ഇൻപുട്ട്</string>
+    <string name="get_colors_message">%s ൽ നിങ്ങൾക്ക് നിറങ്ങൾ കണ്ടെത്താനും പങ്കിടാനും കഴിയും.</string>
+    <string name="get_layouts_message">%s ൽ നിങ്ങൾക്ക് ലേഔട്ടുകൾ കണ്ടെത്താനും പങ്കിടാനും കഴിയും.</string>
+    <string name="discussion_section_link">ചർച്ചാ വിഭാഗം</string>
+    <string name="settings_screen_about">വിവരങ്ങൾ</string>
+    <string name="version">പതിപ്പ്</string>
+    <string name="about_github_link">GitHub-ൽ കാണുക</string>
+    <string name="about_sponsor_link">പദ്ധതി സ്പോൺസർ ചെയ്യുക</string>
+    <string name="about_sponsor_link_description">LeanType-ന്റെ വികസനത്തെ പിന്തുണയ്ക്കുക</string>
+    <string name="sponsor_dialog_title">ഈ പദ്ധതി സ്പോൺസർ ചെയ്യുക</string>
+    <string name="sponsor_dialog_message">ഈ പദ്ധതി പൂർണ്ണമായും കമ്മ്യൂണിറ്റി നയിക്കുന്നതും വികസനം നിലനിർത്താൻ സംഭാവനകളെ ആശ്രയിക്കുന്നതുമാണ്. ഈ കീബോർഡ് ഉപയോഗപ്രദമാണെന്ന് തോന്നിയാൽ, ദയവായി സ്പോൺസർ ചെയ്യുന്നത് പരിഗണിക്കുക!</string>
+    <string name="sponsor_dialog_never_show_again">ഇനി ഒരിക്കലും കാണിക്കരുത്</string>
+    <string name="sponsor_dialog_sponsor">സ്പോൺസർ</string>
+    <string name="sponsor_dialog_not_now">ഇപ്പോൾ വേണ്ട</string>
+    <string name="about_features_link">FEATURES.md-ലേക്ക് പോകുക</string>
+    <string name="about_features_link_description">പ്രധാന സവിശേഷതകളുടെയും കീബോർഡ് മാനുവലിന്റെയും പട്ടിക</string>
+    <string name="libraries_hub_title">ലൈബ്രറികൾ</string>
+    <string name="libraries_hub_summary">ജെസ്റ്റർ ടൈപ്പിംഗ് ലൈബ്രറി, നിഘണ്ടുക്കൾ, ഇമോജി ലൈബ്രറികൾ എന്നിവ നിയന്ത്രിക്കുക.</string>
+    <string name="libraries_hub_gesture_title">ജെസ്റ്റർ ടൈപ്പിംഗ് ലൈബ്രറി</string>
+    <string name="libraries_hub_dictionary_title">പ്രധാന നിഘണ്ടുക്കൾ</string>
+    <string name="libraries_hub_emoji_title">ഇമോജി ലൈബ്രറികൾ</string>
+    <string name="libraries_hub_handwriting_title">ഹാൻഡ്റൈറ്റിംഗ് ഇൻപുട്ട് പ്ലഗിൻ</string>
+    <string name="libraries_hub_dict_guide_title">നിഘണ്ടു ലോഡിംഗ് ഗൈഡ്</string>
+    <string name="libraries_hub_dict_guide_text">ഒരു പുതിയ നിഘണ്ടു ചേർക്കാൻ:\n1. നിങ്ങളുടെ ഭാഷയ്ക്കായി ഒരു .dict ഫയൽ നേടുക.\n2. \"നിഘണ്ടുക്കൾ നിയന്ത്രിക്കുക\" ടാപ്പുചെയ്യുക.\n3. ഫയൽ ഇറക്കുമതി ചെയ്യാൻ പ്ലസ് (+) ബട്ടൺ ഉപയോഗിക്കുക.</string>
+    <string name="libraries_status_active">സജീവം</string>
+    <string name="libraries_status_not_installed">ഇൻസ്റ്റാൾ ചെയ്തിട്ടില്ല</string>
+    <string name="save_log">ലോഗ് സംരക്ഷിക്കുക</string>
+    <string name="log_options_title">ലോഗ് ഓപ്ഷനുകൾ</string>
+    <string name="save_log_to_file">ഫയലിലേക്ക് സംരക്ഷിക്കുക</string>
+    <string name="clear_log">ലോഗ് മായ്ക്കുക</string>
+    <string name="share_log">ലോഗ് പങ്കിടുക</string>
+    <string name="log_cleared">ലോഗ് മായ്ച്ചു</string>
+    <string name="license">ഓപ്പൺ സോഴ്സ് ലൈസൻസ്</string>
+    <string name="gnu_gpl">GNU ജനറൽ പബ്ലിക് ലൈസൻസ് v3.0</string>
+    <string name="dialog_close">അടയ്ക്കുക</string>
+    <string name="text_tap_languages">ക്രമീകരണങ്ങൾ തുറക്കാൻ ഭാഷ ടാപ്പുചെയ്യുക</string>
+    <string name="direct_ime_switch_title">ഡയറക്റ്റ് സ്വിച്ച് ടാർഗെറ്റ് IME</string>
+    <string name="direct_ime_switch_summary">ഇഷ്ടാനുസൃത കീകോഡ് ഓപ്ഷൻ ഉപയോഗിക്കുമ്പോൾ നേരിട്ട് മാറാനുള്ള ഇൻപുട്ട് രീതി</string>
+    <string name="direct_ime_switch_none">ഒന്നുമില്ല</string>
+    <string name="app_language_title">ആപ്പ് ഭാഷ</string>
+    <string name="app_language_summary">ക്രമീകരണ സ്ക്രീനിന്റെയും കീബോർഡ് ഇന്റർഫേസിന്റെയും ഭാഷ മാറ്റുക</string>
+    <string name="app_language_system">സിസ്റ്റം സ്ഥിരസ്ഥിതി</string>
+    <string name="settings_screen_appearance">രൂപഭാവം</string>
+    <string name="settings_screen_toolbar">ടൂൾബാർ</string>
+    <string name="settings_screen_ai_integration">AI സംയോജനം</string>
+    <string name="custom_ai_keys_title">ഇഷ്ടാനുസൃത AI കീകൾ</string>
+    <string name="custom_ai_keys_summary">നിങ്ങളുടെ സ്വന്തം പ്രോംപ്റ്റുകൾ ഉപയോഗിച്ച് നമ്പറിട്ട ടൂൾബാർ കീകൾ ഇഷ്ടാനുസൃതമാക്കുക</string>
+    <string name="hidden_features_title">മറഞ്ഞിരിക്കുന്ന സവിശേഷതകളുടെ വിവരണം</string>
+    <string name="hidden_features_summary">ശ്രദ്ധിക്കപ്പെടാതെ പോയേക്കാവുന്ന സവിശേഷതകൾ കാണിക്കുക</string>
+    <string name="hidden_features_text">ഉപകരണ സംരക്ഷിത സംഭരണം</string>
+    <string name="hidden_features_message">► ദീർഘമർത്തിയാൽ പിൻ ചെയ്ത ടൂൾബാർ കീകൾ അധിക പ്രവർത്തനം നൽകുന്നു: <br />
+\n\t• ക്ലിപ്പ്ബോർഡ് ￫ ഒട്ടിക്കുക <br />
+\n\t• ഇടത്തോട്ട്/വലത്തോട്ട് നീക്കുക ￫ വാക്ക് ഇടത്തോട്ട്/വലത്തോട്ട് <br />
+\n\t• മുകളിലേക്ക്/താഴേക്ക് നീക്കുക ￫ പേജ് മുകളിലേക്ക്/താഴേക്ക് <br />
+\n\t• വാക്ക് ഇടത്തോട്ട്/വലത്തോട്ട് ￫ വരി തുടക്കം/അവസാനം <br />
+\n\t• പേജ് മുകളിലേക്ക്/താഴേക്ക് ￫ പേജ് ആരംഭം/അവസാനം <br />
+\n\t• പകർത്തുക ￫ മുറിക്കുക <br />
+\n\t• വാക്ക് തിരഞ്ഞെടുക്കുക ↔ എല്ലാം തിരഞ്ഞെടുക്കുക <br />
+\n\t• പഴയപടിയാക്കുക ↔ വീണ്ടും ചെയ്യുക <br /> <br />
+\n► നിർദ്ദേശ സ്ട്രിപ്പ് ടൂൾബാറിലെ കീകൾ ദീർഘമർത്തിയാൽ അവ നിർദ്ദേശ സ്ട്രിപ്പിലേക്ക് പിൻ ചെയ്യപ്പെടും. <br /> <br />
+\n► ക്ലിപ്പ്ബോർഡ് കാഴ്ച, ഇമോജി കാഴ്ച, ഒറ്റക്കൈ മോഡ്, ക്രമീകരണങ്ങൾ, അല്ലെങ്കിൽ ഭാഷ മാറ്റുക എന്നിവ ലഭ്യമാക്കാൻ കോമ-കീ ദീർഘമർത്തുക: <br />
+\n\t• അനുബന്ധ കീ പ്രവർത്തനക്ഷമമാക്കിയിട്ടുണ്ടെങ്കിൽ ഇമോജി കാഴ്ചയും ഭാഷാ മാറ്റവും അപ്രത്യക്ഷമാകും; <br />
+\n\t• ചില ലേഔട്ടുകൾക്ക് ഇത് കോമ-കീയല്ല, മറിച്ച് അതേ സ്ഥാനത്തുള്ള കീയാണ് (ഉദാ. ഡിവോറാക് ലേഔട്ടിന് ഇത് \\\'q\\\' ആണ്). <br /> <br />
+\n► ഇൻകോഗ്നിറ്റോ മോഡ് പ്രവർത്തനക്ഷമമാകുമ്പോൾ, വാക്കുകളൊന്നും പഠിക്കില്ല, സമീപകാല ഇമോജികളിലേക്ക് ഇമോജികൾ ചേർക്കുകയുമില്ല. <br /> <br />
+\n► ടൂൾബാർ ലഭ്യമാക്കാൻ ഇൻകോഗ്നിറ്റോ ഐക്കൺ അമർത്തുക. <br /> <br />
+\n► സ്ലൈഡിംഗ് കീ ഇൻപുട്ട്: ഒരൊറ്റ വലിയക്ഷരം ടൈപ്പുചെയ്യാൻ ഷിഫ്റ്റിൽ നിന്ന് മറ്റൊരു കീയിലേക്ക് സ്വൈപ്പ് ചെയ്യുക: <br />
+\n\t• ചിഹ്ന കീബോർഡിൽ നിന്ന് ഒരൊറ്റ ചിഹ്നം ടൈപ്പുചെയ്യാൻ \\\'?123\\\' കീയ്ക്കും ബന്ധപ്പെട്ട കീകൾക്കും ഇത് പ്രവർത്തിക്കുന്നു. <br /> <br />
+\n► ഷിഫ്റ്റ് അല്ലെങ്കിൽ ചിഹ്ന കീ അമർത്തിപ്പിടിക്കുക, ഒന്നോ അതിലധികമോ കീകൾ അമർത്തുക, തുടർന്ന് മുമ്പത്തെ കീബോർഡിലേക്ക് മടങ്ങാൻ ഷിഫ്റ്റ് അല്ലെങ്കിൽ ചിഹ്ന കീ വിടുക. <br /> <br />
+\n► കൂടുതൽ നിർദ്ദേശങ്ങളും ഈ നിർദ്ദേശം നീക്കംചെയ്യാനുള്ള ഒരു ഇല്ലാതാക്കൽ ബട്ടണും കാണിക്കാൻ നിർദ്ദേശ സ്ട്രിപ്പിലെ ഒരു നിർദ്ദേശം ദീർഘമർത്തുക. <br /> <br />
+\n► കൂടുതൽ നിർദ്ദേശങ്ങൾ തുറക്കാൻ ഒരു നിർദ്ദേശത്തിൽ നിന്ന് മുകളിലേക്ക് സ്വൈപ്പ് ചെയ്യുക, അത് തിരഞ്ഞെടുക്കാൻ നിർദ്ദേശത്തിൽ വിടുക. <br /> <br />
+\n► ക്ലിപ്പ്ബോർഡ് ചരിത്രത്തിലെ ഒരു എൻട്രി പിൻ ചെയ്യാൻ അത് ദീർഘമർത്തുക (നിങ്ങൾ അൺപിൻ ചെയ്യുന്നതുവരെ ക്ലിപ്പ്ബോർഡിൽ സൂക്ഷിക്കുക). <br /> <br />
+\n► ഒരു എൻട്രി നീക്കംചെയ്യാൻ ക്ലിപ്പ്ബോർഡ് കാഴ്ചയിൽ ഇടത്തോട്ട് സ്വൈപ്പ് ചെയ്യുക (അത് പിൻ ചെയ്തിരിക്കുമ്പോൾ ഒഴികെ) <br /> <br />
+\n► ടെക്സ്റ്റ് തിരഞ്ഞെടുത്ത് വലിയക്ഷരം, ചെറിയക്ഷരം, പദങ്ങൾ വലിയക്ഷരമാക്കുക എന്നിവയ്ക്കിടയിൽ മാറാൻ ഷിഫ്റ്റ് അമർത്തുക. <br /> <br />
+\n► ഒരു ഫയൽ എക്സ്പ്ലോററിൽ തുറന്ന് നിങ്ങൾക്ക് നിഘണ്ടുക്കൾ ചേർക്കാൻ കഴിയും: <br />
+\n\t• ഇത് <i>content-uris</i> ഉപയോഗിച്ച് മാത്രമേ പ്രവർത്തിക്കൂ, <i>file-uris</i> ഉപയോഗിച്ചല്ല, അതിനാൽ ചില ഫയൽ എക്സ്പ്ലോററുകളിൽ ഇത് പ്രവർത്തിക്കണമെന്നില്ല. <br /> <br />
+\n► റൂട്ട് ആക്സസ് ഉപയോഗിച്ച് മാനുവൽ ബാക്കപ്പുകൾ ചെയ്യുന്ന ഉപയോക്താക്കൾക്ക്: <br />
+\n\t• Android 7 മുതൽ, ആപ്പ് %s ഉപയോഗിക്കുന്നതിനാൽ പങ്കിട്ട മുൻഗണനാ ഫയൽ സ്ഥിരസ്ഥിതി ലൊക്കേഷനിലല്ല. ഉപകരണം അൺലോക്ക് ചെയ്യുന്നതിന് മുമ്പ്, ഉദാ. ബൂട്ട് ചെയ്യുമ്പോൾ ക്രമീകരണങ്ങൾ വായിക്കാൻ കഴിയുന്നതിന് ഇത് ആവശ്യമാണ്; <br />
+\n\t• ഫയൽ /data/user_de/0/package_id/shared_prefs/ ൽ സ്ഥിതിചെയ്യുന്നു, എന്നിരുന്നാലും ഇത് ഉപകരണത്തെയും Android പതിപ്പിനെയും ആശ്രയിച്ചിരിക്കാം. <br /> <br />
+\n<i><b>ഡീബഗ് മോഡ് / ഡീബഗ് APK</b></i> <br /> <br />
+\n► ഉറവിട നിഘണ്ടു കാണിക്കാൻ ഒരു നിർദ്ദേശം ദീർഘമർത്തുക. <br /> <br />
+\n► ഡീബഗ് APK ഉപയോഗിക്കുമ്പോൾ, നിങ്ങൾക്ക് വിപുലമായ മുൻഗണനകൾക്കുള്ളിൽ ഡീബഗ് ക്രമീകരണങ്ങൾ കണ്ടെത്താൻ കഴിയും, എന്നിരുന്നാലും ലോഗിലേക്ക് നിഘണ്ടുക്കൾ ഡംപ് ചെയ്യുന്നതൊഴികെ ഉപയോഗപ്രദത പരിമിതമാണ്. <br />
+\n\t• ഒരു റിലീസ് APK-യ്ക്ക്, നിങ്ങൾ <i>About</i> ലെ പതിപ്പ് നിരവധി തവണ ടാപ്പുചെയ്യേണ്ടതുണ്ട്, തുടർന്ന് <i>Advanced Preferences</i> ൽ ഡീബഗ് ക്രമീകരണങ്ങൾ കണ്ടെത്താം. <br />
+\n\t• <i>Show suggestion infos</i> പ്രവർത്തനക്ഷമമാക്കുമ്പോൾ, നിർദ്ദേശങ്ങൾക്ക് മുകളിൽ ചില ആന്തരിക സ്കോറും ഉറവിട നിഘണ്ടുവും കാണിക്കുന്ന ചെറിയ നമ്പറുകൾ ഉണ്ടാകും. <br /> <br />
+\n► ഒരു ആപ്ലിക്കേഷൻ ക്രാഷ് സംഭവിച്ചാൽ, നിങ്ങൾ ക്രമീകരണങ്ങൾ തുറക്കുമ്പോൾ ക്രാഷ് ലോഗുകൾ വേണോ എന്ന് ആവശ്യപ്പെടും. <br /> <br />
+\n► ബഹുഭാഷാ ടൈപ്പിംഗ് ഉപയോഗിക്കുമ്പോൾ, നിലവിൽ ഉപയോഗിക്കുന്ന ഭാഷ നിർണ്ണയിക്കാൻ ഉപയോഗിക്കുന്ന ഒരു കോൺഫിഡൻസ് മൂല്യം സ്പേസ് ബാർ കാണിക്കും. <br /> <br />
+\n► നിർദ്ദേശങ്ങൾക്ക് മുകളിൽ ചില ആന്തരിക സ്കോറും ഉറവിട നിഘണ്ടുവും കാണിക്കുന്ന ചെറിയ നമ്പറുകൾ ഉണ്ടാകും (പ്രവർത്തനരഹിതമാക്കാം).</string>
+    <string name="label_enter_key">എന്റർ</string>
+    <string name="label_tab_key">ടാബ്</string>
+    <string name="label_delete_key">ഇല്ലാതാക്കുക</string>
+    <string name="label_shift_key">ഷിഫ്റ്റ്</string>
+    <string name="label_shift_key_shifted">ഷിഫ്റ്റ് (ഷിഫ്റ്റ് ചെയ്തു)</string>
+    <string name="label_shift_key_locked">ക്യാപ്സ് ലോക്ക്</string>
+    <string name="label_space_key_for_number_layout">സ്പേസ് (നമ്പർ ലേഔട്ട്)</string>
+    <string name="label_stop_onehanded_mode_key">ഒറ്റക്കൈ മോഡ് അവസാനിപ്പിക്കുക</string>
+    <string name="label_resize_onehanded_key">ഒറ്റക്കൈ മോഡ് വലുപ്പം മാറ്റുക</string>
+    <string name="label_switch_onehanded_key">ഒറ്റക്കൈ മോഡ് വശം മാറ്റുക</string>
+    <string name="label_shortcut_key_disabled">വോയ്സ് ഇൻപുട്ട് പ്രവർത്തനരഹിതമാക്കി</string>
+    <string name="label_toolbar_key">ടൂൾബാർ കാണിക്കുക / മറയ്ക്കുക</string>
+    <string name="label_language_switch_key">@string/show_language_switch_key</string>
+    <string name="label_zwj_key">പൂജ്യം-വീതി ജോയിനർ</string>
+    <string name="label_zwnj_key">പൂജ്യം-വീതി നോൺ-ജോയിനർ</string>
+    <string name="label_bin">ബിൻ</string>
+    <string name="show_horizontal_space_swipe">തിരശ്ചീന സ്പേസ്ബാർ സ്വൈപ്പ് ജെസ്റ്റർ</string>
+    <string name="show_vertical_space_swipe">ലംബ സ്പേസ്ബാർ സ്വൈപ്പ് ജെസ്റ്റർ</string>
+    <string name="action_none">ഒന്നുമില്ല</string>
+    <string name="space_swipe_move_cursor_entry">കഴ്സർ നീക്കുക</string>
+    <string name="space_swipe_toggle_numpad_entry">നമ്പാഡ് ടോഗിൾ ചെയ്യുക</string>
+    <string name="space_swipe_hide_keyboard_entry">കീബോർഡ് മറയ്ക്കുക</string>
+    <string name="space_swipe_touchpad_mode_entry">ടച്ച്പാഡ് മോഡ്</string>
+    <string name="touchpad_sensitivity">ടച്ച്പാഡ് സംവേദനക്ഷമത</string>
+    <string name="force_auto_caps_title">ഓട്ടോ-ക്യാപിറ്റലൈസേഷൻ നിർബന്ധമാക്കുക</string>
+    <string name="force_auto_caps_summary">പാസ്വേഡുകൾ ഒഴികെയുള്ള എല്ലാ ടെക്സ്റ്റ് ഫീൽഡുകളിലും വാക്യ വലിയക്ഷരമാക്കൽ നിർബന്ധമാക്കുക</string>
+    <string name="var_toolbar_direction">വേരിയബിൾ ടൂൾബാർ ദിശ</string>
+    <string name="var_toolbar_direction_summary">വലത്തുനിന്ന് ഇടത്തോട്ടുള്ള കീബോർഡ് ഉപവിഭാഗം തിരഞ്ഞെടുക്കുമ്പോൾ ദിശ വിപരീതമാക്കുക</string>
+    <string name="toolbar_only_with_hw_keyboard">ഫിസിക്കൽ കീബോർഡ് ഉപയോഗിച്ച് ടൂൾബാർ മാത്രം കാണിക്കുക</string>
+    <string name="toolbar_only_with_hw_keyboard_summary">സിസ്റ്റം ക്രമീകരണങ്ങളിൽ വെർച്വൽ കീബോർഡ് കാണിക്കൽ നിങ്ങൾ ഇപ്പോഴും പ്രവർത്തനക്ഷമമാക്കേണ്ടതുണ്ട്</string>
+    <string name="prefs_language_swipe_distance">ഭാഷ മാറ്റുക സ്വൈപ്പ് ദൂരം</string>
+    <string name="customize_toolbar_key_codes">ടൂൾബാർ കീ കോഡുകൾ ഇഷ്ടാനുസൃതമാക്കുക</string>
+    <string name="customize_toolbar_key_code_reset_message">എല്ലാ ഇഷ്ടാനുസൃത കീ കോഡുകളും ശരിക്കും മായ്ക്കണോ?</string>
+    <string name="key_code">കീ കോഡ്</string>
+    <string name="long_press_code">ദീർഘമർത്തൽ കോഡ്</string>
+    <string name="auto_show_toolbar">ടൂൾബാർ സ്വയം കാണിക്കുക</string>
+    <string name="auto_show_toolbar_open">തുറക്കുമ്പോൾ ടൂൾബാർ സ്വയം കാണിക്കുക</string>
+    <string name="auto_show_toolbar_select">തിരഞ്ഞെടുക്കുമ്പോൾ ടൂൾബാർ സ്വയം കാണിക്കുക</string>
+    <string name="auto_show_toolbar_summary">കീബോർഡ് തുറക്കുമ്പോൾ ടൂൾബാർ കാണിക്കുക</string>
+    <string name="auto_show_toolbar_select_summary">ടെക്സ്റ്റ് തിരഞ്ഞെടുക്കുമ്പോൾ ടൂൾബാർ കാണിക്കുക</string>
+    <string name="auto_hide_toolbar">ടൂൾബാർ സ്വയം മറയ്ക്കുക</string>
+    <string name="auto_hide_toolbar_summary">നിർദ്ദേശങ്ങൾ ലഭ്യമാകുമ്പോൾ ടൂൾബാർ മറയ്ക്കുക</string>
+    <string name="toolbar_swipe_down_dismiss">അടയ്ക്കാൻ താഴേക്ക് സ്വൈപ്പ് ചെയ്യുക</string>
+    <string name="toolbar_swipe_down_dismiss_summary">കീബോർഡ് മറയ്ക്കാൻ ടൂൾബാറിൽ താഴേക്ക് സ്വൈപ്പ് ചെയ്യുക</string>
+    <string name="auto_hide_pinned_keys">പിൻ ചെയ്ത കീകൾ സ്വയം മറയ്ക്കുക</string>
+    <string name="auto_hide_pinned_keys_summary">ടൂൾബാർ വികസിപ്പിക്കുമ്പോൾ പിൻ ചെയ്ത കീകൾ മറയ്ക്കുക</string>
+    <string name="remember_toolbar_state">ടൂൾബാർ അവസ്ഥ ഓർമ്മിക്കുക</string>
+    <string name="remember_toolbar_state_summary">സെഷനുകൾക്കിടയിലും ടൈപ്പ് ചെയ്യുമ്പോഴും ടൂൾബാർ വികസിപ്പിച്ചതോ ചുരുക്കിയതോ ആയി സൂക്ഷിക്കുക</string>
+    <string name="close_translate_language_selector">ഭാഷാ സെലക്ടർ അടയ്ക്കുക</string>
+    <string name="toast_msg_clipboard_copy">ഉള്ളടക്കം പകർത്തി</string>
+    <string name="customize_icons">ഐക്കണുകൾ ഇഷ്ടാനുസൃതമാക്കുക</string>
+    <string name="customize_icons_reset_message">എല്ലാ ഇഷ്ടാനുസൃത ഐക്കണുകളും ശരിക്കും പുനഃസജ്ജമാക്കണോ?</string>
+    <string name="delete_confirmation">%s ശരിക്കും ഇല്ലാതാക്കണോ?</string>
+    <string name="name_invalid">അസാധുവായ പേര്</string>
+    <string name="custom_subtype">ഇഷ്ടാനുസൃത ഉപവിഭാഗം</string>
+    <string name="landscape">ലാൻഡ്സ്കേപ്പ്</string>
+    <string name="offline_model_title">ഓഫ്ലൈൻ മോഡൽ</string>
+    <string name="offline_model_summary">പ്രാദേശിക LLM നിയന്ത്രിക്കുക</string>
+    <string name="offline_max_tokens_title">ഓഫ്ലൈൻ AI പരമാവധി ടോക്കണുകൾ</string>
+    <string name="offline_max_tokens_summary">സൃഷ്ടിച്ച തിരുത്തലിന്റെ പരമാവധി ദൈർഘ്യം</string>
+    <string name="offline_max_tokens_custom_option">ഇഷ്ടാനുസൃതം…</string>
+    <string name="offline_max_tokens_custom_desc">ഇഷ്ടാനുസൃതം (%1$d ടോക്കണുകൾ)</string>
+    <string name="offline_temp_title">ടെമ്പറേച്ചർ</string>
+    <string name="offline_temp_summary">ക്രമരഹിതത നിയന്ത്രിക്കുന്നു: കുറവ് കൂടുതൽ ഫോക്കസ്ഡും നിർണ്ണായകവുമാണ്</string>
+    <string name="offline_top_p_title">ടോപ്പ്-പി (ന്യൂക്ലിയസ് സാമ്പ്ലിംഗ്)</string>
+    <string name="offline_top_p_summary">പദാവലിയുടെ വൈവിധ്യം നിയന്ത്രിക്കുന്നു: കുറവ് സാധ്യത കുറഞ്ഞ ഓപ്ഷനുകൾ വെട്ടിക്കളയുന്നു</string>
+    <string name="offline_top_k_title">ടോപ്പ്-കെ</string>
+    <string name="offline_top_k_summary">ഏറ്റവും സാധ്യതയുള്ള കെ ടോക്കണുകളിലേക്ക് തിരഞ്ഞെടുപ്പുകൾ പരിമിതപ്പെടുത്തുന്നു</string>
+    <string name="offline_min_p_title">മിൻ-പി</string>
+    <string name="offline_min_p_summary">ഏറ്റവും സാധ്യതയുള്ള ടോക്കണുമായി താരതമ്യപ്പെടുത്തുമ്പോൾ കുറഞ്ഞ സാധ്യതാ പരിധി</string>
+    <string name="offline_show_thinking_title">ചിന്ത കാണിക്കുക</string>
+    <string name="offline_show_thinking_summary">മോഡൽ അവ സൃഷ്ടിക്കുകയാണെങ്കിൽ യുക്തിവാദ പ്രക്രിയയും ആന്തരിക ചിന്താ ടോക്കണുകളും പ്രദർശിപ്പിക്കുക</string>
+    <string-array name="offline_max_tokens_entries">
+  <item>അൾട്രാ ഫാസ്റ്റ് (12 ടോക്കണുകൾ)</item>
+  <item>ഫാസ്റ്റ് (20 ടോക്കണുകൾ)</item>
+  <item>ബാലൻസ്ഡ് (32 ടോക്കണുകൾ)</item>
+  <item>കൃത്യം (64 ടോക്കണുകൾ)</item>
+  <item>ഡീപ്പ് (128 ടോക്കണുകൾ)</item>
+</string-array>
+    <string-array name="offline_max_tokens_values">
+  <item>12</item>
+  <item>20</item>
+  <item>32</item>
+  <item>64</item>
+  <item>128</item>
+</string-array>
+    <string name="image_pasting_not_supported">ഈ ആപ്പ് ചിത്രം ഒട്ടിക്കൽ പിന്തുണയ്ക്കുന്നില്ല</string>
+    <string name="clear_emoji_history_title">ഇമോജി ചരിത്രം മായ്ക്കുക</string>
+    <string name="clear_emoji_history_message">നിങ്ങളുടെ അടുത്തിടെ ഉപയോഗിച്ച ഇമോജികൾ മായ്ക്കണമെന്ന് ഉറപ്പാണോ?</string>
+    <string name="floating_keyboard_drag_handle">കീബോർഡ് നീക്കാൻ വലിക്കുക</string>
+    <string name="floating_keyboard_resize_handle">കീബോർഡ് വലുപ്പം മാറ്റാൻ വലിക്കുക</string>
+    <string name="persist_floating_keyboard_title">ഫ്ലോട്ടിംഗ് കീബോർഡ് നിലനിർത്തുക</string>
+    <string name="persist_floating_keyboard_summary">ഇൻപുട്ട് പൂർത്തിയാകുമ്പോൾ ഫ്ലോട്ടിംഗ് കീബോർഡ് മറയ്ക്കരുത്</string>
+    <string name="persist_text_edit_mode_title">ടെക്സ്റ്റ് എഡിറ്റിംഗ് മോഡ് നിലനിർത്തുക</string>
+    <string name="persist_text_edit_mode_summary">ഇൻപുട്ട് പൂർത്തിയാകുമ്പോൾ ടെക്സ്റ്റ് എഡിറ്റിംഗ് മോഡിൽ നിന്ന് പുറത്തുകടക്കരുത്</string>
+    <string name="disable_multi_word_suggestions_title">ഒന്നിലധികം-വാക്ക് നിർദ്ദേശങ്ങൾ പ്രവർത്തനരഹിതമാക്കുക</string>
+    <string name="disable_multi_word_suggestions_summary">ഒന്നിലധികം സംയോജിത വാക്കുകൾ അടങ്ങിയ നിർദ്ദേശങ്ങൾ തടയുക (ടർക്കിഷിന് ശുപാർശ ചെയ്യുന്നു)</string>
+    <string name="upgrade">അപ്ഗ്രേഡ്</string>
+    <string name="dictionary_update_available">അപ്ഡേറ്റ് ലഭ്യമാണ്</string>
+    <string name="dictionary_source_title">നിഘണ്ടു ശേഖരണി</string>
+    <string name="dictionary_source_summary">നിങ്ങളുടെ ബ്രൗസറിൽ നിഘണ്ടുക്കൾ ബ്രൗസ് ചെയ്യുക അല്ലെങ്കിൽ ഡൗൺലോഡ് ചെയ്യുക</string>
+    <string name="text_expander_title">ടെക്സ്റ്റ് എക്സ്പാൻഡർ</string>
+    <string name="text_expander_enable_title">ടെക്സ്റ്റ് എക്സ്പാൻഡർ പ്രവർത്തനക്ഷമമാക്കുക</string>
+    <string name="text_expander_enable_summary">സ്പേസ് അല്ലെങ്കിൽ ചിഹ്നനത്തിൽ കുറുക്കുവഴികൾ സ്വദേശിയായും സുരക്ഷിതമായും സ്വയം-വികസിപ്പിക്കുക.</string>
+    <string name="text_expander_immediate_title">ഉടനടി വികസിപ്പിക്കുക</string>
+    <string name="text_expander_immediate_summary">സ്പേസ് അമർത്താതെ തന്നെ കുറുക്കുവഴികൾ ഉടനടി വികസിപ്പിക്കുക.</string>
+    <string name="text_expander_backspace_undo_title">ബാക്ക്സ്പേസ് വികാസം പഴയപടിയാക്കുന്നു</string>
+    <string name="text_expander_backspace_undo_summary">ബാക്ക്സ്പേസിൽ വികസിപ്പിച്ച ടെക്സ്റ്റ് കുറുക്കുവഴിയിലേക്ക് പഴയപടിയാക്കുക.</string>
+    <string name="text_expander_custom_shortcuts_title">ഇഷ്ടാനുസൃത കുറുക്കുവഴികൾ</string>
+    <string name="text_expander_add_shortcut">കുറുക്കുവഴി ചേർക്കുക</string>
+    <string name="text_expander_edit_shortcut">കുറുക്കുവഴി എഡിറ്റുചെയ്യുക</string>
+    <string name="text_expander_quick_guide">💡 ദ്രുത ഫീച്ചർ ഗൈഡ്</string>
+    <string name="text_expander_template_placeholders_title">പിന്തുണയ്ക്കുന്ന ടെംപ്ലേറ്റ് പ്ലെയ്സ്ഹോൾഡറുകൾ:</string>
+    <string name="text_expander_prefix_title">ഉപസർഗ്ഗം (ഐച്ഛികം)</string>
+    <string name="text_expander_shortcut_title">കുറുക്കുവഴി (ഉദാ. \'brb\')</string>
+    <string name="text_expander_regex_pattern_title">റെജക്സ് പാറ്റേൺ</string>
+    <string name="text_expander_regex_title">റെഗുലർ എക്സ്പ്രഷൻ</string>
+    <string name="text_expander_regex_invalid">⚠️ അസാധുവായ റെഗുലർ എക്സ്പ്രഷൻ പാറ്റേൺ</string>
+    <string name="text_expander_template_title">ടെംപ്ലേറ്റ് വികാസം</string>
+    <string name="text_expander_template_hint">Be right back! അല്ലെങ്കിൽ My email is %clipboard%</string>
+    <string name="text_expander_quick_placeholders_title">ദ്രുത പ്ലെയ്സ്ഹോൾഡറുകൾ (കഴ്സറിൽ ചേർക്കാൻ ടാപ്പുചെയ്യുക):</string>
+    <string name="text_expander_save">സംരക്ഷിക്കുക</string>
+    <string name="text_expander_add">ചേർക്കുക</string>
+    <string name="text_expander_delete">ഇല്ലാതാക്കുക</string>
+    <string name="custom_ai_keys_what_are_keywords">കീവേഡുകൾ എന്താണ്?</string>
+    <string name="custom_ai_keys_keywords_description">കീവേഡുകൾ (#proofread അല്ലെങ്കിൽ #summarize പോലുള്ളവ) AI-യ്ക്കുള്ള ദ്രുത നിർദ്ദേശങ്ങളായി പ്രവർത്തിക്കുന്നു. ഒരു കീ കോൺഫിഗർ ചെയ്യുമ്പോൾ അതിന്റെ സ്വഭാവം നിർവചിക്കാൻ അവ തിരഞ്ഞെടുക്കുക. കീ സൃഷ്ടിക്കാൻ നിങ്ങളുടെ സ്വന്തം ഇഷ്ടാനുസൃത പ്രോംപ്റ്റും നിങ്ങൾ ചേർക്കണം.</string>
+    <string name="custom_ai_keys_show_tags_title">കീബോർഡിൽ ടാഗുകൾ കാണിക്കുക</string>
+    <string name="custom_ai_keys_show_tags_summary">പ്രവർത്തനക്ഷമമാക്കുമ്പോൾ, ഡിഫോൾട്ട് AI ഐക്കണിന് പകരം ഇഷ്ടാനുസൃത ടാഗുകൾ കീബോർഡ് ടൂൾബാറിൽ തീം ചെയ്ത ക്യാപ്സ്യൂളുകളായി കാണിക്കും.</string>
+    <string name="custom_ai_keys_not_configured">കോൺഫിഗർ ചെയ്തിട്ടില്ല</string>
+    <string name="custom_ai_keys_configure_title">കീ %1$d കോൺഫിഗർ ചെയ്യുക</string>
+    <string name="custom_ai_keys_config_instruction">സ്വഭാവം നിർവചിക്കാൻ കീവേഡുകൾ തിരഞ്ഞെടുത്ത് അവയെ നിങ്ങളുടെ ഇഷ്ടാനുസൃത നിർദ്ദേശങ്ങളുമായി സംയോജിപ്പിക്കുക.\n\nഉദാഹരണം: #editor തിരഞ്ഞെടുത്ത് "Translate to French" എന്ന് ടൈപ്പുചെയ്ത് ഒരു പ്രത്യേക വിവർത്തന കീ സൃഷ്ടിക്കുക.\n\nശ്രദ്ധിക്കുക: സംരക്ഷിക്കാൻ നിങ്ങൾ ഒരു ഇഷ്ടാനുസൃത പ്രോംപ്റ്റും ഒരു കീവേഡെങ്കിലും തിരഞ്ഞെടുക്കുകയും വേണം.</string>
+    <string name="custom_ai_keys_prompt_label">കീ %1$d-നുള്ള ഇഷ്ടാനുസൃത പ്രോംപ്റ്റ്</string>
+    <string name="custom_ai_keys_tag_label">ടാഗ് / ലേബൽ (ഉദാ. \'French\', \'Grammar\', \'Rewrite\')</string>
+    <string name="custom_ai_keys_selected_functions">തിരഞ്ഞെടുത്ത കീവേഡ് ഫംഗ്ഷനുകൾ:</string>
 </resources>

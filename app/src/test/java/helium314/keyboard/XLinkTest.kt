@@ -6,6 +6,8 @@ import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.common.Links
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.utils.getKnownDictionariesForLocale
+import org.junit.Assume.assumeTrue
+import org.junit.Before
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
@@ -16,6 +18,14 @@ import kotlin.test.assertEquals
 
 @RunWith(RobolectricTestRunner::class)
 class XLinkTest { // Without the X, SubtypeTests fail with ClassCastException. WTF?
+    @Before
+    fun requireNetwork() {
+        assumeTrue(
+            "Network tests require LEAN_NETWORK_TESTS=true",
+            System.getenv("LEAN_NETWORK_TESTS") == "true"
+        )
+    }
+
     @Test fun knownDictionaries() {
         if (BuildConfig.BUILD_TYPE == "runTests") return // don't spam requests to Codeberg on every PR update
         val context = ApplicationProvider.getApplicationContext<App>()

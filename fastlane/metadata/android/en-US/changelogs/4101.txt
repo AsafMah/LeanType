@@ -1,0 +1,6 @@
+- Replaced RECEIVE_SMS permission with privacy-first NotificationListenerService for OTP extraction.
+- Added dynamic SMS application package selector in Settings -> Text Correction for OTP auto-fill.
+- Set default landscape keyboard height scale factor to 45% for improved posture & visibility.
+- Intercepted layout switch keys (?123, Shift, Caps Lock) locally in inline edit/search mode.
+- Added transient word-gesture typing suppression while clipboard inline edit or search is active.
+- Unified spacebar cursor swipe, delete selection swipe, horizontal scrolling, and cursor visibility across clipboard edit and search modes.

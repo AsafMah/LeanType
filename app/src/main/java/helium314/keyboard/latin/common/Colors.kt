@@ -67,10 +67,7 @@ interface Colors {
             KEY_BACKGROUND, MORE_SUGGESTIONS_WORD_BACKGROUND, ACTION_KEY_POPUP_KEYS_BACKGROUND, POPUP_KEYS_BACKGROUND ->
                 attr.getDrawable(R.styleable.KeyboardView_keyBackground)
             FUNCTIONAL_KEY_BACKGROUND -> attr.getDrawable(R.styleable.KeyboardView_functionalKeyBackground)
-            SPACE_BAR_BACKGROUND -> {
-                if (hasKeyBorders) attr.getDrawable(R.styleable.KeyboardView_spacebarBackground)
-                else attr.getDrawable(R.styleable.KeyboardView_spacebarNoBorderBackground)
-            }
+            SPACE_BAR_BACKGROUND -> attr.getDrawable(R.styleable.KeyboardView_spacebarBackground)
             ACTION_KEY_BACKGROUND -> {
                 if (themeStyle == STYLE_HOLO && hasKeyBorders) // no borders has a very small pressed drawable otherwise
                     attr.getDrawable(R.styleable.KeyboardView_functionalKeyBackground)
@@ -206,11 +203,7 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 pressedStateList(accent, Color.WHITE)
             }
 
-        val stripBackground = if (keyboardBackground == null && !hasKeyBorders) {
-            if (isDarkColor(background)) 0x16ffffff else 0x11000000
-        } else {
-            Color.TRANSPARENT
-        }
+        val stripBackground = Color.TRANSPARENT
         val pressedStripElementBackground = if (keyboardBackground == null) adjustedBackground
         else if (isDarkColor(background)) 0x22ffffff else 0x11000000
         stripBackgroundList = pressedStateList(pressedStripElementBackground, stripBackground)
@@ -260,8 +253,9 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 else pressedStateList(doubleAdjustedAccent, accent)
 
             spaceBarStateList =
-                if (!isNight) pressedStateList(gesture, adjustedFunctionalKey)
-                else pressedStateList(adjustedKeyBackground, spaceBar)
+                if (themeStyle == STYLE_HOLO) pressedStateList(spaceBar, spaceBar)
+                else if (!isNight) pressedStateList(adjustedBackground, keyBackground)
+                else pressedStateList(adjustedKeyBackground, keyBackground)
         }
         keyTextFilter = colorFilter(keyText)
 
@@ -291,7 +285,7 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
         MORE_SUGGESTIONS_WORD_BACKGROUND, MAIN_BACKGROUND -> background
         KEY_BACKGROUND -> keyBackground
         ACTION_KEY_POPUP_KEYS_BACKGROUND -> if (themeStyle == STYLE_HOLO) adjustedBackground else accent
-        STRIP_BACKGROUND -> if (!hasKeyBorders && themeStyle == STYLE_MATERIAL) adjustedBackground else background
+        STRIP_BACKGROUND -> background
         CLIPBOARD_SUGGESTION_BACKGROUND -> doubleAdjustedBackground
         NAVIGATION_BAR -> navBar
         MORE_SUGGESTIONS_HINT, SUGGESTED_WORD, SUGGESTION_TYPED_WORD, SUGGESTION_VALID_WORD -> adjustedKeyText
@@ -440,16 +434,13 @@ class DefaultColors (
 
         val stripBackground: Int
         val pressedStripElementBackground: Int
-        if (keyboardBackground != null || (themeStyle == STYLE_HOLO && hasKeyBorders)) {
+        if (keyboardBackground != null || themeStyle == STYLE_HOLO) {
             stripBackground = Color.TRANSPARENT
             pressedStripElementBackground = if (isDarkColor(background)) 0x22ffffff // assume background is similar to the background color
                 else 0x11000000
-        } else if (hasKeyBorders) {
+        } else {
             stripBackground = background
             pressedStripElementBackground = adjustedBackground
-        } else {
-            stripBackground = adjustedBackground
-            pressedStripElementBackground = doubleAdjustedBackground
         }
         stripBackgroundList = pressedStateList(pressedStripElementBackground, stripBackground)
 
@@ -506,7 +497,7 @@ class DefaultColors (
         MORE_SUGGESTIONS_WORD_BACKGROUND, MAIN_BACKGROUND -> background
         KEY_BACKGROUND -> keyBackground
         ACTION_KEY_POPUP_KEYS_BACKGROUND -> if (themeStyle == STYLE_HOLO) adjustedBackground else accent
-        STRIP_BACKGROUND -> if (!hasKeyBorders && themeStyle == STYLE_MATERIAL) adjustedBackground else background
+        STRIP_BACKGROUND -> background
         NAVIGATION_BAR -> navBar
         SUGGESTION_AUTO_CORRECT, EMOJI_CATEGORY, TOOL_BAR_KEY, TOOL_BAR_EXPAND_KEY, ONE_HANDED_MODE_BUTTON -> suggestionText
         MORE_SUGGESTIONS_HINT, SUGGESTED_WORD, SUGGESTION_TYPED_WORD, SUGGESTION_VALID_WORD -> adjustedSuggestionText
