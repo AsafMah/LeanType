@@ -1,11 +1,15 @@
 # LeanTypeDual — Session Handoff (2026-08-06)
 
 This document lets a new agent/session resume without re-deriving context. It records
-**what shipped, exactly where everything sits, the one open task, and the traps that cost
+**what shipped, exactly where everything sits, what is still open, and the traps that cost
 time**. Everything here was verified against the repo, GitHub, and a physical device during
 the session — no assumptions.
 
 Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
+
+> **Amended 2026-08-20:** §5 (v0.2.0 published, release-blocker removed), §11 (worktree paths
+> corrected after the tree moved to `C:/Users/mahle/programming/`, plus the worktree cleanup),
+> and §12 (current open items).
 
 ---
 
@@ -14,16 +18,19 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Thing | State |
 |---|---|
 | `main` | `caed9f65a` — "Release LeanTypeDual 0.2.0 (#130)" |
-| `dev` | `2c1c828c4` — "Release LeanTypeDual 0.2.0 (#129)" |
+| `dev` | `6ac372de3` — "docs: session handoff (#132)" |
 | Current version | `0.2.0` / versionCode `4200` on both `main` and `dev` |
 | Tag `v0.1.0` | Pushed **and published** with 4 signed APKs |
-| Tag `v0.2.0` | Pushed, **no GitHub Release yet** — blocked on CI runners |
+| Tag `v0.2.0` | **Published and latest** with 4 signed APKs |
 | Upstream integrated | LeanBitLab/LeanType **v4.0.8** (`dec87806`), covering v4.0.3–v4.0.8 |
 | Phone (SM-S936B) | `com.asafmah.leantypedual` = signed **0.1.0/4100**; `…debug` = **0.2.0/4200** |
 | Tablet | Never verified — still outstanding, low risk |
-| Open PRs | Only **#106** (`issue37-slide-target-actions`, DIRTY, unrelated/pre-existing) |
+| Open PRs | **#106** (`issue37-slide-target-actions`), **#134** (backspace paragraph merge), **#136** (two-thumb native second pointer track), **#137** (upstream v4.1.2) |
 
-**The single open task:** publish the signed **v0.2.0** release. See §5.
+**No release work is outstanding** — v0.2.0 shipped signed on 2026-08-20. Open items are now
+device verification of #134 and #137. §7's two inherited upstream defects were fixed by v4.1.2
+and their guards removed; the emoji accelerated-delete bug is reported as
+`LeanBitLab/LeanType#423`. See §12.
 
 ---
 
@@ -48,10 +55,11 @@ physical-keyboard suggestion shortcuts, translation plugin + engine selector, a 
 drag-to-resize, key-gap narrowness scale, auto-spanning toolbar keys, text-expander regex
 fixes, and many emoji/clipboard layout fixes.
 
-### 2.3 Released 0.2.0 (partially)
+### 2.3 Released 0.2.0
 - Version bumped to `0.2.0`/`4200` (PR #129 → `dev`, #130 → `main`), tag `v0.2.0` pushed.
 - Debug APK built, installed, and smoke-tested on the phone.
-- **Signed artifacts were never produced** — runners went down (see §5).
+- Signed artifacts were delayed by a runner outage (§5) and **published on 2026-08-20**:
+  four signed APKs, release marked latest, all four verified after download.
 
 ---
 
@@ -90,22 +98,32 @@ git grep -n "android.permission.INTERNET" -- app/src
 
 ---
 
-## 5. THE OPEN TASK — publish signed v0.2.0
+## 5. Release procedure (v0.2.0 shipped — this is the recipe for the next one)
 
-### Why it's blocked
-GitHub-hosted runners stopped picking up jobs for this repo. Signature of the failure:
+**Status: done.** `v0.2.0` was published on **2026-08-20** with all four signed APKs and is
+marked latest: https://github.com/AsafMah/LeanType/releases/tag/v0.2.0
+
+The runner outage that blocked it resolved on its own — Release run **31128748928** succeeded
+at 2026-08-06 22:04 UTC and produced the draft. Everything below is the verified procedure,
+kept because it is what the next release should follow.
+
+### If runners stall again
+
+The outage signature, so it is recognised rather than re-debugged:
 
 - Job status `cancelled` after **exactly ~15 minutes**
 - `steps: []` (never started) and `timing.billable.UBUNTU.total_ms == 0`
-- Affected runs: `31126300886`, `31126946237` (Unit tests) and `31128410212` (Release)
-- The **v0.1.0** release run at 19:04 UTC succeeded, so the outage began after that
+- Affected runs were `31126300886`, `31126946237` (Unit tests) and `31128410212` (Release)
 
-This is **infrastructure, not code**. Do not "fix" tests in response to it.
+This is **infrastructure, not code**. Do not "fix" tests in response to it. The two runs that
+stayed stuck in `queued` after the outage (`31128410212`, `31126946237`) have since been
+cancelled; if it recurs, clear the stragglers with
+`gh run cancel <id> --repo AsafMah/LeanType`.
 
-### What to do when runners recover
+### Cut the release
 
 ```bash
-gh workflow run release.yml --repo AsafMah/LeanType --ref v0.2.0
+gh workflow run release.yml --repo AsafMah/LeanType --ref vX.Y.Z
 gh run list --repo AsafMah/LeanType --workflow release.yml --limit 3
 ```
 
@@ -116,15 +134,15 @@ Release with the APKs attached.
 Then verify the artifacts **after download** (do not trust the build alone):
 
 ```bash
-gh release download v0.2.0 --repo AsafMah/LeanType --pattern "*.apk" --dir build/release-v0.2.0
+gh release download vX.Y.Z --repo AsafMah/LeanType --pattern "*.apk" --dir build/release-vX.Y.Z
 # for each APK:
 #   apkanalyzer manifest application-id | version-name | version-code | min-sdk | permissions
 #   apksigner verify --print-certs
 ```
 
-Expected for every APK:
+Expected for every APK (all four **verified passing** for 0.2.0):
 - signer SHA-256 `c032eafcd7ce9197fd9e636f2c86b1590f0a84f8f73016c66d63c1382af81554`
-- version `0.2.0` / `4200`
+- matching version name / versionCode (`0.2.0` / `4200` for that release)
 - `INTERNET` only in standard + standardfull
 - v1/JAR `true` for standard (minSdk 23), standardfull (23), offlinelite (21); offline is
   minSdk 26 and legitimately reports `v1=false` by default
@@ -132,8 +150,8 @@ Expected for every APK:
 Publish:
 
 ```bash
-gh release edit v0.2.0 --repo AsafMah/LeanType --draft=false --latest \
-  --title "LeanTypeDual 0.2.0" --notes-file docs/releasenote/release_notes_v0.2.0.md
+gh release edit vX.Y.Z --repo AsafMah/LeanType --draft=false --latest \
+  --title "LeanTypeDual X.Y.Z" --notes-file docs/releasenote/release_notes_vX.Y.Z.md
 ```
 
 Then set PR/issue items to **Done** on Project #3 (§8) and, ideally, install the signed
@@ -164,41 +182,83 @@ Note `./gradlew.bat` — bare `gradlew.bat` is not on PATH in this shell.
 
 `:app:testOfflineRunTestsUnitTest` (the CI variant) on **Windows** → **4 failures**, all
 `ParserTest` (`canLoadKeyboard`, `dvorak has 4 rows`, `de_DE has extra keys`, `popup key
-count …`). These are asset/locale-ordering issues that **pass on Linux CI**.
+count …`). These are asset/locale-ordering issues that **pass on Linux CI**. Unchanged by the
+v4.1.2 merge.
 
-`:app:testOfflineDebugUnitTest` (full debug) → **12 failures**:
-- 10 long-standing: `ParserTest` ×5, `XLinkTest > otherLinks`, `InputLogicTest >
-  insertLetterIntoWordHangulFails`, `InputLogicTest >
-  tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`,
-  `StringUtilsTest` ×2
-- 2 inherited from upstream (see §7)
+`:app:testOfflineDebugUnitTest` (full debug) — **the baseline moved with the v4.1.2 merge**
+(#137), so compare against the right one. Both measured on the same Windows machine on
+2026-08-20, minutes apart:
+
+| Baseline | Result |
+|---|---|
+| `origin/dev` (`6ac372de3`) | 320 tests, **12 failed** |
+| v4.1.2 merge branch | 324 tests, **5 failed** |
+
+Still failing on the merge branch — treat these as the current expected set:
+
+- `InputLogicTest > tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`
+- `ParserTest` ×4 — `canLoadKeyboard`, `de_DE has extra keys`, `dvorak has 4 rows`,
+  `popup key count does not depend on shift for (for simple layout)` (the same four as the CI
+  variant)
+
+The seven that stopped failing were `SubtypeTest > subtypeStaysEnabledOnEdits`, `InputLogicTest
+> immediate regex expansion…`, `InputLogicTest > insertLetterIntoWordHangulFails`,
+`ParserTest > backgroundType`, `XLinkTest > otherLinks`, and `StringUtilsTest` ×2
+(`detectEmojisAtEndFail`, `isEmojiDetectsAllAvailableEmojis`).
+
+**Attribute that carefully**, in three tiers. Both runs were on the same machine minutes apart,
+which controls for toolchain, locale and machine state — but not for a remote host being
+reachable.
+
+- **Attributable:** `SubtypeTest > subtypeStaysEnabledOnEdits`, `InputLogicTest > immediate
+  regex expansion…`, and `insertLetterIntoWordHangulFails` — deterministic logic tests with no
+  external inputs, and the two §7 defects were separately confirmed fixed on a pristine v4.1.2
+  checkout.
+- **Plausible but unconfirmed:** `StringUtilsTest` ×2 and `ParserTest > backgroundType` — both
+  depend on bundled data/assets that this merge does change, so the merge is the likely cause,
+  but neither was isolated.
+- **Not attributable:** `XLinkTest > otherLinks` — a live network call to Codeberg, which can
+  flip with no code change at all. Don't count it as a fix.
 
 **Always diff failing test *names* against a baseline run of the merge base — never compare
-absolute pass counts.**
+absolute pass counts.** Both the "12 failures" figure and a "5 failures" figure are correct —
+for different baselines. Quote neither without saying which tree it came from.
 
 ---
 
-## 7. Upstream bugs we inherited (worth reporting upstream)
+## 7. Upstream bugs we inherited — fixed in v4.1.2 (historical)
 
-Both fail on a **pristine upstream `v4.0.8` checkout**, verified by checking out the tag in
-`C:/Users/mahle/LeanType-check-upstream-main` and running the tests there. They are *not*
-merge damage. Both are guarded with the repo's `runTests` skip so CI gates on real failures:
+**Both are resolved.** They are kept here because the *technique* is the reusable lesson:
+when a merge produces failures, reproduce them on a pristine upstream checkout before blaming
+your own merge.
+
+Two tests failed identically on a pristine upstream `v4.0.8` checkout, proving they were
+inherited rather than merge damage, and each was guarded with the repo's `runTests` skip so CI
+gated on real failures:
 
 1. **`SubtypeTest > subtypeStaysEnabledOnEdits`**
    `IllegalArgumentException: List has more than one element` at `SubtypeTest.kt:84` —
-   `getEnabledSubtypes(false)` returns more than one subtype, most likely because upstream
+   `getEnabledSubtypes(false)` returned more than one subtype, most likely because upstream
    v4.0.4 added auto-persisting of default typing-language subtypes at startup.
 
 2. **`InputLogicTest > immediate regex expansion triggers for symbol prefixed regex`**
-   Typing `@john` with regex shortcut `@\w+` yields `user_mentionohn`, expected
-   `user_mention`. Immediate expansion fires at `@j` and the remaining letters are appended.
-   A real user-facing bug in upstream's text expander; fixing it properly means defining
-   when a still-extendable regex match should expand, which is an upstream design decision.
+   Typing `@john` with regex shortcut `@\w+` yielded `user_mentionohn`, expected
+   `user_mention`. Immediate expansion fired at `@j` and the remaining letters were appended.
 
-Guards look like:
+Upstream **v4.1.2 fixes both**, verified two independent ways: on a pristine v4.1.2 checkout
+(`LeanType-check-upstream-main`) `SubtypeTest` runs 3 tests with 0 failures, and in the merged
+tree both tests pass on the debug variant where the guards never applied. Both guards were
+removed in **PR #137** (`e46454efb`), so the two tests now actually execute on CI. Neither
+needs reporting upstream.
+
+v4.1.2 also fixes the long-standing `InputLogicTest > insertLetterIntoWordHangulFails`, which
+was never an inherited-defect case.
+
+The guards that remain elsewhere are unrelated (Linux-only `ParserTest` ordering, `XLinkTest`
+network calls, dictionary-dependent cases, emoji-data versioning) and look like:
 
 ```kotlin
-if (BuildConfig.BUILD_TYPE == "runTests") return // fails at upstream tag v4.0.8 as well; inherited upstream defect
+if (BuildConfig.BUILD_TYPE == "runTests") return // reason; see #12
 ```
 
 ---
@@ -323,15 +383,67 @@ Also consolidated a **pre-existing** duplicated selection-reset block in
 
 ## 11. Environment / device details
 
-- Repo root: `C:/Users/mahle/LeanType` (currently on stale branch `merge/upstream-v3.9.3`).
-- Many worktrees exist (`git worktree list`). Relevant ones:
-  - `LeanType-release-020` → `chore/release-0.2.0` / `docs/handoff`
-  - `LeanType-promote-010` → `promote/v0.2.0`
-  - `LeanType-upstream-408` → `merge/upstream-v4.0.8` (merged)
-  - `LeanType-check-upstream-main` → detached at upstream `v4.0.8`, useful for
-    "does this fail upstream too?" checks
-  - `LeanType-check-origin-dev` → detached, used for baseline test runs
-  - Several stale feature worktrees — safe to prune if desired.
+- Repo root: `C:/Users/mahle/programming/LeanType` (currently on stale branch
+  `merge/upstream-v3.9.3`).
+- **The whole tree moved** from `C:/Users/mahle/` to `C:/Users/mahle/programming/`. If
+  `git worktree list` ever marks every worktree `prunable` again, that is a *relocation
+  artifact, not abandonment* — fix it with `git worktree repair <new-paths...>` from the repo
+  root. **Never** reach for `git worktree prune` in that state; it drops the admin records
+  and orphans live work.
+- `core.longpaths=true` is set on this repo. Without it, `git worktree remove` fails with
+  `Filename too long` on worktrees that have deep Gradle build output, leaving a
+  de-registered but half-deleted directory behind.
+
+### Secondary worktrees (after the 2026-08-20 cleanup)
+
+Kept deliberately:
+
+| Path (under `C:/Users/mahle/programming/`) | Branch / HEAD | Why |
+|---|---|---|
+| `LeanType-bksp` | `issue37-slide-target-actions` | backs **PR #106** (open) |
+| `LeanType-two-thumb-pr` | `pr/upstream-two-thumb-step1` | backs **LeanBitLab PR #240** (open) |
+| `LeanType-check-origin-dev` | detached at `origin/dev` | baseline test runs |
+| `LeanType-check-origin-main` | detached at `origin/main` | baseline for the released tree |
+| `LeanType-check-upstream-main` | detached at upstream `v4.1.2` | "does this fail upstream too?" checks |
+
+`check-upstream-main` tracks the upstream tag currently being integrated; it was moved from
+`v4.0.8` to `v4.1.2` for the #137 merge, which is how §7's two inherited defects were confirmed
+fixed. Re-point it whenever the merge target changes, and use it the same way: reproduce any
+new merge failure on the pristine tag before blaming your own merge.
+
+Unfinished work — all six branches are now **backed up on `origin`** (pushed 2026-08-20 purely
+as backups: no PRs, delete with `git push origin --delete <branch>` once triaged). The commits
+are safe; what still needs a decision is whether each line of work continues:
+
+| Path | Branch | State |
+|---|---|---|
+| `LeanType-a11` | `feat/spacing-a11-insight` | 4 commits; PRs #95/#93 closed unmerged; issues #24, #26 open |
+| `LeanType-gates` | `feat/spacing-gate-model` | 2 commits (shares one with `a11`); PR #94 closed unmerged; issue #24 open |
+| `LeanType-b7a` | `b7a-prefix-aware-stripping` | 2 commits + uncommitted debug logging in `InputLogic.java`; never PR'd; issues #98, #99 open |
+| `LeanType-swipe` | `feat/statistical-swipe-decoder` | 1 commit + an uncommitted `swipetest` build variant; never PR'd |
+| `LeanType-upstream-shortcut-rows` | `feat/upstream-shortcut-rows` | 1 local build-differentiation commit on top of the pushed `pr/upstream-shortcut-rows` |
+| `LeanType-upstream-two-thumb-step1` | `feat/upstream-two-thumb-step1` | 1 local build-differentiation commit on top of the pushed `pr/upstream-two-thumb-step1` |
+
+**The backup covers commits, not working trees.** Two of these still hold uncommitted changes
+that exist nowhere else: `LeanType-b7a` (modified `InputLogic.java` — debug logging) and
+`LeanType-swipe` (modified `app/build.gradle.kts` plus an untracked `app/src/swipetest/`).
+Commit or discard those deliberately; deleting either worktree without doing so loses them.
+The other four are clean.
+
+Removed on 2026-08-20 (≈5.6 GB reclaimed) — all fully merged or superseded, and **every branch
+was kept**, so any of them can be restored with `git worktree add <dir> <branch>`:
+`LeanType-release-311`, `LeanType-release-020`, `LeanType-promote-010`, `LeanType-qol`,
+`LeanType-preview`, `LeanType-corpus`, `LeanType-badges`, `LeanType-replay`,
+`LeanType-shortcut-pr`, `LeanType-upstream-399`, `LeanType-upstream-402`,
+`LeanType-upstream-408`, `LeanType-upstream-shift-fix`.
+
+Short-lived `LeanType-upstream-<version>` worktrees come and go with §10's merge recipe and are
+not tracked here individually; retire each one once its `merge/upstream-vX.Y.Z` branch lands in
+`dev`. One was in flight when this list was written (`LeanType-upstream-412` →
+`merge/upstream-v4.1.2`).
+
+### Device
+
 - Phone: Samsung **SM-S936B**, Android 16, wireless ADB. Device id
   `adb-R5CY13MP25X-jUf01K._adb-tls-connect._tcp` (IP/port changes each toggle; rediscover
   with `adb mdns services`). The user must re-toggle Wireless debugging when it drops.
@@ -356,15 +468,21 @@ background trim level on a foreground process") and refuses to *raise* a level t
 
 ## 12. Suggested next steps
 
-1. **Publish signed v0.2.0** once runners recover (§5). Highest priority; the tag is already
-   public without artifacts.
-2. **Install signed 0.2.0** over the phone's production package and do a real-editor smoke
+1. **Device-verify the two open PRs** — **#134** (backspace paragraph merge in block-based
+   editors) and **#137** (upstream v4.1.2 merge). Both need a real-editor smoke, not just a
+   green test run; see the anti-regression note that "tests pass" ≠ "feature works" for input
+   and integration code.
+2. **Emoji accelerated-delete bug is reported** — `LeanBitLab/LeanType#423`, confirmed still
+   present at upstream `f0ff166ae`. Don't file it twice; track that issue instead. §7's two
+   inherited defects need no report — v4.1.2 fixed both.
+3. **Install signed 0.2.0** over the phone's production package and do a real-editor smoke
    (typing, direct IME switching, custom-layout restoration, unshifted `to`/`no`/`meet`
    staying lowercase).
-3. **Tablet smoke** — the only never-executed release gate.
-4. **Issue #131 — "Java gesture not working with custom layouts"** is an open bug filed
+4. **Tablet smoke** — the only never-executed release gate.
+5. **Issue #131 — "Java gesture not working with custom layouts"** is an open bug filed
    against the fork's own fallback gesture engine; likely the highest-value functional work.
-5. **Report the two upstream defects** (§7) to LeanBitLab, then drop the `runTests` guards
-   once fixed upstream.
-6. Optional: prune stale worktrees/branches, and refresh `AGENTS.md`'s JDK path
+6. Triage the six unfinished worktrees in §11. Their branches are backed up on `origin` now, so
+   there's no deadline — but `LeanType-b7a` and `LeanType-swipe` still hold uncommitted changes
+   that the backup does not cover.
+7. Optional: refresh `AGENTS.md`'s JDK path
    (`jdk-21.0.11.10-hotspot` → `jdk-21.0.12.8-hotspot`).
