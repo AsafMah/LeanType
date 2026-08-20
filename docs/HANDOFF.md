@@ -181,8 +181,8 @@ absolute pass counts.**
 ## 7. Upstream bugs we inherited (worth reporting upstream)
 
 Both fail on a **pristine upstream `v4.0.8` checkout**, verified by checking out the tag in
-`C:/Users/mahle/LeanType-check-upstream-main` and running the tests there. They are *not*
-merge damage. Both are guarded with the repo's `runTests` skip so CI gates on real failures:
+`C:/Users/mahle/programming/LeanType-check-upstream-main` and running the tests there. They
+are *not* merge damage. Both are guarded with the repo's `runTests` skip so CI gates on real failures:
 
 1. **`SubtypeTest > subtypeStaysEnabledOnEdits`**
    `IllegalArgumentException: List has more than one element` at `SubtypeTest.kt:84` —
@@ -323,15 +323,55 @@ Also consolidated a **pre-existing** duplicated selection-reset block in
 
 ## 11. Environment / device details
 
-- Repo root: `C:/Users/mahle/LeanType` (currently on stale branch `merge/upstream-v3.9.3`).
-- Many worktrees exist (`git worktree list`). Relevant ones:
-  - `LeanType-release-020` → `chore/release-0.2.0` / `docs/handoff`
-  - `LeanType-promote-010` → `promote/v0.2.0`
-  - `LeanType-upstream-408` → `merge/upstream-v4.0.8` (merged)
-  - `LeanType-check-upstream-main` → detached at upstream `v4.0.8`, useful for
-    "does this fail upstream too?" checks
-  - `LeanType-check-origin-dev` → detached, used for baseline test runs
-  - Several stale feature worktrees — safe to prune if desired.
+- Repo root: `C:/Users/mahle/programming/LeanType` (currently on stale branch
+  `merge/upstream-v3.9.3`).
+- **The whole tree moved** from `C:/Users/mahle/` to `C:/Users/mahle/programming/`. If
+  `git worktree list` ever marks every worktree `prunable` again, that is a *relocation
+  artifact, not abandonment* — fix it with `git worktree repair <new-paths...>` from the repo
+  root. **Never** reach for `git worktree prune` in that state; it drops the admin records
+  and orphans live work.
+- `core.longpaths=true` is set on this repo. Without it, `git worktree remove` fails with
+  `Filename too long` on worktrees that have deep Gradle build output, leaving a
+  de-registered but half-deleted directory behind.
+
+### Secondary worktrees (after the 2026-08-20 cleanup)
+
+Kept deliberately:
+
+| Path (under `C:/Users/mahle/programming/`) | Branch / HEAD | Why |
+|---|---|---|
+| `LeanType-bksp` | `issue37-slide-target-actions` | backs **PR #106** (open) |
+| `LeanType-two-thumb-pr` | `pr/upstream-two-thumb-step1` | backs **LeanBitLab PR #240** (open) |
+| `LeanType-check-origin-dev` | detached at `origin/dev` | baseline test runs |
+| `LeanType-check-origin-main` | detached at `origin/main` | baseline for the released tree |
+| `LeanType-check-upstream-main` | detached at upstream `v4.0.8` | "does this fail upstream too?" checks |
+
+`check-upstream-main` is intentionally pinned at `v4.0.8` because §7's two upstream-bug
+reproductions were verified there. Whoever does the next upstream merge should re-point it to
+the tag being merged (upstream is at `v4.1.2` as of this writing) and re-check whether those
+two defects still reproduce.
+
+Unfinished work — each of these holds commits that exist on **no remote ref**, so this disk is
+the only copy. Push or discard them deliberately; don't let them rot:
+
+| Path | Branch | State |
+|---|---|---|
+| `LeanType-a11` | `feat/spacing-a11-insight` | 4 commits; PRs #95/#93 closed unmerged; issues #24, #26 open |
+| `LeanType-gates` | `feat/spacing-gate-model` | 2 commits (shares one with `a11`); PR #94 closed unmerged; issue #24 open |
+| `LeanType-b7a` | `b7a-prefix-aware-stripping` | 2 commits + uncommitted debug logging in `InputLogic.java`; never PR'd; issues #98, #99 open |
+| `LeanType-swipe` | `feat/statistical-swipe-decoder` | 1 commit + an uncommitted `swipetest` build variant; never PR'd; no tracking branch |
+| `LeanType-upstream-shortcut-rows` | `feat/upstream-shortcut-rows` | 1 local build-differentiation commit on top of the pushed `pr/upstream-shortcut-rows` |
+| `LeanType-upstream-two-thumb-step1` | `feat/upstream-two-thumb-step1` | 1 local build-differentiation commit on top of the pushed `pr/upstream-two-thumb-step1` |
+
+Removed on 2026-08-20 (≈5.6 GB reclaimed) — all fully merged or superseded, and **every branch
+was kept**, so any of them can be restored with `git worktree add <dir> <branch>`:
+`LeanType-release-311`, `LeanType-release-020`, `LeanType-promote-010`, `LeanType-qol`,
+`LeanType-preview`, `LeanType-corpus`, `LeanType-badges`, `LeanType-replay`,
+`LeanType-shortcut-pr`, `LeanType-upstream-399`, `LeanType-upstream-402`,
+`LeanType-upstream-408`, `LeanType-upstream-shift-fix`.
+
+### Device
+
 - Phone: Samsung **SM-S936B**, Android 16, wireless ADB. Device id
   `adb-R5CY13MP25X-jUf01K._adb-tls-connect._tcp` (IP/port changes each toggle; rediscover
   with `adb mdns services`). The user must re-toggle Wireless debugging when it drops.
@@ -366,5 +406,7 @@ background trim level on a foreground process") and refuses to *raise* a level t
    against the fork's own fallback gesture engine; likely the highest-value functional work.
 5. **Report the two upstream defects** (§7) to LeanBitLab, then drop the `runTests` guards
    once fixed upstream.
-6. Optional: prune stale worktrees/branches, and refresh `AGENTS.md`'s JDK path
+6. Optional: refresh `AGENTS.md`'s JDK path
    (`jdk-21.0.11.10-hotspot` → `jdk-21.0.12.8-hotspot`).
+7. Decide the fate of the six unfinished worktrees in §11 — their commits exist on no remote,
+   so they are one disk failure from gone.
