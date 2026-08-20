@@ -376,7 +376,6 @@ class InputLogicTest {
     }
 
     @Test fun immediateRegexExpansionTriggersForSymbolPrefixedRegex() {
-        if (BuildConfig.BUILD_TYPE == "runTests") return // fails at upstream tag v4.0.8 as well; inherited upstream defect
         reset()
         latinIME.prefs().edit().apply {
             putBoolean(helium314.keyboard.latin.utils.TextExpanderUtils.PREF_ENABLED, true)
@@ -2031,7 +2030,7 @@ class InputLogicTest {
         ei.inputType = currentInputType
         latinIME.mHandler.onStartInput(ei, false)
         latinIME.mHandler.onStartInputView(ei, false)
-        handleMessages() // this is important so the composing span is set correctly
+        handleMessages(requireIdle) // this is important so the composing span is set correctly
         checkConnectionConsistency()
     }
 

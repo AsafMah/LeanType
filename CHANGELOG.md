@@ -21,6 +21,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Whole-word backspace keeps working after the upstream merge.** Upstream's fix for single-click backspace bulk-deleting numeric sequences was auto-merged in a way that stopped the two-thumb whole-word delete from clearing the composing span, leaving partial words behind. Both behaviours now coexist. (#137)
 - **Custom layouts still restore after leaving symbol mode.** Upstream resets the remembered custom layout when switching back to the alphabet, which conflicted with this fork's persistent custom layout slots. (#137)
 
+### Reliability & testing
+- **Dropped both `runTests` skip guards for defects inherited from upstream** — subtype edit persistence and symbol-prefixed regex expansion are both fixed in upstream v4.1.2. Verified twice: on a pristine upstream checkout at the tag, and in the merged tree. Those two tests now actually execute on CI instead of returning early. (#137)
+- **Fixed a latent test-harness bug** where `setText` accepted a `requireIdle` parameter it never passed through, so `reset()` could not tolerate leftover delayed messages. Harmless until the merge shifted JUnit's hash-based test ordering, at which point it failed an unrelated backspace test. (#137)
+
 ## [0.2.0] - 2026-08-06
 
 ### Upstream
