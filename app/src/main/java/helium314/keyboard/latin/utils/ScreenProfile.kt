@@ -6,6 +6,9 @@ import android.content.res.Configuration
 import android.util.Log
 import kotlin.math.roundToInt
 
+import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.settings.SettingsValues
+
 enum class ScreenProfile {
     COMPACT,
     LARGE;
@@ -19,7 +22,19 @@ object ScreenProfileProvider {
     private var cachedConfigHash: Int = 0
 
     @JvmStatic
-    fun getScreenProfile(context: Context, configuration: Configuration? = null): ScreenProfile {
+    @JvmOverloads
+    fun getScreenProfile(
+        context: Context,
+        configuration: Configuration? = null,
+        settingsValues: SettingsValues? = null
+    ): ScreenProfile {
+        val isFoldableModeEnabled = settingsValues?.mFoldableMode
+            ?: context.prefs().getBoolean(Settings.PREF_FOLDABLE_MODE, false)
+
+        if (!isFoldableModeEnabled) {
+            return ScreenProfile.COMPACT
+        }
+
         val config = configuration ?: context.resources.configuration
         val currentHash = config.hashCode()
         cachedProfile?.let {

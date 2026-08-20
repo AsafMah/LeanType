@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:visibility="gone"
-            android:background="?android:attr/colorBackground">
+            android:background="@android:color/transparent">
 
             <TextView
                 android:id="@+id/handwriting_language_label"
@@ -59,7 +59,7 @@
                 android:id="@+id/handwriting_canvas"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="?android:attr/colorBackground" />
+                android:background="@android:color/transparent" />
 
             <LinearLayout
                 android:id="@+id/handwriting_plugin_overlay"

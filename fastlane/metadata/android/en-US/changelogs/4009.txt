@@ -1,0 +1,8 @@
+- Foldable screen profile toggle in Appearance settings (#400).
+- Fixed Android 7 wizard crash on ML Kit initialization (#399).
+- Fixed autocorrect in apps with NO_SUGGESTIONS flag (#389).
+- Fixed custom layout symbol navigation trap (#360).
+- Fixed suggestion strip delete mode leak (#382).
+- Fixed duplicate character entry on composing text (#380).
+- Fixed physical keyboard suggestion selection shortcuts (#397).
+- Full localizations for 11 languages & 100% passing tests.

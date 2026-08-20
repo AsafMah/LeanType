@@ -34,12 +34,28 @@ import android.view.Window;
 import android.view.WindowManager;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InlineSuggestion;
 import android.view.inputmethod.InlineSuggestionsRequest;
 import android.view.inputmethod.InlineSuggestionsResponse;
 import android.view.inputmethod.InputMethodSubtype;
+
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import android.graphics.drawable.Drawable;
+import helium314.keyboard.keyboard.Key;
+import helium314.keyboard.latin.voice.VoiceInputManager;
+import helium314.keyboard.latin.voice.VoicePluginManager;
+import com.leanbitlab.leantype.voice.VoiceConstants;
 
 import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.compat.ConfigurationCompatKt;
@@ -98,11 +114,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.core.content.ContextCompat;
 
 /**
  * Input method implementation for Qwerty'ish keyboard.
@@ -569,8 +582,24 @@ public class LatinIME extends InputMethodService implements
         Log.i(TAG, "Hardware accelerated drawing: " + mIsHardwareAcceleratedDrawingEnabled);
     }
 
+    private static LatinIME sInstance;
+    private VoicePluginManager mVoicePluginManager;
+    private VoiceInputManager mVoiceInputManager;
+    private VoiceInputManager.VoiceState mLastVoiceState = VoiceInputManager.VoiceState.IDLE;
+
+    @Nullable
+    public static LatinIME getInstance() {
+        return sInstance;
+    }
+
+    @Nullable
+    public VoiceInputManager getVoiceInputManager() {
+        return mVoiceInputManager;
+    }
+
     @Override
     public void onCreate() {
+        sInstance = this;
         helium314.keyboard.latin.gesture.SwipeGestureEngine.initialize(this);
         mSettings.startListener();
         KeyboardIconsSet.Companion.getInstance().loadIcons(this);
@@ -581,6 +610,8 @@ public class LatinIME extends InputMethodService implements
         mDisplayContext = KtxKt.getDisplayContext(this);
         KeyboardSwitcher.init(this);
         mFloatingKeyboardManager = new FloatingKeyboardManager(this, this);
+        mVoicePluginManager = new VoicePluginManager(this);
+        mVoiceInputManager = new VoiceInputManager(this, mVoicePluginManager);
         super.onCreate();
 
         loadSettings();
@@ -766,6 +797,17 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onDestroy() {
         helium314.keyboard.latin.gesture.SwipeGestureEngine.cancelIndexing();
+        if (sInstance == this) {
+            sInstance = null;
+        }
+        if (mVoiceInputManager != null) {
+            mVoiceInputManager.release();
+            mVoiceInputManager = null;
+        }
+        if (mVoicePluginManager != null) {
+            mVoicePluginManager.release();
+            mVoicePluginManager = null;
+        }
         mHandler.removeCallbacksAndMessages(null);
         if (mFloatingKeyboardManager != null) {
             mFloatingKeyboardManager.destroy();
@@ -787,6 +829,9 @@ public class LatinIME extends InputMethodService implements
 
     private boolean isImeSuppressedByHardwareKeyboard() {
         final KeyboardSwitcher switcher = KeyboardSwitcher.getInstance();
+        if (switcher.isShowingEmojiPalettes() || switcher.isShowingClipboardHistory()) {
+            return false;
+        }
         return !onEvaluateInputViewShown() && switcher.isImeSuppressedByHardwareKeyboard(
                 mSettings.getCurrent(), switcher.getKeyboardSwitchState());
     }
@@ -853,6 +898,76 @@ public class LatinIME extends InputMethodService implements
         if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
             mFloatingKeyboardManager.onInputViewRecreated(view);
         }
+
+        if (mVoiceInputManager != null) {
+            mVoiceInputManager.setListener(new VoiceInputManager.VoiceInputListener() {
+                @Override
+                public void onStateChanged(@NonNull VoiceInputManager.VoiceState state) {
+                    onVoiceStateChanged(state);
+                }
+
+                @Override
+                public void onError(@NonNull String message) {
+                    Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
+                    onVoiceStateChanged(VoiceInputManager.VoiceState.ERROR);
+                }
+            });
+        }
+    }
+
+    public void onVoiceStateChanged(final VoiceInputManager.VoiceState state) {
+        mHandler.post(() -> {
+            if (state == mLastVoiceState) return;
+            final VoiceInputManager.VoiceState prevState = mLastVoiceState;
+            mLastVoiceState = state;
+
+            if (hasSuggestionStripView()) {
+                switch (state) {
+                    case CONNECTING_PLUGIN:
+                    case STARTING_SESSION:
+                        mSuggestionStripView.showVoiceStatus(
+                                getString(R.string.voice_status_connecting),
+                                false,
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.stopVoice(); },
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); },
+                                helium314.keyboard.latin.suggestions.VoiceVisualizerView.Mode.CONNECTING
+                        );
+                        break;
+                    case RECORDING:
+                        mSuggestionStripView.showVoiceStatus(
+                                getString(R.string.voice_status_listening),
+                                false,
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.stopVoice(); },
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); },
+                                helium314.keyboard.latin.suggestions.VoiceVisualizerView.Mode.RECORDING
+                        );
+                        break;
+                    case PROCESSING_FINAL:
+                        mSuggestionStripView.showVoiceStatus(
+                                getString(R.string.voice_status_processing),
+                                true,
+                                null,
+                                () -> { if (mVoiceInputManager != null) mVoiceInputManager.cancelVoice(); },
+                                helium314.keyboard.latin.suggestions.VoiceVisualizerView.Mode.PROCESSING
+                        );
+                        break;
+                    case IDLE:
+                    case ERROR:
+                    default:
+                        mSuggestionStripView.hideVoiceStatus();
+                        break;
+                }
+            }
+
+            final MainKeyboardView kv = mKeyboardSwitcher != null ? mKeyboardSwitcher.getMainKeyboardView() : null;
+            if (kv != null && kv.getKeyboard() != null) {
+                for (final Key key : kv.getKeyboard().getSortedKeys()) {
+                    if (key.getCode() == KeyCode.VOICE_INPUT) {
+                        kv.invalidateKey(key);
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -996,6 +1111,10 @@ public class LatinIME extends InputMethodService implements
     void onStartInputViewInternal(final EditorInfo editorInfo, final boolean restarting) {
         super.onStartInputView(editorInfo, restarting);
         helium314.keyboard.latin.utils.ProofreadHelper.preloadModel(this);
+        if (mVoicePluginManager != null && !mVoicePluginManager.isPluginConnected()
+                && DeviceProtectedUtils.getSharedPreferences(this).getBoolean(VoiceConstants.PREF_VOICE_OFFLINE_ENABLED, false)) {
+            mVoicePluginManager.bindIfNeeded();
+        }
 
         mClipboardHistoryManager.onStartInputView();
         mDictionaryFacilitator.onStartInput();
@@ -1076,7 +1195,7 @@ public class LatinIME extends InputMethodService implements
         // can go into the correct mode, so we need to do some housekeeping here.
         final boolean needToCallLoadKeyboardLater;
         final Suggest suggest = mInputLogic.getSuggest();
-        if (!isImeSuppressedByHardwareKeyboard()) {
+        if (!isImeSuppressedByHardwareKeyboard() || currentSettingsValues.mHasHardwareKeyboard) {
             // The app calling setText() has the effect of clearing the composing
             // span, so we should reset our state unconditionally, even if restarting is
             // true.
@@ -1225,6 +1344,9 @@ public class LatinIME extends InputMethodService implements
     void onFinishInputViewInternal(final boolean finishingInput) {
         super.onFinishInputView(finishingInput);
         Log.i(TAG, "onFinishInputView");
+        if (mVoiceInputManager != null && mVoiceInputManager.isRecording()) {
+            mVoiceInputManager.stopVoice();
+        }
         mOtpSuggestionManager.stop();
         mClipboardHistoryManager.onFinishInputView();
         cleanupInternalStateForFinishInput();
@@ -1249,6 +1371,10 @@ public class LatinIME extends InputMethodService implements
             final int composingSpanStart, final int composingSpanEnd) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
                 composingSpanStart, composingSpanEnd);
+        if (mVoiceInputManager != null) {
+            mVoiceInputManager.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
+                    composingSpanStart, composingSpanEnd);
+        }
         if (DebugFlags.DEBUG_ENABLED) {
             Log.i(TAG, "onUpdateSelection: oss=" + oldSelStart + ", ose=" + oldSelEnd
                     + ", nss=" + newSelStart + ", nse=" + newSelEnd
@@ -1263,7 +1389,7 @@ public class LatinIME extends InputMethodService implements
         // it is then
         // we want to show suggestions anyway.
         final SettingsValues settingsValues = mSettings.getCurrent();
-        if (isInputViewShown()
+        if ((isInputViewShown() || mKeyboardSwitcher.isShowingStripContainer())
                 && mInputLogic.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
                         composingSpanStart, composingSpanEnd, settingsValues)) {
             // we don't want to update a manually set shift state if selection changed
@@ -1389,31 +1515,21 @@ public class LatinIME extends InputMethodService implements
             return;
         }
         final int inputHeight = mInputView.getHeight();
-        if (isImeSuppressedByHardwareKeyboard() && !visibleKeyboardView.isShown()) {
-            // If there is a hardware keyboard and a visible software keyboard view has been
-            // hidden,
-            // no visual element will be shown on the screen.
-            // for some reason setting contentTopInsets and visibleTopInsets broke somewhere
-            // along the
-            // way from OpenBoard to HeliBoard (GH-702, GH-1455), but not setting anything
-            // seems to work
-            mInsetsUpdater.setInsets(outInsets);
-            return;
-        }
+        final int keyboardHeight = visibleKeyboardView.isShown() ? visibleKeyboardView.getHeight() : 0;
         final int stripHeight = mKeyboardSwitcher.isShowingStripContainer()
                 ? mKeyboardSwitcher.getStripContainer().getHeight()
                 : 0;
-        final int visibleTopY = inputHeight - visibleKeyboardView.getHeight() - stripHeight;
+        final int visibleTopY = inputHeight - keyboardHeight - stripHeight;
 
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setMoreSuggestionsHeight(visibleTopY);
         }
 
-        // Need to set expanded touchable region only if a keyboard view is being shown.
-        if (visibleKeyboardView.isShown()) {
+        // Need to set expanded touchable region if keyboard view or strip container is being shown.
+        if (visibleKeyboardView.isShown() || mKeyboardSwitcher.isShowingStripContainer()) {
             final int touchLeft = 0;
             final int touchTop = mKeyboardSwitcher.isShowingPopupKeysPanel() ? 0 : visibleTopY;
-            final int touchRight = visibleKeyboardView.getWidth();
+            final int touchRight = mInputView.getWidth();
             final int touchBottom = inputHeight
                     // Extend touchable region below the keyboard.
                     + EXTENDED_TOUCHABLE_REGION_HEIGHT;
@@ -1451,6 +1567,10 @@ public class LatinIME extends InputMethodService implements
     @Override
     public boolean onEvaluateInputViewShown() {
         if (mIsExecutingStartShowingInputView) {
+            return true;
+        }
+        final SettingsValues settingsValues = mSettings.getCurrent();
+        if (settingsValues != null && settingsValues.mHasHardwareKeyboard && settingsValues.mShowToolbarOnly) {
             return true;
         }
         return super.onEvaluateInputViewShown();
@@ -1679,7 +1799,25 @@ public class LatinIME extends InputMethodService implements
             return;
         }
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
-            mRichImm.switchToShortcutIme(this);
+            final boolean offlineEnabled = helium314.keyboard.latin.utils.KtxKt.prefs(this)
+                    .getBoolean(VoiceConstants.PREF_VOICE_OFFLINE_ENABLED, false);
+            if (offlineEnabled) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    if (mVoiceInputManager != null) {
+                        if (mVoiceInputManager.isRecording()) {
+                            mVoiceInputManager.stopVoice();
+                        } else {
+                            mVoiceInputManager.startVoice();
+                        }
+                    }
+                } else {
+                    Toast.makeText(this, "Microphone permission required for offline voice input. Enable in Settings -> Voice", Toast.LENGTH_LONG).show();
+                }
+            } else {
+                mRichImm.switchToShortcutIme(this);
+            }
+            return;
         }
         final InputTransaction completeInputTransaction = mInputLogic.onCodeInput(mSettings.getCurrent(), event,
                 mKeyboardSwitcher.getKeyboardShiftMode(), mHandler);
@@ -1804,11 +1942,10 @@ public class LatinIME extends InputMethodService implements
     private void setSuggestedWords(final SuggestedWords suggestedWords) {
         final SettingsValues currentSettingsValues = mSettings.getCurrent();
         mInputLogic.setSuggestedWords(suggestedWords);
-        // TODO: Modify this when we support suggestions with hard keyboard
         if (!hasSuggestionStripView()) {
             return;
         }
-        if (!onEvaluateInputViewShown()) {
+        if (!onEvaluateInputViewShown() && !currentSettingsValues.mHasHardwareKeyboard) {
             return;
         }
 

@@ -33,6 +33,20 @@ public final class SuggestionResults extends TreeSet<SuggestedWordInfo> {
                 firstSuggestionExceedsConfidenceThreshold);
     }
 
+    public SuggestionResults(final SuggestionResults other) {
+        this(other.comparator() != null ? (Comparator<SuggestedWordInfo>) other.comparator() : sSuggestedWordInfoComparator,
+                other.mCapacity, other.mIsBeginningOfSentence,
+                other.mFirstSuggestionExceedsConfidenceThreshold);
+        addAll(other);
+        if (this.mRawSuggestions != null && other.mRawSuggestions != null) {
+            this.mRawSuggestions.addAll(other.mRawSuggestions);
+        }
+    }
+
+    public SuggestionResults copy() {
+        return new SuggestionResults(this);
+    }
+
     private SuggestionResults(final Comparator<SuggestedWordInfo> comparator, final int capacity,
             final boolean isBeginningOfSentence,
             final boolean firstSuggestionExceedsConfidenceThreshold) {

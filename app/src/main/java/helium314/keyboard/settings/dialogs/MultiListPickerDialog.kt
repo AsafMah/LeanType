@@ -27,6 +27,16 @@ import androidx.compose.ui.unit.dp
 import helium314.keyboard.settings.Theme
 import helium314.keyboard.settings.previewDark
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.res.painterResource
+import helium314.keyboard.latin.R
+import helium314.keyboard.settings.SearchIcon
+import helium314.keyboard.settings.CloseIcon
+
 // modified version of ListPickerDialog for selecting multiple items
 @Composable
 fun <T: Any> MultiListPickerDialog(
@@ -37,9 +47,17 @@ fun <T: Any> MultiListPickerDialog(
     title: (@Composable () -> Unit)? = null,
     initialSelection: List<T> = emptyList(),
     getItemName: (@Composable (T) -> String) = { it.toString() },
+    allowSearch: Boolean = items.size > 10,
 ) {
     var selected by remember { mutableStateOf(initialSelection.toSet()) }
+    var searchQuery by remember { mutableStateOf("") }
     val state = rememberLazyListState()
+
+    val itemNames = items.associateWith { getItemName(it) }
+    val filteredItems = remember(items, searchQuery, itemNames) {
+        if (searchQuery.isBlank()) items
+        else items.filter { (itemNames[it] ?: "").contains(searchQuery, ignoreCase = true) }
+    }
 
     ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,
@@ -51,28 +69,50 @@ fun <T: Any> MultiListPickerDialog(
             CompositionLocalProvider(
                 LocalTextStyle provides MaterialTheme.typography.bodyLarge
             ) {
-                LazyColumn(state = state) {
-                    items(items, key = { it.toString() }) { item ->
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                Column {
+                    if (allowSearch) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
                             modifier = Modifier
-                                .clickable {
-                                    selected = if (item in selected) selected - item else selected + item
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            placeholder = { Text(stringResource(android.R.string.search_go)) },
+                            leadingIcon = { SearchIcon() },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        CloseIcon(android.R.string.cancel)
+                                    }
                                 }
-                                .padding(horizontal = 16.dp)
-                                .heightIn(min = 40.dp)
-                        ) {
-                            Text(
-                                text = getItemName(item),
-                                modifier = Modifier.weight(1f),
-                            )
-                            Switch(
-                                checked = item in selected,
-                                onCheckedChange = {
-                                    selected = if (it) selected + item else selected - item
-                                }
-                            )
+                            },
+                            singleLine = true,
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        )
+                    }
+                    LazyColumn(state = state) {
+                        items(filteredItems, key = { it.toString() }) { item ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clickable {
+                                        selected = if (item in selected) selected - item else selected + item
+                                    }
+                                    .padding(horizontal = 16.dp)
+                                    .heightIn(min = 40.dp)
+                            ) {
+                                Text(
+                                    text = getItemName(item),
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Switch(
+                                    checked = item in selected,
+                                    onCheckedChange = {
+                                        selected = if (it) selected + item else selected - item
+                                    }
+                                )
+                            }
                         }
                     }
                 }

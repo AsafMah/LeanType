@@ -238,12 +238,16 @@ fun SubtypeScreen(
                     }
                 }
                 val recognizer = remember { HandwritingLoader.getRecognizer(ctx) }
-                val languageTag = currentSubtype.locale.toLanguageTag()
+                val languageTag = HandwritingLoader.getEffectiveLanguage(ctx, currentSubtype.locale.toLanguageTag())
                 var isHandwritingDownloaded by remember { mutableStateOf(false) }
                 val scope = rememberCoroutineScope()
                 LaunchedEffect(languageTag) {
                     withContext(Dispatchers.IO) {
-                        val ready = recognizer?.isLanguageReady(languageTag) == true
+                        val ready = try {
+                            recognizer?.isLanguageReady(languageTag) == true
+                        } catch (t: Throwable) {
+                            false
+                        }
                         withContext(Dispatchers.Main) {
                             isHandwritingDownloaded = ready
                         }
