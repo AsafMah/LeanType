@@ -28,8 +28,8 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Open PRs | **#106** (`issue37-slide-target-actions`), **#134** (backspace paragraph merge), **#136** (two-thumb native second pointer track), **#137** (upstream v4.1.2) |
 
 **No release work is outstanding** — v0.2.0 shipped signed on 2026-08-20. Open items are now
-device verification of #134 and #137, re-checking §7's two guarded upstream defects against
-v4.1.2 (in flight in #137), and reporting the emoji accelerated-delete bug upstream. See §12.
+device verification of #134 and #137, and reporting the emoji accelerated-delete bug upstream.
+§7's two inherited upstream defects were fixed by v4.1.2 and their guards removed. See §12.
 
 ---
 
@@ -181,47 +181,60 @@ Note `./gradlew.bat` — bare `gradlew.bat` is not on PATH in this shell.
 
 `:app:testOfflineRunTestsUnitTest` (the CI variant) on **Windows** → **4 failures**, all
 `ParserTest` (`canLoadKeyboard`, `dvorak has 4 rows`, `de_DE has extra keys`, `popup key
-count …`). These are asset/locale-ordering issues that **pass on Linux CI**.
+count …`). These are asset/locale-ordering issues that **pass on Linux CI**. Unchanged by the
+v4.1.2 merge.
 
-`:app:testOfflineDebugUnitTest` (full debug) → **12 failures**:
-- 10 long-standing: `ParserTest` ×5, `XLinkTest > otherLinks`, `InputLogicTest >
-  insertLetterIntoWordHangulFails`, `InputLogicTest >
-  tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`,
-  `StringUtilsTest` ×2
-- 2 inherited from upstream (see §7)
+`:app:testOfflineDebugUnitTest` (full debug) — **the baseline moved with the v4.1.2 merge**
+(#137), so use the right one:
+
+- on `origin/dev`: `InputLogicTest` + `SubtypeTest` fail **4** —
+  `tapOnlyCombiningWordDoesNotShowAutospaceIndicatorWhenGestureGateEnabled`,
+  `insertLetterIntoWordHangulFails`, and §7's two inherited upstream defects
+- on the v4.1.2 merge branch: only **1** — the autospace-indicator test. v4.1.2 fixed the
+  Hangul case and both inherited defects.
+
+Beyond those, the long-standing debug-variant failures are `ParserTest` ×5,
+`XLinkTest > otherLinks`, and `StringUtilsTest` ×2.
 
 **Always diff failing test *names* against a baseline run of the merge base — never compare
 absolute pass counts.**
 
 ---
 
-## 7. Upstream bugs we inherited (worth reporting upstream)
+## 7. Upstream bugs we inherited — fixed in v4.1.2 (historical)
 
-Both fail on a **pristine upstream `v4.0.8` checkout**, verified at the time by checking out
-that tag in `C:/Users/mahle/programming/LeanType-check-upstream-main` and running the tests
-there. They are *not* merge damage. Both are guarded with the repo's `runTests` skip so CI
-gates on real failures:
+**Both are resolved.** They are kept here because the *technique* is the reusable lesson:
+when a merge produces failures, reproduce them on a pristine upstream checkout before blaming
+your own merge.
+
+Two tests failed identically on a pristine upstream `v4.0.8` checkout, proving they were
+inherited rather than merge damage, and each was guarded with the repo's `runTests` skip so CI
+gated on real failures:
 
 1. **`SubtypeTest > subtypeStaysEnabledOnEdits`**
    `IllegalArgumentException: List has more than one element` at `SubtypeTest.kt:84` —
-   `getEnabledSubtypes(false)` returns more than one subtype, most likely because upstream
+   `getEnabledSubtypes(false)` returned more than one subtype, most likely because upstream
    v4.0.4 added auto-persisting of default typing-language subtypes at startup.
 
 2. **`InputLogicTest > immediate regex expansion triggers for symbol prefixed regex`**
-   Typing `@john` with regex shortcut `@\w+` yields `user_mentionohn`, expected
-   `user_mention`. Immediate expansion fires at `@j` and the remaining letters are appended.
-   A real user-facing bug in upstream's text expander; fixing it properly means defining
-   when a still-extendable regex match should expand, which is an upstream design decision.
+   Typing `@john` with regex shortcut `@\w+` yielded `user_mentionohn`, expected
+   `user_mention`. Immediate expansion fired at `@j` and the remaining letters were appended.
 
-Guards look like:
+Upstream **v4.1.2 fixes both**, verified two independent ways: on a pristine v4.1.2 checkout
+(`LeanType-check-upstream-main`) `SubtypeTest` runs 3 tests with 0 failures, and in the merged
+tree both tests pass on the debug variant where the guards never applied. Both guards were
+removed in **PR #137** (`e46454efb`), so the two tests now actually execute on CI. Neither
+needs reporting upstream.
+
+v4.1.2 also fixes the long-standing `InputLogicTest > insertLetterIntoWordHangulFails`, which
+was never an inherited-defect case.
+
+The guards that remain elsewhere are unrelated (Linux-only `ParserTest` ordering, `XLinkTest`
+network calls, dictionary-dependent cases, emoji-data versioning) and look like:
 
 ```kotlin
-if (BuildConfig.BUILD_TYPE == "runTests") return // fails at upstream tag v4.0.8 as well; inherited upstream defect
+if (BuildConfig.BUILD_TYPE == "runTests") return // reason; see #12
 ```
-
-**Both are being re-checked against `v4.1.2`** as part of PR #137 (the merge is where the
-guards live). Drop each guard whose defect turns out to be fixed upstream, and report to
-LeanBitLab any that still reproduce — neither has been reported yet.
 
 ---
 
@@ -369,9 +382,9 @@ Kept deliberately:
 | `LeanType-check-upstream-main` | detached at upstream `v4.1.2` | "does this fail upstream too?" checks |
 
 `check-upstream-main` tracks the upstream tag currently being integrated; it was moved from
-`v4.0.8` to `v4.1.2` for the #137 merge. §7's two upstream-bug reproductions were originally
-verified at `v4.0.8`, so re-point this worktree whenever the merge target changes and re-check
-whether those defects still reproduce on the new tag.
+`v4.0.8` to `v4.1.2` for the #137 merge, which is how §7's two inherited defects were confirmed
+fixed. Re-point it whenever the merge target changes, and use it the same way: reproduce any
+new merge failure on the pristine tag before blaming your own merge.
 
 Unfinished work — each of these holds commits that exist on **no remote ref**, so this disk is
 the only copy. Push or discard them deliberately; don't let them rot:
@@ -427,19 +440,15 @@ background trim level on a foreground process") and refuses to *raise* a level t
    editors) and **#137** (upstream v4.1.2 merge). Both need a real-editor smoke, not just a
    green test run; see the anti-regression note that "tests pass" ≠ "feature works" for input
    and integration code.
-2. **Re-check §7's two guarded upstream defects on v4.1.2.** `LeanType-check-upstream-main` has
-   already been re-pointed from `v4.0.8` to `v4.1.2` for this; the re-check is in flight as part
-   of PR #137, which is where the `runTests` skip guards live. Drop each guard whose defect is
-   fixed upstream, and **report to LeanBitLab** any that still reproduce — neither has been
-   reported yet.
-3. **Report the emoji accelerated-delete bug** upstream.
-4. **Install signed 0.2.0** over the phone's production package and do a real-editor smoke
+2. **Report the emoji accelerated-delete bug** upstream (surfaced by #134). §7's two inherited
+   defects need no report — v4.1.2 fixed both.
+3. **Install signed 0.2.0** over the phone's production package and do a real-editor smoke
    (typing, direct IME switching, custom-layout restoration, unshifted `to`/`no`/`meet`
    staying lowercase).
-5. **Tablet smoke** — the only never-executed release gate.
-6. **Issue #131 — "Java gesture not working with custom layouts"** is an open bug filed
+4. **Tablet smoke** — the only never-executed release gate.
+5. **Issue #131 — "Java gesture not working with custom layouts"** is an open bug filed
    against the fork's own fallback gesture engine; likely the highest-value functional work.
-7. Decide the fate of the six unfinished worktrees in §11 — their commits exist on no remote,
+6. Decide the fate of the six unfinished worktrees in §11 — their commits exist on no remote,
    so they are one disk failure from gone.
-8. Optional: refresh `AGENTS.md`'s JDK path
+7. Optional: refresh `AGENTS.md`'s JDK path
    (`jdk-21.0.11.10-hotspot` → `jdk-21.0.12.8-hotspot`).
