@@ -2719,6 +2719,7 @@ public final class InputLogic {
         }
         if (mWordComposer.isComposingWord()) {
             final boolean wasBatchMode = mWordComposer.isBatchMode();
+            boolean wholeWordDeleted = false;
             if (mWordComposer.isBatchMode()) {
                 final String rejectedSuggestion = mWordComposer.getTypedWord();
                 mWordComposer.reset();
@@ -2743,6 +2744,7 @@ public final class InputLogic {
                 // the same mechanism the batch-mode branch above relies on.
                 final int wordLength = mWordComposer.getTypedWord().length();
                 mWordComposer.reset();
+                wholeWordDeleted = true;
                 StatsUtils.onBackspaceWordDelete(wordLength);
             } else {
                 mWordComposer.applyProcessedEvent(event);
@@ -2751,12 +2753,16 @@ public final class InputLogic {
             if (mWordComposer.isComposingWord()) {
                 setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
             } else {
-                if (wasBatchMode) {
-                    // Composing word gone (whole-word/batch delete, or last char removed): clear the
-                    // composing span in the editor. commitText("", 1) is the correct primitive for
-                    // removing composing text — unlike deleteTextBeforeCursor.
+                if (wasBatchMode || wholeWordDeleted) {
+                    // Composing word gone (whole-word/batch delete): clear the composing span in
+                    // the editor. commitText("", 1) is the correct primitive for removing composing
+                    // text — unlike deleteTextBeforeCursor, which would delete committed text
+                    // before the span and mash words together ("This is pretty cool" -> "precool").
                     mConnection.commitText("", 1);
                 } else {
+                    // Last character of the composing word removed: upstream finishes the span and
+                    // deletes one character, which keeps a single backspace from bulk-deleting a
+                    // numeric sequence.
                     mConnection.finishComposingText();
                     mConnection.deleteTextBeforeCursor(1);
                 }
