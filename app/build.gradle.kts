@@ -6,6 +6,7 @@ plugins {
     kotlin("android")
     kotlin("plugin.serialization") version "2.2.21"
     kotlin("plugin.compose") version "2.2.21"
+    kotlin("plugin.parcelize")
 }
 
 // Load keystore properties
@@ -27,8 +28,8 @@ android {
         applicationId = "com.asafmah.leantypedual"
         minSdk = 21
         targetSdk = 35
-        versionCode = 4200
-        versionName = "0.2.0"
+        versionCode = 4300
+        versionName = "0.3.0"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
@@ -155,6 +156,7 @@ android {
         viewBinding = true
         buildConfig = true
         compose = true
+        aidl = true
     }
 
     externalNativeBuild {
@@ -225,7 +227,6 @@ android {
 }
 
 dependencies {
-
     // androidx
     implementation("androidx.core:core-ktx:1.16.0") // 1.17 requires SDK 36
     implementation("androidx.recyclerview:recyclerview:1.4.0")

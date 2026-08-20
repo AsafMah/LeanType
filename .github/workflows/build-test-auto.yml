@@ -39,8 +39,30 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Record run start time
+        id: start
+        run: echo "ts=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Run unit tests
-        run: ./gradlew :app:testOfflineRunTestsUnitTest
+        continue-on-error: true
+        run: ./gradlew :app:testOfflineRunTestsUnitTest --continue
+
+      # Authoritative gate. Strictly stronger than the Gradle exit code above:
+      # it also fails on results that are stale (task was UP-TO-DATE, so the
+      # report describes code that never ran) or self-inconsistent (enumerated
+      # testcases disagree with the totals the suites declare). Both of those
+      # have previously produced confident, wrong "it passes" conclusions.
+      - name: Verify test results and diff against baseline
+        run: |
+          python3 tools/check_test_results.py \
+            --results-dir app/build/test-results/testOfflineRunTestsUnitTest \
+            --baseline tools/test_baselines/runTests-linux.txt \
+            --started-after ${{ steps.start.outputs.ts }}
+
+      - name: Self-test the results checker
+        if: ${{ always() }}
+        run: python3 -m unittest discover -s tools/tests
 
       - name: Archive test reports
         uses: actions/upload-artifact@v4

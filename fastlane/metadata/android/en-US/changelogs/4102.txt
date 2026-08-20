@@ -1,0 +1,7 @@
+- Migrated offline voice typing to Whisper AI with compact Q5_1 models and in-toolbar waveform visualizer.
+- Added Voice Recognition Language selector with Auto-Detect, Follow Keyboard Language, and 99+ Whisper languages.
+- Added in-app streaming self-updater (standardfull), collapsible changelog, and official community links.
+- Added Personal Dictionary auto-learn frequency threshold slider in Settings -> Text Correction.
+- Added Toolbar & Clipboard key alignment setting (Start, Center, End, Auto-Span).
+- Added N-gram backoff and cache safeguards for continuous next-word predictions.
+- Isolated key border theme setting strictly to keyboard letter keys.

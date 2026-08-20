@@ -100,12 +100,12 @@ fun CustomAIKeysScreen(onClickBack: () -> Unit, onNavigateToConfig: (Int) -> Uni
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "What are Keywords?",
+                            text = stringResource(R.string.custom_ai_keys_what_are_keywords),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "Keywords (like #proofread or #summarize) act as quick instructions for the AI. Select them when configuring a key to define its behavior. You must also add your own custom prompt to create the key.",
+                            text = stringResource(R.string.custom_ai_keys_keywords_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -113,10 +113,10 @@ fun CustomAIKeysScreen(onClickBack: () -> Unit, onNavigateToConfig: (Int) -> Uni
                 }
 
                 SwitchPreference(
-                    name = "Show tags on keyboard",
+                    name = stringResource(R.string.custom_ai_keys_show_tags_title),
                     key = "pref_custom_ai_show_tags_on_toolbar",
                     default = false,
-                    description = "When enabled, custom tags will show as themed capsules on the keyboard toolbar instead of the default AI icon."
+                    description = stringResource(R.string.custom_ai_keys_show_tags_summary)
                 )
                 
                 (1..10).forEach { index ->
@@ -197,7 +197,7 @@ private fun CustomAIKeySlot(index: Int, context: Context, onNavigateToConfig: (I
                         }
                     }
                 } else {
-                    androidx.compose.ui.text.AnnotatedString("Not configured")
+                    androidx.compose.ui.text.AnnotatedString(stringResource(R.string.custom_ai_keys_not_configured))
                 }
 
                 Text(
@@ -287,7 +287,7 @@ fun ConfigCustomAIKeyScreen(
     androidx.compose.material3.Scaffold(
         topBar = {
             androidx.compose.material3.TopAppBar(
-                title = { Text("Configure Key $index") },
+                title = { Text(stringResource(R.string.custom_ai_keys_configure_title, index)) },
                 navigationIcon = {
                     androidx.compose.material3.IconButton(
                         onClick = {
@@ -342,7 +342,7 @@ fun ConfigCustomAIKeyScreen(
                                 contentColor = MaterialTheme.colorScheme.onErrorContainer
                             )
                         ) {
-                            Text("Delete")
+                            Text(stringResource(R.string.delete))
                         }
                     }
                     Button(
@@ -363,7 +363,7 @@ fun ConfigCustomAIKeyScreen(
                         modifier = if (initialPrompt.isNotBlank()) Modifier.weight(1f) else Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Save")
+                        Text(stringResource(R.string.save))
                     }
                 }
             }
@@ -378,9 +378,7 @@ fun ConfigCustomAIKeyScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Select keywords to define behavior, and combine them with your custom instructions.\n\n" +
-                       "Example: Choose #editor and type \"Translate to French\" to create a specialized translation key.\n\n" +
-                       "Note: You must provide both a custom prompt and select at least one keyword to save.",
+                text = stringResource(R.string.custom_ai_keys_config_instruction),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -389,7 +387,7 @@ fun ConfigCustomAIKeyScreen(
             androidx.compose.material3.OutlinedTextField(
                 value = customText,
                 onValueChange = { customText = it },
-                label = { Text("Custom Prompt for Key $index") },
+                label = { Text(stringResource(R.string.custom_ai_keys_prompt_label, index)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 200.dp)
@@ -401,7 +399,7 @@ fun ConfigCustomAIKeyScreen(
             androidx.compose.material3.OutlinedTextField(
                 value = tagText,
                 onValueChange = { if (it.length <= 12) tagText = it },
-                label = { Text("Tag / Label (e.g. 'French', 'Grammar', 'Rewrite')") },
+                label = { Text(stringResource(R.string.custom_ai_keys_tag_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp)
@@ -452,7 +450,7 @@ fun ConfigCustomAIKeyScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            "Selected Keyword Functions:",
+                            text = stringResource(R.string.custom_ai_keys_selected_functions),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary
                         )

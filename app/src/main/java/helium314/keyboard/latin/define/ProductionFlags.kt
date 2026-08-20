@@ -13,7 +13,7 @@ object ProductionFlags {
     //  LatinIME.isInputViewShown() returns true when there is no input view, thus crashing in onUpdateSelection
     // physical layout ignored https://github.com/Helium314/HeliBoard/issues/1957, https://github.com/Helium314/HeliBoard/issues/1949
     // physical layout ignored for uppercase letters only (?) https://github.com/Helium314/HeliBoard/issues/2030
-    const val IS_HARDWARE_KEYBOARD_SUPPORTED = false
+    const val IS_HARDWARE_KEYBOARD_SUPPORTED = true
 
     /**
      * Include all suggestions from all dictionaries in

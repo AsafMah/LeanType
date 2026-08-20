@@ -368,17 +368,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         if (words.size == 1) // ignore if more than a single word, which only happens with (badly working) spaceAwareGesture
             adjustConfidences(suggestion, wasAutoCapitalized)
 
-        // Add word to user dictionary if it is in no other dictionary except user history dictionary (i.e. typed again).
-        val sv = Settings.getValues()
-        if (sv.mAddToPersonalDictionary // require the opt-in
-            && sv.mAutoCorrectEnabled == sv.mAutoCorrectionEnabledPerUserSettings // don't add if user wants autocorrect but input field does not, see https://github.com/Helium314/HeliBoard/issues/427#issuecomment-1905438000
-            && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER_HISTORY) // require personalized suggestions
-            && !wasAutoCapitalized // we can't be 100% sure about what the user intended to type, so better don't add it
-            && words.size == 1 // only single words
-        ) {
-            addToPersonalDictionaryIfInvalidButInHistory(suggestion)
-        }
-
         var ngramContextForCurrentWord = ngramContext
         val preferredGroup = currentlyPreferredDictionaryGroup
         for (i in words.indices) {
@@ -390,9 +379,18 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 wasCurrentWordAutoCapitalized, timeStampInSeconds.toInt(), blockPotentiallyOffensive
             )
             ngramContextForCurrentWord = ngramContextForCurrentWord.getNextNgramContext(WordInfo(currentWord))
-
+        
             // Upstream v3.9.1: do not automatically remove blacklisted words from the blacklist on type.
             // Explicit Add/Blocklist actions remain the safe path for restoring blocked words.
+        }
+
+        // Add word to user dictionary if it is in no other dictionary except user history dictionary (i.e. typed again).
+        val sv = Settings.getValues()
+        if (sv.mAddToPersonalDictionary // require the opt-in
+            && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER_HISTORY) // require personalized suggestions
+            && words.size == 1 // only single words
+        ) {
+            addToPersonalDictionaryIfInvalidButInHistory(suggestion, wasAutoCapitalized)
         }
     }
 
@@ -458,29 +456,55 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         UserHistoryDictionary.addToDictionary(userHistoryDictionary, ngramContext, wordToUse, isValid, timeStampInSeconds)
     }
 
-    private fun addToPersonalDictionaryIfInvalidButInHistory(word: String) {
+    private fun addToPersonalDictionaryIfInvalidButInHistory(word: String, wasAutoCapitalized: Boolean) {
         if (word.length <= 1) return
-        val dictionaryGroup = clearlyPreferredDictionaryGroup ?: return
+        val dictionaryGroup = currentlyPreferredDictionaryGroup
         val userDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER) ?: return
         val userHistoryDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
         if (dictionaryGroup.isBlacklisted(word))
             return // never auto-promote a word the user has blacklisted
-        if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup))
+
+        val wordToUse = if (wasAutoCapitalized) {
+            val decapitalized = word.decapitalize(dictionaryGroup.locale)
+            if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
+                && !isValidWord(decapitalized, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
+            ) {
+                word
+            } else {
+                decapitalized
+            }
+        } else {
+            word
+        }
+
+        if (isValidWord(wordToUse, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup))
             return // valid word, no reason to auto-add it to personal dict
-        if (userDict.isInDictionary(word))
+        if (userDict.isInDictionary(wordToUse))
             return // should never happen, but better be safe
 
-        // User history always reports words as invalid, so we check the frequency instead.
-        // Testing shows that after 2 times adding, the frequency is 111, and then rises slowly with usage (values vary slightly).
-        // 120 is after 3 uses of the word, so we simply require more than that. todo: Could be made configurable.
-        // Words added to dictionaries (user and history) seem to be found only after some delay.
-        // This is not too bad, but it delays adding in case a user wants to fill a dictionary using this functionality
-        if (userHistoryDict.getFrequency(word) > 120) {
+        val threshold = Settings.getValues().mAddToPersonalDictThreshold
+        val minRequiredFreq = when (threshold) {
+            1 -> 0
+            2 -> 110 // standard 2nd-use frequency in binary trie
+            3 -> 120 // 3rd-use
+            4 -> 130 // 4th-use
+            else -> 140
+        }
+
+        val canAdd = if (threshold <= 1) {
+            userHistoryDict.isInDictionary(wordToUse) || userHistoryDict.getFrequency(wordToUse) >= 0
+        } else {
+            userHistoryDict.getFrequency(wordToUse) >= minRequiredFreq
+        }
+
+        if (canAdd) {
             scope.launch {
-                // adding can throw IllegalArgumentException: Unknown URL content://user_dictionary/words
-                // https://stackoverflow.com/q/41474623 https://github.com/AnySoftKeyboard/AnySoftKeyboard/issues/490
-                // apparently some devices don't have a dictionary? or it's just sporadic hiccups?
-                runCatching { UserDictionary.Words.addWord(userDict.mContext, word, 250, null, dictionaryGroup.locale) }
+                runCatching {
+                    UserDictionary.Words.addWord(userDict.mContext, wordToUse, 250, null, dictionaryGroup.locale)
+                    Log.i(TAG, "Added word '$wordToUse' to personal dictionary for locale ${dictionaryGroup.locale}")
+                }.onFailure {
+                    Log.w(TAG, "Failed to add word '$wordToUse' to personal dictionary", it)
+                }
             }
         }
     }
@@ -651,6 +675,17 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             var dictionarySuggestions = dictionary.getSuggestions(composedData, ngramContext, proximityInfoHandle,
                 settingsValuesForSuggestion, sessionId, weightForLocale, weightOfLangModelVsSpatialModel
             )
+            // If next-word suggestions with multi-word ngram context yielded no results (e.g. main/history dict has no 3-gram/4-gram match),
+            // back off to single preceding word (bigram) context.
+            if (composedData.mTypedWord.isEmpty() && (dictionarySuggestions == null || dictionarySuggestions.isEmpty()) && ngramContext.prevWordCount > 1) {
+                val backoffContext = ngramContext.singlePrevWordContext
+                val backoffSuggestions = dictionary.getSuggestions(composedData, backoffContext, proximityInfoHandle,
+                    settingsValuesForSuggestion, sessionId, weightForLocale, weightOfLangModelVsSpatialModel
+                )
+                if (!backoffSuggestions.isNullOrEmpty()) {
+                    dictionarySuggestions = backoffSuggestions
+                }
+            }
             if (composedData.mTypedWord.isEmpty() && (dictionarySuggestions == null || dictionarySuggestions.isEmpty())
                 && dictType == Dictionary.TYPE_USER
             ) {
@@ -1133,8 +1168,12 @@ private class DictionaryGroup(
     }
 
     fun isBlacklisted(word: String): Boolean {
-        val patterns = compiledBlacklistPatterns
+        val userDict = getSubDict(Dictionary.TYPE_USER)
         val lowercased = word.lowercase(locale)
+        if (userDict != null && (userDict.isInDictionary(word) || userDict.isInDictionary(lowercased))) {
+            return false
+        }
+        val patterns = compiledBlacklistPatterns
         return patterns.any { it.matches(lowercased) }
     }
 

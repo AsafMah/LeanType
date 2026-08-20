@@ -2,37 +2,26 @@
 
 package helium314.keyboard.latin
 
-import android.Manifest
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
-import android.provider.Telephony
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import helium314.keyboard.event.HapticEvent
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.databinding.OtpSuggestionBinding
-import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.ToolbarKey
-import helium314.keyboard.latin.utils.prefs
 
 /**
  * Optional, opt-in helper that surfaces one-time passcodes (OTPs) from incoming SMS as a
  * suggestion-strip chip the user can tap to insert (similar to the clipboard/screenshot
  * suggestions, see [ClipboardHistoryManager.getClipboardSuggestionView]).
  *
- * Privacy: this never reads the existing SMS inbox. A [BroadcastReceiver] is registered only
- * while the keyboard input view is shown and only when the feature is enabled and the
- * RECEIVE_SMS permission has been granted, so the keyboard only ever sees messages that arrive
- * while the user is actively typing.
+ * Privacy: OTPs are extracted strictly from SMS app notifications via [OtpNotificationListenerService]
+ * when enabled in Settings. No SMS reading permissions are required.
  */
 class OtpSuggestionManager(private val latinIME: LatinIME) {
 
@@ -40,63 +29,14 @@ class OtpSuggestionManager(private val latinIME: LatinIME) {
     private var otpSuggestionView: View? = null
     private var dontShowCurrentSuggestion = false
 
-    private var latestOtp: String? = null
-    private var latestOtpTimestamp = 0L
-
-    private var isRegistered = false
-    private val smsReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-            val body = try {
-                Telephony.Sms.Intents.getMessagesFromIntent(intent)
-                    ?.joinToString(separator = "") { it.messageBody ?: it.displayMessageBody ?: "" }
-                    ?: return
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to read incoming SMS", e)
-                return
-            }
-            val otp = extractOtp(body) ?: return
-            latestOtp = otp
-            latestOtpTimestamp = System.currentTimeMillis()
-            dontShowCurrentSuggestion = false
-            // Refresh the strip on the main thread so the chip appears immediately,
-            // mirroring the screenshot-observer path in ClipboardHistoryManager.
-            mainHandler.post {
-                if (latinIME.isInputViewShown) latinIME.setNeutralSuggestionStrip()
-            }
-        }
-    }
-
-    /** Register the SMS receiver if the feature is enabled and the permission is granted. Idempotent. */
     fun start() {
-        if (isRegistered) return
-        if (!latinIME.mSettings.current.mAutoReadOtp) return
-        if (!PermissionsUtil.checkAllPermissionsGranted(latinIME, Manifest.permission.RECEIVE_SMS)) return
-        try {
-            ContextCompat.registerReceiver(
-                latinIME,
-                smsReceiver,
-                IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION),
-                // EXPORTED is required: SMS_RECEIVED is delivered by the system/telephony process
-                // (an external sender), so a NOT_EXPORTED receiver never receives it. This is safe
-                // because SMS_RECEIVED is a protected broadcast that only the system can send.
-                ContextCompat.RECEIVER_EXPORTED
-            )
-            isRegistered = true
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not register SMS receiver", e)
-        }
+        activeInstance = this
     }
 
-    /** Unregister the receiver. Idempotent. Called when the input view is hidden or the IME is destroyed. */
     fun stop() {
-        if (!isRegistered) return
-        try {
-            latinIME.unregisterReceiver(smsReceiver)
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not unregister SMS receiver", e)
+        if (activeInstance === this) {
+            activeInstance = null
         }
-        isRegistered = false
     }
 
     /**
@@ -147,18 +87,6 @@ class OtpSuggestionManager(private val latinIME: LatinIME) {
         view.isGone = true
     }
 
-    /**
-     * Extract an OTP from an SMS body. Keyword-gated to limit false positives: a 4-8 digit group is
-     * only treated as a code when the message mentions a code-like keyword, or when it is the single
-     * such group in the message.
-     */
-    private fun extractOtp(body: String): String? {
-        if (body.isBlank()) return null
-        val groups = codeRegex.findAll(body).map { it.value }.toList()
-        if (groups.isEmpty()) return null
-        return if (otpKeywordRegex.containsMatchIn(body) || groups.size == 1) groups.first() else null
-    }
-
     companion object {
         private const val TAG = "OtpSuggestionManager"
         private const val RECENT_OTP_MILLIS = 60 * 1000L // OTP chip is offered for 60s after arrival
@@ -167,5 +95,36 @@ class OtpSuggestionManager(private val latinIME: LatinIME) {
             "otp|code|passcode|password|pin|verification|verify|one[- ]?time|2fa|auth",
             RegexOption.IGNORE_CASE
         )
+
+        @Volatile private var latestOtp: String? = null
+        @Volatile private var latestOtpTimestamp: Long = 0L
+        @Volatile private var activeInstance: OtpSuggestionManager? = null
+
+        /**
+         * Called by [OtpNotificationListenerService] when an OTP is detected from an SMS notification.
+         */
+        fun onOtpReceived(otp: String) {
+            latestOtp = otp
+            latestOtpTimestamp = System.currentTimeMillis()
+            val instance = activeInstance ?: return
+            instance.dontShowCurrentSuggestion = false
+            instance.mainHandler.post {
+                if (instance.latinIME.isInputViewShown) {
+                    instance.latinIME.setNeutralSuggestionStrip()
+                }
+            }
+        }
+
+        /**
+         * Extract an OTP from notification or SMS body text. Keyword-gated to limit false positives:
+         * a 4-8 digit group is only treated as a code when the message mentions a code-like keyword,
+         * or when it is the single such group in the message.
+         */
+        fun extractOtp(body: String): String? {
+            if (body.isBlank()) return null
+            val groups = codeRegex.findAll(body).map { it.value }.toList()
+            if (groups.isEmpty()) return null
+            return if (otpKeywordRegex.containsMatchIn(body) || groups.size == 1) groups.first() else null
+        }
     }
 }
