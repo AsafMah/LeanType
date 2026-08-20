@@ -134,7 +134,7 @@ fun BackgroundServicesScreen(
             // 4. SMS OTP Receiver
             CompactServiceCard(
                 title = "SMS OTP Reader",
-                description = "Reads SMS to suggest OTP passcodes.",
+                description = "Reads SMS notifications to suggest OTP passcodes.",
                 status = if (smsOtpEnabled) "READY" else "DISABLED",
                 enabled = smsOtpEnabled,
                 onToggle = { enabled ->
@@ -144,7 +144,7 @@ fun BackgroundServicesScreen(
                 onStopClicked = {
                     smsOtpEnabled = false
                     prefs.edit().putBoolean(Settings.PREF_AUTO_READ_OTP, false).apply()
-                    Toast.makeText(context, "SMS Receiver stopped & unregistered", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "SMS OTP Reader stopped", Toast.LENGTH_SHORT).show()
                 }
             )
 

@@ -103,4 +103,816 @@
     <string name="label_search_key">"تلاش"</string>
     <string name="label_pause_key">"موقوف"</string>
     <string name="label_wait_key">"انتظار"</string>
+
+    <string name="spell_checker_service_name">LeanType اسپیل چیکر</string>
+    <string name="ime_name">LeanType</string>
+    <string name="ime_settings">LeanType ترتیبات</string>
+    <string name="android_spell_checker_settings">LeanType اسپیل چیکر کی ترتیبات</string>
+    <string name="vibrate_in_dnd_mode">پریشان نہ کریں موڈ میں وائبریٹ کریں</string>
+    <string name="suggest_emojis">ایموجیز تجویز کریں</string>
+    <string name="suggest_emojis_summary">عام تجاویز میں ایموجی لغت استعمال کریں</string>
+    <string name="inline_emoji_search">ان لائن ایموجی تلاش</string>
+    <string name="inline_emoji_search_summary">جب کسی لفظ سے پہلے کولن (:) ہو تو صرف ایموجیز تجویز کریں</string>
+    <string name="emoji_dictionary_required">اس فیچر کے کام کرنے کے لیے ایموجی لغت درکار ہے۔ .dict فارمیٹ میں لغات %s سے ڈاؤن لوڈ کی جا سکتی ہیں۔</string>
+    <string name="show_emoji_descriptions">دیر تک دبانے پر ایموجی کی تفصیل دکھائیں</string>
+    <string name="settings_category_input">ان پٹ</string>
+    <string name="settings_category_additional_keys">اضافی کیز</string>
+    <string name="settings_category_clipboard_history">کلپ بورڈ کی تاریخ</string>
+    <string name="settings_category_correction">تصحیح</string>
+    <string name="settings_category_space">اسپیس</string>
+    <string name="settings_category_suggestions">تجاویز</string>
+    <string name="settings_category_experimental">تجرباتی</string>
+    <string name="settings_category_miscellaneous">متفرق</string>
+    <string name="settings_category_configuration">تشکیل</string>
+    <string name="settings_category_visuals">بصریات اور پیش منظر</string>
+    <string name="settings_category_behavior">رویہ</string>
+    <string name="settings_category_gestures_advanced">جدید اشارے</string>
+    <string name="settings_category_touchpad">ٹچ پیڈ</string>
+    <string name="enable_split_keyboard_landscape">اسپلٹ کی بورڈ فعال کریں (لینڈ اسکیپ)</string>
+    <string name="split_spacer_scale">تقسیم کا فاصلہ</string>
+    <string name="switch_language">زبان تبدیل کریں</string>
+    <string name="language_switch_key_switch_both">دونوں تبدیل کریں</string>
+    <string name="language_switch_key_behavior">زبان تبدیل کرنے والی کلید کا رویہ</string>
+    <string name="show_emoji_key">ایموجی کلید</string>
+    <string name="abbreviation_unit_minutes">%s منٹ</string>
+    <string name="settings_no_limit">کوئی حد نہیں</string>
+    <string name="use_apps_dict">ایپ کے نام تلاش کریں</string>
+    <string name="use_apps_dict_summary">تجاویز اور تصحیح کے لیے انسٹال شدہ ایپس کے نام استعمال کریں</string>
+    <string name="disable_personalized_dicts_message">انتباہ: اس ترتیب کو غیر فعال کرنے سے سیکھا ہوا ڈیٹا صاف ہو جائے گا</string>
+    <string name="add_to_personal_dictionary">ذاتی لغت میں الفاظ شامل کریں</string>
+    <string name="add_to_personal_dictionary_summary">سیکھے ہوئے الفاظ کو محفوظ کرنے کے لیے ڈیوائس کی ذاتی لغت استعمال کریں</string>
+    <string name="edit_blocked_words">مسدود الفاظ</string>
+    <string name="blocked_words_summary">تجاویز سے مسدود الفاظ کا نظم کریں</string>
+    <string name="add_blocked_word">ایک لفظ مسدود کریں</string>
+    <string name="blocked_word_already_present">لفظ پہلے ہی مسدود ہے</string>
+    <string name="clear_all_blocked_words_confirmation">کیا آپ واقعی تمام الفاظ غیر مسدود کرنا چاہتے ہیں؟</string>
+    <string name="prefs_always_show_suggestions">ہمیشہ تجاویز دکھائیں</string>
+    <string name="prefs_always_show_suggestions_summary">دیگر ایپس کی تجاویز کو غیر فعال کرنے کی درخواست نظر انداز کریں (مسائل کا سبب بن سکتا ہے)</string>
+    <string name="prefs_always_show_suggestions_except_web_text">ویب ایڈیٹ فیلڈز کے لیے ہمیشہ تجاویز نہ دکھائیں</string>
+    <string name="prefs_always_show_suggestions_except_web_text_summary">ویب ایڈیٹ فیلڈز (زیادہ تر براؤزرز میں) ہمیشہ تجاویز دکھانے کی ترتیب کے ساتھ مسائل کی ایک بہت عام وجہ ہیں</string>
+    <string name="auto_correction_trigger">خودکار تصحیح کب</string>
+    <string name="auto_correction_trigger_both">اسپیس بار اور اوقاف</string>
+    <string name="auto_correction_trigger_space">صرف اسپیس بار</string>
+    <string name="auto_correction_trigger_punctuation">صرف اوقاف</string>
+    <string name="more_autocorrect">مزید خودکار تصحیح</string>
+    <string name="more_autocorrect_summary">خودکار تصحیح کریں چاہے ان پٹ فیلڈ نے واضح طور پر درخواست نہ کی ہو</string>
+    <string name="auto_correction_confidence">خودکار تصحیح کا اعتماد</string>
+    <string name="auto_correct_shortcuts">خودکار تصحیح کے شارٹ کٹ</string>
+    <string name="auto_correct_shortcuts_summary">فعال ہونے پر شارٹ کٹ خودکار تصحیح کے ذریعے پھیل سکتے ہیں</string>
+    <string name="prefs_physical_keyboard_suggestion_shortcuts">فزیکل کی بورڈ تجویز شارٹ کٹ</string>
+    <string name="prefs_physical_keyboard_suggestion_shortcuts_summary">کی بورڈ شارٹ کٹ استعمال کرتے ہوئے تجویز امیدوار منتخب کریں اور نمبر بیجز دکھائیں</string>
+    <string name="physical_keyboard_shortcut_disabled">غیر فعال</string>
+    <string name="physical_keyboard_shortcut_alt">Alt + نمبر (Alt+1، Alt+2، Alt+3)</string>
+    <string name="physical_keyboard_shortcut_ctrl">Ctrl + نمبر (Ctrl+1، Ctrl+2، Ctrl+3)</string>
+    <string name="physical_keyboard_shortcut_number">نمبر کلید (لکھتے وقت 1، 2، 3)</string>
+    <string name="large_screen_layout_note">اس اسکرین کی ترتیبات بڑی اسکرین لے آؤٹ پر لاگو ہوتی ہیں</string>
+    <string name="backspace_reverts_autocorrect">بیک اسپیس خودکار تصحیح کو واپس لے لیتا ہے</string>
+    <string name="center_suggestion_text_to_enter">ہمیشہ درمیانی تجویز استعمال کریں</string>
+    <string name="center_suggestion_text_to_enter_summary">اسپیس یا اوقاف دبانے پر درمیانی تجویز داخل ہو جائے گی</string>
+    <string name="prioritize_personal_suggestions">ذاتی اور سیکھے ہوئے الفاظ کو ترجیح دیں</string>
+    <string name="prioritize_personal_suggestions_summary">اگلے لفظ کی پیش گوئی کے دوران ذاتی لغت اور سیکھے ہوئے الفاظ کو زیادہ اسکور ترجیح دیں</string>
+    <string name="next_word_boost_level">سیکھے ہوئے لفظ کی بوسٹ لیول</string>
+    <string name="next_word_boost_level_summary">سیکھے ہوئے اور ذاتی لغت کے اندراجات کے لیے اسکور ترجیح بوسٹ کی طاقت سیٹ کریں</string>
+    <string name="next_word_strict_ngram">سیکھے ہوئے الفاظ کے لیے سیاق و سباق کی مماثلت ضروری ہے</string>
+    <string name="next_word_strict_ngram_summary">صرف اس وقت سیکھے ہوئے الفاظ تجویز کریں جب پچھلے لفظ کا سیاق و سباق مماثل ہو</string>
+    <string name="immediate_auto_space">فوری خودکار اسپیس</string>
+    <string name="immediate_auto_space_summary">تجویز منتخب کرتے وقت فوراً اسپیس ڈالیں تاکہ اگلے ٹائپ شدہ حرف میں تاخیر نہ ہو</string>
+    <string name="first_word_prediction">پہلے لفظ کی تجاویز</string>
+    <string name="first_word_prediction_summary">جب جملے کے شروع میں کوئی ان پٹ نہ ہو تو تجاویز دکھائیں</string>
+    <string name="suggest_punctuation">اوقاف کی تجاویز</string>
+    <string name="suggest_punctuation_summary">جب کوئی اور تجاویز دستیاب نہ ہوں تو اوقاف دکھائیں</string>
+    <string name="suggest_clipboard_content">کلپ بورڈ مواد تجویز کریں</string>
+    <string name="suggest_clipboard_content_summary">حال ہی میں کاپی کردہ کلپ بورڈ مواد کو بطور تجویز دکھائیں</string>
+    <string name="suggest_screenshots">حالیہ اسکرین شاٹس تجویز کریں</string>
+    <string name="suggest_screenshots_summary">حال ہی میں لیے گئے اسکرین شاٹس کو بطور تجویز دکھائیں</string>
+    <string name="auto_read_otp">SMS سے OTP خودکار پڑھیں</string>
+    <string name="auto_read_otp_summary">آنے والی SMS سے کوڈ کو بطور تجویز دکھائیں جسے تھپتھپا کر داخل کیا جا سکتا ہے</string>
+    <string name="spoken_otp_suggestion">OTP تجویز مسترد کریں</string>
+    <string name="compress_screenshots">اسکرین شاٹ تجاویز کو کمپریس کریں</string>
+    <string name="compress_screenshots_summary">جگہ بچانے کے لیے اسکرین شاٹ تجاویز کے معیار اور سائز کو کم کریں</string>
+    <string name="gesture_floating_preview_static">تیرتا پیش منظر</string>
+    <string name="gesture_floating_preview_static_summary">اشارہ کرتے وقت تجویز کردہ لفظ دیکھیں</string>
+    <string name="gesture_floating_preview_dynamic_summary">اشارے کے دوران پیش منظر کو حرکت دیں</string>
+    <string name="gesture_fast_typing_cooldown">تیز ٹائپنگ کول ڈاؤن</string>
+    <string name="gesture_fast_typing_cooldown_instant">ہمیشہ فوراً شروع کریں</string>
+    <string name="gesture_trail_fadeout_duration">اشارے کی لکیر کی مدت</string>
+    <string name="enable_clipboard_history">کلپ بورڈ کی تاریخ فعال کریں</string>
+    <string name="enable_clipboard_history_summary">اگر غیر فعال ہو تو کلپ بورڈ کلید کلپ بورڈ کا مواد پیسٹ کرے گی اگر موجود ہو</string>
+    <string name="clipboard_history_retention_time">تاریخ برقرار رکھنے کا وقت</string>
+    <string name="clipboard_history_pinned_first">پن کی گئی اشیاء سب سے اوپر دکھائیں</string>
+    <string name="clipboard_fold_pinned">بطور طے شدہ پن کی گئی اشیاء کو فولڈ کریں</string>
+    <string name="clear_clipboard_icon">کلپ بورڈ صاف کرنے کا آئیکن</string>
+    <string name="clear_clipboard_icon_summary">کلپ بورڈ صاف کرنے والے بٹن کے لیے آئیکن اسٹائل منتخب کریں</string>
+    <string name="clear_clipboard_icon_bin">کوڑے دان</string>
+    <string name="clear_clipboard_icon_sweep">صفایا / سب صاف کریں</string>
+    <string name="clear_clipboard_icon_sweep_slanted">ترچھی لکیریں</string>
+    <string name="clear_clipboard_icon_clipboard_slash">سلیش کے ساتھ کلپ بورڈ کا خاکہ</string>
+    <string name="clear_clipboard_icon_legacy">کلاسک کلپ بورڈ</string>
+    <string name="clipboard_pinned">پن کیا گیا</string>
+    <string name="clipboard_search_hint">کلپس تلاش کریں...</string>
+    <string name="clipboard_empty_text">کوئی آئٹم نہیں ملا</string>
+    <string name="clipboard_item_deleted">آئٹم حذف کر دیا گیا</string>
+    <string name="clipboard_no_search_results">کوئی نتیجہ نہیں ملا</string>
+    <string name="clipboard_clear_all_confirmation">کیا آپ واقعی تمام تاریخ صاف کرنا چاہتے ہیں؟</string>
+    <string name="clear_all">سب صاف کریں</string>
+    <string name="delete_swipe">حذف کرنے کا سوائپ</string>
+    <string name="delete_swipe_summary">ڈیلیٹ کلید سے سوائپ کریں تاکہ متن کے بڑے حصوں کو ایک ساتھ منتخب اور ہٹایا جا سکے</string>
+    <string name="backup_restore_title">بیک اپ اور بحال</string>
+    <string name="backup_restore_message">فائل سے محفوظ کریں یا لوڈ کریں۔ انتباہ: بحال کرنے سے موجودہ ڈیٹا اوور رائٹ ہو جائے گا</string>
+    <string name="backup_error">بیک اپ میں خرابی: %s</string>
+    <string name="restore_error">بیک اپ بحال کرنے میں خرابی: %s</string>
+    <string name="button_backup">بیک اپ</string>
+    <string name="button_restore">بحال کریں</string>
+    <string name="backup_restored">بیک اپ بحال ہو گیا</string>
+    <string name="timestamp_format_title">ٹائم اسٹیمپ کلید کے لیے فارمیٹ</string>
+    <string name="secondary_locale">کثیر لسانی ٹائپنگ</string>
+    <string name="locales_with_dict">لغات والی زبانیں</string>
+    <string name="load_gesture_library">اشارہ ٹائپنگ لائبریری لوڈ کریں</string>
+    <string name="load_gesture_library_summary">اشارہ ٹائپنگ کو فعال کرنے کے لیے ایک مقامی لائبریری فراہم کریں</string>
+    <string name="gesture_method">اشارہ ٹائپنگ کا طریقہ</string>
+    <string name="gesture_method_summary">سوائپ ٹائپنگ کے لیے الگورتھم منتخب کریں</string>
+    <string name="gesture_method_native">مقامی لائبریری (swypelib درکار ہے)</string>
+    <string name="gesture_method_fallback">فال بیک انجن (خالص جاوا)</string>
+    <string name="load_gesture_library_message">آپ کو \'%s\' کے لیے لائبریری درکار ہوگی۔ غیر مطابقت پذیر لائبریریاں اشارہ ٹائپنگ کے دوران کریش کر سکتی ہیں۔
+        \n\nانتباہ: بیرونی کوڈ لوڈ کرنا ایک حفاظتی خطرہ ہو سکتا ہے۔ صرف کسی معتبر ذریعہ سے لائبریری استعمال کریں۔</string>
+    <string name="checksum_mismatch_message">نامعلوم لائبریری فائل۔ کیا آپ کو یقین ہے کہ یہ کسی معتبر ذریعہ سے ہے اور \'%s\' کے لیے ہے؟</string>
+    <string name="load_gesture_library_button_load">لائبریری لوڈ کریں</string>
+    <string name="load_gesture_library_button_delete">لائبریری حذف کریں</string>
+    <string name="load_gesture_library_button_download">لائبریری ڈاؤن لوڈ کریں</string>
+    <string name="load_gesture_library_downloading">اشارہ لائبریری ڈاؤن لوڈ ہو رہی ہے…</string>
+    <string name="load_gesture_library_download_success">ڈاؤن لوڈ مکمل! دوبارہ شروع ہو رہا ہے…</string>
+    <string name="load_gesture_library_download_failed">ڈاؤن لوڈ ناکام: %s</string>
+    <string name="load_handwriting_plugin">ہینڈ رائٹنگ پلگ ان لوڈ کریں</string>
+    <string name="load_handwriting_plugin_summary">ہینڈ رائٹنگ ان پٹ کو فعال کرنے کے لیے ایک APK پلگ ان فراہم کریں</string>
+    <string name="load_handwriting_plugin_message">ایک ہینڈ رائٹنگ پلگ ان APK فراہم کریں۔\n\nانتباہ: بیرونی کوڈ لوڈ کرنا ایک حفاظتی خطرہ ہو سکتا ہے۔ صرف کسی معتبر ذریعہ سے پلگ ان استعمال کریں۔</string>
+    <string name="load_handwriting_plugin_button_load">پلگ ان APK لوڈ کریں</string>
+    <string name="load_handwriting_plugin_button_delete">پلگ ان حذف کریں</string>
+    <string name="load_handwriting_plugin_success">ہینڈ رائٹنگ پلگ ان کامیابی سے درآمد ہو گیا</string>
+    <string name="load_handwriting_plugin_failed">ہینڈ رائٹنگ پلگ ان APK لوڈ کرنے میں ناکام</string>
+    <string name="load_translation_plugin">ترجمہ پلگ ان لوڈ کریں</string>
+    <string name="load_translation_plugin_summary">ترجمہ انجن کو فعال کرنے کے لیے ایک APK پلگ ان فراہم کریں</string>
+    <string name="load_translation_plugin_button_delete">پلگ ان حذف کریں</string>
+    <string name="load_translation_plugin_success">ترجمہ پلگ ان کامیابی سے درآمد ہو گیا</string>
+    <string name="load_translation_plugin_failed">ترجمہ پلگ ان APK لوڈ کرنے میں ناکام</string>
+    <string name="handwriting">ہینڈ رائٹنگ</string>
+    <string name="delete_handwriting_model">ڈاؤن لوڈ کردہ ماڈل حذف کریں</string>
+    <string name="handwriting_model_deleted">ہینڈ رائٹنگ ماڈل حذف ہو گیا</string>
+    <string name="handwriting_plugin_required">ہینڈ رائٹنگ پلگ ان درکار ہے</string>
+    <string name="handwriting_plugin_summary_text">براہ کرم ڈرائنگ کی شناخت کو فعال کرنے کے لیے ہینڈ رائٹنگ پلگ ان لائبریری لوڈ کریں۔</string>
+    <string name="handwriting_plugin_load_button">پلگ ان لوڈ کریں</string>
+    <string name="autospace_after_punctuation">اوقاف کے بعد خودکار اسپیس</string>
+    <string name="autospace_after_punctuation_summary">نیا لفظ ٹائپ کرتے وقت اوقاف کے بعد خودکار طور پر اسپیس داخل کریں</string>
+    <string name="autospace_after_emoji">ایموجی کے بعد خودکار اسپیس</string>
+    <string name="autospace_after_emoji_summary">نیا لفظ ٹائپ کرتے وقت ایموجی کے بعد خودکار طور پر اسپیس داخل کریں</string>
+    <string name="autospace_after_suggestion">تجویز منتخب کرنے کے بعد خودکار اسپیس</string>
+    <string name="autospace_before_gesture_typing">اشارے سے لفظ ٹائپ کرنے سے پہلے خودکار اسپیس</string>
+    <string name="autospace_after_gesture_typing">اشارے سے لفظ ٹائپ کرنے کے بعد خودکار اسپیس</string>
+    <string name="shift_removes_autospace">شفٹ دبانے پر خودکار اسپیس نہیں</string>
+    <string name="shift_removes_autospace_summary">شفٹ زیر التواء خودکار اسپیس کو ہٹا دیتا ہے</string>
+    <string name="preserve_space_before_punctuation">اوقاف سے پہلے اسپیس محفوظ رکھیں</string>
+    <string name="preserve_space_before_punctuation_summary">اوقاف کے نشانات سے پہلے اسپیس خودکار طور پر حذف نہ کریں: ]}):;!?,.</string>
+    <string name="show_popup_keys_title">پاپ اپ میں اعراب والے مزید حروف دکھائیں</string>
+    <string name="show_popup_keys_normal">کی بورڈ زبانوں میں متعین شکلیں دکھائیں</string>
+    <string name="show_popup_keys_main">بہت عام شکلیں شامل کریں (طے شدہ)</string>
+    <string name="show_popup_keys_more">عام شکلیں شامل کریں</string>
+    <string name="show_popup_keys_all">تمام دستیاب شکلیں شامل کریں</string>
+    <string name="url_detection_title">URL کا پتہ لگانا</string>
+    <string name="url_detection_summary">URLs اور اسی طرح کو ایک لفظ کے طور پر پتہ لگانے کی کوشش کریں</string>
+    <string name="incognito">پوشیدگی موڈ پر مجبور کریں</string>
+    <string name="touchpad">ٹچ پیڈ</string>
+    <string name="text_edit">متن کی تدوین</string>
+    <string name="select_mode">منتخب موڈ</string>
+    <string name="touchpad_fullscreen">فل اسکرین ٹچ پیڈ</string>
+    <string name="touchpad_fullscreen_summary">جب ٹچ پیڈ موڈ فعال ہو تو تجویز کی پٹی اور ٹول بار چھپائیں</string>
+    <string name="prefs_force_incognito_mode_summary">نئے الفاظ سیکھنا غیر فعال کریں</string>
+    <string name="more_keys_strip_description">مزید کیز</string>
+    <string name="language_and_layouts_title">زبانیں اور لے آؤٹس</string>
+    <string name="languages_title">زبانیں</string>
+    <string name="number_row">نمبر قطار</string>
+    <string name="number_row_summary">ہمیشہ نمبر قطار دکھائیں</string>
+    <string name="number_row_in_symbols">علامات کے نظارے میں نمبر قطار دکھائیں</string>
+    <string name="compact_number_row_in_symbols">کمپیکٹ علامات نمبر قطار</string>
+    <string name="compact_number_row_in_symbols_summary">الگ قطار شامل کرنے کے بجائے علامات کی پہلی قطار کو تبدیل کریں</string>
+    <string name="localized_number_row">نمبر قطار کو مقامی بنائیں</string>
+    <string name="localized_number_row_summary">لاطینی اعداد پر مقامی اعداد کو ترجیح دیں</string>
+    <string name="number_row_hints">نمبر قطار پر اشارے دکھائیں</string>
+    <string name="save_subtype_per_app">فی ایپ زبان یاد رکھیں</string>
+    <string name="show_hints">کلید کے اشارے دکھائیں</string>
+    <string name="show_hints_summary">دیر تک دبانے کے اشارے دکھائیں</string>
+    <string name="popup_order_and_hint_source">پاپ اپ کلید کی ترتیب اور اشاروں کا ذریعہ</string>
+    <string name="hint_source">اشاروں کا ذریعہ منتخب کریں</string>
+    <string name="popup_order">پاپ اپ کلید کی ترتیب منتخب کریں</string>
+    <string name="show_tld_popup_keys">TLD پاپ اپ کیز دکھائیں</string>
+    <string name="show_tld_popup_keys_summary">URLs اور ای میل پتے ٹائپ کرتے وقت پیریڈ کلید کے پاپ اپ کو ٹاپ لیول ڈومینز سے تبدیل کریں</string>
+    <string name="popup_keys_number">نمبر قطار</string>
+    <string name="popup_keys_language">@string/subtype_locale</string>
+    <string name="popup_keys_language_priority">زبان (ترجیح)</string>
+    <string name="popup_keys_layout">لے آؤٹ</string>
+    <string name="popup_keys_symbols">علامات</string>
+    <string name="toolbar_mode">ٹول بار موڈ</string>
+    <string name="toolbar_mode_expandable">ٹول بار کیز اور تجاویز</string>
+    <string name="toolbar_mode_toolbar_keys">صرف ٹول بار کیز</string>
+    <string name="toolbar_mode_suggestion_strip">صرف تجاویز</string>
+    <string name="toolbar_mode_hidden">پوشیدہ</string>
+    <string name="toolbar_hiding_global">کلپ بورڈ اور ایموجی ٹول بار بھی چھپائیں</string>
+    <string name="toolbar_keys">ٹول بار کیز منتخب کریں</string>
+    <string name="paste">@android:string/paste</string>
+    <string name="copy">@android:string/copy</string>
+    <string name="cut">@android:string/cut</string>
+    <string name="clipboard">کلپ بورڈ</string>
+    <string name="clear_clipboard">کلپ بورڈ صاف کریں</string>
+    <string name="clipboard_search">کلپ بورڈ تلاش</string>
+    <string name="download">ڈاؤن لوڈ</string>
+    <string name="downloading">ڈاؤن لوڈ ہو رہا ہے…</string>
+    <string name="download_failed">ڈاؤن لوڈ ناکام</string>
+    <string name="installed">انسٹال ہو گیا</string>
+    <string name="voice">صوتی ان پٹ</string>
+    <string name="numpad">@string/layout_numpad</string>
+    <string name="select_all">@android:string/selectAll</string>
+    <string name="select_word">لفظ منتخب کریں</string>
+    <string name="one_handed">ایک ہاتھ والا موڈ</string>
+    <string name="floating">تیرتا</string>
+    <string name="split">اسپلٹ کی بورڈ</string>
+    <string name="full_left">مکمل بائیں</string>
+    <string name="full_right">مکمل دائیں</string>
+    <string name="page_start">صفحہ کا آغاز</string>
+    <string name="page_end">صفحہ کا اختتام</string>
+    <string name="left">بائیں</string>
+    <string name="right">دائیں</string>
+    <string name="up">اوپر</string>
+    <string name="down">نیچے</string>
+    <string name="word_left">لفظ بائیں</string>
+    <string name="word_right">لفظ دائیں</string>
+    <string name="page_up">صفحہ اوپر</string>
+    <string name="page_down">صفحہ نیچے</string>
+    <string name="close_history">کلپ بورڈ کی تاریخ بند کریں</string>
+    <string name="emoji">ایموجی</string>
+    <string name="proofread">پروف ریڈ</string>
+    <string name="proofread_loading">پروف ریڈنگ ہو رہی ہے…</string>
+    <string name="proofread_success">متن پروف ریڈ ہو گیا</string>
+    <string name="proofread_error">پروف ریڈنگ ناکام: %s</string>
+    <string name="proofread_no_text">پروف ریڈ کرنے کے لیے کوئی متن نہیں</string>
+    <string name="proofread_no_api_key">Gemini API کلید سیٹ نہیں ہے۔ ترتیبات → AI انضمام پر جائیں۔</string>
+    <string name="gemini_api_key_title">Gemini API کلید</string>
+    <string name="gemini_api_key_summary">پروف ریڈنگ کے لیے اپنی Google Gemini API کلید درج کریں</string>
+    <string name="gemini_api_key_hint">API کلید درج کریں</string>
+    <string name="get_api_key">API کلید حاصل کریں</string>
+    <string name="gemini_model_title">Gemini ماڈل</string>
+    <string name="gemini_model_summary">پروف ریڈنگ کے لیے AI ماڈل منتخب کریں</string>
+    <string name="gemini_test_api_key">API کلید کی جانچ کریں</string>
+    <string name="gemini_api_key_valid">API کلید درست ہے!</string>
+    <string name="gemini_api_key_invalid">API کلید کی جانچ ناکام: %s</string>
+    <string name="gemini_testing_api_key">API کلید کی جانچ ہو رہی ہے…</string>
+    <string name="disable_network_title">تمام نیٹ ورک رسائی غیر فعال کریں</string>
+    <string name="disable_network_summary">اندرونی تالا: اس ایپ سے نیٹ ورک کی تمام درخواستوں کو روکتا ہے۔ اجازت مکمل طور پر منسوخ کرنے کے لیے، سسٹم ایپ کی معلومات کی ترتیبات استعمال کریں۔</string>
+    <string name="open_app_info">سسٹم ایپ کی معلومات کھولیں</string>
+    <string name="open_app_info_summary">Android ترتیبات میں اجازتوں اور بیٹری کے استعمال کا نظم کریں</string>
+    <string name="gemini_network_disabled">LeanType ترتیبات میں نیٹ ورک رسائی غیر فعال ہے</string>
+    <string name="ai_provider_title">AI فراہم کنندہ</string>
+    <string name="ai_provider_summary">پروف ریڈنگ کے لیے AI سروس منتخب کریں</string>
+    <string name="ai_provider_gemini">Google Gemini</string>
+    <string name="split_toolbar">اسپلٹ ٹول بار</string>
+    <string name="split_toolbar_summary">تجاویز کو ٹول بار سے الگ کریں</string>
+    <string name="auto_span_toolbar_keys">خودکار پھیلائیں ٹول بار کیز</string>
+    <string name="auto_span_toolbar_keys_summary">دستیاب خالی جگہ پر کرنے کے لیے ٹول بار کیز کو پھیلائیں</string>
+    <string name="show_download_button_in_toolbar">ٹول بار میں ڈاؤن لوڈ بٹن دکھائیں</string>
+    <string name="show_download_button_in_toolbar_summary">جب مرکزی لغت غائب ہو تو تجویز کی پٹی میں لغت ڈاؤن لوڈ کا آئیکن دکھائیں</string>
+    <string name="ai_provider_huggingface">Groq</string>
+    <string name="ai_provider_openai">HF/OpenAI-مطابقت پذیر</string>
+    <string name="huggingface_token_title">API ٹوکن</string>
+    <string name="huggingface_token_summary">اپنی HuggingFace یا OpenAI-مطابقت پذیر API کلید درج کریں</string>
+    <string name="groq_token_title">API ٹوکن</string>
+    <string name="groq_token_summary">اپنی Groq API کلید درج کریں</string>
+    <string name="groq_token_hint">API کلید درج کریں</string>
+    <string name="huggingface_token_hint">API کلید درج کریں</string>
+    <string name="get_groq_key">Groq کلید حاصل کریں</string>
+    <string name="get_huggingface_key">API ٹوکن حاصل کریں</string>
+    <string name="huggingface_no_token">API ٹوکن سیٹ نہیں ہے۔ ترتیبات → AI انضمام پر جائیں۔</string>
+    <string name="huggingface_model_title">ماڈل</string>
+    <string name="huggingface_model_summary">Groq ماڈل منتخب کریں</string>
+    <string name="huggingface_model_hint">model-name</string>
+    <string name="huggingface_no_model">کوئی ماڈل تشکیل نہیں دیا گیا۔ ترتیبات → AI انضمام پر جائیں۔</string>
+    <string name="huggingface_endpoint_title">API اینڈ پوائنٹ</string>
+    <string name="huggingface_endpoint_summary">API اینڈ پوائنٹ URL</string>
+    <string name="huggingface_endpoint_hint">https://api.groq.com/openai/v1/chat/completions</string>
+    <string name="insecure_connection_blocked">غیر محفوظ HTTP کنکشن مسدود کر دیا گیا۔ AI ترتیبات میں \'غیر محفوظ کنکشن کی اجازت دیں\' کو فعال کریں۔</string>
+    <string name="ai_allow_insecure_connections_title">غیر محفوظ کنکشن کی اجازت دیں</string>
+    <string name="ai_allow_insecure_connections_summary">HTTP کنکشن کی اجازت دیں اور SSL سرٹیفکیٹ کی غلطیوں کو نظر انداز کریں۔ انتباہ: ان پٹ کو مقامی نیٹ ورک کی جاسوسی کے سامنے لاتا ہے۔</string>
+    <string name="backup_category_layouts">لے آؤٹس</string>
+    <string name="backup_category_theme">تھیم اور حسب ضرورت پس منظر</string>
+    <string name="backup_category_dictionary">لغات اور ٹائپنگ کی تاریخ</string>
+    <string name="backup_category_clipboard">کلپ بورڈ کی تاریخ</string>
+    <string name="backup_category_general">عام ترتیبات</string>
+    <string name="backup_select_items">شامل کرنے کے لیے آئٹمز منتخب کریں:</string>
+    <string name="config_gemini_models_endpoint">https://generativelanguage.googleapis.com/v1beta/models?key=%1$s</string>
+    <string name="config_groq_models_endpoint">https://api.groq.com/openai/v1/models</string>
+    <string name="config_default_hf_endpoint">https://api.openai.com/v1/chat/completions</string>
+    <string name="config_groq_chat_endpoint">https://api.groq.com/openai/v1/chat/completions</string>
+    <string name="offline_keep_model_loaded_title">ماڈل لوڈ رکھیں</string>
+    <string name="offline_keep_model_loaded_summary">دوبارہ لوڈ کرنے میں تاخیر سے بچنے کے لیے آف لائن AI ماڈل کو میموری میں رکھیں (زیادہ RAM استعمال کرتا ہے)</string>
+    <string name="translate">ترجمہ کریں</string>
+    <string name="translate_loading">ترجمہ ہو رہا ہے…</string>
+    <string name="translate_success">متن کا ترجمہ ہو گیا</string>
+    <string name="translate_error">ترجمہ ناکام: %s</string>
+    <string name="translate_no_text">ترجمہ کرنے کے لیے کوئی متن نہیں</string>
+    <string name="translate_target_language_title">ترجمہ کی ہدف زبان</string>
+    <string name="translate_target_language_summary">جس زبان میں ترجمہ کرنا ہے منتخب کریں</string>
+    <string name="translate_model_title">ترجمے کا ماڈل</string>
+    <string name="translate_model_summary">ترجمے کے لیے AI ماڈل منتخب کریں۔ پروف ریڈنگ ماڈل استعمال کرنے کے لیے خالی چھوڑ دیں۔</string>
+    <string name="translation_engine_title">ترجمے کا انجن</string>
+    <string name="translation_engine_summary">ترجمے کے لیے بیک اینڈ منتخب کریں (پلگ ان یا AI)</string>
+    <string-array name="translate_language_names">
+  <item>انگریزی</item>
+  <item>ہسپانوی</item>
+  <item>فرانسیسی</item>
+  <item>جرمن</item>
+  <item>اطالوی</item>
+  <item>پرتگالی</item>
+  <item>چینی (آسان)</item>
+  <item>چینی (روایتی)</item>
+  <item>جاپانی</item>
+  <item>کوریائی</item>
+  <item>عربی</item>
+  <item>روسی</item>
+  <item>ہندی</item>
+  <item>بنگالی</item>
+  <item>انڈونیشیائی</item>
+  <item>ولندیزی</item>
+  <item>ترکی</item>
+  <item>پولش</item>
+  <item>یوکرائنی</item>
+  <item>سویڈش</item>
+  <item>ڈینش</item>
+  <item>نارویجن</item>
+  <item>فنش</item>
+  <item>یونانی</item>
+  <item>عبرانی</item>
+  <item>تھائی</item>
+  <item>ویتنامی</item>
+  <item>تامل</item>
+  <item>تیلگو</item>
+  <item>مراٹھی</item>
+  <item>گجراتی</item>
+  <item>کنڑ</item>
+  <item>ملیالم</item>
+  <item>اردو</item>
+  <item>فارسی</item>
+  <item>سواحلی</item>
+  <item>رومانیہ</item>
+  <item>چیک</item>
+  <item>ہنگری</item>
+  <item>فلپائنی (ٹیگالوگ)</item>
+  <item>ملائی</item>
+  <item>سربین</item>
+  <item>کروشین</item>
+  <item>بلغاریائی</item>
+  <item>سلوواک</item>
+  <item>سلووین</item>
+  <item>لتھواینین</item>
+  <item>لاطویائی</item>
+  <item>اسٹونین</item>
+  <item>کیٹالان</item>
+  <item>باسکی</item>
+</string-array>
+    <string-array name="translate_language_codes">
+  <item>انگریزی</item>
+  <item>ہسپانوی</item>
+  <item>فرانسیسی</item>
+  <item>جرمن</item>
+  <item>اطالوی</item>
+  <item>پرتگالی</item>
+  <item>چینی (آسان)</item>
+  <item>چینی (روایتی)</item>
+  <item>جاپانی</item>
+  <item>کوریائی</item>
+  <item>عربی</item>
+  <item>روسی</item>
+  <item>ہندی</item>
+  <item>بنگالی</item>
+  <item>انڈونیشیائی</item>
+  <item>ولندیزی</item>
+  <item>ترکی</item>
+  <item>پولش</item>
+  <item>یوکرائنی</item>
+  <item>سویڈش</item>
+  <item>ڈینش</item>
+  <item>نارویجن</item>
+  <item>فنش</item>
+  <item>یونانی</item>
+  <item>عبرانی</item>
+  <item>تھائی</item>
+  <item>ویتنامی</item>
+  <item>تامل</item>
+  <item>تیلگو</item>
+  <item>مراٹھی</item>
+  <item>گجراتی</item>
+  <item>کنڑ</item>
+  <item>ملیالم</item>
+  <item>اردو</item>
+  <item>فارسی</item>
+  <item>سواحلی</item>
+  <item>رومانیہ</item>
+  <item>چیک</item>
+  <item>ہنگری</item>
+  <item>فلپائنی (ٹیگالوگ)</item>
+  <item>ملائی</item>
+  <item>سربین</item>
+  <item>کروشین</item>
+  <item>بلغاریائی</item>
+  <item>سلوواک</item>
+  <item>سلووین</item>
+  <item>لتھواینین</item>
+  <item>لاطویائی</item>
+  <item>اسٹونین</item>
+  <item>کیٹالان</item>
+  <item>باسکی</item>
+</string-array>
+    <string name="clipboard_toolbar_keys">کلپ بورڈ ٹول بار کیز منتخب کریں</string>
+    <string name="pinned_toolbar_keys">پن کی گئی ٹول بار کیز منتخب کریں</string>
+    <string name="quick_pin_toolbar_keys">دیر تک دبانے پر ٹول بار کلید پن کریں</string>
+    <string name="quick_pin_toolbar_keys_summary">یہ ان ٹول بار کیز کے لیے دیر تک دبانے کی دیگر کارروائیوں کو غیر فعال کر دے گا جو پن نہیں ہیں</string>
+    <string name="toolbar_long_press_hint">دیر تک دبانے کے اشارے کے نقطے دکھائیں</string>
+    <string name="toolbar_long_press_hint_summary">ان ٹول بار کیز پر نقطے دکھائیں جن میں دیر تک دبانے کی کارروائی ہے</string>
+    <string name="show_popup_hints">فنکشنل اشارے دکھائیں</string>
+    <string name="show_popup_hints_summary">اگر کوئی کلید دیر تک دبانے سے اضافی فعالیت متحرک ہوتی ہے تو اشارے دکھائیں</string>
+    <string name="remove_redundant_popups">فالتو پاپ اپ ہٹائیں</string>
+    <string name="remove_redundant_popups_summary">وہ پاپ اپ کیز دبائیں جو پہلے سے بنیادی لے آؤٹ پر موجود ہیں</string>
+    <string name="prefs_long_press_keyboard_to_change_lang">اسپیس کلید سے ان پٹ میتھڈ تبدیل کریں</string>
+    <string name="prefs_long_press_keyboard_to_change_lang_summary">اسپیس کلید کو دیر تک دبانے سے ان پٹ میتھڈ کے انتخاب کا مینو سامنے آئے گا</string>
+    <string name="prefs_long_press_symbol_for_numpad">نمبر پیڈ کے لیے علامات کی کلید دیر تک دبائیں</string>
+    <string name="prefs_narrow_key_gaps">تنگ کلیدی خلا</string>
+    <string name="prefs_narrow_key_gaps_level">تنگ ہونے کی سطح</string>
+    <string name="narrowness_level_low">سب سے چھوٹی</string>
+    <string name="narrowness_level_medium_low">چھوٹی</string>
+    <string name="narrowness_level_medium">درمیانی</string>
+    <string name="narrowness_level_medium_high">بڑی</string>
+    <string name="narrowness_level_high">سب سے بڑی</string>
+    <string name="prefs_keyboard_height_scale">کی بورڈ کی اونچائی کا پیمانہ</string>
+    <string name="prefs_bottom_padding_scale">نچلی پیڈنگ کا پیمانہ</string>
+    <string name="prefs_side_padding_scale">اطراف کی پیڈنگ کا پیمانہ</string>
+    <string name="prefs_font_scale">کی بورڈ فونٹ کا پیمانہ</string>
+    <string name="prefs_emoji_font_scale">ایموجی منظر کا فونٹ پیمانہ</string>
+    <string name="prefs_emoji_key_fit">ایموجی کلید کا سائز فونٹ سائز کے ساتھ پیمانہ کریں</string>
+    <string name="prefs_emoji_skin_tone">طے شدہ ایموجی جلد کی رنگت</string>
+    <string name="prefs_emoji_skin_tone_neutral">غیر جانبدار</string>
+    <string name="prefs_space_bar_text">اسپیس بار پر حسب ضرورت متن</string>
+    <string name="custom_font">فائل سے حسب ضرورت فونٹ سیٹ کریں</string>
+    <string name="custom_emoji_font">فائل سے حسب ضرورت ایموجی فونٹ سیٹ کریں</string>
+    <string name="prefs_use_system_emoji">سستم ایموجی فونٹ استعمال کریں</string>
+    <string name="prefs_use_system_emoji_summary">ترتیبات اور تلاش میں سسٹم ایموجی فونٹ استعمال کریں (ایپ دوبارہ شروع ہوتی ہے)</string>
+    <string name="subtype_mns">مانسی</string>
+    <string name="subtype_xdq">کیتاگ</string>
+    <string name="subtype_dag">دگبانی</string>
+    <string name="subtype_st">سیسوتھو</string>
+    <string name="subtype_dru">درگوا (یوراخی)</string>
+    <string name="subtype_mhr">ماری (مشرقی)</string>
+    <string name="subtype_with_layout_generic">%1$s (%2$s)</string>
+    <string name="subtype_generic_extended">%s (توسیع شدہ)</string>
+    <string name="subtype_akkhor_bn_BD">%s (اکھور)</string>
+    <string name="subtype_probhat_bn_BD">%s (پروبھات)</string>
+    <string name="subtype_baishakhi_bn_IN">%s (بیشاکھی)</string>
+    <string name="subtype_khipro_bn">%s (کھیپرو)</string>
+    <string name="subtype_generic_phonetic">%s (صوتی)</string>
+    <string name="subtype_generic_sebeolsik_390">%s (سیبیولسک 390)</string>
+    <string name="subtype_generic_sebeolsik_final">%s (سیبیولسک فائنل)</string>
+    <string name="subtype_generic_student">%s (طالب علم)</string>
+    <string name="load">لوڈ کریں</string>
+    <string name="button_title_add_custom_layout">حسب ضرورت لے آؤٹ شامل کریں</string>
+    <string name="message_add_custom_layout">ہم آہنگ فارمیٹ میں ایک فائل منتخب کریں۔ فارمیٹس کے بارے میں معلومات %s پر دستیاب ہے۔</string>
+    <string name="button_load_custom">فائل لوڈ کریں</string>
+    <string name="button_save_file">فائل میں محفوظ کریں</string>
+    <string name="copy_to_clipboard">کلپ بورڈ میں کاپی کریں</string>
+    <string name="file_read_error">فائل نہیں پڑھی جا سکتی</string>
+    <string name="delete_layout">واقعی حسب ضرورت لے آؤٹ %s حذف کرنا ہے؟</string>
+    <string name="layout_in_use">انتباہ: لے آؤٹ اس وقت استعمال میں ہے</string>
+    <string name="add_custom_layout">حسب ضرورت لے آؤٹ شامل کریں</string>
+    <string name="layout_error">لے آؤٹ کی خرابی: %s</string>
+    <string name="edit_layout">خام لے آؤٹ میں ترمیم کرنے کے لیے تھپتھپائیں</string>
+    <string name="settings_screen_secondary_layouts">ثانوی لے آؤٹس</string>
+    <string name="layout_custom1">حسب ضرورت لے آؤٹ 1</string>
+    <string name="layout_custom2">حسب ضرورت لے آؤٹ 2</string>
+    <string name="layout_custom3">حسب ضرورت لے آؤٹ 3</string>
+    <string name="layout_custom4">حسب ضرورت لے آؤٹ 4</string>
+    <string name="layout_custom5">حسب ضرورت لے آؤٹ 5</string>
+    <string name="layout_functional_keys">فنکشنل کیز</string>
+    <string name="layout_functional_keys_tablet">فنکشنل کیز (بڑی اسکرین)</string>
+    <string name="layout_functional_keys_khipro">فنکشنل کیز (کھیپرو)</string>
+    <string name="layout_functional_keys_symbols">فنکشنل کیز (علامات)</string>
+    <string name="layout_functional_keys_symbols_shifted">فنکشنل کیز (مزید علامات)</string>
+    <string name="layout_symbols">علامات</string>
+    <string name="layout_symbols_arabic">علامات (عربی)</string>
+    <string name="layout_symbols_shifted">مزید علامات</string>
+    <string name="layout_phone">فون</string>
+    <string name="layout_phone_symbols">فون علامات</string>
+    <string name="layout_number">اعداد</string>
+    <string name="layout_numpad">نمبر پیڈ</string>
+    <string name="layout_numpad_landscape">نمبر پیڈ (لینڈ اسکیپ)</string>
+    <string name="layout_number_row">نمبر قطار</string>
+    <string name="layout_number_row_basic">نمبر قطار (بنیادی)</string>
+    <string name="layout_emoji_bottom_row">ایموجی نچلی قطار</string>
+    <string name="layout_emoji_bottom_row_with_action">ایکشن کلید کے ساتھ ایموجی نچلی قطار</string>
+    <string name="layout_clip_bottom_row">کلپ بورڈ نچلی قطار</string>
+    <string name="layout_clip_bottom_row_with_action">ایکشن کلید کے ساتھ کلپ بورڈ نچلی قطار</string>
+    <string name="customize_background_image">پس منظر کی تصویر سیٹ کریں</string>
+    <string name="customize_background_image_landscape">پس منظر کی تصویر سیٹ کریں (لینڈ اسکیپ)</string>
+    <string name="summary_customize_background_image_landscape">اگر سیٹ نہیں ہے تو پورٹریٹ تصویر استعمال کی جائے گی</string>
+    <string name="customize_currencies">کرنسیاں حسب ضرورت بنائیں</string>
+    <string name="customize_currencies_detail">مرکزی اور 6 تک ثانوی کرنسی علامات سیٹ کریں، اسپیس سے الگ</string>
+    <string name="switch_keyboard_after">اس کے بعد مرکزی کی بورڈ پر جائیں…</string>
+    <string name="after_emoji">ایموجی منظر میں ایموجی منتخب کرنے پر</string>
+    <string name="after_clip">کلپ بورڈ کی تاریخ کا اندراج منتخب کرنے پر</string>
+    <string name="after_symbol_and_space">علامات کے منظر میں دیگر کیز کے بعد انٹر یا اسپیس دبانے پر</string>
+    <string name="after_numpad_and_space">نمبر پیڈ میں دیگر کیز کے بعد انٹر یا اسپیس دبانے پر</string>
+    <string name="day_or_night_image">دن یا رات کے موڈ کے لیے تصویر سیٹ کریں؟</string>
+    <string name="day_or_night_day">دن</string>
+    <string name="day_or_night_night">رات</string>
+    <string name="prefs_keypress_vibration_amplitude_settings">کلید دبانے کی وائبریشن کی طاقت</string>
+    <string name="prefs_key_emoji_max_sdk">ایموجی ورژن کو اوور رائڈ کریں</string>
+    <string name="setup_step3_action">کی بورڈ تشکیل دیں</string>
+    <string name="dictionary_settings_category">لغات</string>
+    <string name="internal_dictionary_summary">اندرونی مرکزی لغت</string>
+    <string name="add_new_dictionary_title">"فائل سے لغت شامل کریں"</string>
+    <string name="button_select_language">"زبان منتخب کریں"</string>
+    <string name="replace_dictionary_message">"واقعی صارف کی شامل کردہ لغت \"%1$s\" کو تبدیل کرنا ہے؟\n
+موجودہ لغت:
+%2$s\n
+نئی لغت:
+%3$s"</string>
+    <string name="replace_dictionary">"لغت تبدیل کریں"</string>
+    <string name="remove_dictionary_message">"واقعی صارف کی شامل کردہ لغت \"%s\" کو ہٹانا ہے؟"</string>
+    <string name="no_dictionary_message">"لغت کے بغیر، آپ کو صرف اس متن کے لیے تجاویز ملیں گی جو آپ نے پہلے درج کیا تھا۔<br />
+        آپ لغات %1$s ڈاؤن لوڈ کر سکتے ہیں۔"</string>
+    <string name="no_dictionary_dont_show_again_button">"دوبارہ نہ دکھائیں"</string>
+    <string name="add_dictionary">"شامل کرنے کے لیے ایک لغت منتخب کریں۔ .dict فارمیٹ میں لغات %s ڈاؤن لوڈ کی جا سکتی ہیں۔"</string>
+    <string name="dictionary_link_text">"یہاں"</string>
+    <string name="available_dictionary_experimental">"%s (تجرباتی)"</string>
+    <string name="dictionary_file_error">"خرابی: منتخب کردہ فائل ایک درست لغت فائل نہیں ہے"</string>
+    <string name="dictionary_file_wrong_script">"خرابی: رسم الخط اس کی بورڈ کے ساتھ مطابقت نہیں رکھتا"</string>
+    <string name="dictionary_load_error">"لغت فائل لوڈ کرنے میں خرابی"</string>
+    <string name="user_dict_settings_add_weight_value">وزن:</string>
+    <string name="user_dict_word_already_present">یہ لفظ پہلے ہی %s صارف لغت میں موجود ہے۔ براہ کرم دوسرا ٹائپ کریں۔</string>
+    <string name="user_dict_add_word_button">ایک لفظ شامل کریں</string>
+    <string name="user_dict_clear_all_confirmation">کیا آپ واقعی اس لغت سے تمام الفاظ صاف کرنا چاہتے ہیں؟</string>
+    <string name="theme_style">انداز</string>
+    <string name="icon_style">آئیکن کا انداز</string>
+    <string name="style_name_Rounded">گول</string>
+    <string name="theme_colors">رنگ</string>
+    <string name="theme_colors_night">رنگ (رات)</string>
+    <string name="key_borders">کلید کی سرحدیں</string>
+    <string name="day_night_mode">خودکار دن/رات موڈ</string>
+    <string name="day_night_mode_summary">ظاہری شکل سسٹم کی ترتیبات کی پیروی کرے گی</string>
+    <string name="theme_navbar">نیویگیشن بار کا رنگ</string>
+    <string name="theme_name_light">روشن</string>
+    <string name="theme_name_holo_white">ہولو سفید</string>
+    <string name="theme_name_dark">گہرا</string>
+    <string name="theme_name_darker">زیادہ گہرا</string>
+    <string name="theme_name_black">سیاہ</string>
+    <string name="theme_name_dynamic">متحرک رنگ</string>
+    <string name="theme_name_blue_gray">نیلا سرمئی</string>
+    <string name="theme_name_brown">بھورا</string>
+    <string name="theme_name_chocolate">چاکلیٹ</string>
+    <string name="theme_name_cloudy">ابر آلود</string>
+    <string name="theme_name_forest">جنگل</string>
+    <string name="theme_name_indigo">انڈگو</string>
+    <string name="theme_name_mint_and_pink">پودینہ اور گلابی</string>
+    <string name="theme_name_pink">گلابی</string>
+    <string name="theme_name_sand">ریت</string>
+    <string name="theme_name_violette">بنفشی</string>
+    <string name="theme_name_user">صارف-وضاحت کردہ</string>
+    <string name="theme_name_leanbitlab_light">LeanBitLab روشن</string>
+    <string name="theme_name_leanbitlab_dark">LeanBitLab گہرا</string>
+    <string name="auto_user_color">خود بخود رنگ منتخب کریں</string>
+    <string name="main_colors">صرف مرکزی رنگ دکھائیں</string>
+    <string name="more_colors">مزید رنگ دکھائیں</string>
+    <string name="all_colors">تمام رنگ دکھائیں</string>
+    <string name="all_colors_warning">یہ ترتیب ان تمام رنگوں کو ظاہر کرتی ہے جو اندرونی طور پر استعمال ہوتے ہیں۔ رنگوں کی فہرست کسی بھی وقت تبدیل ہو سکتی ہے۔ طے شدہ عام رنگوں سے اخذ کیا گیا ہے، اور ناموں کا ترجمہ نہیں کیا جائے گا۔</string>
+    <string name="select_color_background">کی بورڈ کا پس منظر</string>
+    <string name="select_color_key">کلید کا متن</string>
+    <string name="select_color_key_hint">کلید اشارے کا متن</string>
+    <string name="select_color_suggestion">تجویز کی پٹی کا متن</string>
+    <string name="select_color_key_background">کلید کا پس منظر</string>
+    <string name="select_color_functional_key_background">فنکشنل کلید کا پس منظر</string>
+    <string name="select_color_spacebar_background">اسپیس بار کا پس منظر</string>
+    <string name="select_color_spacebar_text">اسپیس بار کا متن</string>
+    <string name="select_color_accent">ایکسینٹ</string>
+    <string name="select_color_gesture">اشارہ ان پٹ</string>
+    <string name="get_colors_message">"آپ رنگ %s میں تلاش اور شیئر کر سکتے ہیں۔"</string>
+    <string name="get_layouts_message">"آپ لے آؤٹس %s میں تلاش اور شیئر کر سکتے ہیں۔"</string>
+    <string name="discussion_section_link">"بحث کا سیکشن"</string>
+    <string name="settings_screen_about">کے بارے میں</string>
+    <string name="version">ورژن</string>
+    <string name="about_github_link">GitHub پر دیکھیں</string>
+    <string name="about_sponsor_link">منصوبے کو سپانسر کریں</string>
+    <string name="about_sponsor_link_description">LeanType کی ترقی کی حمایت کریں</string>
+    <string name="sponsor_dialog_title">اس منصوبے کو سپانسر کریں</string>
+    <string name="sponsor_dialog_message">یہ منصوبہ مکمل طور پر کمیونٹی پر مبنی ہے اور ترقی کو جاری رکھنے کے لیے عطیات پر انحصار کرتا ہے۔ اگر آپ کو یہ کی بورڈ مفید لگتا ہے تو براہ کرم سپانسر کرنے پر غور کریں!</string>
+    <string name="sponsor_dialog_never_show_again">دوبارہ کبھی نہ دکھائیں</string>
+    <string name="sponsor_dialog_sponsor">سپانسر</string>
+    <string name="sponsor_dialog_not_now">ابھی نہیں</string>
+    <string name="about_features_link">FEATURES.md پر جائیں</string>
+    <string name="about_features_link_description">اہم خصوصیات اور کی بورڈ دستی کی فہرست</string>
+    <string name="libraries_hub_title">لائبریریاں</string>
+    <string name="libraries_hub_summary">اشارہ ٹائپنگ لائبریری، لغات اور ایموجی لائبریریوں کا نظم کریں۔</string>
+    <string name="libraries_hub_gesture_title">اشارہ ٹائپنگ لائبریری</string>
+    <string name="libraries_hub_dictionary_title">مرکزی لغات</string>
+    <string name="libraries_hub_emoji_title">ایموجی لائبریریاں</string>
+    <string name="libraries_hub_handwriting_title">ہینڈ رائٹنگ ان پٹ پلگ ان</string>
+    <string name="libraries_hub_dict_guide_title">لغت لوڈ کرنے کی گائیڈ</string>
+    <string name="libraries_hub_dict_guide_text">نئی لغت شامل کرنے کے لیے:\n1. اپنی زبان کے لیے ایک .dict فائل حاصل کریں۔\n2. \"لغات کا نظم کریں\" پر تھپتھپائیں۔\n3. فائل درآمد کرنے کے لیے جمع (+) بٹن استعمال کریں۔</string>
+    <string name="libraries_status_active">فعال</string>
+    <string name="libraries_status_not_installed">انسٹال نہیں ہے</string>
+    <string name="save_log">لاگ محفوظ کریں</string>
+    <string name="log_options_title">لاگ کے اختیارات</string>
+    <string name="save_log_to_file">فائل میں محفوظ کریں</string>
+    <string name="clear_log">لاگ صاف کریں</string>
+    <string name="share_log">لاگ شیئر کریں</string>
+    <string name="log_cleared">لاگ صاف ہو گیا</string>
+    <string name="license">اوپن سورس لائسنس</string>
+    <string name="gnu_gpl">GNU جنرل پبلک لائسنس v3.0</string>
+    <string name="dialog_close">بند کریں</string>
+    <string name="text_tap_languages">ترتیبات کھولنے کے لیے زبان پر تھپتھپائیں</string>
+    <string name="direct_ime_switch_title">براہ راست سوئچ کا ہدف IME</string>
+    <string name="direct_ime_switch_summary">حسب ضرورت کی کوڈ آپشن استعمال کرتے وقت براہ راست تبدیل ہونے والا ان پٹ میتھڈ</string>
+    <string name="direct_ime_switch_none">کوئی نہیں</string>
+    <string name="app_language_title">ایپ کی زبان</string>
+    <string name="app_language_summary">ترتیبات کی اسکرین اور کی بورڈ انٹرفیس کی زبان تبدیل کریں</string>
+    <string name="app_language_system">سسٹم کا طے شدہ</string>
+    <string name="settings_screen_appearance">ظاہری شکل</string>
+    <string name="settings_screen_toolbar">ٹول بار</string>
+    <string name="settings_screen_ai_integration">AI انضمام</string>
+    <string name="custom_ai_keys_title">حسب ضرورت AI کیز</string>
+    <string name="custom_ai_keys_summary">نمبر والی ٹول بار کیز کو اپنے پرامپٹس کے ساتھ حسب ضرورت بنائیں</string>
+    <string name="hidden_features_title">پوشیدہ خصوصیات کی تفصیل</string>
+    <string name="hidden_features_summary">وہ خصوصیات دکھائیں جن پر توجہ نہیں جا سکتی</string>
+    <string name="hidden_features_text">ڈیوائس پروٹیکٹڈ اسٹوریج</string>
+    <string name="hidden_features_message">► پن کی گئی ٹول بار کیز کو دیر تک دبانے سے اضافی فعالیت ملتی ہے: <br />
+\n\t• کلپ بورڈ ￫ پیسٹ <br />
+\n\t• بائیں/دائیں منتقل کریں ￫ لفظ بائیں/دائیں <br />
+\n\t• اوپر/نیچے منتقل کریں ￫ صفحہ اوپر/نیچے <br />
+\n\t• لفظ بائیں/دائیں ￫ لائن کا آغاز/اختتام <br />
+\n\t• صفحہ اوپر/نیچے ￫ صفحہ کا آغاز/اختتام <br />
+\n\t• کاپی کریں ￫ کٹ کریں <br />
+\n\t• لفظ منتخب کریں ↔ سب منتخب کریں <br />
+\n\t• انڈو ↔ ریڈو <br /> <br />
+\n► تجویز کی پٹی والے ٹول بار میں کیز کو دیر تک دبانے سے وہ تجویز کی پٹی میں پن ہو جاتی ہیں۔ <br /> <br />
+\n► کلپ بورڈ منظر، ایموجی منظر، ایک ہاتھ والا موڈ، ترتیبات، یا زبان تبدیل کرنے تک رسائی کے لیے کوما کلید کو دیر تک دبائیں: <br />
+\n\t• اگر آپ کے پاس متعلقہ کلید فعال ہے تو ایموجی منظر اور زبان کی تبدیلی غائب ہو جائے گی؛ <br />
+\n\t• کچھ لے آؤٹس کے لیے یہ کوما کلید نہیں ہے، بلکہ اسی پوزیشن پر موجود کلید ہے (مثلاً ڈوورک لے آؤٹ کے لیے یہ \'q\' ہے)۔ <br /> <br />
+\n► جب پوشیدگی موڈ فعال ہو تو کوئی الفاظ نہیں سیکھے جائیں گے، اور حالیہ میں کوئی ایموجیز شامل نہیں کیے جائیں گے۔ <br /> <br />
+\n► ٹول بار تک رسائی کے لیے پوشیدگی کے آئیکن کو دبائیں۔ <br /> <br />
+\n► سلائیڈنگ کلید ان پٹ: ایک بڑے حرف والی کلید ٹائپ کرنے کے لیے شفٹ سے دوسری کلید کی طرف سوائپ کریں: <br />
+\n\t• یہ علامات کی بورڈ سے ایک علامت ٹائپ کرنے کے لیے \'?123\' کلید کے لیے بھی کام کرتا ہے، اور متعلقہ کیز کے لیے۔ <br /> <br />
+\n► شفٹ یا علامت کلید کو دبائے رکھیں، ایک یا زیادہ کیز دبائیں، اور پھر پچھلے کی بورڈ پر واپس آنے کے لیے شفٹ یا علامت کلید چھوڑ دیں۔ <br /> <br />
+\n► مزید تجاویز دکھانے کے لیے تجویز کی پٹی میں کسی تجویز کو دیر تک دبائیں، اور اس تجویز کو ہٹانے کے لیے حذف کا بٹن۔ <br /> <br />
+\n► مزید تجاویز کھولنے کے لیے کسی تجویز سے اوپر کی طرف سوائپ کریں، اور اسے منتخب کرنے کے لیے تجویز پر چھوڑ دیں۔ <br /> <br />
+\n► کلپ بورڈ کی تاریخ میں کسی اندراج کو پن کرنے کے لیے اسے دیر تک دبائیں (جب تک آپ ان پن نہ کریں اسے کلپ بورڈ میں رکھیں)۔ <br /> <br />
+\n► کسی اندراج کو ہٹانے کے لیے کلپ بورڈ منظر میں بائیں طرف سوائپ کریں (سوائے جب وہ پن ہو) <br /> <br />
+\n► متن منتخب کریں اور بڑے حروف، چھوٹے حروف اور الفاظ کو بڑا کرنے کے درمیان سوئچ کرنے کے لیے شفٹ دبائیں۔ <br /> <br />
+\n► آپ فائل ایکسپلورر میں کھول کر لغات شامل کر سکتے ہیں: <br />
+\n\t• یہ صرف <i>content-uris</i> کے ساتھ کام کرتا ہے نہ کہ <i>file-uris</i> کے ساتھ، مطلب یہ کہ کچھ فائل ایکسپلوررز کے ساتھ کام نہیں کر سکتا۔ <br /> <br />
+\n► روٹ رسائی کے ساتھ دستی بیک اپ کرنے والے صارفین کے لیے: <br />
+\n\t• Android 7 سے شروع کرتے ہوئے، مشترکہ ترجیحات کی فائل طے شدہ مقام پر نہیں ہے، کیونکہ ایپ %s استعمال کر رہی ہے۔ یہ ضروری ہے تاکہ ڈیوائس کے غیر مقفل ہونے سے پہلے ترتیبات پڑھی جا سکیں، جیسے بوٹ پر؛ <br />
+\n\t• فائل /data/user_de/0/package_id/shared_prefs/ میں واقع ہے حالانکہ یہ ڈیوائس اور Android ورژن پر منحصر ہو سکتا ہے۔ <br /> <br />
+\n<i><b>ڈیبگ موڈ / ڈیبگ APK</b></i> <br /> <br />
+\n► ماخذ لغت دکھانے کے لیے کسی تجویز کو دیر تک دبائیں۔ <br /> <br />
+\n► ڈیبگ APK استعمال کرتے وقت، آپ اعلی درجے کی ترجیحات میں ڈیبگ ترتیبات تلاش کر سکتے ہیں، حالانکہ لاگ میں لغات ڈمپ کرنے کے علاوہ افادیت محدود ہے۔ <br />
+\n\t• ریلیز APK کے لیے، آپ کو <i>کے بارے میں</i> میں ورژن کو کئی بار تھپتھپانے کی ضرورت ہے، پھر آپ <i>اعلی درجے کی ترجیحات</i> میں ڈیبگ ترتیبات تلاش کر سکتے ہیں۔ <br />
+\n\t• <i>تجویز کی معلومات دکھائیں</i> کو فعال کرنے پر، تجاویز کے اوپر کچھ چھوٹے نمبر ہوں گے جو کچھ اندرونی اسکور اور ماخذ لغت دکھاتے ہیں۔ <br /> <br />
+\n► ایپلیکیشن کریش ہونے کی صورت میں، جب آپ ترتیبات کھولیں گے تو آپ کو اشارہ کیا جائے گا کہ کیا آپ کریش لاگز چاہتے ہیں۔ <br /> <br />
+\n► کثیر لسانی ٹائپنگ استعمال کرتے وقت، اسپیس بار موجودہ استعمال شدہ زبان کا تعین کرنے کے لیے استعمال ہونے والی اعتماد کی قدر دکھائے گا۔ <br /> <br />
+\n► تجاویز کے اوپر کچھ چھوٹے نمبر ہوں گے جو کچھ اندرونی اسکور اور ماخذ لغت دکھاتے ہیں (غیر فعال کیا جا سکتا ہے)۔</string>
+    <string name="label_enter_key">انٹر</string>
+    <string name="label_tab_key">ٹیب</string>
+    <string name="label_delete_key">حذف کریں</string>
+    <string name="label_shift_key">شفٹ</string>
+    <string name="label_shift_key_shifted">شفٹ (شفٹ شدہ)</string>
+    <string name="label_shift_key_locked">کیپس لاک</string>
+    <string name="label_space_key_for_number_layout">اسپیس (نمبر لے آؤٹ)</string>
+    <string name="label_stop_onehanded_mode_key">ایک ہاتھ والا موڈ ختم کریں</string>
+    <string name="label_resize_onehanded_key">ایک ہاتھ والے موڈ کا سائز تبدیل کریں</string>
+    <string name="label_switch_onehanded_key">ایک ہاتھ والے موڈ کی طرف تبدیل کریں</string>
+    <string name="label_shortcut_key_disabled">صوتی ان پٹ غیر فعال ہے</string>
+    <string name="label_toolbar_key">ٹول بار دکھائیں / چھپائیں</string>
+    <string name="label_language_switch_key">@string/show_language_switch_key</string>
+    <string name="label_zwj_key">زیرو وڈتھ جوائنر</string>
+    <string name="label_zwnj_key">زیرو وڈتھ نان جوائنر</string>
+    <string name="label_bin">بن</string>
+    <string name="show_horizontal_space_swipe">افقی اسپیس بار سوائپ اشارہ</string>
+    <string name="show_vertical_space_swipe">عمودی اسپیس بار سوائپ اشارہ</string>
+    <string name="action_none">کوئی نہیں</string>
+    <string name="space_swipe_move_cursor_entry">کرسر منتقل کریں</string>
+    <string name="space_swipe_toggle_numpad_entry">نمبر پیڈ ٹوگل کریں</string>
+    <string name="space_swipe_hide_keyboard_entry">کی بورڈ چھپائیں</string>
+    <string name="space_swipe_touchpad_mode_entry">ٹچ پیڈ موڈ</string>
+    <string name="touchpad_sensitivity">ٹچ پیڈ کی حساسیت</string>
+    <string name="force_auto_caps_title">خودکار بڑے حروف پر مجبور کریں</string>
+    <string name="force_auto_caps_summary">پاس ورڈز کے علاوہ تمام ٹیکسٹ فیلڈز پر جملے کے بڑے حروف پر مجبور کریں</string>
+    <string name="var_toolbar_direction">متغیر ٹول بار کی سمت</string>
+    <string name="var_toolbar_direction_summary">جب دائیں سے بائیں کی بورڈ ذیلی قسم منتخب کی جائے تو سمت الٹ دیں</string>
+    <string name="toolbar_only_with_hw_keyboard">صرف فزیکل کی بورڈ کے ساتھ ٹول بار دکھائیں</string>
+    <string name="toolbar_only_with_hw_keyboard_summary">آپ کو اب بھی سسٹم کی ترتیبات میں ورچوئل کی بورڈ دکھانے کو فعال کرنے کی ضرورت ہے</string>
+    <string name="prefs_language_swipe_distance">زبان سوئچ کرنے کی سوائپ کی دوری</string>
+    <string name="customize_toolbar_key_codes">ٹول بار کی کوڈز حسب ضرورت بنائیں</string>
+    <string name="customize_toolbar_key_code_reset_message">واقعی تمام حسب ضرورت کی کوڈز صاف کرنا ہے؟</string>
+    <string name="key_code">کلید کا کوڈ</string>
+    <string name="long_press_code">دیر تک دبانے کا کوڈ</string>
+    <string name="auto_show_toolbar">خودکار طور پر ٹول بار دکھائیں</string>
+    <string name="auto_show_toolbar_open">کھلنے پر خودکار ٹول بار دکھائیں</string>
+    <string name="auto_show_toolbar_select">منتخب کرنے پر خودکار ٹول بار دکھائیں</string>
+    <string name="auto_show_toolbar_summary">کی بورڈ کھلنے پر ٹول بار دکھائیں</string>
+    <string name="auto_show_toolbar_select_summary">متن منتخب کرتے وقت ٹول بار دکھائیں</string>
+    <string name="auto_hide_toolbar">خودکار طور پر ٹول بار چھپائیں</string>
+    <string name="auto_hide_toolbar_summary">جب تجاویز دستیاب ہو جائیں تو ٹول بار چھپائیں</string>
+    <string name="toolbar_swipe_down_dismiss">بند کرنے کے لیے نیچے سوائپ کریں</string>
+    <string name="toolbar_swipe_down_dismiss_summary">کی بورڈ چھپانے کے لیے ٹول بار پر نیچے کی طرف سوائپ کریں</string>
+    <string name="auto_hide_pinned_keys">پن کی گئی کیز خودکار چھپائیں</string>
+    <string name="auto_hide_pinned_keys_summary">جب ٹول بار پھیلا ہوا ہو تو پن کی گئی کیز چھپائیں</string>
+    <string name="remember_toolbar_state">ٹول بار کی حالت یاد رکھیں</string>
+    <string name="remember_toolbar_state_summary">سیشنز کے درمیان اور ٹائپ کرتے وقت ٹول بار کو پھیلا ہوا یا بند رکھیں</string>
+    <string name="close_translate_language_selector">زبان کا انتخاب کنندہ بند کریں</string>
+    <string name="toast_msg_clipboard_copy">مواد کاپی ہو گیا</string>
+    <string name="customize_icons">آئیکنز حسب ضرورت بنائیں</string>
+    <string name="customize_icons_reset_message">واقعی تمام حسب ضرورت آئیکنز کو دوبارہ ترتیب دینا ہے؟</string>
+    <string name="delete_confirmation">واقعی %s حذف کرنا ہے؟</string>
+    <string name="name_invalid">غلط نام</string>
+    <string name="custom_subtype">حسب ضرورت ذیلی قسم</string>
+    <string name="landscape">لینڈ اسکیپ</string>
+    <string name="offline_model_title">آف لائن ماڈل</string>
+    <string name="offline_model_summary">مقامی LLM کا نظم کریں</string>
+    <string name="offline_max_tokens_title">آف لائن AI زیادہ سے زیادہ ٹوکنز</string>
+    <string name="offline_max_tokens_summary">تیار کردہ تصحیح کی زیادہ سے زیادہ لمبائی</string>
+    <string name="offline_max_tokens_custom_option">حسب ضرورت…</string>
+    <string name="offline_max_tokens_custom_desc">حسب ضرورت (%1$d ٹوکنز)</string>
+    <string name="offline_temp_title">درجہ حرارت</string>
+    <string name="offline_temp_summary">بے ترتیبی کو کنٹرول کرتا ہے: کم زیادہ مرکوز اور تعینی ہے</string>
+    <string name="offline_top_p_title">ٹاپ-پی (نیوکلیئس سیمپلنگ)</string>
+    <string name="offline_top_p_summary">الفاظ کے تنوع کو کنٹرول کرتا ہے: کم کم ممکنہ اختیارات کو کاٹ دیتا ہے</string>
+    <string name="offline_top_k_title">ٹاپ-کے</string>
+    <string name="offline_top_k_summary">انتخاب کو K سب سے زیادہ ممکنہ ٹوکنز تک محدود کرتا ہے</string>
+    <string name="offline_min_p_title">من-پی</string>
+    <string name="offline_min_p_summary">سب سے زیادہ ممکنہ ٹوکن کی نسبت کم از کم امکان کی حد</string>
+    <string name="offline_show_thinking_title">سوچ دکھائیں</string>
+    <string name="offline_show_thinking_summary">اگر ماڈل انہیں پیدا کرتا ہے تو استدلال کے عمل اور اندرونی سوچ کے ٹوکنز ڈسپلے کریں</string>
+    <string-array name="offline_max_tokens_entries">
+  <item>انتہائی تیز (12 ٹوکنز)</item>
+  <item>تیز (20 ٹوکنز)</item>
+  <item>متوازن (32 ٹوکنز)</item>
+  <item>درست (64 ٹوکنز)</item>
+  <item>گہرا (128 ٹوکنز)</item>
+</string-array>
+    <string-array name="offline_max_tokens_values">
+  <item>12</item>
+  <item>20</item>
+  <item>32</item>
+  <item>64</item>
+  <item>128</item>
+</string-array>
+    <string name="image_pasting_not_supported">یہ ایپ تصویر چسپاں کرنے کی حمایت نہیں کرتی</string>
+    <string name="clear_emoji_history_title">ایموجی کی تاریخ صاف کریں</string>
+    <string name="clear_emoji_history_message">کیا آپ واقعی اپنی حال ہی میں استعمال کردہ ایموجیز صاف کرنا چاہتے ہیں؟</string>
+    <string name="floating_keyboard_drag_handle">کی بورڈ منتقل کرنے کے لیے گھسیٹیں</string>
+    <string name="floating_keyboard_resize_handle">کی بورڈ کا سائز تبدیل کرنے کے لیے گھسیٹیں</string>
+    <string name="persist_floating_keyboard_title">تیرتے کی بورڈ کو برقرار رکھیں</string>
+    <string name="persist_floating_keyboard_summary">جب ان پٹ ختم ہو جائے تو تیرتے کی بورڈ کو نہ چھپائیں</string>
+    <string name="persist_text_edit_mode_title">متن کی تدوین کے موڈ کو برقرار رکھیں</string>
+    <string name="persist_text_edit_mode_summary">جب ان پٹ ختم ہو جائے تو متن کی تدوین کے موڈ سے باہر نہ نکلیں</string>
+    <string name="disable_multi_word_suggestions_title">کثیر الفاظ کی تجاویز غیر فعال کریں</string>
+    <string name="disable_multi_word_suggestions_summary">ایسی تجاویز کو روکیں جو متعدد مشترکہ الفاظ پر مشتمل ہوں (ترکی کے لیے تجویز کردہ)</string>
+    <string name="upgrade">اپ گریڈ</string>
+    <string name="dictionary_update_available">اپ ڈیٹ دستیاب ہے</string>
+    <string name="dictionary_source_title">لغت کا ذخیرہ</string>
+    <string name="dictionary_source_summary">براہ راست اپنے براؤزر میں لغات براؤز کریں یا ڈاؤن لوڈ کریں</string>
+    <string name="text_expander_title">ٹیکسٹ ایکسپینڈر</string>
+    <string name="text_expander_enable_title">ٹیکسٹ ایکسپینڈر کو فعال کریں</string>
+    <string name="text_expander_enable_summary">اسپیس یا اوقاف پر شارٹ کٹس کو مقامی اور محفوظ طریقے سے خودکار پھیلائیں۔</string>
+    <string name="text_expander_immediate_title">فوراً پھیلائیں</string>
+    <string name="text_expander_immediate_summary">اسپیس دبائے بغیر فوراً شارٹ کٹس پھیلائیں۔</string>
+    <string name="text_expander_backspace_undo_title">بیک اسپیس پھیلاؤ کو واپس لیتی ہے</string>
+    <string name="text_expander_backspace_undo_summary">بیک اسپیس پر پھیلے ہوئے متن کو واپس شارٹ کٹ میں تبدیل کریں۔</string>
+    <string name="text_expander_custom_shortcuts_title">حسب ضرورت شارٹ کٹس</string>
+    <string name="text_expander_add_shortcut">شارٹ کٹ شامل کریں</string>
+    <string name="text_expander_edit_shortcut">شارٹ کٹ میں ترمیم کریں</string>
+    <string name="text_expander_quick_guide">💡 فوری فیچر گائیڈ</string>
+    <string name="text_expander_template_placeholders_title">معاون ٹیمپلیٹ پلیس ہولڈرز:</string>
+    <string name="text_expander_prefix_title">سابقہ (اختیاری)</string>
+    <string name="text_expander_shortcut_title">شارٹ کٹ (مثلاً \'brb\')</string>
+    <string name="text_expander_regex_pattern_title">ریجیکس پیٹرن</string>
+    <string name="text_expander_regex_title">ریگولر ایکسپریشن</string>
+    <string name="text_expander_regex_invalid">⚠️ غلط ریگولر ایکسپریشن پیٹرن</string>
+    <string name="text_expander_template_title">ٹیمپلیٹ کی توسیع</string>
+    <string name="text_expander_template_hint" formatted="false">ابھی واپس آیا! یا میرا ای میل %clipboard% ہے</string>
+    <string name="text_expander_quick_placeholders_title">فوری پلیس ہولڈرز (کرسر پر داخل کرنے کے لیے تھپتھپائیں):</string>
+    <string name="text_expander_save">محفوظ کریں</string>
+    <string name="text_expander_add">شامل کریں</string>
+    <string name="text_expander_delete">حذف کریں</string>
+    <string name="custom_ai_keys_what_are_keywords">کلیدی الفاظ کیا ہیں؟</string>
+    <string name="custom_ai_keys_keywords_description">کلیدی الفاظ (جیسے #proofread یا #summarize) AI کے لیے فوری ہدایات کے طور پر کام کرتے ہیں۔ کسی کلید کو تشکیل دیتے وقت اس کے رویے کی وضاحت کے لیے انہیں منتخب کریں۔ کلید بنانے کے لیے آپ کو اپنا حسب ضرورت پرامپٹ بھی شامل کرنا ہوگا۔</string>
+    <string name="custom_ai_keys_show_tags_title">کی بورڈ پر ٹیگز دکھائیں</string>
+    <string name="custom_ai_keys_show_tags_summary">فعال ہونے پر، حسب ضرورت ٹیگز ڈیفالٹ AI آئیکن کے بجائے کی بورڈ ٹول بار پر تھیم والے کیپسول کے طور پر دکھائے جائیں گے۔</string>
+    <string name="custom_ai_keys_not_configured">تشکیل نہیں دی گئی</string>
+    <string name="custom_ai_keys_configure_title">کلید %1$d تشکیل دیں</string>
+    <string name="custom_ai_keys_config_instruction">رویے کی وضاحت کے لیے کلیدی الفاظ منتخب کریں، اور انہیں اپنی حسب ضرورت ہدایات کے ساتھ یکجا کریں۔\n\nمثال: #editor منتخب کریں اور ایک خصوصی ترجمے کی کلید بنانے کے لیے "فرانسیسی میں ترجمہ کریں" ٹائپ کریں۔\n\nنوٹ: محفوظ کرنے کے لیے آپ کو ایک حسب ضرورت پرامپٹ فراہم کرنا اور کم از کم ایک کلیدی لفظ منتخب کرنا ضروری ہے۔</string>
+    <string name="custom_ai_keys_prompt_label">کلید %1$d کے لیے حسب ضرورت پرامپٹ</string>
+    <string name="custom_ai_keys_tag_label">ٹیگ / لیبل (مثلاً \'فرانسیسی\'، \'گرامر\'، \'دوبارہ لکھیں\')</string>
+    <string name="custom_ai_keys_selected_functions">منتخب کردہ کلیدی الفاظ کے افعال:</string>
 </resources>

@@ -25,6 +25,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.res.painterResource
+import helium314.keyboard.latin.R
+import helium314.keyboard.settings.SearchIcon
+import helium314.keyboard.settings.CloseIcon
 import helium314.keyboard.settings.Theme
 import helium314.keyboard.settings.previewDark
 
@@ -40,12 +49,20 @@ fun <T: Any> ListPickerDialog(
     getItemName: (@Composable (T) -> String) = { it.toString() },
     confirmImmediately: Boolean = true,
     showRadioButtons: Boolean = true,
+    allowSearch: Boolean = items.size > 10,
 ) {
     var selected by remember { mutableStateOf(selectedItem) }
+    var searchQuery by remember { mutableStateOf("") }
     val state = rememberLazyListState()
 
+    val itemNames = items.associateWith { getItemName(it) }
+    val filteredItems = remember(items, searchQuery, itemNames) {
+        if (searchQuery.isBlank()) items
+        else items.filter { (itemNames[it] ?: "").contains(searchQuery, ignoreCase = true) }
+    }
+
     LaunchedEffect(selectedItem) {
-        val index = items.indexOf(selectedItem)
+        val index = filteredItems.indexOf(selectedItem)
         if (index != -1) state.scrollToItem(index, -state.layoutInfo.viewportSize.height / 3)
     }
     ThreeButtonAlertDialog(
@@ -59,37 +76,59 @@ fun <T: Any> ListPickerDialog(
             CompositionLocalProvider(
                 LocalTextStyle provides MaterialTheme.typography.bodyLarge
             ) {
-                LazyColumn(state = state) {
-                    items(items, key = { it.toString() }) { item ->
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                Column {
+                    if (allowSearch) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
                             modifier = Modifier
-                                .clickable {
-                                    if (confirmImmediately) {
-                                        onDismissRequest()
-                                        onItemSelected(item)
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            placeholder = { Text(stringResource(android.R.string.search_go)) },
+                            leadingIcon = { SearchIcon() },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        CloseIcon(android.R.string.cancel)
                                     }
-                                    selected = item
                                 }
-                                .padding(horizontal = if (showRadioButtons) 8.dp else 16.dp)
-                                .heightIn(min = 56.dp)
-                        ) {
-                            if (showRadioButtons)
-                                RadioButton(
-                                    selected = selected == item,
-                                    onClick = {
+                            },
+                            singleLine = true,
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        )
+                    }
+                    LazyColumn(state = state) {
+                        items(filteredItems, key = { it.toString() }) { item ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clickable {
                                         if (confirmImmediately) {
                                             onDismissRequest()
                                             onItemSelected(item)
                                         }
                                         selected = item
                                     }
+                                    .padding(horizontal = if (showRadioButtons) 8.dp else 16.dp)
+                                    .heightIn(min = 56.dp)
+                            ) {
+                                if (showRadioButtons)
+                                    RadioButton(
+                                        selected = selected == item,
+                                        onClick = {
+                                            if (confirmImmediately) {
+                                                onDismissRequest()
+                                                onItemSelected(item)
+                                            }
+                                            selected = item
+                                        }
+                                    )
+                                Text(
+                                    text = getItemName(item),
+                                    modifier = Modifier.weight(1f),
                                 )
-                            Text(
-                                text = getItemName(item),
-                                modifier = Modifier.weight(1f),
-                            )
+                            }
                         }
                     }
                 }

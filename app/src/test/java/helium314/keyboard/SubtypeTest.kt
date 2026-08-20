@@ -36,6 +36,9 @@ class SubtypeTest {
 
     @BeforeTest fun setUp() {
         latinIME = Robolectric.setupService(LatinIME::class.java)
+        val prefs = latinIME.prefs()
+        prefs.edit().clear().commit()
+        SubtypeSettings.init(latinIME)
         ShadowLog.setupLogging()
         ShadowLog.stream = System.out
         params = KeyboardParams()
@@ -74,7 +77,6 @@ class SubtypeTest {
     }
 
     @Test fun subtypeStaysEnabledOnEdits() {
-        if (BuildConfig.BUILD_TYPE == "runTests") return // fails at upstream tag v4.0.8 as well; inherited upstream defect
         val prefs = latinIME.prefs()
         prefs.edit().putString(Settings.PREF_ADDITIONAL_SUBTYPES, "").apply() // clear it for convenience
 

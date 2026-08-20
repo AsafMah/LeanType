@@ -1928,7 +1928,9 @@ public final class InputLogic {
                 // #onPressKey(int,int,boolean)} and {@link #onReleaseKey(int,boolean)}.
                 // We need to switch to the shortcut IME. This is handled by LatinIME since the
                 // input logic has no business with IME switching.
-            case KeyCode.EMOJI, KeyCode.TOGGLE_ONE_HANDED_MODE, KeyCode.SWITCH_ONE_HANDED_MODE, KeyCode.TOGGLE_FLOATING_KEYBOARD:
+            case KeyCode.EMOJI, KeyCode.TOGGLE_ONE_HANDED_MODE, KeyCode.SWITCH_ONE_HANDED_MODE, KeyCode.TOGGLE_FLOATING_KEYBOARD,
+                 KeyCode.HANDWRITING, KeyCode.CLEAR_HANDWRITING, KeyCode.CLIPBOARD_SEARCH, KeyCode.TOGGLE_TOUCHPAD_MODE,
+                 KeyCode.TOGGLE_TEXT_EDIT_MODE, KeyCode.TOGGLE_SELECTION_MODE, KeyCode.SWITCH_TO_USER_IME:
                 break;
             case KeyCode.CAPS_LOCK:
                 if (KeyboardSwitcher.getInstance().getKeyboard() == null
@@ -2289,6 +2291,9 @@ public final class InputLogic {
                 sendDownUpKeyEvent(codePoint - '0' + KeyEvent.KEYCODE_0);
             } else {
                 mConnection.commitCodePoint(codePoint);
+                if (settingsValues.needsToLookupSuggestions() && settingsValues.isWordCodePoint(codePoint)) {
+                    inputTransaction.setRequiresUpdateSuggestions();
+                }
             }
             if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
                     && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
@@ -2713,6 +2718,8 @@ public final class InputLogic {
             // false.
         }
         if (mWordComposer.isComposingWord()) {
+            final boolean wasBatchMode = mWordComposer.isBatchMode();
+            boolean wholeWordDeleted = false;
             if (mWordComposer.isBatchMode()) {
                 final String rejectedSuggestion = mWordComposer.getTypedWord();
                 mWordComposer.reset();
@@ -2737,6 +2744,7 @@ public final class InputLogic {
                 // the same mechanism the batch-mode branch above relies on.
                 final int wordLength = mWordComposer.getTypedWord().length();
                 mWordComposer.reset();
+                wholeWordDeleted = true;
                 StatsUtils.onBackspaceWordDelete(wordLength);
             } else {
                 mWordComposer.applyProcessedEvent(event);
@@ -2745,10 +2753,19 @@ public final class InputLogic {
             if (mWordComposer.isComposingWord()) {
                 setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
             } else {
-                // Composing word gone (whole-word/batch delete, or last char removed): clear the
-                // composing span in the editor. commitText("", 1) is the correct primitive for
-                // removing composing text — unlike deleteTextBeforeCursor.
-                mConnection.commitText("", 1);
+                if (wasBatchMode || wholeWordDeleted) {
+                    // Composing word gone (whole-word/batch delete): clear the composing span in
+                    // the editor. commitText("", 1) is the correct primitive for removing composing
+                    // text — unlike deleteTextBeforeCursor, which would delete committed text
+                    // before the span and mash words together ("This is pretty cool" -> "precool").
+                    mConnection.commitText("", 1);
+                } else {
+                    // Last character of the composing word removed: upstream finishes the span and
+                    // deletes one character, which keeps a single backspace from bulk-deleting a
+                    // numeric sequence.
+                    mConnection.finishComposingText();
+                    mConnection.deleteTextBeforeCursor(1);
+                }
             }
             updateInlineEmojiSearch();
             inputTransaction.setRequiresUpdateSuggestions();
@@ -2758,7 +2775,8 @@ public final class InputLogic {
                 mJustRevertedExpandedShortcut = null;
             }
             if (mLastComposedWord.canRevertCommit()
-                    && inputTransaction.getSettingsValues().mBackspaceRevertsAutocorrect) {
+                    && inputTransaction.getSettingsValues().mBackspaceRevertsAutocorrect
+                    && !TextUtils.isDigitsOnly(mLastComposedWord.mCommittedWord)) {
                 final String lastComposedWord = mLastComposedWord.mTypedWord;
                 revertCommit(inputTransaction);
                 StatsUtils.onRevertAutoCorrect();
@@ -3520,11 +3538,13 @@ public final class InputLogic {
                 }
             }
         }
-        final int[] codePoints = StringUtils.toCodePointArray(typedWordString);
-        mWordComposer.setComposingWord(codePoints, mLatinIME.getCoordinatesForCurrentKeyboard(codePoints));
-        mWordComposer.setCursorPositionWithinWord(typedWordString.codePointCount(0, numberOfCharsInWordBeforeCursor));
-        mConnection.setComposingRegion(expectedCursorPosition - numberOfCharsInWordBeforeCursor,
-                expectedCursorPosition + range.getNumberOfCharsInWordAfterCursor());
+        if (!TextUtils.isDigitsOnly(typedWordString)) {
+            final int[] codePoints = StringUtils.toCodePointArray(typedWordString);
+            mWordComposer.setComposingWord(codePoints, mLatinIME.getCoordinatesForCurrentKeyboard(codePoints));
+            mWordComposer.setCursorPositionWithinWord(typedWordString.codePointCount(0, numberOfCharsInWordBeforeCursor));
+            mConnection.setComposingRegion(expectedCursorPosition - numberOfCharsInWordBeforeCursor,
+                    expectedCursorPosition + range.getNumberOfCharsInWordAfterCursor());
+        }
         if (suggestions.size() <= 1) {
             // If there weren't any suggestion spans on this word, suggestions#size() will
             // be 1
@@ -3779,7 +3799,20 @@ public final class InputLogic {
             final LatinIME.UIHandler handler) {
         clearOneShotSpaceActionAndNotifyIfChanged();
         if (mWordComposer.isComposingWord()) {
-            commitCurrentAutoCorrection(settingsValues, LastComposedWord.NOT_A_SEPARATOR, handler);
+            final SuggestedWordInfo autoCorrection = mWordComposer.getAutoCorrectionOrNull();
+            final String typedWord = mWordComposer.getTypedWord();
+            if (autoCorrection != null && !typedWord.equals(autoCorrection.mWord)) {
+                commitCurrentAutoCorrection(settingsValues, LastComposedWord.NOT_A_SEPARATOR, handler);
+            } else {
+                final NgramContext ngramContext = mConnection.getNgramContextFromNthPreviousWord(
+                        settingsValues.mSpacingAndPunctuations, 1);
+                performAdditionToUserHistoryDictionary(settingsValues, typedWord, ngramContext);
+                mLastComposedWord = mWordComposer.commitWord(
+                        LastComposedWord.COMMIT_TYPE_USER_TYPED_WORD, typedWord,
+                        LastComposedWord.NOT_A_SEPARATOR, ngramContext);
+                mConnection.finishComposingText();
+                StatsUtils.onWordCommitUserTyped(typedWord, mWordComposer.isBatchMode());
+            }
         }
         mConnection.performEditorAction(actionId);
     }

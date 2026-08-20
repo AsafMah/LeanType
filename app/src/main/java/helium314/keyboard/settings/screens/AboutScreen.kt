@@ -72,7 +72,6 @@ fun AboutScreen(
         SettingsWithoutKey.HIDDEN_FEATURES,
         SettingsWithoutKey.GITHUB_FEATURES,
         SettingsWithoutKey.GITHUB,
-        SettingsWithoutKey.SPONSOR,
         SettingsWithoutKey.SAVE_LOG,
     )
     SearchSettingsScreen(
@@ -111,17 +110,44 @@ fun createAboutSettings(context: Context) = listOf(
     },
     Setting(context, SettingsWithoutKey.LICENSE, R.string.license, R.string.gnu_gpl) {
         val ctx = LocalContext.current
+        var showDialog by rememberSaveable { mutableStateOf(false) }
         Preference(
             name = it.title,
             description = it.description,
-            onClick = {
-                val intent = Intent()
-                intent.data = Links.LICENSE.toUri()
-                intent.action = Intent.ACTION_VIEW
-                ctx.startActivity(intent)
-            },
+            onClick = { showDialog = true },
             icon = R.drawable.ic_settings_about_license
         )
+        if (showDialog) {
+            helium314.keyboard.settings.dialogs.PreferenceDialog(
+                onDismissRequest = { showDialog = false },
+                title = stringResource(R.string.license),
+                showCloseButton = true,
+                buttons = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                showDialog = false
+                                val intent = Intent(Intent.ACTION_VIEW, Links.LICENSE.toUri())
+                                ctx.startActivity(intent)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.gnu_gpl))
+                        }
+                    }
+                }
+            ) {
+                Text(
+                    text = "LeanType is licensed under GNU GPL v3.0.\n\nThird-Party Speech Components:\n• whisper.cpp — MIT License (github.com/ggerganov/whisper.cpp)\n• Vosk Speech Recognition — Apache 2.0 (alphacephei.com/vosk)",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
     },
     Setting(context, SettingsWithoutKey.HIDDEN_FEATURES, R.string.hidden_features_title, R.string.hidden_features_summary) {
         val ctx = LocalContext.current
@@ -172,21 +198,6 @@ fun createAboutSettings(context: Context) = listOf(
                 intent.action = Intent.ACTION_VIEW
                 ctx.startActivity(intent)
             },
-            icon = R.drawable.ic_settings_about_github
-        )
-    },
-    Setting(context, SettingsWithoutKey.SPONSOR, R.string.about_sponsor_link, R.string.about_sponsor_link_description) {
-        val ctx = LocalContext.current
-        Preference(
-            name = it.title,
-            description = it.description,
-            onClick = {
-                val intent = Intent()
-                intent.data = Links.SPONSOR.toUri()
-                intent.action = Intent.ACTION_VIEW
-                ctx.startActivity(intent)
-            },
-            // Re-using the github icon or using a generic heart/sponsor icon if available. We will use ic_settings_about_github for now or a generic one. Let's see what icons we have. Let's try R.drawable.ic_keyboard_settings or similar, actually R.drawable.ic_settings_about_github might be okay if we don't have a sponsor one. Wait, let's look for a heart icon. Let's just use ic_settings_about_github for now and change it if needed.
             icon = R.drawable.ic_settings_about_github
         )
     },
