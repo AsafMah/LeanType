@@ -370,6 +370,11 @@ was kept**, so any of them can be restored with `git worktree add <dir> <branch>
 `LeanType-shortcut-pr`, `LeanType-upstream-399`, `LeanType-upstream-402`,
 `LeanType-upstream-408`, `LeanType-upstream-shift-fix`.
 
+Short-lived `LeanType-upstream-<version>` worktrees come and go with §10's merge recipe and are
+not tracked here individually; retire each one once its `merge/upstream-vX.Y.Z` branch lands in
+`dev`. One was in flight when this list was written (`LeanType-upstream-412` →
+`merge/upstream-v4.1.2`).
+
 ### Device
 
 - Phone: Samsung **SM-S936B**, Android 16, wireless ADB. Device id
