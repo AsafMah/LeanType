@@ -90,6 +90,14 @@ fun TwoThumbTypingScreen(
         // does not improve recognition -- it corrupts the trail and produces nonsense words.
         // So gate the whole group, and say why rather than silently showing nothing.
         if (JniUtils.sHaveNativeGestureLib) {
+            // These only take effect during multi-part word composition, and that is armed by
+            // the spacing mode above (manual spacing, or a non-zero combining grace). At the
+            // default spacing mode StrokeAligner is never reached at all -- see
+            // WordComposer.setBatchInputPointers -- so the settings would appear to do nothing.
+            // Show them, but say so, rather than letting someone conclude the feature is broken.
+            if (!nonNormalSpacing) {
+                add(SettingsWithoutKey.TWO_THUMB_RECOGNITION_NEEDS_MULTIPART)
+            }
             add(Settings.PREF_STROKE_ALIGN_MODE)
             add(Settings.PREF_STROKE_IDEAL_PREFIX)
             if (strokeAlignMode == "dual_pointer") {
@@ -145,6 +153,10 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     // produces nonsense words. Saying so beats silently rendering an empty category.
     Setting(context, SettingsWithoutKey.TWO_THUMB_RECOGNITION_NEEDS_NATIVE_LIB,
         R.string.two_thumb_recognition_needs_lib, R.string.two_thumb_recognition_needs_lib_summary) { def ->
+        Preference(name = def.title, description = def.description, enabled = false, onClick = { })
+    },
+    Setting(context, SettingsWithoutKey.TWO_THUMB_RECOGNITION_NEEDS_MULTIPART,
+        R.string.two_thumb_recognition_needs_multipart, R.string.two_thumb_recognition_needs_multipart_summary) { def ->
         Preference(name = def.title, description = def.description, enabled = false, onClick = { })
     },
     Setting(context, SettingsWithoutKey.TWO_THUMB_SPACING_MODE,
