@@ -406,17 +406,24 @@ Kept deliberately:
 fixed. Re-point it whenever the merge target changes, and use it the same way: reproduce any
 new merge failure on the pristine tag before blaming your own merge.
 
-Unfinished work — each of these holds commits that exist on **no remote ref**, so this disk is
-the only copy. Push or discard them deliberately; don't let them rot:
+Unfinished work — all six branches are now **backed up on `origin`** (pushed 2026-08-20 purely
+as backups: no PRs, delete with `git push origin --delete <branch>` once triaged). The commits
+are safe; what still needs a decision is whether each line of work continues:
 
 | Path | Branch | State |
 |---|---|---|
 | `LeanType-a11` | `feat/spacing-a11-insight` | 4 commits; PRs #95/#93 closed unmerged; issues #24, #26 open |
 | `LeanType-gates` | `feat/spacing-gate-model` | 2 commits (shares one with `a11`); PR #94 closed unmerged; issue #24 open |
 | `LeanType-b7a` | `b7a-prefix-aware-stripping` | 2 commits + uncommitted debug logging in `InputLogic.java`; never PR'd; issues #98, #99 open |
-| `LeanType-swipe` | `feat/statistical-swipe-decoder` | 1 commit + an uncommitted `swipetest` build variant; never PR'd; no tracking branch |
+| `LeanType-swipe` | `feat/statistical-swipe-decoder` | 1 commit + an uncommitted `swipetest` build variant; never PR'd |
 | `LeanType-upstream-shortcut-rows` | `feat/upstream-shortcut-rows` | 1 local build-differentiation commit on top of the pushed `pr/upstream-shortcut-rows` |
 | `LeanType-upstream-two-thumb-step1` | `feat/upstream-two-thumb-step1` | 1 local build-differentiation commit on top of the pushed `pr/upstream-two-thumb-step1` |
+
+**The backup covers commits, not working trees.** Two of these still hold uncommitted changes
+that exist nowhere else: `LeanType-b7a` (modified `InputLogic.java` — debug logging) and
+`LeanType-swipe` (modified `app/build.gradle.kts` plus an untracked `app/src/swipetest/`).
+Commit or discard those deliberately; deleting either worktree without doing so loses them.
+The other four are clean.
 
 Removed on 2026-08-20 (≈5.6 GB reclaimed) — all fully merged or superseded, and **every branch
 was kept**, so any of them can be restored with `git worktree add <dir> <branch>`:
@@ -469,7 +476,8 @@ background trim level on a foreground process") and refuses to *raise* a level t
 4. **Tablet smoke** — the only never-executed release gate.
 5. **Issue #131 — "Java gesture not working with custom layouts"** is an open bug filed
    against the fork's own fallback gesture engine; likely the highest-value functional work.
-6. Decide the fate of the six unfinished worktrees in §11 — their commits exist on no remote,
-   so they are one disk failure from gone.
+6. Triage the six unfinished worktrees in §11. Their branches are backed up on `origin` now, so
+   there's no deadline — but `LeanType-b7a` and `LeanType-swipe` still hold uncommitted changes
+   that the backup does not cover.
 7. Optional: refresh `AGENTS.md`'s JDK path
    (`jdk-21.0.11.10-hotspot` → `jdk-21.0.12.8-hotspot`).
