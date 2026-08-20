@@ -1,0 +1,14 @@
+Upstream LeanType v4.1.2 merged in.
+
+New:
+• Clipboard entries can be edited in place, with cursor control from the keyboard
+• Voice recognition language selector with auto-detect and 99+ Whisper languages
+• Personal dictionary learning threshold - choose how many times a word must be typed before it is saved
+• Suggestions can be picked with shortcut keys from a connected physical keyboard
+• Settings screens are localized
+
+Fixed:
+• Held backspace no longer cuts an emoji in half
+• Whole-word backspace after a swipe no longer leaves part of the word behind
+• Custom layouts still restore after leaving symbol mode
+• Text expander regex shortcuts expand more reliably
