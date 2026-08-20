@@ -14,6 +14,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-20
+
 ### Upstream
 - Merged **LeanBitLab/LeanType v4.1.2** (pinned at `8720abeb`, covering v4.0.9–v4.1.2, 200 commits) — adds a clipboard edit mode, a personal-dictionary learning threshold, physical-keyboard and suggestion fixes, and Compose localization. LeanTypeDual retains its distinct `applicationId`, fork version, privacy tiers, Java fallback gesture engine, two-thumb typing, and persistent custom layout slots. (#137)
 
@@ -36,6 +38,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - The multi-part trail merge moved behind a pure, unit-tested `StrokeAligner` seam whose defaults reproduce the previous behaviour exactly. (#135)
 - **Dropped both `runTests` skip guards for defects inherited from upstream** — subtype edit persistence and symbol-prefixed regex expansion are both fixed in upstream v4.1.2. Verified twice: on a pristine upstream checkout at the tag, and in the merged tree. Those two tests now actually execute on CI instead of returning early. (#137)
 - **Fixed a latent test-harness bug** where `setText` accepted a `requireIdle` parameter it never passed through, so `reset()` could not tolerate leftover delayed messages. Harmless until the merge shifted JUnit's hash-based test ordering, at which point it failed an unrelated backspace test. (#137)
+- **Test results are now gated rather than eyeballed** — `tools/check_test_results.py` refuses to report when the results are untrustworthy (any file predating the run, so a Gradle `UP-TO-DATE` task can't pass off a stale green report; or its own enumeration disagreeing with the totals the suites declare). It then diffs failing test *names* against a checked-in baseline and quarantines network-dependent tests so they are never counted as a regression or as a fix. Runs as the authoritative gate in CI. (#139)
 
 ## [0.2.0] - 2026-08-06
 
