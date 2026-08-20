@@ -83,15 +83,21 @@ fun TwoThumbTypingScreen(
         }
 
         add(R.string.settings_category_two_thumb_typing_recognition)
-        // DUAL_POINTER only means anything to the native decoder; the Java fallback engine
-        // ignores pointer ids entirely, so offering the choice there would be misleading.
+        // Everything in this group synthesises or re-labels the points handed to the gesture
+        // decoder, and only the native decoder acts on them: it partitions points by pointer id
+        // and has its own scoring. The Java fallback engine ignores pointer ids and scores a
+        // single trail, so feeding it invented connector points or a synthetic key-centre prefix
+        // does not improve recognition -- it corrupts the trail and produces nonsense words.
+        // So gate the whole group, and say why rather than silently showing nothing.
         if (JniUtils.sHaveNativeGestureLib) {
             add(Settings.PREF_STROKE_ALIGN_MODE)
-        }
-        add(Settings.PREF_STROKE_IDEAL_PREFIX)
-        if (JniUtils.sHaveNativeGestureLib && strokeAlignMode == "dual_pointer") {
-            add(Settings.PREF_STROKE_ALIGN_INTERVAL_MS)
-            add(Settings.PREF_STROKE_ALIGN_GAP_MS)
+            add(Settings.PREF_STROKE_IDEAL_PREFIX)
+            if (strokeAlignMode == "dual_pointer") {
+                add(Settings.PREF_STROKE_ALIGN_INTERVAL_MS)
+                add(Settings.PREF_STROKE_ALIGN_GAP_MS)
+            }
+        } else {
+            add(SettingsWithoutKey.TWO_THUMB_RECOGNITION_NEEDS_NATIVE_LIB)
         }
         add(Settings.PREF_GESTURE_DUAL_THUMB_HINTING)
         if (dualThumbHinting) {
@@ -133,6 +139,14 @@ fun TwoThumbTypingScreen(
 }
 
 fun createTwoThumbTypingSettings(context: Context) = listOf(
+    // Shown instead of the recognition settings when no native gesture library is loaded.
+    // Those settings synthesise points for the native decoder; the Java fallback engine scores
+    // a single trail and ignores pointer ids, so applying them there corrupts the trail and
+    // produces nonsense words. Saying so beats silently rendering an empty category.
+    Setting(context, SettingsWithoutKey.TWO_THUMB_RECOGNITION_NEEDS_NATIVE_LIB,
+        R.string.two_thumb_recognition_needs_lib, R.string.two_thumb_recognition_needs_lib_summary) { def ->
+        Preference(name = def.title, description = def.description, enabled = false, onClick = { })
+    },
     Setting(context, SettingsWithoutKey.TWO_THUMB_SPACING_MODE,
         R.string.two_thumb_spacing_mode, R.string.two_thumb_spacing_mode_summary) {
         TwoThumbSpacingModePreference(it)

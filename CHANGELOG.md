@@ -23,6 +23,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 - **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order onto the two per-pointer tracks the native decoder actually reads. (#135)
+- **The two-thumb recognition settings no longer appear when they cannot work.** They synthesise touch points for the native gesture decoder; the built-in fallback engine scores a single trail and ignores which thumb drew it, so applying them there corrupted the trail and produced nonsense words. The group is now gated on a loaded gesture library and explains itself instead of silently rendering empty. (#141)
+- **Held backspace no longer mis-deletes emoji.** The accelerated second deletion measured the character from *before* the first deletion rather than the one it was about to remove, so it could cut a multi-code-point emoji in half. Present upstream too; reported as `LeanBitLab/LeanType#423`. (#133)
 - **Whole-word backspace keeps working after the upstream merge.** Upstream's fix for single-click backspace bulk-deleting numeric sequences was auto-merged in a way that stopped the two-thumb whole-word delete from clearing the composing span, leaving partial words behind. Both behaviours now coexist. (#137)
 - **Custom layouts still restore after leaving symbol mode.** Upstream resets the remembered custom layout when switching back to the alphabet, which conflicted with this fork's persistent custom layout slots. (#137)
 

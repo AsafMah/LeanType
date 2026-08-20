@@ -384,6 +384,9 @@
     <string name="two_thumb_backspace_word">Delete whole word</string>
     <string name="two_thumb_point_hinting">Improve two-thumb recognition (experimental)</string>
     <string name="two_thumb_point_hinting_summary">Adds synthetic hints for the recognizer when both thumbs are used. It may help two-thumb gestures, but can hurt accuracy if the hand split is wrong.</string>
+    <!-- Shown in place of the recognition settings when no native gesture library is loaded -->
+    <string name="two_thumb_recognition_needs_lib">Needs the gesture library</string>
+    <string name="two_thumb_recognition_needs_lib_summary">These settings shape the touch points sent to the native gesture decoder. The built-in fallback engine scores a single trail and ignores which thumb drew it, so they would make recognition worse rather than better. Load a gesture library under Gesture typing to enable them.</string>
     <string name="stroke_align_mode">Joining word parts</string>
     <string name="stroke_align_mode_summary">How an earlier part of the word is fed to the recognizer together with the part you are swiping now.</string>
     <string name="stroke_align_mode_connector">One joined trail</string>
