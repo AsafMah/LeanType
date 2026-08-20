@@ -89,6 +89,13 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
 - **Key tests:** `InputLogicTest.kt` (typing/autocorrect/combining-mode/Hangul), `SuggestTest.kt`, `WordComposerTest.java`, `DictionaryGroupTest.kt` (reflection + Mockito on the package-internal `DictionaryGroup`), `SettingsContainerTest.kt` (settings wiring), `KeyboardParserTest.kt`, `ClipboardDaoTest.kt`.
 - **Conventions:** `@Test`; method names use camelCase or backtick form; obtain `Context` via Robolectric; package-internal classes are exercised via reflection (`Class.forName(...).declaredConstructors`).
 - **Known failures:** the full debug unit suite has ~11 pre-existing failures (in `KeyboardParserTest`, `XLinkTest`, `StringUtilsTest` emoji, and `InputLogicTest` Hangul/autocorrect-revert/autospace-indicator) that are environment/data-dependent and usually unrelated to a change. The `runTests` build type exists to skip these on CI. **Verify a change by diffing failures against an `origin/main` baseline run, not by absolute pass count.**
+- **Don't read the test report by hand — use the gate.** `tools/check_test_results.py` parses the JUnit XML and refuses to answer when the results can't be trusted: it fails if any result file predates the run (Gradle served an UP-TO-DATE task, so the report describes code that never ran) and if its own enumeration disagrees with the totals the suites declare (an under-counting reader looks like good news). It then diffs failing test **names** against a checked-in baseline, and quarantines `net:`-marked tests that reach the network so they are never counted as a regression or as an attributable fix. It runs automatically in the Unit tests workflow and is the authoritative gate there. Locally:
+  ```bash
+  python tools/check_test_results.py \
+    --results-dir app/build/test-results/testOfflineRunTestsUnitTest \
+    --baseline tools/test_baselines/runTests-windows.txt
+  ```
+  Baselines live in `tools/test_baselines/`. If it reports new failures, don't paste them into the baseline — establish they aren't yours first, then `--update-baseline` and say why in the PR. The checker has its own tests: `python -m unittest discover -s tools/tests`.
 - **Coverage gap:** gesture/glide recognition needs the native engine, so JVM unit tests exercise tap-based logic, not native gesture recognition (a trace/replay harness is planned — see `docs/IMPROVEMENT_PLAN.md`).
 - **Expectation:** new behavior MUST add/update unit tests; any settings change updates `SettingsContainerTest.kt`. Keep PRs single-responsibility (see `CONTRIBUTING.md`).
 
