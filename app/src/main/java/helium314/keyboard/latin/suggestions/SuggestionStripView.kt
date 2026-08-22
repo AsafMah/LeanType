@@ -160,8 +160,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
     private val keyDimension: Int
         get() {
-            val scale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }
-            val edgeKeyWidth = (resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width) * scale).toInt()
+            val defaultWidth = ResourceUtils.getDefaultKeyboardWidth(context).toFloat().coerceAtLeast(1f)
+            val floatingWidth = ResourceUtils.getFloatingKeyboardWidth().toFloat()
+            val widthScale = if (floatingWidth > 0f) (floatingWidth / defaultWidth).coerceIn(0.4f, 1.5f) else 1.0f
+            val heightScale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }.coerceIn(0.4f, 1.5f)
+            val effectiveScale = minOf(widthScale, heightScale)
+            val edgeKeyWidth = (resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width) * effectiveScale).toInt()
             val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
             return kotlin.math.min(edgeKeyWidth, stripHeight)
         }
@@ -184,12 +188,16 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // expand key
         // weird way of setting size (default is config_suggestions_strip_edge_key_width)
         // but better not change it or people will complain
-        val toolbarHeight = ResourceUtils.getSuggestionsStripHeight(resources)
+        val toolbarHeight = keyDimension
         toolbarExpandKey.layoutParams.height = toolbarHeight
         toolbarExpandKey.layoutParams.width = toolbarHeight // we want it square
         toolbarExpandKey.setBackgroundResource(R.drawable.toolbar_key_background)
-        val scale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }
-        val expandPadding = (9 * scale).toInt().dpToPx(resources)
+        val defaultWidth = ResourceUtils.getDefaultKeyboardWidth(context).toFloat().coerceAtLeast(1f)
+        val floatingWidth = ResourceUtils.getFloatingKeyboardWidth().toFloat()
+        val widthScale = if (floatingWidth > 0f) (floatingWidth / defaultWidth).coerceIn(0.4f, 1.5f) else 1.0f
+        val heightScale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }.coerceIn(0.4f, 1.5f)
+        val effectiveScale = minOf(widthScale, heightScale)
+        val expandPadding = (9 * effectiveScale).toInt().dpToPx(resources).coerceAtLeast(2)
         toolbarExpandKey.setPadding(expandPadding, expandPadding, expandPadding, expandPadding)
         colors.setColor(toolbarExpandKey, ColorType.TOOL_BAR_EXPAND_KEY)
         colors.setColor(toolbarExpandKey.background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
