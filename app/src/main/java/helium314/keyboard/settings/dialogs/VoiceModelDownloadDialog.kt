@@ -31,6 +31,10 @@ import helium314.keyboard.latin.voice.VoiceModelItem
 import helium314.keyboard.latin.voice.VoiceModelRegistry
 import helium314.keyboard.latin.voice.VoicePluginManager
 
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 @Composable
 fun VoiceModelDownloadDialog(
     onDismissRequest: () -> Unit,
@@ -41,13 +45,20 @@ fun VoiceModelDownloadDialog(
     onImportLocalFile: (String) -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val isNetworkAvailable = remember(context) { VoiceDownloadDispatcher.hasInternetPermission(context) }
     val prefs = context.prefs()
 
     val installedWhisperId = prefs.getString("installed_model_${VoiceConstants.ENGINE_WHISPER}", null)
+    val activeDownloadingId = VoiceDownloadDispatcher.downloadingModelId.value
+    val currentProgress = VoiceDownloadDispatcher.downloadProgress.floatValue
 
     ThreeButtonAlertDialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = {
+            if (activeDownloadingId == null) {
+                onDismissRequest()
+            }
+        },
         onConfirmed = {},
         confirmButtonText = null,
         cancelButtonText = null,
@@ -62,14 +73,28 @@ fun VoiceModelDownloadDialog(
 
                 for (model in VoiceModelRegistry.whisperModels) {
                     val isThisModelInstalled = isWhisperInstalled && installedWhisperId == model.id
+                    val isThisModelDownloading = activeDownloadingId == model.id
 
                     ModelDownloadRow(
                         model = model,
                         isThisModelInstalled = isThisModelInstalled,
+                        isThisModelDownloading = isThisModelDownloading,
+                        isAnyModelDownloading = activeDownloadingId != null,
+                        downloadProgress = currentProgress,
                         isAnyModelInstalledForEngine = isWhisperInstalled,
                         isNetworkAvailable = isNetworkAvailable,
                         onDownload = {
-                            VoiceDownloadDispatcher.download(context, model)
+                            scope.launch {
+                                VoiceDownloadDispatcher.downloadAndInstall(
+                                    context = context,
+                                    model = model,
+                                    pluginManager = pluginManager,
+                                    onSuccess = { onRefresh() },
+                                    onError = { err ->
+                                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                                    }
+                                )
+                            }
                         },
                         onDelete = {
                             prefs.edit().remove("installed_model_${VoiceConstants.ENGINE_WHISPER}").apply()
@@ -117,6 +142,7 @@ fun VoiceModelDownloadDialog(
                                     Toast.makeText(context, "Model removed", Toast.LENGTH_SHORT).show()
                                     onRefresh()
                                 },
+                                enabled = activeDownloadingId == null,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.error,
                                     contentColor = MaterialTheme.colorScheme.onError
@@ -128,6 +154,7 @@ fun VoiceModelDownloadDialog(
                         } else {
                             OutlinedButton(
                                 onClick = { onImportLocalFile(VoiceConstants.ENGINE_WHISPER) },
+                                enabled = activeDownloadingId == null,
                                 modifier = Modifier.height(36.dp)
                             ) {
                                 Text("Import")
@@ -144,6 +171,9 @@ fun VoiceModelDownloadDialog(
 private fun ModelDownloadRow(
     model: VoiceModelItem,
     isThisModelInstalled: Boolean,
+    isThisModelDownloading: Boolean,
+    isAnyModelDownloading: Boolean,
+    downloadProgress: Float,
     isAnyModelInstalledForEngine: Boolean,
     isNetworkAvailable: Boolean,
     onDownload: () -> Unit,
@@ -160,53 +190,72 @@ private fun ModelDownloadRow(
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = model.displayName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "${model.language} • ${model.sizeMb}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = model.displayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = if (isThisModelDownloading) {
+                            "Downloading... ${(downloadProgress * 100).toInt()}% (${model.sizeMb})"
+                        } else {
+                            "${model.language} • ${model.sizeMb}"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isThisModelDownloading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (isThisModelInstalled && !isThisModelDownloading) {
+                    Button(
+                        onClick = onDelete,
+                        enabled = !isAnyModelDownloading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        ),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("Remove")
+                    }
+                } else if (!isThisModelDownloading) {
+                    Button(
+                        onClick = onDownload,
+                        enabled = !isAnyModelDownloading,
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        val label = if (isAnyModelInstalledForEngine) {
+                            "Replace"
+                        } else {
+                            "Download"
+                        }
+                        Text(label)
+                    }
+                }
             }
 
-            if (isThisModelInstalled) {
-                Button(
-                    onClick = onDelete,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    ),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Text("Remove")
-                }
-            } else {
-                Button(
-                    onClick = onDownload,
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    val label = if (isAnyModelInstalledForEngine) {
-                        "Replace"
-                    } else {
-                        "Download"
-                    }
-                    Text(label)
-                }
+            if (isThisModelDownloading) {
+                LinearProgressIndicator(
+                    progress = { downloadProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                )
             }
         }
     }
