@@ -1280,7 +1280,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             ?: toolbarContainer.measuredWidth.takeIf { it > 0 }
             ?: fallbackAvailableWidth
 
-        val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
+        val isFloating = ResourceUtils.getFloatingKeyboardWidth() > 0
+        val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys && !isFloating
         val isToolbarVisible = toolbarContainer.isVisible && (isExpanded || isSplit)
         val minSpannedKeyWidth = (singleKeyWidth * 1.25f).toInt()
         val canSpan = containerWidth > 0 && (containerWidth / visibleCount >= minSpannedKeyWidth)

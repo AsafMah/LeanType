@@ -459,7 +459,6 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                         lp.width = newWidth
                         lp.height = newHeight
                         try {
-                            windowManager?.updateViewLayout(overlayRoot, lp)
                             val content = overlayRoot?.getChildAt(0) as? LinearLayout
                             if (content != null) {
                                 content.layoutParams = FrameLayout.LayoutParams(
@@ -481,6 +480,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                                     keyboardFrame.scaleY = scaleY
                                 }
                             }
+                            windowManager?.updateViewLayout(overlayRoot, lp)
                         } catch (e: Exception) {
                             Log.w(TAG, "Failed to update overlay layout on resize", e)
                         }

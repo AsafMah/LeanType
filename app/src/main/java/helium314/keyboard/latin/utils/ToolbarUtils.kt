@@ -59,7 +59,8 @@ private val toolbarPrefScope = CoroutineScope(SupervisorJob() + Dispatchers.Defa
 fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     val button = ImageButton(context, null, R.attr.suggestionWordStyle)
     button.scaleType = ImageView.ScaleType.CENTER_INSIDE
-    val padding = 9.dpToPx(context.resources)
+    val scale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }
+    val padding = (9 * scale).toInt().dpToPx(context.resources)
     button.setPadding(padding, padding, padding, padding)
     button.tag = key
     button.contentDescription = key.name.lowercase().getStringResourceOrName("", context)
