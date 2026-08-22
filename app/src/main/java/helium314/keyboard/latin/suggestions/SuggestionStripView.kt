@@ -1283,10 +1283,9 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             ?: toolbarContainer.measuredWidth.takeIf { it > 0 }
             ?: fallbackAvailableWidth
 
-        val isFloating = ResourceUtils.getFloatingKeyboardWidth() > 0
-        val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys && !isFloating
+        val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
         val isToolbarVisible = toolbarContainer.isVisible && (isExpanded || isSplit)
-        val minSpannedKeyWidth = (singleKeyWidth * 1.25f).toInt()
+        val minSpannedKeyWidth = (singleKeyWidth * 0.8f).toInt()
         val canSpan = containerWidth > 0 && (containerWidth / visibleCount >= minSpannedKeyWidth)
         val useEqualSpacing = isAutoSpan && isToolbarVisible && canSpan
 
@@ -1310,6 +1309,21 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 toolbarKeyLayoutParams
             }
         }
+    }
+
+    fun onFloatingKeyboardScaleChanged() {
+        val toolbarHeight = keyDimension
+        toolbarExpandKey.layoutParams.height = toolbarHeight
+        toolbarExpandKey.layoutParams.width = toolbarHeight
+        val defaultStripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height).toFloat()
+        val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources).toFloat()
+        val effectiveScale = if (defaultStripHeight > 0f) stripHeight / defaultStripHeight else 1.0f
+        val expandPadding = (9 * effectiveScale).toInt().dpToPx(resources).coerceAtLeast(2)
+        toolbarExpandKey.setPadding(expandPadding, expandPadding, expandPadding, expandPadding)
+
+        rebuildToolbarKeys()
+        requestLayout()
+        invalidate()
     }
 
     fun updateSplitToolbarState() {

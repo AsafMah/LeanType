@@ -733,6 +733,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mCurrentInputView == null)
             return;
         mEmojiPalettesView.clearKeyboardCache();
+        if (mSuggestionStripView != null) {
+            mSuggestionStripView.onFloatingKeyboardScaleChanged();
+        }
         reloadMainKeyboard();
     }
 
