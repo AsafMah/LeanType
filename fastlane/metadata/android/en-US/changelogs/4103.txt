@@ -1,0 +1,7 @@
+- Live real-time floating keyboard resizing with instant key repositioning and dynamic layout scaling.
+- Proportionally scaled suggestions strip, toolbar keys, expand handles, and functional icons in floating mode.
+- Added extensive voice customization controls (CPU threads, custom vocabulary prompt, mic sensitivity, max duration, smart punctuation).
+- Reorganized voice input settings into a clean, prioritized hierarchy.
+- Fixed emoji tab strip dark mode synchronization and system navbar colors on config changes.
+- Preserved square aspect ratios for toolbar keys and eliminated viewport clipping on resize.
+- Softened spacebar contrast and reduced pill height in borderless mode.

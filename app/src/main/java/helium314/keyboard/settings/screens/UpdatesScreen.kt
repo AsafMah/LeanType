@@ -72,13 +72,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "🎙️ Migrated offline voice typing to Whisper AI with compact Q5_1 models and in-toolbar waveform visualizer",
-    "🌐 Added Voice Recognition Language selector with Auto-Detect, Follow Keyboard Language, and 99+ Whisper languages",
-    "🚀 Added in-app streaming self-updater (standardfull), collapsible changelog, and official community links",
-    "🧠 Added Personal Dictionary auto-learn frequency threshold slider in Settings -> Text Correction",
-    "🎨 Added Toolbar & Clipboard key alignment setting (Start, Center, End, Auto-Span)",
-    "⚡ Added N-gram backoff and cache safeguards for continuous next-word predictions",
-    "🎨 Isolated key border theme setting strictly to keyboard letter keys"
+    "✨ Live real-time floating keyboard resizing with instant key repositioning and dynamic layout scaling",
+    "📐 Proportionally scaled suggestions strip, toolbar keys, expand handles, and functional icons in floating mode",
+    "🎙️ Extensive voice customization controls (CPU threads, custom vocabulary prompt, mic sensitivity, max duration, smart punctuation)",
+    "🎛️ Reorganized voice input settings into a clean, prioritized hierarchy",
+    "🎨 Fixed emoji tab strip dark mode synchronization and system navbar colors on config changes",
+    "🖼️ Preserved square aspect ratios for toolbar keys and eliminated viewport clipping on resize",
+    "🎨 Softened spacebar contrast and reduced pill height in borderless mode"
 )
 
 @Composable
