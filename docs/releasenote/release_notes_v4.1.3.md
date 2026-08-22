@@ -4,9 +4,11 @@ As an open-source, community-funded project, we operate on a very limited budget
 ## 🚀 What's New in v4.1.3
 
 ### ✨ New Features & Enhancements
+- **Voice Plugin v1.0.1 Release**: Released [LeanType Voice Plugin v1.0.1](https://github.com/LeanBitLab/LeanType-Voice-Plugin/releases/tag/v1.0.1) with native auto-spoken language detection fixes, dynamic CPU thread allocation (2, 4, 6, 8 threads), and custom vocabulary prompt support.
+- **Voice Customization & Optimization Controls**: Added extensive controls in Settings → Voice input, including CPU inference threads, custom vocabulary/context prompt, microphone sensitivity gate, max recording duration limit, and smart punctuation toggle.
+- **Robust In-App Model Downloader**: Replaced system download manager with direct in-app streaming download featuring multi-hop redirect resolution and real-time download progress indicators directly inside the model dialog.
 - **Live Real-Time Floating Keyboard Resizing**: Drag the resize handles to fluidly resize the floating keyboard in real-time with live key repositioning, automatic bounds checking, and instant persistence.
 - **Dynamic Floating Proportional Scaling**: Seamlessly scales suggestions strip, toolbar keys, pinned action buttons, expand/drag handles, and functional icons proportionally with floating width and height.
-- **Voice Customization & Optimization Controls**: Added extensive controls in Settings → Voice input, including CPU inference threads (2, 4, 6, 8 threads), custom vocabulary/context prompt, microphone sensitivity gate, max recording duration limit, and smart punctuation toggle.
 - **Prioritized Voice Settings**: Reorganized voice input settings into a clear, intuitive hierarchy prioritizing setup essentials, dictation behavior, and hardware performance tuning.
 
 ### 🐛 Bug Fixes & Stability Improvements
