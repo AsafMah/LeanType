@@ -40,6 +40,7 @@ import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.suggestions.MoreSuggestions;
 import helium314.keyboard.latin.suggestions.MoreSuggestionsView;
+import helium314.keyboard.latin.utils.ResourceUtils;
 import helium314.keyboard.latin.utils.TypefaceUtils;
 
 import java.util.HashSet;
@@ -324,7 +325,17 @@ public class KeyboardView extends View {
         final SettingsValues sv = Settings.getValues();
         mShowsHints = sv.mShowsHints;
         final float scale = sv.mKeyboardHeightScale;
-        mIconScaleFactor = scale < 0.8f ? scale + 0.2f : 1f;
+        final float floatingScale = ResourceUtils.getFloatingKeyboardScale();
+        final int floatingWidth = ResourceUtils.getFloatingKeyboardWidth();
+        final int defaultWidth = ResourceUtils.getDefaultKeyboardWidth(getContext());
+        if (floatingScale > 0.0f || floatingWidth > 0) {
+            final float heightScale = scale * (floatingScale > 0.0f ? floatingScale : 1.0f);
+            final float widthScale = (floatingWidth > 0 && defaultWidth > 0) ? ((float) floatingWidth / defaultWidth) : 1.0f;
+            final float effectiveKeyScale = Math.min(heightScale, widthScale);
+            mIconScaleFactor = Math.max(0.4f, Math.min(effectiveKeyScale, 1.5f));
+        } else {
+            mIconScaleFactor = scale < 0.8f ? scale + 0.2f : 1f;
+        }
         final Paint paint = mPaint;
         final Drawable background = getBackground();
         // Calculate clip region and set.
