@@ -24,7 +24,7 @@
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="@dimen/config_suggestions_strip_height"
-        style="?attr/suggestionStripViewStyle" />
+        android:background="@android:color/transparent" />
     <HorizontalScrollView
         android:id="@+id/clipboard_strip_scroll_view"
         android:layout_width="match_parent"

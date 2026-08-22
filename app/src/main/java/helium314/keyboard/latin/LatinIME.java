@@ -861,6 +861,7 @@ public class LatinIME extends InputMethodService implements
         // KeyboardSwitcher will check by itself if theme update is necessary
         mKeyboardSwitcher.updateKeyboardTheme(KtxKt.getDisplayContext(this));
         mKeyboardSwitcher.onConfigurationChanged(conf);
+        setNavigationBarColor();
     }
 
     @Override

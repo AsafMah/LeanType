@@ -221,7 +221,7 @@ public final class EmojiPalettesView extends LinearLayout
     private static SingleDictionaryFacilitator sDictionaryFacilitator;
 
     private boolean initialized = false;
-    private final Colors mColors;
+    private Colors mColors;
     private final EmojiLayoutParams mEmojiLayoutParams;
     private LinearLayout mTabStrip;
     private EmojiCategoryPageIndicatorView mEmojiCategoryPageIndicatorView;
@@ -887,6 +887,7 @@ public final class EmojiPalettesView extends LinearLayout
         mEditorInfo = editorInfo; // Saved
         mKeyboardActionListener = keyboardActionListener;
         initialize();
+        updateColors();
         setupBottomRowKeyboard(editorInfo, keyboardActionListener);
         final KeyDrawParams params = new KeyDrawParams();
         params.updateParams(mEmojiLayoutParams.getBottomRowKeyboardHeight(), keyVisualAttr);
@@ -1177,7 +1178,7 @@ public final class EmojiPalettesView extends LinearLayout
 
                 if (old instanceof ImageView) {
                     Settings.getValues().mColors.setColor((ImageView) old, ColorType.EMOJI_CATEGORY);
-                    old.setBackgroundColor(android.graphics.Color.WHITE);
+                    old.setBackground(null);
                     Settings.getValues().mColors.setBackground((ImageView) old, ColorType.STRIP_BACKGROUND);
                 }
                 if (current instanceof ImageView) {
@@ -1185,6 +1186,33 @@ public final class EmojiPalettesView extends LinearLayout
                     Settings.getValues().mColors.setColor(current.getBackground(), ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND);
                 }
             }
+        }
+    }
+
+    public void updateColors() {
+        mColors = Settings.getValues().mColors;
+        if (mTabStrip != null) {
+            mColors.setBackground(mTabStrip, ColorType.STRIP_BACKGROUND);
+            for (int i = 0; i < mTabStrip.getChildCount(); i++) {
+                final View child = mTabStrip.getChildAt(i);
+                if (child instanceof ImageView) {
+                    final Object tag = child.getTag();
+                    final long categoryId = tag instanceof Long ? (Long) tag : -1;
+                    if (categoryId == mEmojiCategory.getCurrentCategoryId()) {
+                        child.setBackgroundResource(R.drawable.toolbar_key_background);
+                        mColors.setColor(child.getBackground(), ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND);
+                    } else {
+                        child.setBackground(null);
+                        mColors.setBackground(child, ColorType.STRIP_BACKGROUND);
+                    }
+                    mColors.setColor((ImageView) child, ColorType.EMOJI_CATEGORY);
+                }
+            }
+        }
+        if (mEmojiCategoryPageIndicatorView != null) {
+            mEmojiCategoryPageIndicatorView.setColors(
+                    mColors.get(ColorType.EMOJI_CATEGORY_SELECTED),
+                    mColors.get(ColorType.STRIP_BACKGROUND));
         }
     }
 
@@ -1199,6 +1227,7 @@ public final class EmojiPalettesView extends LinearLayout
         }
 
         mEmojiCategory.clearKeyboardCache();
+        updateColors();
         mPager.getAdapter().notifyDataSetChanged();
         closeDictionaryFacilitator();
     }
