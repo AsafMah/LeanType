@@ -454,6 +454,12 @@ public class KeyboardView extends View {
             bgHeight = (int) (drawBackground.getIntrinsicHeight() * mIconScaleFactor);
             bgX = (keyWidth - bgWidth) / 2;
             bgY = (keyHeight - bgHeight) / 2;
+        } else if (!mColors.getHasKeyBorders() && key.getBackgroundType() == Key.BACKGROUND_TYPE_SPACEBAR) {
+            final int verticalInset = (int) (keyHeight * 0.16f);
+            bgWidth = keyWidth + padding.left + padding.right;
+            bgHeight = Math.max(1, keyHeight + padding.top + padding.bottom - (verticalInset * 2));
+            bgY = -padding.top + verticalInset;
+            bgX = -padding.left;
         } else {
             bgWidth = keyWidth + padding.left + padding.right;
             bgHeight = keyHeight + padding.top + padding.bottom;

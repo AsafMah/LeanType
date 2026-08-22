@@ -253,10 +253,10 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 else if (!isNight) pressedStateList(gesture, accent)
                 else pressedStateList(doubleAdjustedAccent, accent)
 
+            val borderlessSpaceBar = androidx.core.graphics.ColorUtils.blendARGB(background, keyBackground, 0.45f)
             spaceBarStateList =
                 if (themeStyle == STYLE_HOLO) pressedStateList(spaceBar, spaceBar)
-                else if (!isNight) pressedStateList(adjustedBackground, keyBackground)
-                else pressedStateList(adjustedKeyBackground, keyBackground)
+                else pressedStateList(brightenOrDarken(borderlessSpaceBar, true), borderlessSpaceBar)
         }
         keyTextFilter = colorFilter(keyText)
 
@@ -472,7 +472,8 @@ class DefaultColors (
             functionalKeyStateList = keyStateList
             actionKeyStateList = if (themeStyle == STYLE_HOLO) functionalKeyStateList
                 else pressedStateList(brightenOrDarken(accent, true), accent)
-            spaceBarStateList = pressedStateList(brightenOrDarken(spaceBar, true), spaceBar)
+            val borderlessSpaceBar = androidx.core.graphics.ColorUtils.blendARGB(background, spaceBar, 0.45f)
+            spaceBarStateList = pressedStateList(brightenOrDarken(borderlessSpaceBar, true), borderlessSpaceBar)
         }
         keyTextFilter = colorFilter(keyText)
         actionKeyIconColorFilter = when {
