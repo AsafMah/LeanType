@@ -642,31 +642,9 @@ fun VoiceSettingsScreen(
                 }
             }
 
-            // Language & Audio
+            // Models & Setup section
             Text(
-                text = "Audio & Dictation",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            voiceLanguageSetting.Preference()
-            micSensitivitySetting.Preference()
-            silenceTimeoutSetting.Preference()
-            maxDurationSetting.Preference()
-            smartPunctuationSetting.Preference()
-
-            // Performance & Accuracy
-            Text(
-                text = "Performance & Accuracy Tuning",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            cpuThreadsSetting.Preference()
-            customPromptSetting.Preference()
-            whisperKeepLoadedSetting.Preference()
-
-            // Models section
-            Text(
-                text = "Speech Models",
+                text = "Engine & Models",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp)
             )
@@ -705,6 +683,29 @@ fun VoiceSettingsScreen(
                     }
                 }
             )
+
+            voiceLanguageSetting.Preference()
+
+            // Dictation & Behavior
+            Text(
+                text = "Dictation & Behavior",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            smartPunctuationSetting.Preference()
+            silenceTimeoutSetting.Preference()
+            micSensitivitySetting.Preference()
+            maxDurationSetting.Preference()
+
+            // Performance & Advanced Tuning
+            Text(
+                text = "Performance & Advanced",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            cpuThreadsSetting.Preference()
+            customPromptSetting.Preference()
+            whisperKeepLoadedSetting.Preference()
         }
     }
 }
