@@ -55,6 +55,7 @@ import helium314.keyboard.settings.filePicker
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.SwitchPreference
+import helium314.keyboard.settings.preferences.TextInputPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -366,6 +367,7 @@ fun VoiceSettingsScreen(
             ListPreference(
                 setting = it,
                 items = listOf(
+                    "2 seconds (Fastest)" to "2",
                     "3 seconds" to "3",
                     "5 seconds (Recommended)" to "5",
                     "7 seconds" to "7",
@@ -374,6 +376,85 @@ fun VoiceSettingsScreen(
                     "Never (Listen until mic tapped)" to "0"
                 ),
                 default = "5"
+            )
+        }
+    }
+
+    val micSensitivitySetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_MIC_SENSITIVITY,
+            title = "Microphone Sensitivity"
+        ) {
+            ListPreference(
+                setting = it,
+                items = listOf(
+                    "High (Quiet rooms / Whisper)" to "high",
+                    "Standard (Recommended)" to "normal",
+                    "Low (Noisy environments / In-car)" to "low"
+                ),
+                default = "normal"
+            )
+        }
+    }
+
+    val maxDurationSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_MAX_DURATION_SECONDS,
+            title = "Max Recording Duration"
+        ) {
+            ListPreference(
+                setting = it,
+                items = listOf(
+                    "15 seconds" to "15",
+                    "30 seconds (Default)" to "30",
+                    "60 seconds" to "60",
+                    "Unlimited" to "0"
+                ),
+                default = "30"
+            )
+        }
+    }
+
+    val smartPunctuationSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_SMART_PUNCTUATION,
+            title = "Smart Punctuation",
+            description = "Automatically add punctuation and sentence capitalization"
+        ) {
+            SwitchPreference(
+                setting = it,
+                default = true
+            )
+        }
+    }
+
+    val cpuThreadsSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_CPU_THREADS,
+            title = "CPU Inference Threads"
+        ) {
+            ListPreference(
+                setting = it,
+                items = listOf(
+                    "2 threads (Battery saver)" to "2",
+                    "4 threads (Recommended)" to "4",
+                    "6 threads (High performance)" to "6",
+                    "8 threads (Maximum speed)" to "8"
+                ),
+                default = "4"
+            )
+        }
+    }
+
+    val customPromptSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_CUSTOM_PROMPT,
+            title = "Vocabulary & Context Prompt",
+            description = "Guide Whisper with technical terms, names, slang, or jargon"
+        ) {
+            TextInputPreference(
+                setting = it,
+                default = ""
             )
         }
     }
@@ -561,8 +642,27 @@ fun VoiceSettingsScreen(
                 }
             }
 
+            // Language & Audio
+            Text(
+                text = "Audio & Dictation",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp)
+            )
             voiceLanguageSetting.Preference()
+            micSensitivitySetting.Preference()
             silenceTimeoutSetting.Preference()
+            maxDurationSetting.Preference()
+            smartPunctuationSetting.Preference()
+
+            // Performance & Accuracy
+            Text(
+                text = "Performance & Accuracy Tuning",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            cpuThreadsSetting.Preference()
+            customPromptSetting.Preference()
+            whisperKeepLoadedSetting.Preference()
 
             // Models section
             Text(
@@ -605,8 +705,6 @@ fun VoiceSettingsScreen(
                     }
                 }
             )
-
-            whisperKeepLoadedSetting.Preference()
         }
     }
 }
