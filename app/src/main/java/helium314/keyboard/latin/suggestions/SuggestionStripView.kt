@@ -159,10 +159,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private var isLoadingAnimationActive = false
 
     private val keyDimension: Int
-        get() = kotlin.math.min(
-            resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
-            resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
-        )
+        get() {
+            val scale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }
+            val edgeKeyWidth = (resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width) * scale).toInt()
+            val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
+            return kotlin.math.min(edgeKeyWidth, stripHeight)
+        }
 
     private val toolbarKeyLayoutParams: LinearLayout.LayoutParams
         get() = LinearLayout.LayoutParams(keyDimension, keyDimension).apply {
@@ -182,11 +184,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // expand key
         // weird way of setting size (default is config_suggestions_strip_edge_key_width)
         // but better not change it or people will complain
-        val toolbarHeight = min(toolbarExpandKey.layoutParams.height, resources.getDimension(R.dimen.config_suggestions_strip_height).toInt())
+        val toolbarHeight = ResourceUtils.getSuggestionsStripHeight(resources)
         toolbarExpandKey.layoutParams.height = toolbarHeight
         toolbarExpandKey.layoutParams.width = toolbarHeight // we want it square
         toolbarExpandKey.setBackgroundResource(R.drawable.toolbar_key_background)
-        val expandPadding = 9.dpToPx(resources)
+        val scale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }
+        val expandPadding = (9 * scale).toInt().dpToPx(resources)
         toolbarExpandKey.setPadding(expandPadding, expandPadding, expandPadding, expandPadding)
         colors.setColor(toolbarExpandKey, ColorType.TOOL_BAR_EXPAND_KEY)
         colors.setColor(toolbarExpandKey.background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
@@ -195,7 +198,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val color = colors.get(ColorType.TOOL_BAR_KEY_ENABLED_BACKGROUND) or -0x1000000 // ignore alpha (in Java this is more readable 0xFF000000)
         enabledToolKeyBackground.colors = intArrayOf(color, Color.TRANSPARENT)
         enabledToolKeyBackground.gradientType = GradientDrawable.RADIAL_GRADIENT
-        enabledToolKeyBackground.gradientRadius = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height) / 2.1f
+        enabledToolKeyBackground.gradientRadius = ResourceUtils.getSuggestionsStripHeight(resources) / 2.1f
 
         val mToolbarMode = Settings.getValues().mToolbarMode
         if (mToolbarMode == ToolbarMode.TOOLBAR_KEYS) {
@@ -210,7 +213,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         rebuildToolbarKeys()
 
         if (Settings.getValues().mSplitToolbar) {
-            val stripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+            val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
             
             val wrapper = findViewById<LinearLayout>(R.id.suggestions_strip_wrapper)
             
@@ -277,7 +280,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val stripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
         val split = Settings.getValues().mSplitToolbar
         val isEmojiView = split && (isShowingEmojiSuggestions || helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().isShowingEmojiPalettes)
 
@@ -757,7 +760,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // In split mode, don't intercept touches on the top row (toolbar row)
         // to prevent accidentally cancelling long presses on toolbar buttons.
         if (Settings.getValues().mSplitToolbar) {
-            val stripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+            val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
             if (motionEvent.y < stripHeight) {
                 return false
             }
@@ -1347,7 +1350,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
         val colors = Settings.getValues().mColors
         val customTypeface = Settings.getInstance().customEmojiTypeface
-        val stripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
 
         // Create a horizontal scroll container for emojis
         val scrollView = android.widget.HorizontalScrollView(context)

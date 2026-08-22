@@ -459,21 +459,19 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                         try {
                             windowManager?.updateViewLayout(overlayRoot, lp)
                             val content = overlayRoot?.getChildAt(0) as? LinearLayout
-                            if (content != null) {
-                                content.layoutParams = FrameLayout.LayoutParams(
-                                    FrameLayout.LayoutParams.MATCH_PARENT,
-                                    FrameLayout.LayoutParams.MATCH_PARENT
+                            if (content != null && content.childCount > 1) {
+                                val keyboardFrame = content.getChildAt(1)
+                                keyboardFrame.layoutParams = LinearLayout.LayoutParams(
+                                    initialResizeWidth,
+                                    baseKeyboardHeight
                                 )
-                                if (content.childCount > 1) {
-                                    val keyboardFrame = content.getChildAt(1)
-                                    val targetKeyboardHeight = (newHeight - height).coerceAtLeast(1)
-                                    val scaleX = newWidth.toFloat() / initialResizeWidth.coerceAtLeast(1)
-                                    val scaleY = targetKeyboardHeight.toFloat() / baseKeyboardHeight.coerceAtLeast(1)
-                                    keyboardFrame.pivotX = 0f
-                                    keyboardFrame.pivotY = 0f
-                                    keyboardFrame.scaleX = scaleX
-                                    keyboardFrame.scaleY = scaleY
-                                }
+                                val targetKeyboardHeight = (newHeight - height).coerceAtLeast(1)
+                                val scaleX = newWidth.toFloat() / initialResizeWidth.coerceAtLeast(1)
+                                val scaleY = targetKeyboardHeight.toFloat() / baseKeyboardHeight.coerceAtLeast(1)
+                                keyboardFrame.pivotX = 0f
+                                keyboardFrame.pivotY = 0f
+                                keyboardFrame.scaleX = scaleX
+                                keyboardFrame.scaleY = scaleY
                             }
                         } catch (e: Exception) {
                             Log.w(TAG, "Failed to update overlay layout on resize", e)
@@ -490,28 +488,22 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                     windowParams?.let { lp ->
                         val finalWidth = lp.width
                         val finalHeight = lp.height
-                        val baseHeight = if (initialResizeHeight > 0) initialResizeHeight else (baseKeyboardHeight + height)
-                        val heightRatio = if (baseHeight > 0) finalHeight.toFloat() / baseHeight else 1.0f
+                        val targetKeyboardHeight = (finalHeight - height).coerceAtLeast(1)
+                        val heightRatio = targetKeyboardHeight.toFloat() / baseKeyboardHeight.coerceAtLeast(1)
                         val finalScale = (initialResizeScale * heightRatio).coerceIn(0.5f, 1.8f)
 
                         // Reset visual scale transformations
                         val content = overlayRoot?.getChildAt(0) as? LinearLayout
-                        if (content != null) {
-                            content.layoutParams = FrameLayout.LayoutParams(
-                                FrameLayout.LayoutParams.MATCH_PARENT,
-                                FrameLayout.LayoutParams.WRAP_CONTENT
+                        if (content != null && content.childCount > 1) {
+                            val keyboardFrame = content.getChildAt(1)
+                            keyboardFrame.scaleX = 1.0f
+                            keyboardFrame.scaleY = 1.0f
+                            keyboardFrame.pivotX = 0f
+                            keyboardFrame.pivotY = 0f
+                            keyboardFrame.layoutParams = LinearLayout.LayoutParams(
+                                finalWidth,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                            if (content.childCount > 1) {
-                                val keyboardFrame = content.getChildAt(1)
-                                keyboardFrame.scaleX = 1.0f
-                                keyboardFrame.scaleY = 1.0f
-                                keyboardFrame.pivotX = 0f
-                                keyboardFrame.pivotY = 0f
-                                keyboardFrame.layoutParams = LinearLayout.LayoutParams(
-                                    LinearLayout.LayoutParams.MATCH_PARENT,
-                                    LinearLayout.LayoutParams.WRAP_CONTENT
-                                )
-                            }
                         }
 
                         // Reset window height back to WRAP_CONTENT so it wraps newly-measured keys tightly
