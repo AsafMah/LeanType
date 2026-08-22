@@ -59,11 +59,9 @@ private val toolbarPrefScope = CoroutineScope(SupervisorJob() + Dispatchers.Defa
 fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     val button = ImageButton(context, null, R.attr.suggestionWordStyle)
     button.scaleType = ImageView.ScaleType.CENTER_INSIDE
-    val defaultWidth = ResourceUtils.getDefaultKeyboardWidth(context).toFloat().coerceAtLeast(1f)
-    val floatingWidth = ResourceUtils.getFloatingKeyboardWidth().toFloat()
-    val widthScale = if (floatingWidth > 0f) (floatingWidth / defaultWidth).coerceIn(0.4f, 1.5f) else 1.0f
-    val heightScale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }.coerceIn(0.4f, 1.5f)
-    val effectiveScale = minOf(widthScale, heightScale)
+    val defaultStripHeight = context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height).toFloat()
+    val stripHeight = ResourceUtils.getSuggestionsStripHeight(context.resources).toFloat()
+    val effectiveScale = if (defaultStripHeight > 0f) stripHeight / defaultStripHeight else 1.0f
     val padding = (9 * effectiveScale).toInt().dpToPx(context.resources).coerceAtLeast(2)
     button.setPadding(padding, padding, padding, padding)
     button.tag = key

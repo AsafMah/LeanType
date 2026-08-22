@@ -85,8 +85,14 @@ public final class ResourceUtils {
 
     public static int getSuggestionsStripHeight(final Resources res) {
         final int defaultHeight = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height);
-        if (sFloatingKeyboardScaleOverride > 0.0f) {
-            return Math.max((int) (defaultHeight * sFloatingKeyboardScaleOverride), (int) (20 * res.getDisplayMetrics().density));
+        if (sFloatingKeyboardScaleOverride > 0.0f || sFloatingKeyboardWidthOverride > 0) {
+            final float heightScale = sFloatingKeyboardScaleOverride > 0.0f ? sFloatingKeyboardScaleOverride : 1.0f;
+            final int screenWidth = res.getDisplayMetrics().widthPixels;
+            final float widthScale = (sFloatingKeyboardWidthOverride > 0 && screenWidth > 0)
+                    ? ((float) sFloatingKeyboardWidthOverride / screenWidth)
+                    : 1.0f;
+            final float effectiveScale = Math.min(heightScale, widthScale);
+            return Math.max((int) (defaultHeight * effectiveScale), (int) (18 * res.getDisplayMetrics().density));
         }
         return defaultHeight;
     }
