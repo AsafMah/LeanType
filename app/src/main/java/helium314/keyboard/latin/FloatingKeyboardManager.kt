@@ -414,6 +414,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
 
         var initialWindowX = 0
         var initialWindowY = 0
+        var baseKeyboardHeight = 0
 
         resizeBtn.setOnTouchListener { _, event ->
             when (event.action) {
@@ -425,6 +426,10 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                     initialResizeWidth = windowParams?.width ?: ResourceUtils.getFloatingKeyboardWidth()
                     initialResizeHeight = overlayRoot?.height ?: 0
                     initialResizeScale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }
+                    val content = overlayRoot?.getChildAt(0) as? LinearLayout
+                    val keyboardFrame = if (content != null && content.childCount > 1) content.getChildAt(1) else null
+                    baseKeyboardHeight = keyboardFrame?.height?.takeIf { it > 0 }
+                        ?: (if (initialResizeHeight > 0) (initialResizeHeight - height).coerceAtLeast(1) else (220 * density).toInt())
                     paint.color = (textColor and 0x00FFFFFF) or activeAlpha
                     paint.strokeWidth = 4.5f * density
                     resizeBg.setColor(activeBgColor)
@@ -437,7 +442,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
 
                     // Dragging top-left corner: dx < 0 expands left, dy < 0 expands top
                     val targetWidth = initialResizeWidth - dx
-                    val baseHeight = if (initialResizeHeight > 0) initialResizeHeight else (250 * density).toInt()
+                    val baseHeight = if (initialResizeHeight > 0) initialResizeHeight else (baseKeyboardHeight + height)
                     val targetHeight = baseHeight - dy
 
                     val newWidth = targetWidth.coerceIn(minWidth, maxWidth)
@@ -461,11 +466,13 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                                 )
                                 if (content.childCount > 1) {
                                     val keyboardFrame = content.getChildAt(1)
-                                    keyboardFrame.layoutParams = LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        0,
-                                        1.0f
-                                    )
+                                    val targetKeyboardHeight = (newHeight - height).coerceAtLeast(1)
+                                    val scaleX = newWidth.toFloat() / initialResizeWidth.coerceAtLeast(1)
+                                    val scaleY = targetKeyboardHeight.toFloat() / baseKeyboardHeight.coerceAtLeast(1)
+                                    keyboardFrame.pivotX = 0f
+                                    keyboardFrame.pivotY = 0f
+                                    keyboardFrame.scaleX = scaleX
+                                    keyboardFrame.scaleY = scaleY
                                 }
                             }
                         } catch (e: Exception) {
@@ -483,9 +490,29 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                     windowParams?.let { lp ->
                         val finalWidth = lp.width
                         val finalHeight = lp.height
-                        val baseHeight = if (initialResizeHeight > 0) initialResizeHeight else (250 * density).toInt()
+                        val baseHeight = if (initialResizeHeight > 0) initialResizeHeight else (baseKeyboardHeight + height)
                         val heightRatio = if (baseHeight > 0) finalHeight.toFloat() / baseHeight else 1.0f
                         val finalScale = (initialResizeScale * heightRatio).coerceIn(0.5f, 1.8f)
+
+                        // Reset visual scale transformations
+                        val content = overlayRoot?.getChildAt(0) as? LinearLayout
+                        if (content != null) {
+                            content.layoutParams = FrameLayout.LayoutParams(
+                                FrameLayout.LayoutParams.MATCH_PARENT,
+                                FrameLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            if (content.childCount > 1) {
+                                val keyboardFrame = content.getChildAt(1)
+                                keyboardFrame.scaleX = 1.0f
+                                keyboardFrame.scaleY = 1.0f
+                                keyboardFrame.pivotX = 0f
+                                keyboardFrame.pivotY = 0f
+                                keyboardFrame.layoutParams = LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                )
+                            }
+                        }
 
                         // Reset window height back to WRAP_CONTENT so it wraps newly-measured keys tightly
                         lp.height = WindowManager.LayoutParams.WRAP_CONTENT
