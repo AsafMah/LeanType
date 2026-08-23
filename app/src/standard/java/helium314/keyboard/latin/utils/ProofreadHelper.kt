@@ -210,6 +210,77 @@ object ProofreadHelper {
         )
     }
 
+    private fun getLangCode(targetLang: String): String {
+        val trimmed = targetLang.trim()
+        if (trimmed.length == 2) return trimmed.lowercase()
+        if (trimmed.contains("-")) return trimmed.substringBefore("-").lowercase()
+        return when (trimmed.lowercase()) {
+            "english" -> "en"
+            "spanish" -> "es"
+            "french" -> "fr"
+            "german" -> "de"
+            "italian" -> "it"
+            "portuguese" -> "pt"
+            "chinese", "chinese (simplified)", "chinese (traditional)" -> "zh"
+            "japanese" -> "ja"
+            "korean" -> "ko"
+            "arabic" -> "ar"
+            "russian" -> "ru"
+            "hindi" -> "hi"
+            "bengali" -> "bn"
+            "indonesian" -> "id"
+            "dutch" -> "nl"
+            "turkish" -> "tr"
+            "polish" -> "pl"
+            "ukrainian" -> "uk"
+            "swedish" -> "sv"
+            "danish" -> "da"
+            "norwegian" -> "no"
+            "finnish" -> "fi"
+            "greek" -> "el"
+            "hebrew" -> "he"
+            "thai" -> "th"
+            "vietnamese" -> "vi"
+            "tamil" -> "ta"
+            "telugu" -> "te"
+            "marathi" -> "mr"
+            "gujarati" -> "gu"
+            "kannada" -> "kn"
+            "malayalam" -> "ml"
+            "urdu" -> "ur"
+            "persian (farsi)", "persian", "farsi" -> "fa"
+            "swahili" -> "sw"
+            "romanian" -> "ro"
+            "czech" -> "cs"
+            "hungarian" -> "hu"
+            "filipino (tagalog)", "tagalog", "filipino" -> "tl"
+            "malay" -> "ms"
+            "serbian" -> "sr"
+            "croatian" -> "hr"
+            "bulgarian" -> "bg"
+            "slovak" -> "sk"
+            "slovenian" -> "sl"
+            "lithuanian" -> "lt"
+            "latvian" -> "lv"
+            "estonian" -> "et"
+            "catalan" -> "ca"
+            "basque" -> "eu"
+            "afrikaans" -> "af"
+            "albanian" -> "sq"
+            "belarusian" -> "be"
+            "esperanto" -> "eo"
+            "galician" -> "gl"
+            "georgian" -> "ka"
+            "haitian creole", "haitian" -> "ht"
+            "icelandic" -> "is"
+            "irish" -> "ga"
+            "macedonian" -> "mk"
+            "maltese" -> "mt"
+            "welsh" -> "cy"
+            else -> trimmed.take(2).lowercase()
+        }
+    }
+
     /**
      * Translate text asynchronously and call the callback with the result.
      * 
@@ -227,11 +298,18 @@ object ProofreadHelper {
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
     ) {
-        val translationMethod = context.prefs().getString("pref_translation_method", "auto") ?: "auto"
+        val prefs = context.prefs()
+        val translationEngine = prefs.getString("pref_translation_engine", prefs.getString("pref_translation_method", "auto") ?: "auto") ?: "auto"
+        val translationMode = prefs.getString("pref_translation_mode", "auto") ?: "auto"
+        val isOfflineOnly = translationMode == "offline_only"
+        val isOnlineOnly = translationMode == "online_only"
+
         val hasPlugin = helium314.keyboard.latin.translation.TranslationLoader.hasPlugin(context)
-        val usePlugin = when (translationMethod) {
-            "plugin" -> hasPlugin
-            "ai" -> false
+        val usePlugin = when {
+            isOfflineOnly -> true
+            isOnlineOnly -> hasPlugin
+            translationEngine == "plugin" -> hasPlugin
+            translationEngine == "ai" -> false
             else -> hasPlugin
         }
         performAsyncOperation(
@@ -239,24 +317,97 @@ object ProofreadHelper {
             text = text,
             noTextErrorResId = R.string.translate_no_text,
             errorResId = R.string.translate_error,
-            skipApiKeyCheck = usePlugin,
+            skipApiKeyCheck = usePlugin || isOfflineOnly,
             apiCall = { service ->
                 val pluginProvider = if (usePlugin) helium314.keyboard.latin.translation.TranslationLoader.getProvider(context) else null
-                if (pluginProvider != null && pluginProvider.isAvailable()) {
+                val targetLang = service.getTargetLanguage()
+                val langCode = getLangCode(targetLang)
+
+                if (isOfflineOnly) {
+                    if (pluginProvider == null || !pluginProvider.isAvailable()) {
+                        mainHandler.post {
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(R.string.translation_model_not_downloaded),
+                                true
+                            )
+                        }
+                        return@performAsyncOperation Result.failure(
+                            Exception(context.getString(R.string.translation_model_not_downloaded))
+                        )
+                    }
+
+                    val isDownloaded = if (langCode == "en") true else {
+                        try {
+                            pluginProvider.isModelDownloaded(langCode)
+                        } catch (_: Throwable) {
+                            false
+                        }
+                    }
+
+                    if (!isDownloaded) {
+                        mainHandler.post {
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(R.string.translation_model_not_downloaded),
+                                true
+                            )
+                        }
+                        return@performAsyncOperation Result.failure(
+                            Exception(context.getString(R.string.translation_model_not_downloaded))
+                        )
+                    }
+
                     try {
-                        val targetLang = service.getTargetLanguage()
+                        Log.i("ProofreadHelper", "Translating via Offline ML Kit (target: $targetLang, code: $langCode)")
+                        val result = pluginProvider.translate(text, targetLang)
+                        if (result.isNotBlank() && !result.equals(text, ignoreCase = false)) {
+                            Result.success(result)
+                        } else {
+                            mainHandler.post {
+                                KeyboardSwitcher.getInstance().showToast(
+                                    context.getString(R.string.translation_model_not_downloaded),
+                                    true
+                                )
+                            }
+                            Result.failure(Exception(context.getString(R.string.translation_model_not_downloaded)))
+                        }
+                    } catch (e: Throwable) {
+                        Log.e("ProofreadHelper", "Offline translation failed", e)
+                        mainHandler.post {
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(R.string.translation_model_not_downloaded),
+                                true
+                            )
+                        }
+                        Result.failure(e)
+                    }
+                } else if (pluginProvider != null && pluginProvider.isAvailable()) {
+                    try {
                         Log.i("ProofreadHelper", "Translating via Translation Plugin (target: $targetLang)")
                         val result = pluginProvider.translate(text, targetLang)
                         if (result.isNotBlank() && !result.equals(text, ignoreCase = false)) {
                             Result.success(result)
+                        } else if (translationEngine == "plugin") {
+                            Result.failure(Exception("Plugin translation returned unmodified text"))
                         } else {
                             Log.w("ProofreadHelper", "Plugin returned blank or unmodified text, falling back to built-in AI")
                             service.translate(text)
                         }
                     } catch (e: Throwable) {
-                        Log.e("ProofreadHelper", "Plugin translation failed, falling back to built-in AI", e)
-                        service.translate(text)
+                        if (translationEngine == "plugin") {
+                            Result.failure(e)
+                        } else {
+                            Log.e("ProofreadHelper", "Plugin translation failed, falling back to built-in AI", e)
+                            service.translate(text)
+                        }
                     }
+                } else if (translationEngine == "plugin") {
+                    mainHandler.post {
+                        KeyboardSwitcher.getInstance().showToast(
+                            context.getString(R.string.translation_model_not_downloaded),
+                            true
+                        )
+                    }
+                    Result.failure(Exception("Translation plugin not available"))
                 } else {
                     Log.i("ProofreadHelper", "Translating via built-in AI service")
                     service.translate(text)

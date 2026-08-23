@@ -598,7 +598,7 @@
     <string name="pref_translation_mode_online_only">Online Only (Google Web)</string>
     <string name="offline_translation_models_title">Offline Translation Models</string>
     <string name="offline_translation_models_summary">Download and manage on-device language models (~30 MB each)</string>
-    <string name="translation_model_not_downloaded">Offline model not downloaded. Download in Settings → Libraries Hub.</string>
+    <string name="translation_model_not_downloaded">Offline model not downloaded. Download in Settings → Translation.</string>
     
     <!-- Translation target language options -->
     <string-array name="translate_language_names">
