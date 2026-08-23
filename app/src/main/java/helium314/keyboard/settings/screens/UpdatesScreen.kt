@@ -72,13 +72,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "✨ Live real-time floating keyboard resizing with instant key repositioning and dynamic layout scaling",
-    "📐 Proportionally scaled suggestions strip, toolbar keys, expand handles, and functional icons in floating mode",
-    "🎙️ Extensive voice customization controls (CPU threads, custom vocabulary prompt, mic sensitivity, max duration, smart punctuation)",
-    "🎛️ Reorganized voice input settings into a clean, prioritized hierarchy",
-    "🎨 Fixed emoji tab strip dark mode synchronization and system navbar colors on config changes",
-    "🖼️ Preserved square aspect ratios for toolbar keys and eliminated viewport clipping on resize",
-    "🎨 Softened spacebar contrast and reduced pill height in borderless mode"
+    "⚡ Versatile Text Expander modifiers (%clipboard:clean%, %clipboard:singleline%, %clipboard:title%, %clipboard:slug%, %clipboard:upper%)",
+    "✂️ Automatic Wikipedia & research paper citation bracket stripper in Text Expander",
+    "✍️ Dedicated Handwriting settings dashboard with in-app model manager and live progress downloads",
+    "🔄 Dynamic GitHub release checking and version comparison for Voice and Handwriting plugins",
+    "😊 Fixed symbol keyboard resetting to alphabet layout on emoticons like :) and :(",
+    "📚 Fixed personal dictionary auto-learning based on user configured learning threshold",
+    "🧩 Reorganized settings: moved dictionaries to Languages and refactored Plugins hub"
 )
 
 @Composable
