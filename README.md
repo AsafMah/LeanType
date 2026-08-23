@@ -18,7 +18,7 @@
 **A private, smart, and deeply customizable open-source Android keyboard.**  
 *Forked from [HeliBoard](https://github.com/Helium314/HeliBoard) / OpenBoard / AOSP LatinIME.*
 
-[Download APKs](#-download) • [Flavor Comparison](#-flavor-comparison) • [Features](#-features) • [Setup Guide](#-setup-guide) • [Ecosystem](#-ecosystem--plugins) • [Other Projects](https://github.com/LeanBitLab#-android-projects)
+[Screenshots](#-screenshots) • [Download APKs](#-download) • [Flavor Comparison](#-flavor-comparison) • [Features](#-features) • [Setup Guide](#-setup-guide) • [Ecosystem](#-ecosystem--plugins) • [Other Projects](https://github.com/LeanBitLab#-android-projects)
 
 </div>
 
@@ -27,6 +27,21 @@
 ## 🚀 Overview
 
 **LeanType** combines the trusted, lightweight, privacy-focused foundation of HeliBoard with modern productivity features: Multi-Provider Cloud, Self-Hosted & Offline AI proofreading, On-Device Whisper Voice Typing, Handwriting Recognition, Smart Toolbar Auto-Spanning, Built-in Self-Updater, and Rich Text Tools, while keeping you in complete control over your data.
+
+---
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/images/1.png" width="180" alt="Keyboard Main View"/></td>
+    <td><img src="docs/images/2.png" width="180" alt="AI Proofreading"/></td>
+    <td><img src="docs/images/3.png" width="180" alt="Clipboard Search"/></td>
+    <td><img src="docs/images/4.png" width="180" alt="Text Editing Panel"/></td>
+    <td><img src="docs/images/5.png" width="180" alt="Settings Screen"/></td>
+    <td><img src="docs/images/6.png" width="180" alt="Floating Keyboard"/></td>
+  </tr>
+</table>
 
 ---
 
@@ -109,21 +124,6 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
         <img alt="Get it on F-Droid" src="docs/images/get-it-on-fdroid.png" height="80">
       </a>
     </td>
-  </tr>
-</table>
-
----
-
-## 📸 Screenshots
-
-<table>
-  <tr>
-    <td><img src="docs/images/1.png" width="180" alt="Keyboard Main View"/></td>
-    <td><img src="docs/images/2.png" width="180" alt="AI Proofreading"/></td>
-    <td><img src="docs/images/3.png" width="180" alt="Clipboard Search"/></td>
-    <td><img src="docs/images/4.png" width="180" alt="Text Editing Panel"/></td>
-    <td><img src="docs/images/5.png" width="180" alt="Settings Screen"/></td>
-    <td><img src="docs/images/6.png" width="180" alt="Floating Keyboard"/></td>
   </tr>
 </table>
 
