@@ -58,7 +58,6 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
     val items = buildList {
         // Always show provider selection
         add(SettingsWithoutKey.AI_PROVIDER)
-        add(SettingsWithoutKey.TRANSLATION_ENGINE)
         // Custom AI Keys are only shown in the standard flavor (guaranteed by caller)
         add(SettingsWithoutKey.CUSTOM_AI_KEYS)
 
@@ -67,13 +66,11 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
             "GROQ" -> {
                 add(SettingsWithoutKey.GROQ_TOKEN)
                 add(SettingsWithoutKey.GROQ_MODEL)
-                add(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE)
                 add(SettingsWithoutKey.TRANSLATE_GROQ_MODEL)
             }
             "GEMINI" -> {
                 add(SettingsWithoutKey.GEMINI_API_KEY)
                 add(SettingsWithoutKey.GEMINI_MODEL)
-                add(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE)
                 add(SettingsWithoutKey.TRANSLATE_GEMINI_MODEL)
             }
             "OPENAI" -> {
@@ -81,7 +78,6 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
                 add(SettingsWithoutKey.HUGGINGFACE_MODEL)
                 add(SettingsWithoutKey.HUGGINGFACE_ENDPOINT)
                 add(SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS)
-                add(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE)
                 add(SettingsWithoutKey.TRANSLATE_HUGGINGFACE_MODEL)
             }
         }

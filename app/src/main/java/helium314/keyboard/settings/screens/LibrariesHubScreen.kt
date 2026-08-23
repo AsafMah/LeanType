@@ -61,22 +61,41 @@ fun LibrariesHubScreen(
                     .padding(innerPadding)
                     .padding(vertical = 8.dp)
             ) {
+                // Dictionaries Card
                 ElevatedCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     colors = CardDefaults.elevatedCardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 ) {
                     Column {
-                        // Dictionaries
                         Preference(
                             name = stringResource(R.string.libraries_hub_dictionary_title),
-                            description = "", // No description
+                            description = "",
                             onClick = onClickDictionaries,
                             icon = R.drawable.ic_dictionary
                         ) { NextScreenIcon() }
+                    }
+                }
+
+                // Plugins Section Card
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Text(
+                            text = "PLUGINS & EXPANSIONS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
 
                         // Handwriting Input Plugin (ML Kit based, standardfull only)
                         if (BuildConfig.FLAVOR == "standardfull") {
@@ -101,7 +120,15 @@ fun LibrariesHubScreen(
                                 icon = R.drawable.ic_translate,
                                 onSuccess = { translationInstalled = helium314.keyboard.latin.translation.TranslationLoader.hasPlugin(context) }
                             )
+                            
+                            // Translation Engine Selection
+                            helium314.keyboard.settings.preferences.TranslationEnginePreference()
+
+                            // Translation Target Language
+                            helium314.keyboard.settings.preferences.TranslationTargetLanguagePreference()
+
                             if (BuildConfig.FLAVOR == "standardfull" && translationInstalled) {
+                                // Translation Mode Selection (Auto, Offline Only, Online Only)
                                 helium314.keyboard.settings.preferences.TranslationModePreference()
 
                                 var showModelsDialog by remember { mutableStateOf(false) }
@@ -130,6 +157,26 @@ fun LibrariesHubScreen(
                             onClick = onClickOfflineVoice,
                             icon = R.drawable.sym_keyboard_voice_holo
                         ) { NextScreenIcon() }
+                    }
+                }
+
+                // Native Libraries & Documentation Card
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        // Gesture Typing Library
+                        var gestureLibState by remember { mutableStateOf(JniUtils.sHaveNativeGestureLib) }
+                        LoadGestureLibPreference(
+                            title = stringResource(R.string.load_gesture_library),
+                            summary = if (gestureLibState) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed),
+                            onSuccess = { gestureLibState = JniUtils.sHaveNativeGestureLib }
+                        )
 
                         // Documentation & Features
                         val uriHandler = LocalUriHandler.current
