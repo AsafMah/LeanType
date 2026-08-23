@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -171,27 +175,54 @@ private fun DictionaryDetails(dict: File, onDelete: () -> Unit) {
         else -> type
     }
 
-    Row(
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-        DeleteButton {
-            dict.delete()
-            dict.parentFile?.name?.constructLocale()?.let { dictLocale ->
-                ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 4.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "Installed on device",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
-            onDelete()
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = {
+                        dict.delete()
+                        dict.parentFile?.name?.constructLocale()?.let { dictLocale ->
+                            ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
+                        }
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text("Delete", style = MaterialTheme.typography.labelMedium)
+                }
+                ExpandButton { showDetails = !showDetails }
+            }
         }
-        ExpandButton { showDetails = !showDetails }
-    }
-    AnimatedVisibility(showDetails, enter = fadeIn(), exit = fadeOut()) {
-        Text(
-            header.info(LocalConfiguration.current.locale()),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(start = 10.dp, top = 0.dp, end = 10.dp, bottom = 12.dp)
-        )
+        AnimatedVisibility(showDetails, enter = fadeIn(), exit = fadeOut()) {
+            Text(
+                text = header.info(LocalConfiguration.current.locale()),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(start = 6.dp, top = 4.dp, end = 6.dp, bottom = 8.dp)
+            )
+        }
     }
 }
 

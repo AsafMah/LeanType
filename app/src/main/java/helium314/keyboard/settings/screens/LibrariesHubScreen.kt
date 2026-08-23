@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +31,7 @@ import helium314.keyboard.latin.handwriting.HandwritingLoader
 import helium314.keyboard.latin.translation.TranslationLoader
 import helium314.keyboard.settings.NextScreenIcon
 import helium314.keyboard.settings.SearchSettingsScreen
+import helium314.keyboard.settings.dialogs.HandwritingModelDownloadDialog
 import helium314.keyboard.settings.dialogs.TranslationModelDownloadDialog
 import helium314.keyboard.settings.preferences.HandwritingLanguagePreference
 import helium314.keyboard.settings.preferences.LoadHandwritingPluginPreference
@@ -49,6 +51,7 @@ fun LibrariesHubScreen(
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    var showHandwritingModelDialog by rememberSaveable { mutableStateOf(false) }
 
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -114,6 +117,12 @@ fun LibrariesHubScreen(
                                 onSuccess = { handwritingInstalled = HandwritingLoader.hasPlugin(context) }
                             )
                             if (handwritingInstalled) {
+                                Preference(
+                                    name = "Handwriting Models",
+                                    description = "Download & manage offline recognition models",
+                                    onClick = { showHandwritingModelDialog = true },
+                                    icon = R.drawable.ic_settings_languages
+                                ) { NextScreenIcon() }
                                 HandwritingLanguagePreference()
                             }
                         }
@@ -145,5 +154,11 @@ fun LibrariesHubScreen(
                 }
             }
         }
+    }
+
+    if (showHandwritingModelDialog) {
+        HandwritingModelDownloadDialog(
+            onDismissRequest = { showHandwritingModelDialog = false }
+        )
     }
 }
