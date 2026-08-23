@@ -45,6 +45,7 @@ fun LibrariesHubScreen(
     onClickBack: () -> Unit,
     onClickDictionaries: () -> Unit,
     onClickOfflineVoice: () -> Unit = {},
+    onClickTranslation: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -124,57 +125,21 @@ fun LibrariesHubScreen(
                             onClick = onClickOfflineVoice,
                             icon = R.drawable.sym_keyboard_voice_holo
                         ) { NextScreenIcon() }
-                    }
-                }
 
-                // Section 3: Translation (available on standard and standardfull)
-                if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
-                        )
-                    ) {
-                        Column {
-                            PreferenceCategory(stringResource(R.string.translation_settings_title))
-
-                            var translationInstalled by remember { mutableStateOf(TranslationLoader.hasPlugin(context)) }
-                            LoadTranslationPluginPreference(
-                                title = "Translation Plugin",
-                                summary = if (translationInstalled) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed),
-                                icon = R.drawable.ic_translate,
-                                onSuccess = { translationInstalled = TranslationLoader.hasPlugin(context) }
-                            )
-
-                            // Translation Engine Selection
-                            TranslationEnginePreference()
-
-                            // Translation Target Language
-                            TranslationTargetLanguagePreference()
-
-                            if (BuildConfig.FLAVOR == "standardfull" && translationInstalled) {
-                                // Translation Mode Selection (Auto, Offline Only, Online Only)
-                                TranslationModePreference()
-
-                                var showModelsDialog by remember { mutableStateOf(false) }
-                                Preference(
-                                    name = stringResource(R.string.offline_translation_models_title),
-                                    description = stringResource(R.string.offline_translation_models_summary),
-                                    onClick = { showModelsDialog = true },
-                                    icon = R.drawable.ic_translate
-                                )
-                                if (showModelsDialog) {
-                                    val provider = remember { TranslationLoader.getProvider(context) }
-                                    if (provider != null) {
-                                        TranslationModelDownloadDialog(
-                                            provider = provider,
-                                            onDismissRequest = { showModelsDialog = false }
-                                        )
-                                    }
-                                }
+                        // Translation Settings Screen (available on standard and standardfull)
+                        if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
+                            val translationInstalled = TranslationLoader.hasPlugin(context)
+                            val summary = if (translationInstalled) {
+                                if (BuildConfig.FLAVOR == "standardfull") "Offline ML Kit & Online engine" else "Online Translation Plugin"
+                            } else {
+                                "Configure plugin & translation backend"
                             }
+                            Preference(
+                                name = stringResource(R.string.translation_settings_title),
+                                description = summary,
+                                onClick = onClickTranslation,
+                                icon = R.drawable.ic_translate
+                            ) { NextScreenIcon() }
                         }
                     }
                 }

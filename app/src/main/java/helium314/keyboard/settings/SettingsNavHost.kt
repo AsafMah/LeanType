@@ -116,7 +116,8 @@ fun SettingsNavHost(
             LibrariesHubScreen(
                 onClickBack = ::goBack,
                 onClickDictionaries = { navController.navigate(SettingsDestination.Dictionaries) },
-                onClickOfflineVoice = { navController.navigate(SettingsDestination.OfflineVoice) }
+                onClickOfflineVoice = { navController.navigate(SettingsDestination.OfflineVoice) },
+                onClickTranslation = { navController.navigate(SettingsDestination.Translation) }
             )
         }
         composable(SettingsDestination.CustomAIKeys) {
@@ -183,6 +184,9 @@ fun SettingsNavHost(
         composable(SettingsDestination.OfflineVoice) {
             helium314.keyboard.latin.voice.VoiceSettingsScreen(onClickBack = ::goBack)
         }
+        composable(SettingsDestination.Translation) {
+            helium314.keyboard.settings.screens.TranslationSettingsScreen(onClickBack = ::goBack)
+        }
     }
     if (target.value != SettingsDestination.Settings/* && target.value != navController.currentBackStackEntry?.destination?.route*/)
         navController.navigate(route = target.value)
@@ -216,6 +220,7 @@ object SettingsDestination {
     const val TextExpander = "text_expander"
     const val BackgroundServices = "background_services"
     const val OfflineVoice = "offline_voice"
+    const val Translation = "translation"
     val navTarget = MutableStateFlow(Settings)
 
     // Use SupervisorJob so a cancellation in one navigation hop
