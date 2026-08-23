@@ -146,7 +146,7 @@ fun MainSettingsScreen(
                             ) { NextScreenIcon() }
                         }
                         Preference(
-                            name = stringResource(R.string.libraries_hub_title),
+                            name = stringResource(R.string.plugins_title),
                             onClick = onClickLibraries,
                             icon = R.drawable.ic_emoji_objects
                         ) { NextScreenIcon() }

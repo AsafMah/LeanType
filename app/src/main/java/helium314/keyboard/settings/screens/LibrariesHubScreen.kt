@@ -37,7 +37,6 @@ import helium314.keyboard.settings.preferences.PreferenceCategory
 @Composable
 fun LibrariesHubScreen(
     onClickBack: () -> Unit,
-    onClickDictionaries: () -> Unit,
     onClickOfflineVoice: () -> Unit = {},
     onClickTranslation: () -> Unit = {},
     onClickHandwriting: () -> Unit = {},
@@ -47,8 +46,8 @@ fun LibrariesHubScreen(
 
     SearchSettingsScreen(
         onClickBack = onClickBack,
-        title = stringResource(R.string.libraries_hub_title),
-        settings = emptyList(), // Custom content provided below
+        title = stringResource(R.string.plugins_title),
+        settings = emptyList(),
     ) {
         Scaffold(
             contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
@@ -59,35 +58,7 @@ fun LibrariesHubScreen(
                     .padding(innerPadding)
                     .padding(vertical = 8.dp)
             ) {
-                // Section 1: Dictionaries & Documentation
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
-                    Column {
-                        PreferenceCategory(stringResource(R.string.libraries_hub_dictionary_title))
-
-                        Preference(
-                            name = stringResource(R.string.libraries_hub_dictionary_title),
-                            description = "",
-                            onClick = onClickDictionaries,
-                            icon = R.drawable.ic_dictionary
-                        ) { NextScreenIcon() }
-
-                        Preference(
-                            name = "Features Guide",
-                            description = "View the detailed features.md guide on GitHub",
-                            onClick = { uriHandler.openUri("https://github.com/LeanBitLab/HeliboardL/blob/main/docs/FEATURES.md") },
-                            icon = R.drawable.ic_settings_about_wiki
-                        ) { NextScreenIcon() }
-                    }
-                }
-
-                // Section 2: Plugins
+                // Section 1: Plugins
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -134,6 +105,27 @@ fun LibrariesHubScreen(
                                 icon = R.drawable.ic_translate
                             ) { NextScreenIcon() }
                         }
+                    }
+                }
+
+                // Section 2: Documentation
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        PreferenceCategory("Documentation")
+
+                        Preference(
+                            name = "Features Guide",
+                            description = "View the detailed features.md guide on GitHub",
+                            onClick = { uriHandler.openUri("https://github.com/LeanBitLab/HeliboardL/blob/main/docs/FEATURES.md") },
+                            icon = R.drawable.ic_settings_about_wiki
+                        ) { NextScreenIcon() }
                     }
                 }
             }

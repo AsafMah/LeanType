@@ -115,7 +115,6 @@ fun SettingsNavHost(
         composable(SettingsDestination.Libraries) {
             LibrariesHubScreen(
                 onClickBack = ::goBack,
-                onClickDictionaries = { navController.navigate(SettingsDestination.Dictionaries) },
                 onClickOfflineVoice = { navController.navigate(SettingsDestination.OfflineVoice) },
                 onClickTranslation = { navController.navigate(SettingsDestination.Translation) },
                 onClickHandwriting = { navController.navigate(SettingsDestination.Handwriting) }
