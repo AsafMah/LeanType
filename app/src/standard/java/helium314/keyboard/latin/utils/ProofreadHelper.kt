@@ -247,10 +247,10 @@ object ProofreadHelper {
                         val targetLang = service.getTargetLanguage()
                         Log.i("ProofreadHelper", "Translating via Translation Plugin (target: $targetLang)")
                         val result = pluginProvider.translate(text, targetLang)
-                        if (result.isNotBlank()) {
+                        if (result.isNotBlank() && !result.equals(text, ignoreCase = false)) {
                             Result.success(result)
                         } else {
-                            Log.w("ProofreadHelper", "Plugin returned blank, falling back to AI")
+                            Log.w("ProofreadHelper", "Plugin returned blank or unmodified text, falling back to built-in AI")
                             service.translate(text)
                         }
                     } catch (e: Throwable) {
