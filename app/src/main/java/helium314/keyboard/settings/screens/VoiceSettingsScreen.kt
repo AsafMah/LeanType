@@ -122,6 +122,40 @@ fun VoiceSettingsScreen(
     var showModelDownloadDialog by remember { mutableStateOf(false) }
     var showVoicePluginDialog by rememberSaveable { mutableStateOf(false) }
 
+    var remoteVersion by remember { mutableStateOf<String?>(null) }
+    var updateAvailable by remember { mutableStateOf(false) }
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isPluginInstalled, pluginVersion) {
+        isCheckingUpdate = true
+        scope.launch(Dispatchers.IO) {
+            try {
+                val url = URL(Links.VOICE_PLUGIN_RELEASES_API)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.setRequestProperty("User-Agent", "HeliboardL")
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                conn.connect()
+                if (conn.responseCode == 200) {
+                    val response = conn.inputStream.bufferedReader().use { it.readText() }
+                    val regex = "\"tag_name\"\\s*:\\s*\"([^\"]+)\"".toRegex()
+                    val match = regex.find(response)
+                    if (match != null) {
+                        val tag = match.groupValues[1]
+                        remoteVersion = tag
+                        if (isPluginInstalled && pluginVersion != null) {
+                            updateAvailable = isUpdateAvailable(pluginVersion, tag)
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // ignore network errors
+            } finally {
+                isCheckingUpdate = false
+            }
+        }
+    }
+
     var isDownloadingPlugin by remember { mutableStateOf(false) }
     var pluginDownloadProgress by remember { mutableFloatStateOf(0f) }
 
@@ -534,13 +568,13 @@ fun VoiceSettingsScreen(
                             .padding(top = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (!isPluginInstalled) {
+                        if (!isPluginInstalled || updateAvailable) {
                             if (BuildConfig.FLAVOR == "standardfull") {
                                 Button(
                                     onClick = { downloadAndInstallPlugin() },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("Download & Install Plugin")
+                                    Text(if (updateAvailable) "Update Plugin" else "Download & Install Plugin")
                                 }
                             } else {
                                 Button(
@@ -553,11 +587,12 @@ fun VoiceSettingsScreen(
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("Download Plugin")
+                                    Text(if (updateAvailable) "Update Plugin" else "Download Plugin")
                                 }
                             }
-                        } else {
-                            if (!isPluginConnected && !isInitialConnectionPending) {
+                        }
+                        if (isPluginInstalled) {
+                            if (!isPluginConnected && !isInitialConnectionPending && !updateAvailable) {
                                 Button(
                                     onClick = {
                                         pluginManager.bindIfNeeded()
@@ -591,8 +626,10 @@ fun VoiceSettingsScreen(
             }
         ) {
             val message = when {
+                isPluginInstalled && updateAvailable -> "An update is available for the voice plugin!\nInstalled version: $pluginVersion\nLatest version: $remoteVersion\n\nDo you want to download and update?"
                 isPluginConnected -> "Voice plugin is active (version ${pluginVersion ?: "v1.0.0"}).\n\nLeanType Voice Plugin handles high-performance on-device Whisper speech-to-text inference."
                 isPluginInstalled -> "Voice plugin is installed on this device, but currently disconnected.\n\nTap Connect to establish connection."
+                remoteVersion != null -> "Download the latest voice plugin (version $remoteVersion) to enable private, fast offline voice typing."
                 else -> "Offline voice input requires the LeanType Voice Plugin (com.leanbitlab.leantype.voice.offline).\n\nDownload and install the voice plugin to enable private, fast offline voice typing."
             }
             Text(message)
@@ -665,8 +702,9 @@ fun VoiceSettingsScreen(
 
                         offlineEnabledSetting.Preference()
 
-                        val voicePluginSummary = remember(isPluginInstalled, isPluginConnected, pluginVersion) {
+                        val voicePluginSummary = remember(isPluginInstalled, isPluginConnected, pluginVersion, updateAvailable, remoteVersion) {
                             when {
+                                updateAvailable -> "Update available ($pluginVersion → $remoteVersion)"
                                 isPluginConnected -> "Active (${pluginVersion ?: "v1.0.0"})"
                                 isPluginInstalled -> "Installed (Disconnected)"
                                 else -> "Not installed"
@@ -799,4 +837,22 @@ private fun buildVoiceLanguageEntries(context: android.content.Context): List<Pa
 
     list.addAll(langItems)
     return list
+}
+
+private fun isUpdateAvailable(local: String, remote: String): Boolean {
+    val cleanLocal = local.removePrefix("v").trim()
+    val cleanRemote = remote.removePrefix("v").trim()
+    if (cleanLocal == cleanRemote) return false
+
+    val localParts = cleanLocal.split(".").mapNotNull { it.toIntOrNull() }
+    val remoteParts = cleanRemote.split(".").mapNotNull { it.toIntOrNull() }
+
+    val maxLength = maxOf(localParts.size, remoteParts.size)
+    for (i in 0 until maxLength) {
+        val localPart = localParts.getOrElse(i) { 0 }
+        val remotePart = remoteParts.getOrElse(i) { 0 }
+        if (remotePart > localPart) return true
+        if (localPart > remotePart) return false
+    }
+    return false
 }
