@@ -10,33 +10,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import helium314.keyboard.latin.R
-import helium314.keyboard.latin.utils.DictionaryInfoUtils
-import helium314.keyboard.latin.utils.JniUtils
-import helium314.keyboard.settings.NextScreenIcon
-import helium314.keyboard.settings.SearchSettingsScreen
-import helium314.keyboard.settings.preferences.LoadGestureLibPreference
-import helium314.keyboard.settings.preferences.LoadHandwritingPluginPreference
-import helium314.keyboard.settings.preferences.LoadTranslationPluginPreference
-import helium314.keyboard.latin.handwriting.HandwritingLoader
-import helium314.keyboard.latin.BuildConfig
-import helium314.keyboard.latin.common.Links
-import helium314.keyboard.settings.preferences.Preference
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import helium314.keyboard.latin.BuildConfig
+import helium314.keyboard.latin.R
+import helium314.keyboard.latin.handwriting.HandwritingLoader
+import helium314.keyboard.latin.translation.TranslationLoader
+import helium314.keyboard.settings.NextScreenIcon
+import helium314.keyboard.settings.SearchSettingsScreen
+import helium314.keyboard.settings.dialogs.TranslationModelDownloadDialog
+import helium314.keyboard.settings.preferences.HandwritingLanguagePreference
+import helium314.keyboard.settings.preferences.LoadHandwritingPluginPreference
+import helium314.keyboard.settings.preferences.LoadTranslationPluginPreference
+import helium314.keyboard.settings.preferences.Preference
+import helium314.keyboard.settings.preferences.PreferenceCategory
+import helium314.keyboard.settings.preferences.TranslationEnginePreference
+import helium314.keyboard.settings.preferences.TranslationModePreference
+import helium314.keyboard.settings.preferences.TranslationTargetLanguagePreference
 
 @Composable
 fun LibrariesHubScreen(
@@ -45,12 +47,12 @@ fun LibrariesHubScreen(
     onClickOfflineVoice: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    val gestureInstalled = JniUtils.sHaveNativeGestureLib
-    
+    val uriHandler = LocalUriHandler.current
+
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = stringResource(R.string.libraries_hub_title),
-        settings = emptyList(), // Not used because content is provided
+        settings = emptyList(), // Custom content provided below
     ) {
         Scaffold(
             contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
@@ -61,41 +63,45 @@ fun LibrariesHubScreen(
                     .padding(innerPadding)
                     .padding(vertical = 8.dp)
             ) {
-                // Dictionaries Card
-                ElevatedCard(
+                // Section 1: Dictionaries & Documentation
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    colors = CardDefaults.elevatedCardColors(
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 ) {
                     Column {
+                        PreferenceCategory(stringResource(R.string.libraries_hub_dictionary_title))
+
                         Preference(
                             name = stringResource(R.string.libraries_hub_dictionary_title),
                             description = "",
                             onClick = onClickDictionaries,
                             icon = R.drawable.ic_dictionary
                         ) { NextScreenIcon() }
+
+                        Preference(
+                            name = "Features Guide",
+                            description = "View the detailed features.md guide on GitHub",
+                            onClick = { uriHandler.openUri("https://github.com/LeanBitLab/HeliboardL/blob/main/docs/FEATURES.md") },
+                            icon = R.drawable.ic_settings_about_wiki
+                        ) { NextScreenIcon() }
                     }
                 }
 
-                // Plugins Section Card
-                ElevatedCard(
+                // Section 2: Plugins & Expansions
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    colors = CardDefaults.elevatedCardColors(
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 ) {
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        Text(
-                            text = "PLUGINS & EXPANSIONS",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
+                    Column {
+                        PreferenceCategory("Plugins & Expansions")
 
                         // Handwriting Input Plugin (ML Kit based, standardfull only)
                         if (BuildConfig.FLAVOR == "standardfull") {
@@ -107,29 +113,29 @@ fun LibrariesHubScreen(
                                 onSuccess = { handwritingInstalled = HandwritingLoader.hasPlugin(context) }
                             )
                             if (handwritingInstalled) {
-                                helium314.keyboard.settings.preferences.HandwritingLanguagePreference()
+                                HandwritingLanguagePreference()
                             }
                         }
 
                         // Translation Plugin (available on standard and standardfull)
                         if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
-                            var translationInstalled by remember { mutableStateOf(helium314.keyboard.latin.translation.TranslationLoader.hasPlugin(context)) }
+                            var translationInstalled by remember { mutableStateOf(TranslationLoader.hasPlugin(context)) }
                             LoadTranslationPluginPreference(
                                 title = "Translation Plugin",
                                 summary = if (translationInstalled) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed),
                                 icon = R.drawable.ic_translate,
-                                onSuccess = { translationInstalled = helium314.keyboard.latin.translation.TranslationLoader.hasPlugin(context) }
+                                onSuccess = { translationInstalled = TranslationLoader.hasPlugin(context) }
                             )
-                            
+
                             // Translation Engine Selection
-                            helium314.keyboard.settings.preferences.TranslationEnginePreference()
+                            TranslationEnginePreference()
 
                             // Translation Target Language
-                            helium314.keyboard.settings.preferences.TranslationTargetLanguagePreference()
+                            TranslationTargetLanguagePreference()
 
                             if (BuildConfig.FLAVOR == "standardfull" && translationInstalled) {
                                 // Translation Mode Selection (Auto, Offline Only, Online Only)
-                                helium314.keyboard.settings.preferences.TranslationModePreference()
+                                TranslationModePreference()
 
                                 var showModelsDialog by remember { mutableStateOf(false) }
                                 Preference(
@@ -139,9 +145,9 @@ fun LibrariesHubScreen(
                                     icon = R.drawable.ic_translate
                                 )
                                 if (showModelsDialog) {
-                                    val provider = remember { helium314.keyboard.latin.translation.TranslationLoader.getProvider(context) }
+                                    val provider = remember { TranslationLoader.getProvider(context) }
                                     if (provider != null) {
-                                        helium314.keyboard.settings.dialogs.TranslationModelDownloadDialog(
+                                        TranslationModelDownloadDialog(
                                             provider = provider,
                                             onDismissRequest = { showModelsDialog = false }
                                         )
@@ -156,35 +162,6 @@ fun LibrariesHubScreen(
                             description = stringResource(R.string.pref_offline_voice_summary),
                             onClick = onClickOfflineVoice,
                             icon = R.drawable.sym_keyboard_voice_holo
-                        ) { NextScreenIcon() }
-                    }
-                }
-
-                // Native Libraries & Documentation Card
-                ElevatedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
-                    Column {
-                        // Gesture Typing Library
-                        var gestureLibState by remember { mutableStateOf(JniUtils.sHaveNativeGestureLib) }
-                        LoadGestureLibPreference(
-                            title = stringResource(R.string.load_gesture_library),
-                            summary = if (gestureLibState) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed),
-                            onSuccess = { gestureLibState = JniUtils.sHaveNativeGestureLib }
-                        )
-
-                        // Documentation & Features
-                        val uriHandler = LocalUriHandler.current
-                        Preference(
-                            name = "Features Guide",
-                            description = "View the detailed features.md guide on GitHub",
-                            onClick = { uriHandler.openUri("https://github.com/LeanBitLab/HeliboardL/blob/main/docs/FEATURES.md") },
-                            icon = R.drawable.ic_settings_about_wiki
                         ) { NextScreenIcon() }
                     }
                 }
