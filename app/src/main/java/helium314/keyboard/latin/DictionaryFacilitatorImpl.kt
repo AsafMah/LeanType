@@ -385,7 +385,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // Add word to user dictionary if it is in no other dictionary except user history dictionary (i.e. typed again).
         val sv = Settings.getValues()
         if (sv.mAddToPersonalDictionary // require the opt-in
-            && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER_HISTORY) // require personalized suggestions
+            && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER)
             && words.size == 1 // only single words
         ) {
             addToPersonalDictionaryIfInvalidButInHistory(suggestion, wasAutoCapitalized)
@@ -450,16 +450,22 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         UserHistoryDictionary.addToDictionary(userHistoryDictionary, ngramContext, wordToUse, isValid, timeStampInSeconds)
     }
 
+    private val DICTIONARY_TYPES_EXCLUDING_HISTORY = arrayOf(
+        Dictionary.TYPE_MAIN,
+        Dictionary.TYPE_CONTACTS,
+        Dictionary.TYPE_APPS,
+        Dictionary.TYPE_USER
+    )
+
     private fun addToPersonalDictionaryIfInvalidButInHistory(word: String, wasAutoCapitalized: Boolean) {
         if (word.length <= 1) return
         val dictionaryGroup = currentlyPreferredDictionaryGroup
         val userDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER) ?: return
-        val userHistoryDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
 
         val wordToUse = if (wasAutoCapitalized) {
             val decapitalized = word.decapitalize(dictionaryGroup.locale)
-            if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
-                && !isValidWord(decapitalized, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
+            if (isValidWord(word, DICTIONARY_TYPES_EXCLUDING_HISTORY, dictionaryGroup)
+                && !isValidWord(decapitalized, DICTIONARY_TYPES_EXCLUDING_HISTORY, dictionaryGroup)
             ) {
                 word
             } else {
@@ -469,31 +475,22 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             word
         }
 
-        if (isValidWord(wordToUse, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup))
+        if (isValidWord(wordToUse, DICTIONARY_TYPES_EXCLUDING_HISTORY, dictionaryGroup))
             return // valid word, no reason to auto-add it to personal dict
         if (userDict.isInDictionary(wordToUse))
-            return // should never happen, but better be safe
+            return // already in personal dict
 
         val threshold = Settings.getValues().mAddToPersonalDictThreshold
-        val minRequiredFreq = when (threshold) {
-            1 -> 0
-            2 -> 110 // standard 2nd-use frequency in binary trie
-            3 -> 120 // 3rd-use
-            4 -> 130 // 4th-use
-            else -> 140
-        }
-
-        val canAdd = if (threshold <= 1) {
-            userHistoryDict.isInDictionary(wordToUse) || userHistoryDict.getFrequency(wordToUse) >= 0
-        } else {
-            userHistoryDict.getFrequency(wordToUse) >= minRequiredFreq
-        }
+        val count = sessionWordBoost?.getCount(wordToUse) ?: 1
+        val canAdd = count >= threshold
 
         if (canAdd) {
             scope.launch {
                 runCatching {
-                    UserDictionary.Words.addWord(userDict.mContext, wordToUse, 250, null, dictionaryGroup.locale)
-                    Log.i(TAG, "Added word '$wordToUse' to personal dictionary for locale ${dictionaryGroup.locale}")
+                    val localeToUse = if (dictionaryGroup.locale.language.isNullOrEmpty()) null else dictionaryGroup.locale
+                    UserDictionary.Words.addWord(userDict.mContext, wordToUse, 250, null, localeToUse)
+                    userDict.addUnigramEntry(wordToUse, 250, null, 0, false, false, (System.currentTimeMillis() / 1000).toInt())
+                    Log.i(TAG, "Added word '$wordToUse' to personal dictionary for locale $localeToUse (typed $count times, threshold $threshold)")
                 }.onFailure {
                     Log.w(TAG, "Failed to add word '$wordToUse' to personal dictionary", it)
                 }

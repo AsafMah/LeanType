@@ -64,6 +64,16 @@ class SessionWordBoost private constructor(
     }
 
     /**
+     * Get the committed use count for a word.
+     */
+    fun getCount(word: String): Int {
+        val normalized = WordTokenizer.normalizeForLookup(word)
+        return entries[normalized]?.count
+            ?: entries[normalized.lowercase()]?.count
+            ?: 0
+    }
+
+    /**
      * Get the boost score for a candidate word.
      * Returns 0 if the word has never been recorded.
      *
