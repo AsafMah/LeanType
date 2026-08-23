@@ -31,16 +31,8 @@ import helium314.keyboard.latin.handwriting.HandwritingLoader
 import helium314.keyboard.latin.translation.TranslationLoader
 import helium314.keyboard.settings.NextScreenIcon
 import helium314.keyboard.settings.SearchSettingsScreen
-import helium314.keyboard.settings.dialogs.HandwritingModelDownloadDialog
-import helium314.keyboard.settings.dialogs.TranslationModelDownloadDialog
-import helium314.keyboard.settings.preferences.HandwritingLanguagePreference
-import helium314.keyboard.settings.preferences.LoadHandwritingPluginPreference
-import helium314.keyboard.settings.preferences.LoadTranslationPluginPreference
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.PreferenceCategory
-import helium314.keyboard.settings.preferences.TranslationEnginePreference
-import helium314.keyboard.settings.preferences.TranslationModePreference
-import helium314.keyboard.settings.preferences.TranslationTargetLanguagePreference
 
 @Composable
 fun LibrariesHubScreen(
@@ -48,10 +40,10 @@ fun LibrariesHubScreen(
     onClickDictionaries: () -> Unit,
     onClickOfflineVoice: () -> Unit = {},
     onClickTranslation: () -> Unit = {},
+    onClickHandwriting: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
-    var showHandwritingModelDialog by rememberSaveable { mutableStateOf(false) }
 
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -109,22 +101,14 @@ fun LibrariesHubScreen(
 
                         // Handwriting Input Plugin (ML Kit based, standardfull only)
                         if (BuildConfig.FLAVOR == "standardfull") {
-                            var handwritingInstalled by remember { mutableStateOf(HandwritingLoader.hasPlugin(context)) }
-                            LoadHandwritingPluginPreference(
-                                title = stringResource(R.string.libraries_hub_handwriting_title),
-                                summary = if (handwritingInstalled) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed),
-                                icon = R.drawable.ic_edit,
-                                onSuccess = { handwritingInstalled = HandwritingLoader.hasPlugin(context) }
-                            )
-                            if (handwritingInstalled) {
-                                Preference(
-                                    name = "Handwriting Models",
-                                    description = "Download & manage offline recognition models",
-                                    onClick = { showHandwritingModelDialog = true },
-                                    icon = R.drawable.ic_settings_languages
-                                ) { NextScreenIcon() }
-                                HandwritingLanguagePreference()
-                            }
+                            val handwritingInstalled = HandwritingLoader.hasPlugin(context)
+                            val summary = if (handwritingInstalled) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed)
+                            Preference(
+                                name = stringResource(R.string.libraries_hub_handwriting_title),
+                                description = summary,
+                                onClick = onClickHandwriting,
+                                icon = R.drawable.ic_edit
+                            ) { NextScreenIcon() }
                         }
 
                         // Offline Voice Input
@@ -154,11 +138,5 @@ fun LibrariesHubScreen(
                 }
             }
         }
-    }
-
-    if (showHandwritingModelDialog) {
-        HandwritingModelDownloadDialog(
-            onDismissRequest = { showHandwritingModelDialog = false }
-        )
     }
 }
