@@ -277,3 +277,27 @@ private fun isUpdateAvailable(local: String, remote: String): Boolean {
     }
     return false
 }
+
+@Composable
+fun TranslationModePreference() {
+    val ctx = LocalContext.current
+    val items = listOf(
+        ctx.getString(R.string.pref_translation_mode_auto) to "auto",
+        ctx.getString(R.string.pref_translation_mode_offline_only) to "offline_only",
+        ctx.getString(R.string.pref_translation_mode_online_only) to "online_only"
+    )
+    val setting = remember {
+        helium314.keyboard.settings.Setting(
+            key = "pref_translation_mode",
+            title = ctx.getString(R.string.pref_translation_mode_title)
+        ) {
+            ListPreference(
+                setting = it,
+                items = items,
+                default = "auto",
+                icon = R.drawable.ic_translate
+            )
+        }
+    }
+    setting.Preference()
+}

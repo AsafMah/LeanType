@@ -10,7 +10,7 @@ import java.io.File
 import java.lang.ref.WeakReference
 
 object TranslationLoader {
-    private const val CURRENT_INTERFACE_VERSION = 1
+    private const val CURRENT_INTERFACE_VERSION = 2
     private const val PLUGIN_FILENAME = "translation_plugin.apk"
     private const val PLUGIN_CLASS_NAME = "helium314.keyboard.translation.plugin.TranslationProviderImpl"
     private const val PREF_HAS_PLUGIN = "pref_translation_has_plugin"

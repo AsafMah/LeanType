@@ -101,6 +101,26 @@ fun LibrariesHubScreen(
                                 icon = R.drawable.ic_translate,
                                 onSuccess = { translationInstalled = helium314.keyboard.latin.translation.TranslationLoader.hasPlugin(context) }
                             )
+                            if (BuildConfig.FLAVOR == "standardfull" && translationInstalled) {
+                                helium314.keyboard.settings.preferences.TranslationModePreference()
+
+                                var showModelsDialog by remember { mutableStateOf(false) }
+                                Preference(
+                                    name = stringResource(R.string.offline_translation_models_title),
+                                    description = stringResource(R.string.offline_translation_models_summary),
+                                    onClick = { showModelsDialog = true },
+                                    icon = R.drawable.ic_translate
+                                )
+                                if (showModelsDialog) {
+                                    val provider = remember { helium314.keyboard.latin.translation.TranslationLoader.getProvider(context) }
+                                    if (provider != null) {
+                                        helium314.keyboard.settings.dialogs.TranslationModelDownloadDialog(
+                                            provider = provider,
+                                            onDismissRequest = { showModelsDialog = false }
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Offline Voice Input

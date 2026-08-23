@@ -5,7 +5,7 @@ import android.content.Context
 
 interface ITranslationProvider {
     /** Interface version number to ensure backward/forward compatibility. */
-    fun getInterfaceVersion(): Int = 1
+    fun getInterfaceVersion(): Int = 2
 
     /** Initialize provider with Application Context to prevent memory leaks. */
     fun init(context: Context)
@@ -24,4 +24,16 @@ interface ITranslationProvider {
 
     /** Release heavy resources / models. */
     fun cleanup()
+
+    /** Returns list of supported language codes for offline translation. */
+    fun getSupportedLanguages(): List<String> = emptyList()
+
+    /** Check if a specific language model is downloaded offline. */
+    fun isModelDownloaded(langCode: String): Boolean = false
+
+    /** Trigger download of a language model. */
+    fun downloadModel(langCode: String, onComplete: (Boolean) -> Unit) { onComplete(false) }
+
+    /** Delete a downloaded language model to free storage. */
+    fun deleteModel(langCode: String): Boolean = false
 }
