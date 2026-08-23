@@ -3508,7 +3508,7 @@ public final class InputLogic {
     }
 
     private void enterInlineEmojiSearchIfNeeded(int codePoint, SettingsValues settingsValues) {
-        if (mEmojiDictionaryFacilitator == null || isInlineEmojiSearchAction()) {
+        if (!settingsValues.mInlineEmojiSearch || mEmojiDictionaryFacilitator == null || isInlineEmojiSearchAction()) {
             return;
         }
 
@@ -3520,6 +3520,12 @@ public final class InputLogic {
     }
 
     private void updateInlineEmojiSearch() {
+        if (!Settings.getValues().mInlineEmojiSearch || mEmojiDictionaryFacilitator == null) {
+            if (isInlineEmojiSearchAction()) {
+                setInlineEmojiSearchAction(false);
+            }
+            return;
+        }
         setInlineEmojiSearchAction(getInlineEmojiSearchString() != null);
     }
 
