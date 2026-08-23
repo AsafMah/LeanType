@@ -587,6 +587,8 @@
     <string name="translate_model_title">Translation Model</string>
     <string name="translate_model_summary">Select the AI model for translation. Leave empty to use proofreading model.</string>
     
+    <string name="plugins_title">Plugins</string>
+    <string name="translation_settings_title">Translation</string>
     <string name="translation_engine_title">Translation Engine</string>
     <string name="translation_engine_summary">Select backend for translation (Plugin or AI)</string>
     <string name="pref_translation_mode_title">Translation Mode</string>

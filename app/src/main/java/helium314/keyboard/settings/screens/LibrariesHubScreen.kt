@@ -91,7 +91,7 @@ fun LibrariesHubScreen(
                     }
                 }
 
-                // Section 2: Plugins & Expansions
+                // Section 2: Plugins
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -101,7 +101,7 @@ fun LibrariesHubScreen(
                     )
                 ) {
                     Column {
-                        PreferenceCategory("Plugins & Expansions")
+                        PreferenceCategory(stringResource(R.string.plugins_title))
 
                         // Handwriting Input Plugin (ML Kit based, standardfull only)
                         if (BuildConfig.FLAVOR == "standardfull") {
@@ -117,8 +117,29 @@ fun LibrariesHubScreen(
                             }
                         }
 
-                        // Translation Plugin (available on standard and standardfull)
-                        if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
+                        // Offline Voice Input
+                        Preference(
+                            name = stringResource(R.string.offline_voice_title),
+                            description = stringResource(R.string.pref_offline_voice_summary),
+                            onClick = onClickOfflineVoice,
+                            icon = R.drawable.sym_keyboard_voice_holo
+                        ) { NextScreenIcon() }
+                    }
+                }
+
+                // Section 3: Translation (available on standard and standardfull)
+                if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Column {
+                            PreferenceCategory(stringResource(R.string.translation_settings_title))
+
                             var translationInstalled by remember { mutableStateOf(TranslationLoader.hasPlugin(context)) }
                             LoadTranslationPluginPreference(
                                 title = "Translation Plugin",
@@ -155,14 +176,6 @@ fun LibrariesHubScreen(
                                 }
                             }
                         }
-
-                        // Offline Voice Input
-                        Preference(
-                            name = stringResource(R.string.offline_voice_title),
-                            description = stringResource(R.string.pref_offline_voice_summary),
-                            onClick = onClickOfflineVoice,
-                            icon = R.drawable.sym_keyboard_voice_holo
-                        ) { NextScreenIcon() }
                     }
                 }
             }
