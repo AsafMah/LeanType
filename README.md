@@ -50,7 +50,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 | **Approximate APK Size** | **~23 MB** | **~11 MB** | **~67 MB** | **~26 MB** |
 
 > [!TIP]
-> **Side-by-Side Installation**: The `offline` and `offlinelite` flavors use distinct application package IDs, allowing them to be installed **concurrently** with `standardfull` on the same device without conflicts!
+> **APK Installation Notice**: Google Play Protect or your browser may block direct APK installations downloaded from web browsers. If you experience installation issues, install via [Obtainium](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/LeanBitLab/HeliboardL) or a package manager like [App Manager](https://github.com/MuntashirAkon/AppManager).
 
 ---
 
