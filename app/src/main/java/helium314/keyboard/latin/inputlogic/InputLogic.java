@@ -3593,6 +3593,10 @@ public final class InputLogic {
      * <p>
      * Public for testing.
      */
+    public static boolean isInlineEmojiSearchChar(final int codePoint) {
+        return Character.isLetterOrDigit(codePoint) || codePoint == '_' || codePoint == '+' || codePoint == '-';
+    }
+
     public static String getInlineEmojiSearchString(CharSequence textBeforeCursor) {
         if (textBeforeCursor == null) {
             return null;
@@ -3611,7 +3615,7 @@ public final class InputLogic {
 
         var searchString = text.substring(markerIndex + 1);
         for (int i = 0; i < searchString.length(); i++) {
-            if (Character.isWhitespace(searchString.charAt(i))) {
+            if (!isInlineEmojiSearchChar(searchString.codePointAt(i))) {
                 return null;
             }
         }
@@ -3624,7 +3628,7 @@ public final class InputLogic {
             int charBeforeBeforeCursor,
             SettingsValues settingsValues) {
         return codePointBeforeCursor == INLINE_EMOJI_SEARCH_MARKER && codePoint != INLINE_EMOJI_SEARCH_MARKER
-                && !Character.isWhitespace(codePoint)
+                && isInlineEmojiSearchChar(codePoint)
                 && isValidInlineEmojiSearchPreviousChar(charBeforeBeforeCursor, settingsValues);
     }
 
