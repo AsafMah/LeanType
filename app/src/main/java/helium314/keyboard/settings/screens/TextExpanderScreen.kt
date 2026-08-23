@@ -296,6 +296,7 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                                             }
                                             Column(modifier = Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                                 PlaceholderChip(tag = "%clipboard%", desc = "Clipboard content")
+                                                PlaceholderChip(tag = "%clipboard_clean%", desc = "Clipboard (citations [1][2] stripped)")
                                                 PlaceholderChip(tag = "%day%", desc = "Day name (e.g. Monday)")
                                                 PlaceholderChip(tag = "%month%", desc = "Month (e.g. June)")
                                                 PlaceholderChip(tag = "%language%", desc = "Keyboard language (e.g. English)")
@@ -566,7 +567,7 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val tags = listOf(
-                            "%date%", "%time%", "%time12%", "%clipboard%",
+                            "%date%", "%time%", "%time12%", "%clipboard%", "%clipboard_clean%",
                             "%day%", "%month%", "%year%", "%week%",
                             "%battery%", "%language%", "%cursor%", "%greeting%",
                             "%tomorrow%", "%bullets%", "%list%"

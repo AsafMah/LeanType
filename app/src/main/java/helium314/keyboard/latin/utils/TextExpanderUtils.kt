@@ -128,6 +128,29 @@ object TextExpanderUtils {
         }
     }
 
+    fun cleanCitations(text: String): String {
+        val citationRegex = Regex(
+            """\[(?:\s*\d+(?:\s*[,;\-–—]\s*\d+)*\s*|\s*note\s*\d+\s*|\s*citation\s+needed\s*|\s*edit\s*|\s*source\s*)\]""",
+            RegexOption.IGNORE_CASE
+        )
+        var cleaned = citationRegex.replace(text, "")
+        cleaned = cleaned.replace(Regex("""\s+([.,;:!?])"""), "$1")
+        cleaned = cleaned.replace(Regex("""[^\S\r\n]{2,}"""), " ")
+        return cleaned
+    }
+
+    private fun getClipboardText(context: Context): String {
+        return try {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            if (clipboard?.hasPrimaryClip() == true) {
+                val rawText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                if (rawText.length > 5000) rawText.substring(0, 5000) else rawText
+            } else ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     fun expand(template: String, context: Context): String {
         var result = template
 
@@ -143,17 +166,15 @@ object TextExpanderUtils {
             result = result.replace("%time%", timeStr)
         }
 
+        // Resolve %clipboard_clean% / %clipboard_nocite%
+        if (result.contains("%clipboard_clean%") || result.contains("%clipboard_nocite%")) {
+            val cleanClip = cleanCitations(getClipboardText(context))
+            result = result.replace("%clipboard_clean%", cleanClip).replace("%clipboard_nocite%", cleanClip)
+        }
+
         // Resolve %clipboard%
         if (result.contains("%clipboard%")) {
-            val clipText = try {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                if (clipboard?.hasPrimaryClip() == true) {
-                    val rawText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-                    if (rawText.length > 2000) rawText.substring(0, 2000) else rawText
-                } else ""
-            } catch (e: Exception) {
-                ""
-            }
+            val clipText = getClipboardText(context)
             result = result.replace("%clipboard%", clipText)
         }
 
