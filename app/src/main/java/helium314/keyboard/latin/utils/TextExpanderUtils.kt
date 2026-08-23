@@ -139,6 +139,80 @@ object TextExpanderUtils {
         return cleaned
     }
 
+    fun applyModifiers(input: String, modifiersString: String): String {
+        if (modifiersString.isBlank()) return input
+        var text = input
+        val modifierTokens = mutableListOf<String>()
+        var currentToken = StringBuilder()
+        var parenDepth = 0
+        for (ch in modifiersString) {
+            if (ch == '(') parenDepth++
+            else if (ch == ')') parenDepth--
+            if (ch == ':' && parenDepth == 0) {
+                if (currentToken.isNotBlank()) modifierTokens.add(currentToken.toString().trim())
+                currentToken = StringBuilder()
+            } else {
+                currentToken.append(ch)
+            }
+        }
+        if (currentToken.isNotBlank()) modifierTokens.add(currentToken.toString().trim())
+
+        for (mod in modifierTokens) {
+            text = when {
+                mod.equals("clean", ignoreCase = true) || mod.equals("nocite", ignoreCase = true) -> cleanCitations(text)
+                mod.equals("singleline", ignoreCase = true) || mod.equals("oneline", ignoreCase = true) -> text.replace(Regex("""[\r\n]+"""), " ")
+                mod.equals("trim", ignoreCase = true) -> text.trim()
+                mod.equals("lower", ignoreCase = true) -> text.lowercase(Locale.getDefault())
+                mod.equals("upper", ignoreCase = true) -> text.uppercase(Locale.getDefault())
+                mod.equals("title", ignoreCase = true) -> text.split(Regex("""\s+""")).joinToString(" ") { word ->
+                    word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                }
+                mod.equals("slug", ignoreCase = true) || mod.equals("kebab", ignoreCase = true) -> {
+                    text.trim().lowercase(Locale.getDefault())
+                        .replace(Regex("""[^\w\s-]"""), "")
+                        .replace(Regex("""[\s_]+"""), "-")
+                        .replace(Regex("""-+"""), "-")
+                }
+                mod.equals("snake", ignoreCase = true) -> {
+                    text.trim().lowercase(Locale.getDefault())
+                        .replace(Regex("""[^\w\s]"""), "")
+                        .replace(Regex("""[\s-]+"""), "_")
+                        .replace(Regex("""_+"""), "_")
+                }
+                mod.equals("camel", ignoreCase = true) -> {
+                    val words = text.trim().split(Regex("""[\s_-]+"""))
+                    words.mapIndexed { index, w ->
+                        if (index == 0) w.lowercase(Locale.getDefault())
+                        else w.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                    }.joinToString("")
+                }
+                mod.equals("unquote", ignoreCase = true) -> {
+                    var trimmed = text.trim()
+                    if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+                        trimmed = trimmed.substring(1, trimmed.length - 1)
+                    }
+                    trimmed
+                }
+                mod.equals("nourl", ignoreCase = true) -> text.replace(Regex("""https?://\S+"""), "").replace(Regex("""\s{2,}"""), " ")
+                mod.startsWith("replace(", ignoreCase = true) && mod.endsWith(")") -> {
+                    val inner = mod.substring(8, mod.length - 1)
+                    val parts = inner.split(",", limit = 2)
+                    if (parts.isNotEmpty()) {
+                        val pattern = parts[0].trim()
+                        val replacement = if (parts.size > 1) parts[1] else ""
+                        try {
+                            text.replace(Regex(pattern), replacement)
+                        } catch (_: Exception) {
+                            text
+                        }
+                    } else text
+                }
+                else -> text
+            }
+        }
+        return text
+    }
+
     private fun getClipboardText(context: Context): String {
         return try {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -146,7 +220,7 @@ object TextExpanderUtils {
                 val rawText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
                 if (rawText.length > 5000) rawText.substring(0, 5000) else rawText
             } else ""
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             ""
         }
     }
@@ -154,10 +228,14 @@ object TextExpanderUtils {
     fun expand(template: String, context: Context): String {
         var result = template
 
-        // Resolve %date%
-        if (result.contains("%date%")) {
-            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            result = result.replace("%date%", dateStr)
+        // Resolve %date[:modifiers]%
+        if (result.contains("%date")) {
+            val dateRegex = Regex("%date(?::([a-zA-Z0-9_():, -]+))?%")
+            result = dateRegex.replace(result) { match ->
+                val mods = match.groups[1]?.value
+                val rawDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                if (mods != null) applyModifiers(rawDate, mods) else rawDate
+            }
         }
 
         // Resolve %time%
@@ -166,16 +244,20 @@ object TextExpanderUtils {
             result = result.replace("%time%", timeStr)
         }
 
-        // Resolve %clipboard_clean% / %clipboard_nocite%
+        // Resolve %clipboard_clean% / %clipboard_nocite% aliases
         if (result.contains("%clipboard_clean%") || result.contains("%clipboard_nocite%")) {
             val cleanClip = cleanCitations(getClipboardText(context))
             result = result.replace("%clipboard_clean%", cleanClip).replace("%clipboard_nocite%", cleanClip)
         }
 
-        // Resolve %clipboard%
-        if (result.contains("%clipboard%")) {
-            val clipText = getClipboardText(context)
-            result = result.replace("%clipboard%", clipText)
+        // Resolve %clipboard[:modifiers]%
+        if (result.contains("%clipboard")) {
+            val clipRegex = Regex("%clipboard(?::([a-zA-Z0-9_():, -]+))?%")
+            result = clipRegex.replace(result) { match ->
+                val mods = match.groups[1]?.value
+                val rawClip = getClipboardText(context)
+                if (mods != null) applyModifiers(rawClip, mods) else rawClip
+            }
         }
 
         // Resolve %day%
