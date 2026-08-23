@@ -70,13 +70,18 @@ fun ActionRow(
 /** Icon if resource is a vector image, (bitmap) Image otherwise */
 @Composable
 fun IconOrImage(@DrawableRes resId: Int, name: String?, sizeDp: Int) {
+    if (resId == 0) return
     val ctx = LocalContext.current
-    val drawable = ContextCompat.getDrawable(ctx, resId)
+    val drawable = try {
+        ContextCompat.getDrawable(ctx, resId)
+    } catch (_: Exception) {
+        null
+    } ?: return
     if (drawable is VectorDrawable)
         Icon(painterResource(resId), name, Modifier.size(sizeDp.dp))
     else {
         val px = sizeDp.dpToPx(LocalResources.current)
-        Image(drawable!!.toBitmap(px, px).asImageBitmap(), name)
+        Image(drawable.toBitmap(px, px).asImageBitmap(), name)
     }
 }
 

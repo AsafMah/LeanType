@@ -78,7 +78,7 @@ fun SwitchPreference(
         onClick = { switched(!value) },
         modifier = modifier,
         enabled = enabled,
-        icon = icon,
+        icon = icon.takeIf { it != 0 },
         description = description
     ) {
         Switch(

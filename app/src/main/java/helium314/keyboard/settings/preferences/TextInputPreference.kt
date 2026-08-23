@@ -27,7 +27,7 @@ fun TextInputPreference(
     val prefs = LocalContext.current.prefs()
     Preference(
         name = setting.title,
-        icon = icon,
+        icon = icon.takeIf { it != 0 },
         onClick = { showDialog = true },
         description = prefs.getString(setting.key, default)?.takeIf { it.isNotEmpty() }
     )

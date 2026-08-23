@@ -73,7 +73,7 @@ fun Preference(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (icon != null) {
+        if (icon != null && icon != 0) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
