@@ -160,11 +160,11 @@ fun DictionaryScreen(
                     )
                 ) {
                     Column {
-                        PreferenceCategory(stringResource(R.string.edit_personal_dictionary))
+                        PreferenceCategory("Word learning")
 
                         SwitchPreference(
                             name = stringResource(R.string.add_to_personal_dictionary),
-                            description = stringResource(R.string.add_to_personal_dictionary_summary),
+                            description = "Add typed words to personal dictionary",
                             key = Settings.PREF_ADD_TO_PERSONAL_DICTIONARY,
                             default = Defaults.PREF_ADD_TO_PERSONAL_DICTIONARY,
                             icon = R.drawable.ic_settings_correction,
@@ -172,11 +172,11 @@ fun DictionaryScreen(
                         )
 
                         if (personalDictEnabled) {
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                             SliderPreference(
                                 name = stringResource(R.string.add_to_personal_dict_threshold),
                                 key = Settings.PREF_ADD_TO_PERSONAL_DICT_THRESHOLD,
                                 default = Defaults.PREF_ADD_TO_PERSONAL_DICT_THRESHOLD,
+                                icon = R.drawable.ic_settings_preferences,
                                 range = 1f..5f,
                                 stepSize = 1,
                                 description = {
