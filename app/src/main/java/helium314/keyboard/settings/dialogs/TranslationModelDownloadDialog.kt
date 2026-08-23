@@ -61,7 +61,11 @@ fun TranslationModelDownloadDialog(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            val codes = provider.getSupportedLanguages().ifEmpty {
+            val codes = try {
+                provider.getSupportedLanguages()
+            } catch (_: Throwable) {
+                emptyList()
+            }.ifEmpty {
                 // Fallback standard ML Kit 59 language tags
                 listOf(
                     "af", "sq", "ar", "be", "bg", "bn", "ca", "zh", "hr", "cs", "da", "nl",
@@ -90,7 +94,11 @@ fun TranslationModelDownloadDialog(
                 if (code == "en") {
                     withContext(Dispatchers.Main) { downloadedMap[code] = true }
                 } else {
-                    val downloaded = provider.isModelDownloaded(code)
+                    val downloaded = try {
+                        provider.isModelDownloaded(code)
+                    } catch (_: Throwable) {
+                        false
+                    }
                     withContext(Dispatchers.Main) { downloadedMap[code] = downloaded }
                 }
             }
@@ -178,7 +186,11 @@ fun TranslationModelDownloadDialog(
                                     Button(
                                         onClick = {
                                             scope.launch(Dispatchers.IO) {
-                                                val deleted = provider.deleteModel(item.code)
+                                                val deleted = try {
+                                                    provider.deleteModel(item.code)
+                                                } catch (_: Throwable) {
+                                                    false
+                                                }
                                                 withContext(Dispatchers.Main) {
                                                     if (deleted) {
                                                         downloadedMap[item.code] = false
@@ -202,15 +214,22 @@ fun TranslationModelDownloadDialog(
                                         onClick = {
                                             downloadingMap[item.code] = true
                                             scope.launch(Dispatchers.IO) {
-                                                provider.downloadModel(item.code) { success ->
+                                                try {
+                                                    provider.downloadModel(item.code) { success ->
+                                                        scope.launch(Dispatchers.Main) {
+                                                            downloadingMap[item.code] = false
+                                                            if (success) {
+                                                                downloadedMap[item.code] = true
+                                                                Toast.makeText(context, "${item.displayName} model downloaded", Toast.LENGTH_SHORT).show()
+                                                            } else {
+                                                                Toast.makeText(context, "Download failed for ${item.displayName}", Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        }
+                                                    }
+                                                } catch (_: Throwable) {
                                                     scope.launch(Dispatchers.Main) {
                                                         downloadingMap[item.code] = false
-                                                        if (success) {
-                                                            downloadedMap[item.code] = true
-                                                            Toast.makeText(context, "${item.displayName} model downloaded", Toast.LENGTH_SHORT).show()
-                                                        } else {
-                                                            Toast.makeText(context, "Download failed for ${item.displayName}", Toast.LENGTH_SHORT).show()
-                                                        }
+                                                        Toast.makeText(context, "Download failed for ${item.displayName}", Toast.LENGTH_SHORT).show()
                                                     }
                                                 }
                                             }
