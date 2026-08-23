@@ -6,14 +6,18 @@ As an open-source, community-funded project, we operate on a very limited budget
 ### ✨ New Features & Enhancements
 - **Versatile Text Expander & Transformation Modifiers**: Introduced a modular modifier pipeline supporting composable filters on placeholders (`%clipboard:clean%`, `%clipboard:singleline%`, `%clipboard:title%`, `%clipboard:slug%`, `%clipboard:upper%`, `%clipboard:lower%`, `%clipboard:replace(a,b)%`).
 - **Citation & Bracket Cleaner**: Added automatic citation stripping (`[1]`, `[1][2]`, `[note 1]`, `[citation needed]`) for Wikipedia and research paper text snippets in Text Expander.
+- **Dedicated Translation Settings & Model Manager**: Added dedicated Translation Settings dashboard featuring Translation Mode selection (Plugin vs. Built-in) and an in-app Offline Translation Models manager dialog with direct download progress.
 - **Dedicated Handwriting Settings Screen**: Created a dedicated Handwriting settings dashboard featuring plugin status monitoring, stroke customization cards, and an in-app offline model manager with live progress downloads.
-- **Voice Plugin Automated Update Checking**: Dynamic GitHub release checking and version comparison for LeanType Voice Plugin with one-tap update dialogs.
+- **Automated Plugin Update Checking**: Dynamic GitHub release checking and version comparison for Voice and Handwriting plugins with one-tap update dialogs.
+- **Modernized & Unified Settings UI**: Completely restyled Dictionary, Voice, Translation, and Handwriting settings pages with standardized Material 3 Card containers, category groupings, and consistent model download dialogs.
 - **Reorganized Settings Structure**: Moved main dictionaries into Languages and layouts, and refactored the libraries section into a dedicated "Plugins" hub.
 
 ### 🐛 Bug Fixes & Stability Improvements
 - **Emoticon & Colon Symbol Layout Switching**: Fixed symbols layout unexpectedly resetting to the alphabet keyboard when typing emoticons (`:)`, `:(`, `:/`) or colons followed by punctuation.
 - **Inline Emoji Search Setting Guards**: Strictly enforced inline emoji search preferences so the search routine remains completely inactive when disabled in settings.
 - **Personal Dictionary Auto-Learning**: Fixed dictionary type validation and connected session word count tracking to ensure typed words accurately learn to the personal dictionary according to the user's configured threshold.
+- **Translation Plugin Fallbacks**: Wrapped plugin model methods to prevent `AbstractMethodError` and added graceful fallback to built-in AI when external plugins return unmodified text or fail.
+- **UI & Slider Preference Polish**: Added dialog headers and icons to `SliderPreference` and guarded against invalid icon resource IDs across Compose settings components.
 
 ## 📦 Downloads (Choose Your Flavor)
 

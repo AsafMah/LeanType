@@ -1,7 +1,9 @@
 - Versatile Text Expander modifiers (%clipboard:clean%, %clipboard:singleline%, %clipboard:title%, %clipboard:slug%, %clipboard:upper%).
 - Automatic Wikipedia and research paper citation bracket stripping in Text Expander.
+- Dedicated Translation settings screen with Offline Translation Models manager and built-in fallback.
 - Dedicated Handwriting settings screen with in-app model manager and live progress downloads.
 - Automated GitHub update checking and version comparison for Voice and Handwriting plugins.
+- Modernized and standardized Card UI across Dictionary, Voice, Translation, and Handwriting settings.
 - Fixed symbols layout resetting to alphabet mode when typing emoticons (:) and :().
 - Fixed personal dictionary auto-learning to accurately record words based on configured learning threshold.
 - Reorganized settings: moved dictionaries to Languages and renamed Libraries to Plugins.

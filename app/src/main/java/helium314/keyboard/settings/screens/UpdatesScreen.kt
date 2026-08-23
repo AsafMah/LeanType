@@ -74,8 +74,10 @@ import java.net.URL
 private val currentChangelogItems = listOf(
     "⚡ Versatile Text Expander modifiers (%clipboard:clean%, %clipboard:singleline%, %clipboard:title%, %clipboard:slug%, %clipboard:upper%)",
     "✂️ Automatic Wikipedia & research paper citation bracket stripper in Text Expander",
+    "🌐 Dedicated Translation settings screen with Offline Translation Models manager and built-in fallback",
     "✍️ Dedicated Handwriting settings dashboard with in-app model manager and live progress downloads",
     "🔄 Dynamic GitHub release checking and version comparison for Voice and Handwriting plugins",
+    "🎨 Modernized and standardized Card UI across Dictionary, Voice, Translation, and Handwriting settings",
     "😊 Fixed symbol keyboard resetting to alphabet layout on emoticons like :) and :(",
     "📚 Fixed personal dictionary auto-learning based on user configured learning threshold",
     "🧩 Reorganized settings: moved dictionaries to Languages and refactored Plugins hub"
