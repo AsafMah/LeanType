@@ -268,6 +268,7 @@ dependencies {
     // ML Kit's internal asset manager and native library loader use the host app context,
     // so the host app must compile and include the client library resources/libraries.
     "standardfullImplementation"("com.google.mlkit:digital-ink-recognition:19.0.0")
+    "standardfullImplementation"("com.google.mlkit:translate:17.0.3")
 
     // test
     testImplementation(kotlin("test"))
