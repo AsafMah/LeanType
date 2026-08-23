@@ -39,7 +39,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 | **Target Audience** | **Recommended** for full feature set | F-Droid / 100% Pure FOSS users | Privacy purists wanting **Local AI** | Minimalists wanting **Zero AI** |
 | **Cloud AI** *(Gemini, Groq, OpenAI)* | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
 | **Offline AI** *(Local GGUF via llama.cpp)* | ❌ No | ❌ No | ✅ **Yes** | ❌ No |
-| **Translation Engine** | ✅ **AI or Google Plugin**<br>*(User Choice / Auto fallback)* | ✅ **AI or Google Plugin**<br>*(User Choice / Auto fallback)* | ⚙️ **Offline GGUF only** | ❌ No |
+| **Translation Engine** | ✅ **Built-in Offline (ML Kit)**<br>+ AI + Translation Plugin | ✅ **AI or Translation Plugin**<br>*(User Choice / Auto fallback)* | ⚙️ **Offline GGUF only** | ❌ No |
 | **Voice Typing** *(On-device Whisper)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* |
 | **Handwriting Input** *(ML Kit)* | ✅ **Yes** *(via plugin)* | ❌ No *(Proprietary-free)* | ❌ No | ❌ No |
 | **In-App Self-Updater** | ✅ **Yes** *(GitHub Releases)* | ❌ No *(F-Droid managed)* | ❌ No | ❌ No |
@@ -60,13 +60,13 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 - **Multi-Provider Cloud & Self-Hosted AI**: Integrated proofreading, grammar correction, and text rewriting powered by **Google Gemini**, **Groq** (Llama 3.3, Mixtral, DeepSeek), **OpenAI**, or any **Self-Hosted local LLM server** (Ollama, LM Studio, LocalAI, vLLM, or custom OpenAI-compatible endpoints).
 - **Dynamic Model Fetching**: Automatically fetches and populates the latest available model IDs directly from your cloud or self-hosted provider.
 - **🛡️ Offline Neural Proofreading (GGUF)**: Run compact, quantized GGUF language models directly on your device via embedded `llama.cpp`—100% private, zero network access (`offline` flavor).
-- **🌐 Dual-Engine In-Keyboard Translation**: Translate text directly into any language. Freely choose between your configured **AI Provider** (Gemini, Groq, OpenAI, self-hosted LLM, or local GGUF) or the high-speed **Google Translation Plugin**, with automatic fallback support.
+- **🌐 Multi-Mode In-Keyboard Translation**: Translate text directly into any language without switching apps. Choose between **Built-in Offline Translation (ML Kit)** (`standardfull` flavor with in-app model manager), dedicated **Translation Plugin**, or your configured **Cloud / Self-Hosted AI Provider** (Gemini, Groq, OpenAI, Ollama, local GGUF) with seamless automatic fallback.
 - **🧠 Custom AI Keys & Capsules**: Assign custom prompts, personas (`#editor`, `#proofread`), and themed tag capsules to 10 customizable toolbar keys.
 
 ### 🎙️ Voice & Handwriting Input
 - **On-Device Whisper Voice Typing**: High-accuracy speech recognition powered by compact quantized **Whisper models** via the [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin).
 - **Interactive Voice Toolbar**: Real-time waveform audio visualizer, silence detection sensitivity slider, and background keep-alive options.
-- **✍️ Handwriting Recognition**: Draw characters or words directly on an expansive writing canvas using the [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (`standardfull` flavor).
+- **✍️ Handwriting Recognition**: Draw characters or words directly on an expansive writing canvas using the [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (`standardfull` flavor), with dedicated settings and model management.
 
 ### ⌨️ Layouts, Navigation & Typing
 - **👆 Gesture / Glide Typing**: Smooth swipe typing powered by native C++ libraries (`libjni_latinime.so`).
@@ -81,7 +81,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 ### 📋 Clipboard & Productivity
 - **🔍 Smart Clipboard History & Inline Editing**: Search clips in real-time, swipe right to edit text directly in the toolbar with full gesture cursor/deletion, swipe left to delete with 5s undo, and fold pinned items.
 - **📸 Screenshot Suggestions**: Detects recently taken screenshots and offers instant 1-tap sharing via the suggestion strip or clipboard history.
-- **📝 Text Expander**: Built-in shortcut expansion with dynamic variables (`%date%`, `%time%`, `%clipboard%`, `%cursor%`, custom placeholders).
+- **📝 Versatile Text Expander**: Built-in shortcut expansion with dynamic variables (`%date%`, `%time%`, `%clipboard%`, `%cursor%`), composable modifier filters (`%clipboard:clean%`, `:singleline`, `:title`, `:slug`, `:upper`, `:replace`), and automatic Wikipedia / research paper citation cleaner.
 - **✉️ Privacy-First OTP Auto-Fill**: Notification-based OTP verification code detection without sensitive SMS permissions, with customizable messaging app selection.
 - **📚 Smart Learning & Session Boost**: Adaptive personal dictionary learning threshold (1 to 5 times) and dynamic session word boosting.
 - **🚫 Blacklist & Regex Filtering**: Filter offensive words or unwanted suggestions with custom regex pattern support.
@@ -144,9 +144,13 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 3. Download or import your preferred Multilingual Whisper model (e.g. *Tiny* ~32 MB, *Base* ~57 MB, or *Small* ~182 MB supporting 99+ languages).
 4. Tap the microphone icon on the keyboard toolbar to start typing with your voice!
 
-### 3. Translation Plugin Setup
-1. In LeanType, open **Settings → Text correction → Translation method → Translation Plugin**.
-2. Download or import the [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) APK for fast, dedicated translation without separate API keys.
+### 3. Translation Setup (Offline & Online)
+1. In LeanType, open **Settings → Translation**.
+2. Select your preferred **Translation Mode**:
+   - **Built-in Offline (ML Kit)** (`standardfull`): 100% on-device private translation. Tap **Offline Translation Models** to download 59+ language pairs directly with in-app progress.
+   - **Translation Plugin**: High-speed translation via the companion [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest).
+   - **AI Translation**: Translate using your configured Cloud or Self-Hosted AI provider.
+3. Tap the **Translate** icon on the keyboard toolbar to translate selected text or your input field instantly.
 
 ### 4. Gesture Typing Setup
 1. In the `standard` and `standardfull` builds, open **Settings → Gesture typing** to download the gesture library automatically.

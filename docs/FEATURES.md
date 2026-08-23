@@ -42,15 +42,15 @@ LeanType combines a lightweight, privacy-focused keyboard foundation with cuttin
 | **Multi-Provider Cloud AI** | Proofread, rewrite, and fix grammar via Gemini, Groq, or OpenAI-compatible custom endpoints. | `AI Integration > Set AI Provider` |
 | **Custom AI Keys** | 10 customizable toolbar keys with prompt templates, hashtags (`#editor`, `#proofread`), and tag capsules. | `AI Integration > Custom Keys` |
 | **Offline Proofreading (GGUF)** | Zero-network, on-device neural proofreading powered by embedded `llama.cpp`. | `Advanced > GGUF Model (.gguf)` |
-| **Dual-Engine Translation** | Translate selected text via Cloud AI or dedicated Translation Plugin with auto-fallback. | `AI Integration / Text correction > Translation method` |
+| **Multi-Mode In-Keyboard Translation** | Translate text on-device (Offline ML Kit), via Translation Plugin, or Cloud/Local AI with auto-fallback. | `Translation > Translation Mode` |
 | **Whisper Voice Typing** | On-device speech-to-text with quantized multilingual Whisper models and audio visualizer. | `Voice typing > Whisper Speech Models` |
-| **Handwriting Recognition** | Draw characters on a dedicated canvas with independent language selection (Standard Full flavor). | `Libraries > Handwriting Input Plugin` |
+| **Handwriting Recognition** | Draw characters on a dedicated canvas with in-app model manager (Standard Full flavor). | `Handwriting > Handwriting recognition` |
 | **Text Editing Panel** | Precision DPAD arrow navigation, Shift selection mode, and clipboard shortcuts. | Toolbar > Text Editing Icon |
 | **Auto-Spanning Toolbar** | Dynamically expands and balances toolbar keys symmetrically across device widths. | `Appearance > Toolbar auto-spacing` |
 | **Touchpad Mode** | Swipe up on Spacebar to activate full cursor control and laptop-style touchpad gestures. | `Gesture typing > Vertical spacebar swipe` |
 | **Floating Keyboard** | Detach keyboard into a draggable, resizable window with persistent positioning. | Toolbar > Floating Keyboard |
 | **Split Toolbar & Suggestions** | Separates suggestions from the toolbar into a dual-row view. | `Appearance > Split toolbar & suggestions` |
-| **Text Expander** | Expand custom shortcuts using dynamic placeholders (`%date%`, `%time%`, `%clipboard%`, `%cursor%`). | `Text correction > Text Expander` |
+| **Versatile Text Expander** | Expand shortcuts with dynamic variables, citation stripper (`%clipboard:clean%`), and modifiers. | `Text correction > Text Expander` |
 | **Clipboard History & Inline Edit** | Search history, swipe-right to edit inline, swipe-left to delete with undo, fold pinned clips, and slide-select. | Clipboard Toolbar > Search / Swipe items |
 | **Screenshot Suggestions** | Instant 1-tap sharing of recently taken screenshots via the suggestion strip. | `Text correction > Suggest recent screenshots` |
 | **Emoji Search** | Search emojis by name/keyword directly from the emoji palette. | `Emoji Key > Search Icon` |
@@ -126,18 +126,24 @@ Include these hashtags in your custom prompts to enforce strict system roles:
 
 ---
 
-## 4. Dual-Engine In-Keyboard Translation
+## 4. Multi-Mode In-Keyboard Translation
 
-LeanType offers a flexible translation architecture allowing you to toggle between:
-1. **AI Provider Translation**: Uses Gemini, Groq, OpenAI, or local GGUF models with customizable prompts.
-2. **Translation Plugin (Google / ML Kit)**: Instant, on-device translation engine powered by the [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin).
-3. **Auto Mode**: Prefers the fast Translation Plugin, with seamless automatic fallback to your configured AI provider.
+LeanType offers a flexible translation architecture supporting 3 versatile translation modes:
+
+1. **Built-in Offline Translation (ML Kit)** (`standardfull` flavor):
+   - **100% On-Device & Private**: Translates text entirely locally on your device without sending text to external servers.
+   - **In-App Offline Translation Model Manager**: Download 59+ language translation models directly inside the keyboard settings with real-time download progress indicators (~30 MB per language pack).
+2. **Translation Plugin**:
+   - High-speed translation powered by the companion [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest).
+   - Features automatic fallback to built-in translation if the plugin encounters network timeouts or unexpected errors.
+3. **Cloud & Local AI Translation**:
+   - Uses your configured **AI Provider** (Google Gemini, Groq, OpenAI, Ollama, or local GGUF models) with customizable translation prompts.
 
 ### How to Setup
-1. In LeanType, open **Settings → Text correction / AI Integration → Translation method**.
-2. Select **Auto**, **Translation Plugin**, or **AI Provider**.
-3. If using the plugin, tap **Download Plugin** to install the companion APK.
-4. Tap the **Translate** icon on the toolbar to translate selected text or entire input fields.
+1. In LeanType, open **Settings → Translation**.
+2. Select your preferred **Translation Mode** (**Built-in Offline**, **Plugin Translation**, or **AI Translation**).
+3. If using **Built-in Offline Translation**, tap **Offline Translation Models** to download your source and target language pairs.
+4. Tap the **Translate** icon on the keyboard toolbar to instantly translate selected text or entire input fields.
 
 ---
 
@@ -172,11 +178,11 @@ LeanType integrates high-accuracy, private speech-to-text powered by OpenAI's Wh
 Draw letters, words, or symbols directly on a handwriting recognition canvas using your finger or stylus.
 
 ### Setup Instructions
-1. Open **Settings → Libraries → Handwriting Input Plugin**.
-2. Tap **Download** to install the companion [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin).
-3. Select your preferred **Handwriting recognition language** (e.g. English, Chinese, Devanagari, Japanese, etc.), independent of your active keyboard typing language.
-4. Tap the **Handwriting (Pencil)** icon on the keyboard toolbar to open the drawing canvas.
-5. Draw characters naturally—the handwriting engine transcribes strokes into text in real-time.
+1. Open **Settings → Handwriting**.
+2. Tap **Download Plugin** to install the companion [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (with automated update checking and version notifications).
+3. Use the **In-App Offline Handwriting Models** dialog to download recognition language packs directly with real-time download progress.
+4. Customize stroke width, stroke fade timeout, and recognition sensitivity.
+5. Tap the **Handwriting (Pencil)** icon on the keyboard toolbar to open the drawing canvas and write naturally.
 
 ---
 
@@ -223,7 +229,7 @@ Turn the entire keyboard space into a fluid laptop-style trackpad:
 Detach LeanType into a moveable, resizable floating window:
 - Tap the **Floating Keyboard** icon on the toolbar.
 - Drag the bottom handle to reposition anywhere on the screen.
-- Drag corner handles to resize.
+- Drag corner handles to resize with live real-time proportional key scaling.
 - Enable **Persistent Floating Mode** to keep the keyboard floating across app switches.
 
 ---
@@ -235,9 +241,9 @@ Split your toolbar and suggestion strip into two independent rows for fast, unhi
 
 ---
 
-## 12. Text Expander
+## 12. Versatile Text Expander & Modifiers
 
-Define custom abbreviations that instantly expand into rich text templates with dynamic variables:
+Define custom abbreviations that instantly expand into rich text templates with dynamic variables, citation cleaning, and chained text modifiers:
 
 ### Supported Dynamic Placeholders
 - `%date%`: Inserts current date (YYYY-MM-DD).
@@ -249,9 +255,22 @@ Define custom abbreviations that instantly expand into rich text templates with 
 - `%bullets%` / `%list%`: Inserts templated bulleted or numbered lists.
 - `%custom_variable%`: Prompts an interactive popup to fill in custom text on the fly.
 
+### Composable Clipboard Modifiers
+Transform clipboard content on the fly by appending modifiers (`%clipboard:<mod1>:<mod2>%`):
+- `%clipboard:clean%` / `%clipboard:nocite%`: Automatically strips bracketed Wikipedia / academic citations (`[1]`, `[1][2]`, `[note 1]`, `[citation needed]`) and cleans formatting.
+- `%clipboard:singleline%` / `%clipboard:oneline%`: Flattens multi-line text into a single line.
+- `%clipboard:title%`: Converts clipboard text to Title Case.
+- `%clipboard:slug%` / `%clipboard:kebab%`: Converts text into a kebab-case URL slug (e.g. `my-awesome-post`).
+- `%clipboard:snake%` / `%clipboard:camel%`: Converts text to `snake_case` or `camelCase`.
+- `%clipboard:upper%` / `%clipboard:lower%`: Converts text to UPPERCASE or lowercase.
+- `%clipboard:trim%`: Removes leading and trailing whitespace.
+- `%clipboard:unquote%`: Strips outer quotation marks.
+- `%clipboard:nourl%`: Removes URLs from text.
+- `%clipboard:replace(pattern, replacement)%`: Performs custom regex find-and-replace.
+
 ### Setup Instructions
 1. Open **Settings → Text correction → Text Expander**.
-2. Tap **+ (Add)**, define the shortcut (e.g. `brb`), and enter your expansion template.
+2. Tap **+ (Add)**, define the shortcut (e.g. `cite`), and enter your expansion template (e.g. `%clipboard:clean%`).
 
 ---
 
