@@ -20,8 +20,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +38,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +63,7 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
+import helium314.keyboard.settings.dialogs.PreferenceDialog
 import helium314.keyboard.settings.dialogs.VoiceModelDownloadDialog
 import helium314.keyboard.settings.filePicker
 import helium314.keyboard.settings.preferences.ListPreference
@@ -100,6 +104,13 @@ fun VoiceSettingsScreen(
     var engineInfo by remember { mutableStateOf<VoiceEngineInfo?>(pluginManager.getInfo()) }
     var isPluginConnected by remember { mutableStateOf(pluginManager.isPluginConnected()) }
     var isPluginInstalled by remember { mutableStateOf(pluginManager.isPluginInstalled()) }
+    val pluginVersion = remember(isPluginInstalled) {
+        try {
+            context.packageManager.getPackageInfo(VoiceConstants.VOICE_PLUGIN_PACKAGE, 0).versionName
+        } catch (_: Exception) {
+            null
+        }
+    }
     var isInitialConnectionPending by remember { mutableStateOf(!isPluginConnected && isPluginInstalled) }
     val installedWhisperPref = remember(prefs) { prefs.getString("installed_model_${VoiceConstants.ENGINE_WHISPER}", null) }
     var whisperState by remember {
@@ -109,6 +120,7 @@ fun VoiceSettingsScreen(
         )
     }
     var showModelDownloadDialog by remember { mutableStateOf(false) }
+    var showVoicePluginDialog by rememberSaveable { mutableStateOf(false) }
 
     var isDownloadingPlugin by remember { mutableStateOf(false) }
     var pluginDownloadProgress by remember { mutableFloatStateOf(0f) }
@@ -217,6 +229,7 @@ fun VoiceSettingsScreen(
 
                 withContext(Dispatchers.Main) {
                     isDownloadingPlugin = false
+                    showVoicePluginDialog = false
                     installDownloadedPlugin(targetFile)
                 }
             } catch (e: Exception) {
@@ -493,6 +506,99 @@ fun VoiceSettingsScreen(
         )
     }
 
+    if (showVoicePluginDialog) {
+        PreferenceDialog(
+            onDismissRequest = { if (!isDownloadingPlugin) showVoicePluginDialog = false },
+            title = "Voice Plugin",
+            showCloseButton = !isDownloadingPlugin,
+            buttons = {
+                if (isDownloadingPlugin) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Downloading... ${(pluginDownloadProgress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (!isPluginInstalled) {
+                            if (BuildConfig.FLAVOR == "standardfull") {
+                                Button(
+                                    onClick = { downloadAndInstallPlugin() },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Download & Install Plugin")
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        showVoicePluginDialog = false
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(Links.VOICE_PLUGIN_REPO)).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(intent)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Download Plugin")
+                                }
+                            }
+                        } else {
+                            if (!isPluginConnected && !isInitialConnectionPending) {
+                                Button(
+                                    onClick = {
+                                        pluginManager.bindIfNeeded()
+                                        updatePluginStatus()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Connect")
+                                }
+                            }
+                            Button(
+                                onClick = {
+                                    showVoicePluginDialog = false
+                                    val appInfoIntent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.parse("package:${VoiceConstants.VOICE_PLUGIN_PACKAGE}")
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(appInfoIntent)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Uninstall")
+                            }
+                        }
+                    }
+                }
+            }
+        ) {
+            val message = when {
+                isPluginConnected -> "Voice plugin is active (version ${pluginVersion ?: "v1.0.0"}).\n\nLeanType Voice Plugin handles high-performance on-device Whisper speech-to-text inference."
+                isPluginInstalled -> "Voice plugin is installed on this device, but currently disconnected.\n\nTap Connect to establish connection."
+                else -> "Offline voice input requires the LeanType Voice Plugin (com.leanbitlab.leantype.voice.offline).\n\nDownload and install the voice plugin to enable private, fast offline voice typing."
+            }
+            Text(message)
+        }
+    }
+
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = context.getString(R.string.offline_voice_title),
@@ -559,117 +665,20 @@ fun VoiceSettingsScreen(
 
                         offlineEnabledSetting.Preference()
 
-                        if (isPluginInstalled) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.sym_keyboard_voice_holo),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Voice Plugin",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = if (isPluginConnected) "Installed & Connected"
-                                        else if (isInitialConnectionPending) "Connecting…"
-                                        else "Installed (Disconnected)",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (isPluginConnected) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (!isPluginConnected && !isInitialConnectionPending) {
-                                        Button(
-                                            onClick = {
-                                                pluginManager.bindIfNeeded()
-                                                updatePluginStatus()
-                                            },
-                                            modifier = Modifier.height(36.dp)
-                                        ) {
-                                            Text("Connect")
-                                        }
-                                    }
-                                    OutlinedButton(
-                                        onClick = {
-                                            val appInfoIntent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                                data = Uri.parse("package:${VoiceConstants.VOICE_PLUGIN_PACKAGE}")
-                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                            }
-                                            context.startActivity(appInfoIntent)
-                                        },
-                                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.error
-                                        ),
-                                        modifier = Modifier.height(36.dp)
-                                    ) {
-                                        Text("Uninstall")
-                                    }
-                                }
-                            }
-                        } else {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = "Voice Plugin Not Installed",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.error,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Offline voice input requires the LeanType Voice Plugin (com.leanbitlab.leantype.voice.offline).",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                if (BuildConfig.FLAVOR == "standardfull") {
-                                    if (isDownloadingPlugin) {
-                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            LinearProgressIndicator(
-                                                progress = { pluginDownloadProgress },
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                            Text(
-                                                text = "Downloading plugin... ${(pluginDownloadProgress * 100).toInt()}%",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    } else {
-                                        Button(
-                                            onClick = { downloadAndInstallPlugin() }
-                                        ) {
-                                            Text("Download & Install Plugin")
-                                        }
-                                    }
-                                } else {
-                                    Button(
-                                        onClick = {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(Links.VOICE_PLUGIN_REPO)).apply {
-                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                            }
-                                            context.startActivity(intent)
-                                        }
-                                    ) {
-                                        Text("Download Plugin")
-                                    }
-                                }
+                        val voicePluginSummary = remember(isPluginInstalled, isPluginConnected, pluginVersion) {
+                            when {
+                                isPluginConnected -> "Active (${pluginVersion ?: "v1.0.0"})"
+                                isPluginInstalled -> "Installed (Disconnected)"
+                                else -> "Not installed"
                             }
                         }
+
+                        Preference(
+                            name = "Voice Plugin",
+                            description = voicePluginSummary,
+                            icon = R.drawable.sym_keyboard_voice_holo,
+                            onClick = { showVoicePluginDialog = true }
+                        )
                     }
                 }
 
