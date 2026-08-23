@@ -22,6 +22,7 @@ import helium314.keyboard.latin.utils.withHtmlLink
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.dialogs.InfoDialog
+import androidx.annotation.DrawableRes
 import androidx.core.content.edit
 
 @Composable
@@ -29,6 +30,7 @@ fun SwitchPreference(
     setting: Setting,
     default: Boolean,
     enabled: Boolean = true,
+    @DrawableRes icon: Int = 0,
     allowCheckedChange: (Boolean) -> Boolean = { true },
     onCheckedChange: (Boolean) -> Unit = { }
 ) {
@@ -38,6 +40,7 @@ fun SwitchPreference(
         key = setting.key,
         default = default,
         enabled = enabled,
+        icon = icon,
         allowCheckedChange = allowCheckedChange,
         onCheckedChange = onCheckedChange
     )
@@ -51,6 +54,7 @@ fun SwitchPreference(
     default: Boolean,
     enabled: Boolean = true,
     description: String? = null,
+    @DrawableRes icon: Int = 0,
     allowCheckedChange: (Boolean) -> Boolean = { true }, // true means ok, usually for showing some dialog
     onCheckedChange: (Boolean) -> Unit = { },
 ) {
@@ -74,6 +78,7 @@ fun SwitchPreference(
         onClick = { switched(!value) },
         modifier = modifier,
         enabled = enabled,
+        icon = icon,
         description = description
     ) {
         Switch(

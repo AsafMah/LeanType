@@ -17,13 +17,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -326,7 +330,8 @@ fun VoiceSettingsScreen(
         ) {
             SwitchPreference(
                 setting = it,
-                default = false
+                default = false,
+                icon = R.drawable.sym_keyboard_voice_holo
             )
         }
     }
@@ -345,7 +350,8 @@ fun VoiceSettingsScreen(
                     "Keep in memory for 1 minute" to "60",
                     "Unload immediately after session" to "0"
                 ),
-                default = "300"
+                default = "300",
+                icon = R.drawable.ic_settings_advanced
             )
         }
     }
@@ -381,7 +387,8 @@ fun VoiceSettingsScreen(
                     "15 seconds" to "15",
                     "Never (Listen until mic tapped)" to "0"
                 ),
-                default = "5"
+                default = "5",
+                icon = R.drawable.ic_settings_preferences
             )
         }
     }
@@ -398,7 +405,8 @@ fun VoiceSettingsScreen(
                     "Standard (Recommended)" to "normal",
                     "Low (Noisy environments / In-car)" to "low"
                 ),
-                default = "normal"
+                default = "normal",
+                icon = R.drawable.sym_keyboard_voice_holo
             )
         }
     }
@@ -416,7 +424,8 @@ fun VoiceSettingsScreen(
                     "60 seconds" to "60",
                     "Unlimited" to "0"
                 ),
-                default = "30"
+                default = "30",
+                icon = R.drawable.ic_settings_preferences
             )
         }
     }
@@ -429,7 +438,8 @@ fun VoiceSettingsScreen(
         ) {
             SwitchPreference(
                 setting = it,
-                default = true
+                default = true,
+                icon = R.drawable.ic_settings_correction
             )
         }
     }
@@ -447,7 +457,8 @@ fun VoiceSettingsScreen(
                     "6 threads (High performance)" to "6",
                     "8 threads (Maximum speed)" to "8"
                 ),
-                default = "4"
+                default = "4",
+                icon = R.drawable.ic_settings_advanced
             )
         }
     }
@@ -460,7 +471,8 @@ fun VoiceSettingsScreen(
         ) {
             TextInputPreference(
                 setting = it,
-                default = ""
+                default = "",
+                icon = R.drawable.ic_edit
             )
         }
     }
@@ -552,9 +564,15 @@ fun VoiceSettingsScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.sym_keyboard_voice_holo),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = "Voice Plugin",
@@ -683,6 +701,7 @@ fun VoiceSettingsScreen(
                         Preference(
                             name = "Manage & Download Models",
                             description = null,
+                            icon = R.drawable.sym_keyboard_voice_holo,
                             onClick = {
                                 showModelDownloadDialog = true
                             },
