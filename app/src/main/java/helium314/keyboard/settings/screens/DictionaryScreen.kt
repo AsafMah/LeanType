@@ -60,6 +60,8 @@ import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.previewDark
 import helium314.keyboard.settings.SettingsDestination
 import helium314.keyboard.settings.NextScreenIcon
+import helium314.keyboard.settings.preferences.Preference
+import helium314.keyboard.settings.preferences.PreferenceCategory
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.latin.settings.Settings
@@ -76,7 +78,7 @@ fun DictionaryScreen(
     val enabledLanguages = SubtypeSettings.getEnabledSubtypes(true).map { it.locale().language }
     val cachedDictFolders = DictionaryInfoUtils.getCacheDirectories(ctx).map { it.name }
     val comparer = compareBy<Locale>({ it.language !in enabledLanguages }, { it.toLanguageTag() !in cachedDictFolders }, { it.displayName })
-    val dictionaryLocales = listOf(Locale(SubtypeLocaleUtils.NO_LANGUAGE)) + getDictionaryLocales(ctx)
+    val dictionaryLocales = listOf(Locale.forLanguageTag(SubtypeLocaleUtils.NO_LANGUAGE)) + getDictionaryLocales(ctx)
         .filter { it.language != SubtypeLocaleUtils.NO_LANGUAGE }
         .sortedWith(comparer)
     var selectedLocale: Locale? by remember { mutableStateOf(null) }
@@ -96,190 +98,79 @@ fun DictionaryScreen(
         },
         itemContent = { locale ->
             if (locale.language == SubtypeLocaleUtils.NO_LANGUAGE) {
-                // Card for general actions
+                // Card 1: Dictionaries Management
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    shape = RoundedCornerShape(16.dp)
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
                 ) {
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Column {
+                        PreferenceCategory(stringResource(R.string.dictionary_settings_category))
+
                         // Add Dictionary Entry
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showAddDictDialog = true }
-                                .padding(vertical = 14.dp, horizontal = 16.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_plus),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(end = 12.dp).size(24.dp)
-                                )
-                                Text(
-                                    stringResource(R.string.add_new_dictionary_title),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            NextScreenIcon()
-                        }
-                        
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant
+                        Preference(
+                            name = stringResource(R.string.add_new_dictionary_title),
+                            icon = R.drawable.ic_plus,
+                            onClick = { showAddDictDialog = true },
+                            value = { NextScreenIcon() }
                         )
 
                         // Personal Dictionary Entry
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { SettingsDestination.navigateTo(SettingsDestination.PersonalDictionaries) }
-                                .padding(vertical = 14.dp, horizontal = 16.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_dictionary),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(end = 12.dp).size(24.dp)
-                                )
-                                Text(
-                                    stringResource(R.string.edit_personal_dictionary),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            NextScreenIcon()
-                        }
-                        
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant
+                        Preference(
+                            name = stringResource(R.string.edit_personal_dictionary),
+                            icon = R.drawable.ic_dictionary,
+                            onClick = { SettingsDestination.navigateTo(SettingsDestination.PersonalDictionaries) },
+                            value = { NextScreenIcon() }
                         )
 
                         // Blocked Words Entry
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { SettingsDestination.navigateTo(SettingsDestination.BlockedWords) }
-                                .padding(vertical = 14.dp, horizontal = 16.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_bin),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(end = 12.dp).size(24.dp)
-                                )
-                                Text(
-                                    stringResource(R.string.edit_blocked_words),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            NextScreenIcon()
-                        }
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant
+                        Preference(
+                            name = stringResource(R.string.edit_blocked_words),
+                            icon = R.drawable.ic_bin,
+                            onClick = { SettingsDestination.navigateTo(SettingsDestination.BlockedWords) },
+                            value = { NextScreenIcon() }
                         )
 
                         // Dictionary Source Entry
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(helium314.keyboard.latin.common.Links.DICTIONARY_URL))
-                                    ctx.startActivity(intent)
-                                }
-                                .padding(vertical = 14.dp, horizontal = 16.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_settings_about_github),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(end = 12.dp).size(24.dp)
-                                )
-                                Column {
-                                    Text(
-                                        stringResource(R.string.dictionary_source_title),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        stringResource(R.string.dictionary_source_summary),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            NextScreenIcon()
-                        }
+                        Preference(
+                            name = stringResource(R.string.dictionary_source_title),
+                            description = stringResource(R.string.dictionary_source_summary),
+                            icon = R.drawable.ic_settings_about_github,
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(helium314.keyboard.latin.common.Links.DICTIONARY_URL))
+                                ctx.startActivity(intent)
+                            },
+                            value = { NextScreenIcon() }
+                        )
                     }
                 }
 
-                // Card for Personal Dictionary Switch Setting
+                // Card 2: Personal Dictionary Learning & Threshold
                 val prefs = ctx.prefs()
                 var personalDictEnabled by remember { mutableStateOf(prefs.getBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, Defaults.PREF_ADD_TO_PERSONAL_DICTIONARY)) }
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    shape = RoundedCornerShape(16.dp)
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
                 ) {
                     Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier
-                                .clickable {
-                                    val newValue = !personalDictEnabled
-                                    personalDictEnabled = newValue
-                                    ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, newValue) }
-                                }
-                                .padding(all = 16.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                Text(
-                                    stringResource(R.string.add_to_personal_dictionary),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    stringResource(R.string.add_to_personal_dictionary_summary),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            androidx.compose.material3.Switch(
-                                checked = personalDictEnabled,
-                                onCheckedChange = { 
-                                    personalDictEnabled = it
-                                    ctx.prefs().edit { putBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, it) } 
-                                }
-                            )
-                        }
+                        PreferenceCategory(stringResource(R.string.edit_personal_dictionary))
+
+                        SwitchPreference(
+                            name = stringResource(R.string.add_to_personal_dictionary),
+                            description = stringResource(R.string.add_to_personal_dictionary_summary),
+                            key = Settings.PREF_ADD_TO_PERSONAL_DICTIONARY,
+                            default = Defaults.PREF_ADD_TO_PERSONAL_DICTIONARY,
+                            icon = R.drawable.ic_settings_correction,
+                            onCheckedChange = { personalDictEnabled = it }
+                        )
+
                         if (personalDictEnabled) {
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                             SliderPreference(
@@ -300,20 +191,14 @@ fun DictionaryScreen(
                     }
                 }
 
-                // Add a "Languages" Section Header
-                Text(
-                    text = stringResource(R.string.language_and_layouts_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp)
-                )
+                // Languages Section Header
+                PreferenceCategory(stringResource(R.string.language_and_layouts_title))
             } else {
-                // Premium Language Card
+                // Language Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
                         .clickable { selectedLocale = locale },
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
@@ -428,7 +313,7 @@ fun getUserAndInternalDictionaries(context: Context, locale: Locale): Pair<List<
     val candidateDirs = mutableListOf<File>()
     DictionaryInfoUtils.getCacheDirectoryForLocale(locale, context)?.let { candidateDirs.add(File(it)) }
     if (locale.country.isNotEmpty() || locale.variant.isNotEmpty()) {
-        val fallbackLocale = Locale(locale.language)
+        val fallbackLocale = Locale.forLanguageTag(locale.language)
         DictionaryInfoUtils.getCacheDirectoryForLocale(fallbackLocale, context)?.let { candidateDirs.add(File(it)) }
     }
     DictionaryInfoUtils.getFallbackVariantDirectory(locale, context)?.let { candidateDirs.add(it) }
