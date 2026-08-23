@@ -4,20 +4,15 @@ As an open-source, community-funded project, we operate on a very limited budget
 ## 🚀 What's New in v4.1.4
 
 ### ✨ New Features & Enhancements
-- **Versatile Text Expander & Transformation Modifiers**: Introduced a modular modifier pipeline supporting composable filters on placeholders (`%clipboard:clean%`, `%clipboard:singleline%`, `%clipboard:title%`, `%clipboard:slug%`, `%clipboard:upper%`, `%clipboard:lower%`, `%clipboard:replace(a,b)%`).
-- **Citation & Bracket Cleaner**: Added automatic citation stripping (`[1]`, `[1][2]`, `[note 1]`, `[citation needed]`) for Wikipedia and research paper text snippets in Text Expander.
-- **Dedicated Translation Settings & Model Manager**: Added dedicated Translation Settings dashboard featuring Translation Mode selection (Plugin vs. Built-in) and an in-app Offline Translation Models manager dialog with direct download progress.
-- **Dedicated Handwriting Settings Screen**: Created a dedicated Handwriting settings dashboard featuring plugin status monitoring, stroke customization cards, and an in-app offline model manager with live progress downloads.
-- **Automated Plugin Update Checking**: Dynamic GitHub release checking and version comparison for Voice and Handwriting plugins with one-tap update dialogs.
-- **Modernized & Unified Settings UI**: Completely restyled Dictionary, Voice, Translation, and Handwriting settings pages with standardized Material 3 Card containers, category groupings, and consistent model download dialogs.
-- **Reorganized Settings Structure**: Moved main dictionaries into Languages and layouts, and refactored the libraries section into a dedicated "Plugins" hub.
+- **Versatile Text Expander**: Added dynamic clipboard modifiers (`%clipboard:clean%`, `:singleline`, `:title`, `:slug`, `:upper`, `:replace`) and automatic citation cleaner (`[1]`, `[note 1]`) for Wikipedia and research text.
+- **Dedicated Handwriting & Translation Hubs**: Added standalone settings dashboards with in-app offline model managers, live download progress, and translation fallback.
+- **Automated Plugin Update Checking**: Automatic GitHub release checking and one-tap update dialogs for Voice and Handwriting plugins.
+- **Refreshed Settings Experience**: Reorganized settings (moved Dictionaries to Languages & Layouts, renamed Libraries to Plugins) and modernized card UI across all screens.
 
-### 🐛 Bug Fixes & Stability Improvements
-- **Emoticon & Colon Symbol Layout Switching**: Fixed symbols layout unexpectedly resetting to the alphabet keyboard when typing emoticons (`:)`, `:(`, `:/`) or colons followed by punctuation.
-- **Inline Emoji Search Setting Guards**: Strictly enforced inline emoji search preferences so the search routine remains completely inactive when disabled in settings.
-- **Personal Dictionary Auto-Learning**: Fixed dictionary type validation and connected session word count tracking to ensure typed words accurately learn to the personal dictionary according to the user's configured threshold.
-- **Translation Plugin Fallbacks**: Wrapped plugin model methods to prevent `AbstractMethodError` and added graceful fallback to built-in AI when external plugins return unmodified text or fail.
-- **UI & Slider Preference Polish**: Added dialog headers and icons to `SliderPreference` and guarded against invalid icon resource IDs across Compose settings components.
+### 🐛 Bug Fixes & Improvements
+- **Emoticon Stability**: Fixed symbol keyboard resetting to the letters layout when typing emoticons (`:)`, `:-(`, `:(`) or colons followed by punctuation.
+- **Personal Dictionary Learning**: Fixed auto-learning so unrecognized words accurately save after being typed the configured number of times.
+- **Inline Emoji Search Guards**: Strictly enforced settings so emoji search stays completely dormant when turned off.
 
 ## 📦 Downloads (Choose Your Flavor)
 
