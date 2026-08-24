@@ -4,17 +4,17 @@ As an open-source, community-funded project, we operate on a very limited budget
 ## 🚀 What's New in v4.1.4
 
 ### ✨ New Features & Enhancements
-- **Dynamic Plugin Architecture**: Enabled standalone Translation and Handwriting plugins across all flavors (`standard`, `standardfull`, `offline`, `offlinelite`) with native `.so` library isolation, in-process reloading, and WorkManager task delegation.
-- **Versatile Text Expander**: Added dynamic clipboard modifiers (`%clipboard:clean%`, `:singleline`, `:title`, `:slug`, `:upper`, `:replace`) and automatic citation cleaner (`[1]`, `[note 1]`) for Wikipedia and research text.
-- **Comprehensive Offline Model Importer**: Added multi-pack handwriting imports (`recospec`, neural model, and dictionary FST), browser-assisted download dialogs for offline flavors, and instantaneous dialog loading.
-- **Universal Toolbar Integration**: Handwriting, Translation, and Clipboard Search toolbar keys are now available across all builds (including OfflineLite) with auto-spanning calibration.
-- **Refreshed Plugins Hub & Update Checking**: Unified status tags (`Active` / `Not installed`) across all plugins and automated GitHub release update checking for Voice and Handwriting plugins.
+- **Offline Handwriting & Translation Everywhere**: Offline handwriting recognition and translation plugins are now fully supported across all app flavors (Standard, Standard Full, Offline, and Offline Lite).
+- **Offline Model Downloader & Importer**: In-app model downloads for online flavors and direct browser download popups + multi-file import for offline flavors.
+- **Unified Plugins Dashboard**: Reorganized settings with a single Plugins hub showing active status and automated update checks for Voice and Handwriting plugins.
+- **Expanded Toolbar Keys**: Handwriting, Translation, and Clipboard Search toolbar keys are now available on all builds with improved auto-spacing.
+- **Smart Text Expander**: Added handy clipboard modifiers (`%clipboard:clean%`, `:singleline`, `:title`, `:slug`, `:upper`, `:replace`) that automatically clean Wikipedia citations and format text.
 
-### 🐛 Bug Fixes & Improvements
-- **Regional Handwriting Isolation**: Fixed language tag detection so regional models (e.g. `en-AU`, `hi-IN`) load in complete isolation without falsely marking other variants.
-- **Emoticon Stability**: Fixed symbol keyboard resetting to the letters layout when typing emoticons (`:)`, `:-(`, `:(`) or colons followed by punctuation.
-- **Personal Dictionary Learning**: Fixed auto-learning so unrecognized words accurately save after being typed the configured number of times.
-- **Inline Emoji Search Guards**: Strictly enforced settings so emoji search stays completely dormant when turned off.
+### 🐛 Bug Fixes
+- **Emoticon Fix**: Typing emoticons like `:)` and `:(` no longer resets the symbol keyboard back to letters.
+- **Personal Dictionary**: Fixed word auto-learning so new words are properly saved based on your configured threshold.
+- **Handwriting Tag Fix**: Fixed model loading so regional languages (like English Australia or Hindi) load without affecting other language variants.
+- **Emoji Search Setting**: Strictly honored the inline emoji search toggle when turned off.
 
 ## 📦 Downloads (Choose Your Flavor)
 

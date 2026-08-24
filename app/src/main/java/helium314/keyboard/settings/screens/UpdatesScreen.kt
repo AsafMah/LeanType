@@ -72,12 +72,12 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "🧩 Dynamic plugin loading for Translation & Handwriting across all build flavors",
-    "⚡ Versatile Text Expander modifiers (%clipboard:clean%, :singleline, :title, :slug, :upper, :replace) & citation cleaner",
-    "✍️ Comprehensive offline model manager with multi-pack extraction and browser download support",
-    "🛠️ Enabled Handwriting and Translation toolbar keys across all flavors (including OfflineLite)",
-    "🔄 Unified Plugins Hub with automated update checking for Voice and Handwriting plugins",
-    "😊 Fixed emoticon typing layout resets and calibrated toolbar auto-spanning",
+    "✍️ Added offline handwriting and offline translation across all app flavors",
+    "📦 Added offline model manager with browser download and file import support",
+    "🧩 Unified Plugins settings hub with automated plugin update checking",
+    "🛠️ Enabled Handwriting, Translation, and Clipboard Search toolbar keys on all builds",
+    "⚡ Added smart text expander clipboard modifiers and citation cleaner",
+    "😊 Fixed symbol keyboard resetting when typing emoticons (:), :()",
     "📚 Fixed personal dictionary auto-learning threshold"
 )
 
