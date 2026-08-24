@@ -30,19 +30,19 @@ object HandwritingModelImporter {
         filenameHint: String
     ): Boolean {
         val baseDir = context.noBackupFilesDir ?: context.filesDir
-        val targetDir = File(baseDir, "com.google.mlkit.models/$languageTag/DIGITAL_INK/0")
-        targetDir.mkdirs()
-        val targetModelFile = File(targetDir, "model.tflite")
+        val baseLang = languageTag.substringBefore('-').lowercase()
+        val normalizedTag = languageTag.replace('_', '-')
+        val targetTags = setOf(normalizedTag, baseLang, languageTag)
 
+        val tempFile = File.createTempFile("hw_import", ".tmp", context.cacheDir)
         return try {
             if (filenameHint.endsWith(".zip", ignoreCase = true)) {
-                // Extract model from zip
                 var extracted = false
                 ZipInputStream(inputStream.buffered()).use { zipIn ->
                     var entry = zipIn.nextEntry
                     while (entry != null) {
                         if (!entry.isDirectory && (entry.name.contains("model.tflite") || entry.name.endsWith(".local") || entry.name.endsWith(".tflite"))) {
-                            FileOutputStream(targetModelFile).use { out ->
+                            FileOutputStream(tempFile).use { out ->
                                 zipIn.copyTo(out)
                             }
                             extracted = true
@@ -52,17 +52,28 @@ object HandwritingModelImporter {
                         entry = zipIn.nextEntry
                     }
                 }
-                extracted
+                if (!extracted) return false
             } else {
-                // Direct .tflite copy
-                FileOutputStream(targetModelFile).use { out ->
+                FileOutputStream(tempFile).use { out ->
                     inputStream.copyTo(out)
                 }
-                true
             }
+
+            if (tempFile.length() == 0L) return false
+
+            for (tag in targetTags) {
+                val targetDir = File(baseDir, "com.google.mlkit.models/$tag/DIGITAL_INK/0")
+                targetDir.mkdirs()
+                val targetModelFile = File(targetDir, "model.tflite")
+                tempFile.copyTo(targetModelFile, overwrite = true)
+            }
+            Log.i(TAG, "Successfully imported handwriting model for $languageTag (installed to $targetTags)")
+            true
         } catch (e: Throwable) {
-            Log.e(TAG, "Failed to extract handwriting model for $languageTag", e)
+            Log.e(TAG, "Failed to import handwriting model for $languageTag", e)
             false
+        } finally {
+            tempFile.delete()
         }
     }
 }
