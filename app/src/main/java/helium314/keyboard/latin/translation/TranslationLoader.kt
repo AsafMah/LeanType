@@ -120,6 +120,7 @@ object TranslationLoader {
         apkFile.setReadOnly()
 
         return try {
+            ensureWorkManagerInitialized(context)
             val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
             val libFile = File(nativeLibDir, "libtranslate_jni.so")
@@ -223,6 +224,7 @@ object TranslationLoader {
             apkFile.setReadOnly()
 
             // Verify the plugin loads successfully
+            ensureWorkManagerInitialized(context)
             val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
             val libFile = File(nativeLibDir, "libtranslate_jni.so")
@@ -274,6 +276,20 @@ object TranslationLoader {
         return false
     }
 
+    private fun ensureWorkManagerInitialized(context: Context) {
+        try {
+            androidx.work.WorkManager.getInstance(context)
+        } catch (_: IllegalStateException) {
+            try {
+                androidx.work.WorkManager.initialize(
+                    context.applicationContext,
+                    (context.applicationContext as? androidx.work.Configuration.Provider)?.workManagerConfiguration
+                        ?: androidx.work.Configuration.Builder().build()
+                )
+            } catch (_: Throwable) {}
+        }
+    }
+
     fun unloadPlugin() {
         try {
             activeProviderRef?.get()?.cleanup()
@@ -302,7 +318,7 @@ object TranslationLoader {
         context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
     }
 
-    private class PluginContext(base: Context, private val apkPath: String) : android.content.ContextWrapper(base) {
+    private class PluginContext(base: Context, private val apkPath: String) : android.content.ContextWrapper(base), androidx.work.Configuration.Provider {
         private val pluginResources: android.content.res.Resources by lazy {
             try {
                 val assetManager = android.content.res.AssetManager::class.java.getDeclaredConstructor().newInstance()
@@ -320,6 +336,10 @@ object TranslationLoader {
         override fun getAssets(): android.content.res.AssetManager = pluginResources.assets
 
         override fun getApplicationContext(): Context = this
+
+        override val workManagerConfiguration: androidx.work.Configuration
+            get() = (baseContext.applicationContext as? androidx.work.Configuration.Provider)?.workManagerConfiguration
+                ?: androidx.work.Configuration.Builder().build()
     }
 
     private class PluginClassLoader(
