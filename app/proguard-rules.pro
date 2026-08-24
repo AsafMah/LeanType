@@ -70,6 +70,13 @@
 # Keep WorkManager plugin factory & runtime for dynamically loaded plugins
 -keep class helium314.keyboard.latin.work.** { *; }
 -keep interface helium314.keyboard.latin.work.** { *; }
+-keep class androidx.work.** { *; }
+-keep interface androidx.work.** { *; }
+-keep class * extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keepnames class com.google.mlkit.** extends androidx.work.ListenableWorker
+-dontwarn androidx.work.**
 
 # Keep ML Kit, DataTransport, GMS Tasks, and Firebase components for plugin dynamic linkage
 -keep class com.google.mlkit.** { *; }
