@@ -18,33 +18,53 @@ object HandwritingModelImporter {
         val hasFst: Boolean,
         val hasRecospec: Boolean
     ) {
-        val isComplete: Boolean get() = hasModel && hasFst
-        val isReady: Boolean get() = hasModel
+        val isComplete: Boolean get() = hasModel && hasFst && hasRecospec
+        val isReady: Boolean get() = hasModel && hasFst
     }
 
     fun getComponentsStatus(context: Context, languageTag: String): ModelComponentsStatus {
-        val baseDir = context.noBackupFilesDir ?: context.filesDir
+        val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
         val normalizedTag = languageTag.replace('_', '-')
-        val dir = File(baseDir, "com.google.mlkit.models/$normalizedTag/DIGITAL_INK/0")
+        val lowerTag = normalizedTag.lowercase()
+        val underscoreTag = languageTag.replace('-', '_')
 
-        val hasModel = File(dir, "model.tflite").exists() && File(dir, "model.tflite").length() > 0
-        val hasFst = File(dir, "fst.compact").exists() && File(dir, "fst.compact").length() > 0
-        val hasRecospec = File(dir, "recospec").exists() && File(dir, "recospec").length() > 0
+        val possibleTags = listOf(normalizedTag, lowerTag, underscoreTag).distinct()
 
-        return ModelComponentsStatus(hasModel, hasFst, hasRecospec)
+        for (baseDir in baseDirs) {
+            for (tag in possibleTags) {
+                val dir = File(baseDir, "com.google.mlkit.models/$tag/DIGITAL_INK/0")
+                if (dir.exists()) {
+                    val hasModel = File(dir, "model.tflite").exists() && File(dir, "model.tflite").length() > 0
+                    val hasFst = File(dir, "fst.compact").exists() && File(dir, "fst.compact").length() > 0
+                    val hasRecospec = File(dir, "recospec").exists() && File(dir, "recospec").length() > 0
+                    if (hasModel || hasFst || hasRecospec) {
+                        return ModelComponentsStatus(hasModel, hasFst, hasRecospec)
+                    }
+                }
+            }
+        }
+        return ModelComponentsStatus(false, false, false)
     }
 
     fun deleteModelForLanguage(context: Context, languageTag: String): Boolean {
-        val baseDir = context.noBackupFilesDir ?: context.filesDir
+        val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
         val normalizedTag = languageTag.replace('_', '-')
+        val lowerTag = normalizedTag.lowercase()
+        val underscoreTag = languageTag.replace('-', '_')
+
+        val possibleTags = listOf(normalizedTag, lowerTag, underscoreTag).distinct()
         var deleted = false
-        val dir = File(baseDir, "com.google.mlkit.models/$normalizedTag/DIGITAL_INK/0")
-        if (dir.exists()) {
-            deleted = dir.deleteRecursively()
-        }
-        val parent = File(baseDir, "com.google.mlkit.models/$normalizedTag")
-        if (parent.exists()) {
-            parent.deleteRecursively()
+        for (baseDir in baseDirs) {
+            for (tag in possibleTags) {
+                val dir = File(baseDir, "com.google.mlkit.models/$tag/DIGITAL_INK/0")
+                if (dir.exists()) {
+                    if (dir.deleteRecursively()) deleted = true
+                }
+                val parent = File(baseDir, "com.google.mlkit.models/$tag")
+                if (parent.exists()) {
+                    if (parent.deleteRecursively()) deleted = true
+                }
+            }
         }
         Log.i(TAG, "Deleted handwriting model for $languageTag (deleted=$deleted)")
         return deleted
@@ -216,13 +236,21 @@ object HandwritingModelImporter {
             val extractedFiles = tempExtractDir.listFiles()?.filter { it.length() > 0 } ?: emptyList()
             if (extractedFiles.isEmpty()) return false
 
-            val targetDir = File(baseDir, "com.google.mlkit.models/$normalizedTag/DIGITAL_INK/0")
-            targetDir.mkdirs()
-            for (file in extractedFiles) {
-                val targetFile = File(targetDir, file.name)
-                file.copyTo(targetFile, overwrite = true)
+            val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
+            val lowerTag = normalizedTag.lowercase()
+            val underscoreTag = languageTag.replace('-', '_')
+            val targetTags = listOf(normalizedTag, lowerTag, underscoreTag).distinct()
+            for (bDir in baseDirs) {
+                for (tTag in targetTags) {
+                    val targetDir = File(bDir, "com.google.mlkit.models/$tTag/DIGITAL_INK/0")
+                    targetDir.mkdirs()
+                    for (file in extractedFiles) {
+                        val targetFile = File(targetDir, file.name)
+                        file.copyTo(targetFile, overwrite = true)
+                    }
+                }
             }
-            Log.i(TAG, "Successfully imported handwriting model files for $languageTag (files: ${extractedFiles.map { it.name }} -> $normalizedTag)")
+            Log.i(TAG, "Successfully imported handwriting model files for $languageTag (files: ${extractedFiles.map { it.name }} -> $targetTags)")
             true
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to import handwriting model for $languageTag", e)
