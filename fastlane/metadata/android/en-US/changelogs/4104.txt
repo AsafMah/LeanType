@@ -1,7 +1,6 @@
 - Added offline handwriting and offline translation support across all app flavors.
 - Added offline model manager with browser download and multi-file import support.
 - Unified Plugins settings hub with automated update checking for Voice and Handwriting plugins.
-- Enabled Handwriting, Translation, and Clipboard Search toolbar keys on all builds.
 - Added smart text expander clipboard modifiers and citation cleaner.
 - Fixed symbol keyboard resetting to letters when typing emoticons (:), :().
 - Fixed personal dictionary auto-learning based on configured threshold.
