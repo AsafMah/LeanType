@@ -81,9 +81,16 @@ fun LibrariesHubScreen(
                         ) { NextScreenIcon() }
 
                         // Offline Voice Input
+                        val voicePluginManager = remember { helium314.keyboard.latin.voice.VoicePluginManager(context) }
+                        val voiceInstalled = voicePluginManager.isPluginInstalled()
+                        val voiceSummary = if (voiceInstalled) {
+                            stringResource(R.string.libraries_status_active)
+                        } else {
+                            stringResource(R.string.libraries_status_not_installed)
+                        }
                         Preference(
                             name = stringResource(R.string.offline_voice_title),
-                            description = stringResource(R.string.pref_offline_voice_summary),
+                            description = voiceSummary,
                             onClick = onClickOfflineVoice,
                             icon = R.drawable.sym_keyboard_voice_holo
                         ) { NextScreenIcon() }
