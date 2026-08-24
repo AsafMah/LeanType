@@ -415,38 +415,11 @@ class HandwritingView @JvmOverloads constructor(
 
         recognitionExecutor.execute {
             try {
-                val urlStr = "https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest/download/handwriting_plugin.apk"
-                var url = java.net.URL(urlStr)
-                var conn = url.openConnection() as java.net.HttpURLConnection
-                conn.instanceFollowRedirects = true
-                conn.setRequestProperty("User-Agent", "HeliboardL")
-                conn.connect()
-
-                var redirectConn = conn
-                var status = redirectConn.responseCode
-                var redirectCount = 0
-                while ((status == java.net.HttpURLConnection.HTTP_MOVED_TEMP || status == java.net.HttpURLConnection.HTTP_MOVED_PERM || status == java.net.HttpURLConnection.HTTP_SEE_OTHER) && redirectCount < 5) {
-                    val newUrl = redirectConn.getHeaderField("Location")
-                    redirectConn.disconnect()
-                    val nextUrl = java.net.URL(newUrl)
-                    redirectConn = nextUrl.openConnection() as java.net.HttpURLConnection
-                    redirectConn.setRequestProperty("User-Agent", "HeliboardL")
-                    redirectConn.connect()
-                    status = redirectConn.responseCode
-                    redirectCount++
-                }
-
-                if (status != java.net.HttpURLConnection.HTTP_OK) {
-                    throw java.io.IOException("Server returned HTTP $status")
-                }
-
                 val tempFile = java.io.File(context.cacheDir, "temp_handwriting_plugin.apk")
-                redirectConn.inputStream.use { input ->
-                    java.io.FileOutputStream(tempFile).use { output ->
-                        input.copyTo(output)
-                    }
+                val downloaded = HandwritingLoader.downloadPluginApk(context, null, tempFile)
+                if (!downloaded) {
+                    throw java.io.IOException("Failed to download handwriting plugin APK")
                 }
-                redirectConn.disconnect()
 
                 val success = HandwritingLoader.importPlugin(context, android.net.Uri.fromFile(tempFile))
                 tempFile.delete()

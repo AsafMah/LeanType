@@ -62,6 +62,80 @@ object HandwritingLoader {
         return displayName
     }
 
+    @JvmStatic
+    fun getTargetAbi(): String {
+        for (abi in android.os.Build.SUPPORTED_ABIS) {
+            when (abi) {
+                "arm64-v8a" -> return "arm64-v8a"
+                "armeabi-v7a" -> return "armeabi-v7a"
+                "x86_64" -> return "x86_64"
+                "x86" -> return "x86"
+            }
+        }
+        return "arm64-v8a"
+    }
+
+    @JvmStatic
+    fun getPluginDownloadUrl(tag: String? = null): String {
+        val abi = getTargetAbi()
+        val filename = "handwriting_plugin-$abi.apk"
+        return if (tag == null || tag == "latest") {
+            "https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest/download/$filename"
+        } else {
+            "https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/download/$tag/$filename"
+        }
+    }
+
+    @JvmStatic
+    fun downloadPluginApk(context: Context, tag: String? = null, tempFile: File): Boolean {
+        val urlsToTry = listOf(
+            getPluginDownloadUrl(tag),
+            if (tag == null || tag == "latest") {
+                "https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest/download/handwriting_plugin.apk"
+            } else {
+                "https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/download/$tag/handwriting_plugin.apk"
+            }
+        ).distinct()
+
+        for (urlStr in urlsToTry) {
+            try {
+                val url = java.net.URL(urlStr)
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.instanceFollowRedirects = true
+                conn.setRequestProperty("User-Agent", "HeliboardL")
+                conn.connect()
+
+                var redirectConn = conn
+                var status = redirectConn.responseCode
+                var redirectCount = 0
+                while ((status == java.net.HttpURLConnection.HTTP_MOVED_TEMP || status == java.net.HttpURLConnection.HTTP_MOVED_PERM || status == java.net.HttpURLConnection.HTTP_SEE_OTHER) && redirectCount < 5) {
+                    val newUrl = redirectConn.getHeaderField("Location")
+                    redirectConn.disconnect()
+                    val nextUrl = java.net.URL(newUrl)
+                    redirectConn = nextUrl.openConnection() as java.net.HttpURLConnection
+                    redirectConn.setRequestProperty("User-Agent", "HeliboardL")
+                    redirectConn.connect()
+                    status = redirectConn.responseCode
+                    redirectCount++
+                }
+
+                if (status == java.net.HttpURLConnection.HTTP_OK) {
+                    redirectConn.inputStream.use { input ->
+                        java.io.FileOutputStream(tempFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    redirectConn.disconnect()
+                    return true
+                }
+                redirectConn.disconnect()
+            } catch (e: Exception) {
+                Log.w("HandwritingLoader", "Failed to download from $urlStr", e)
+            }
+        }
+        return false
+    }
+
     private const val NATIVE_LOADER_DEX_BASE64 = "ZGV4CjAzNQAkiCvTdFX0r/3RrbselneGBCvx+cvJKtkwAwAAcAAAAHhWNBIAAAAAAAAAAJACAAAKAAAAcAAAAAUAAACYAAAAAgAAAKwAAAAAAAAAAAAAAAQAAADEAAAAAQAAAOQAAAAsAgAABAEAAEYBAABOAQAAhAEAAJgBAACsAQAAwAEAANMBAADWAQAA2gEAAOABAAABAAAAAgAAAAMAAAAEAAAABgAAAAYAAAAEAAAAAAAAAAcAAAAEAAAAQAEAAAAAAAAAAAAAAAABAAgAAAABAAAAAAAAAAMAAQAIAAAAAAAAAAEAAAABAAAAAAAAAAUAAAAAAAAAfgIAAAAAAAABAAEAAQAAADQBAAAEAAAAcBACAAAADgABAAEAAQAAADgBAAAEAAAAcRADAAAADgACAA4ABAEADjwAAAABAAAAAgAGPGluaXQ+ADRMaGVsaXVtMzE0L2tleWJvYXJkL2hhbmR3cml0aW5nL3BsdWdpbi9OYXRpdmVMb2FkZXI7ABJMamF2YS9sYW5nL09iamVjdDsAEkxqYXZhL2xhbmcvU3RyaW5nOwASTGphdmEvbGFuZy9TeXN0ZW07ABFOYXRpdmVMb2FkZXIuamF2YQABVgACVkwABGxvYWQAmwF+fkQ4eyJiYWNrZW5kIjoiZGV4IiwiY29tcGlsYXRpb24tbW9kZSI6ImRlYnVnIiwiaGFzLWNoZWNrc3VtcyI6ZmFsc2UsIm1pbi1hcGkiOjEsInNoYS0xIjoiNzUwYTIxYjRmNDI4MWIxZjQ1M2I2NDllMGI4NGYxYmE5YzA0ZjRmYyIsInZlcnNpb24iOiI5LjAuMy1kZXYifQAAAAIAAIGABIQCAQmcAgAAAAANAAAAAAAAAAEAAAAAAAAAAQAAAAoAAABwAAAAAgAAAAUAAACYAAAAAwAAAAIAAACsAAAABQAAAAQAAADEAAAABgAAAAEAAADkAAAAASAAAAIAAAAEAQAAAyAAAAIAAAA0AQAAARAAAAEAAABAAQAAAiAAAAoAAABGAQAAACAAAAEAAAB+AgAAAxAAAAEAAACMAgAAABAAAAEAAACQAgAA"
 
     private fun getNativeLoaderDex(context: Context): File {
