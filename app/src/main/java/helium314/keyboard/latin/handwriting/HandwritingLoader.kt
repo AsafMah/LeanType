@@ -82,6 +82,7 @@ object HandwritingLoader {
         }
 
         try {
+            ensureWorkManagerInitialized(context)
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
@@ -100,6 +101,20 @@ object HandwritingLoader {
             Log.e("HandwritingLoader", "Failed to link handwriting plugin (ML Kit incompatible on this OS)", e)
         }
         return null
+    }
+
+    private fun ensureWorkManagerInitialized(context: Context) {
+        try {
+            androidx.work.WorkManager.getInstance(context)
+        } catch (_: IllegalStateException) {
+            try {
+                androidx.work.WorkManager.initialize(
+                    context.applicationContext,
+                    (context.applicationContext as? androidx.work.Configuration.Provider)?.workManagerConfiguration
+                        ?: androidx.work.Configuration.Builder().build()
+                )
+            } catch (_: Throwable) {}
+        }
     }
 
     fun hasPlugin(context: Context): Boolean {
@@ -136,6 +151,7 @@ object HandwritingLoader {
             apkFile.setReadOnly()
 
             // Verify the plugin loads successfully
+            ensureWorkManagerInitialized(context)
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
@@ -176,7 +192,7 @@ object HandwritingLoader {
         activeRecognizer = null
     }
 
-    private class PluginContext(base: Context, private val apkPath: String) : android.content.ContextWrapper(base) {
+    private class PluginContext(base: Context, private val apkPath: String) : android.content.ContextWrapper(base), androidx.work.Configuration.Provider {
         private val pluginResources: android.content.res.Resources by lazy {
             try {
                 val assetManager = android.content.res.AssetManager::class.java.getDeclaredConstructor().newInstance()
@@ -194,6 +210,10 @@ object HandwritingLoader {
         override fun getAssets(): android.content.res.AssetManager = pluginResources.assets
 
         override fun getApplicationContext(): Context = this
+
+        override val workManagerConfiguration: androidx.work.Configuration
+            get() = (baseContext.applicationContext as? androidx.work.Configuration.Provider)?.workManagerConfiguration
+                ?: androidx.work.Configuration.Builder().build()
     }
 
     private class PluginClassLoader(

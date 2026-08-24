@@ -312,7 +312,7 @@ private val flavorExcludedKeys by lazy {
     else emptyList()
     val otherKeys = if (BuildConfig.FLAVOR == "offlinelite")
         listOf(PROOFREAD, TRANSLATE, CLIPBOARD_SEARCH, HANDWRITING)
-    else if (BuildConfig.FLAVOR == "offline" || BuildConfig.FLAVOR == "standard")
+    else if (BuildConfig.FLAVOR == "offline")
         listOf(HANDWRITING)
     else
         emptyList()
