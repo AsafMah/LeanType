@@ -34,46 +34,58 @@ object HandwritingModelImporter {
         val normalizedTag = languageTag.replace('_', '-')
         val targetTags = setOf(normalizedTag, baseLang, languageTag)
 
-        val tempFile = File.createTempFile("hw_import", ".tmp", context.cacheDir)
+        val tempExtractDir = File(context.cacheDir, "hw_import_${System.currentTimeMillis()}")
+        tempExtractDir.mkdirs()
+
         return try {
             if (filenameHint.endsWith(".zip", ignoreCase = true)) {
-                var extracted = false
                 ZipInputStream(inputStream.buffered()).use { zipIn ->
                     var entry = zipIn.nextEntry
                     while (entry != null) {
-                        if (!entry.isDirectory && (entry.name.contains("model.tflite") || entry.name.endsWith(".local") || entry.name.endsWith(".tflite"))) {
-                            FileOutputStream(tempFile).use { out ->
-                                zipIn.copyTo(out)
+                        if (!entry.isDirectory) {
+                            val lowerName = entry.name.lowercase()
+                            val destName = when {
+                                lowerName.contains("recospec") -> "recospec"
+                                lowerName.contains("fst") || lowerName.endsWith(".compact") -> "fst.compact"
+                                lowerName.endsWith(".tflite") || lowerName.contains("model") || lowerName.endsWith(".local") -> "model.tflite"
+                                else -> null
                             }
-                            extracted = true
-                            break
+                            if (destName != null) {
+                                val destFile = File(tempExtractDir, destName)
+                                FileOutputStream(destFile).use { out ->
+                                    zipIn.copyTo(out)
+                                }
+                            }
                         }
                         zipIn.closeEntry()
                         entry = zipIn.nextEntry
                     }
                 }
-                if (!extracted) return false
             } else {
-                FileOutputStream(tempFile).use { out ->
+                val destFile = File(tempExtractDir, "model.tflite")
+                FileOutputStream(destFile).use { out ->
                     inputStream.copyTo(out)
                 }
             }
 
-            if (tempFile.length() == 0L) return false
+            val extractedFiles = tempExtractDir.listFiles()?.filter { it.length() > 0 } ?: emptyList()
+            if (extractedFiles.isEmpty()) return false
 
             for (tag in targetTags) {
                 val targetDir = File(baseDir, "com.google.mlkit.models/$tag/DIGITAL_INK/0")
                 targetDir.mkdirs()
-                val targetModelFile = File(targetDir, "model.tflite")
-                tempFile.copyTo(targetModelFile, overwrite = true)
+                for (file in extractedFiles) {
+                    val targetFile = File(targetDir, file.name)
+                    file.copyTo(targetFile, overwrite = true)
+                }
             }
-            Log.i(TAG, "Successfully imported handwriting model for $languageTag (installed to $targetTags)")
+            Log.i(TAG, "Successfully imported handwriting model for $languageTag (files: ${extractedFiles.map { it.name }} -> $targetTags)")
             true
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to import handwriting model for $languageTag", e)
             false
         } finally {
-            tempFile.delete()
+            tempExtractDir.deleteRecursively()
         }
     }
 }
