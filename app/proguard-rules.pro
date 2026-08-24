@@ -55,10 +55,11 @@
     <methods>;
 }
 
-# Keep ML Kit, GMS Tasks, and Firebase components for handwriting plugin dynamic linkage
+# Keep ML Kit, DataTransport, GMS Tasks, and Firebase components for plugin dynamic linkage
 -keep class com.google.mlkit.** { *; }
--keep class com.google.android.gms.tasks.** { *; }
--keep class com.google.firebase.components.** { *; }
+-keep class com.google.android.datatransport.** { *; }
+-keep class com.google.android.gms.** { *; }
+-keep class com.google.firebase.** { *; }
 
 # Keep Kotlin standard library for dynamically loaded plugins
 # ponytail: keep kotlin stdlib classes to prevent NoSuchMethodError in plugin loading

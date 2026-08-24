@@ -31,7 +31,7 @@ object TranslationLoader {
         apkFile.setReadOnly()
 
         return try {
-            val classLoader = DexClassLoader(
+            val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
                 null,
@@ -87,7 +87,7 @@ object TranslationLoader {
             apkFile.setReadOnly()
 
             // Verify the plugin loads successfully
-            val classLoader = DexClassLoader(
+            val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
                 null,
@@ -137,5 +137,30 @@ object TranslationLoader {
             context.codeCacheDir.deleteRecursively()
         } catch (_: Exception) {}
         context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
+    }
+
+    private class PluginClassLoader(
+        dexPath: String,
+        optimizedDirectory: String?,
+        librarySearchPath: String?,
+        parent: ClassLoader
+    ) : DexClassLoader(dexPath, optimizedDirectory, librarySearchPath, parent) {
+        override fun loadClass(name: String, resolve: Boolean): Class<*> {
+            if (name.startsWith("helium314.keyboard.translation.plugin.") ||
+                name.startsWith("com.google.mlkit.") ||
+                name.startsWith("com.google.android.datatransport.") ||
+                name.startsWith("com.google.android.gms.") ||
+                name.startsWith("com.google.firebase.")
+            ) {
+                val loaded = findLoadedClass(name)
+                if (loaded != null) return loaded
+                try {
+                    return findClass(name)
+                } catch (_: ClassNotFoundException) {
+                    // fallback to parent
+                }
+            }
+            return super.loadClass(name, resolve)
+        }
     }
 }
