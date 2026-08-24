@@ -128,21 +128,21 @@ Include these hashtags in your custom prompts to enforce strict system roles:
 
 ## 4. Multi-Mode In-Keyboard Translation
 
-LeanType offers a flexible translation architecture supporting 3 versatile translation modes:
+LeanType offers a flexible translation architecture supporting all app flavors:
 
-1. **Built-in Offline Translation (ML Kit)** (`standardfull` flavor):
-   - **100% On-Device & Private**: Translates text entirely locally on your device without sending text to external servers.
-   - **In-App Offline Translation Model Manager**: Download 59+ language translation models directly inside the keyboard settings with real-time download progress indicators (~30 MB per language pack).
-2. **Translation Plugin**:
-   - High-speed translation powered by the companion [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest).
-   - Features automatic fallback to built-in translation if the plugin encounters network timeouts or unexpected errors.
+1. **Translation Plugin** (Supported across all flavors):
+   - High-speed, private translation powered by the companion [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest).
+   - In-app model downloads for online builds, and browser download + local file importing for offline builds.
+2. **Built-in Offline Translation (ML Kit)**:
+   - 100% On-Device & Private translation on supported builds.
+   - Download 59+ language translation models directly inside keyboard settings (~30 MB per language pack).
 3. **Cloud & Local AI Translation**:
    - Uses your configured **AI Provider** (Google Gemini, Groq, OpenAI, Ollama, or local GGUF models) with customizable translation prompts.
 
 ### How to Setup
 1. In LeanType, open **Settings → Translation**.
-2. Select your preferred **Translation Mode** (**Built-in Offline**, **Plugin Translation**, or **AI Translation**).
-3. If using **Built-in Offline Translation**, tap **Offline Translation Models** to download your source and target language pairs.
+2. Install the companion [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) (or configure AI on online builds).
+3. Download or import your required source and target language pairs.
 4. Tap the **Translate** icon on the keyboard toolbar to instantly translate selected text or entire input fields.
 
 ---
@@ -172,15 +172,12 @@ LeanType integrates high-accuracy, private speech-to-text powered by OpenAI's Wh
 
 ## 6. Handwriting Input
 
-> [!NOTE]
-> Available in the **Standard Full** (`-standardfull-release.apk`) build flavor.
-
-Draw letters, words, or symbols directly on a handwriting recognition canvas using your finger or stylus.
+Draw letters, words, or symbols directly on a handwriting recognition canvas using your finger or stylus via the companion [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (supported across all flavors).
 
 ### Setup Instructions
 1. Open **Settings → Handwriting**.
 2. Tap **Download Plugin** to install the companion [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (with automated update checking and version notifications).
-3. Use the **In-App Offline Handwriting Models** dialog to download recognition language packs directly with real-time download progress.
+3. Use the **Offline Handwriting Models** dialog to download recognition packs directly (or import downloaded `.zip` model packs on offline builds).
 4. Customize stroke width, stroke fade timeout, and recognition sensitivity.
 5. Tap the **Handwriting (Pencil)** icon on the keyboard toolbar to open the drawing canvas and write naturally.
 
@@ -369,18 +366,15 @@ Map the custom keycode `-10076` (`SWITCH_TO_USER_IME`) to any toolbar key:
 ---
 
 ## 23. Flavor Architecture & Privacy
-
+ 
 LeanType is published in **4 purpose-built flavors**:
-
-| Flavor | Cloud AI | Offline AI | Voice Input | Handwriting | In-App Updates | Internet Permission | Min SDK | Approx Size |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Standard Full** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ | 🌐 Required *(Opt-in)* | SDK 23 (6.0+) | **~23 MB** |
-| **Standard (FOSS)** | ✅ | ❌ | ✅ *(Plugin)* | ❌ | ❌ | 🌐 Required *(Opt-in)* | SDK 23 (6.0+) | **~11 MB** |
-| **Offline AI** | ❌ | ✅ *(GGUF)* | ✅ *(Plugin)* | ❌ | ❌ | 🚫 **None** | SDK 26 (8.0+) | **~67 MB** |
-| **Offline Lite** | ❌ | ❌ | ✅ *(Plugin)* | ❌ | ❌ | 🚫 **None** | SDK 21 (5.0+) | **~26 MB** |
+ 
+| Flavor | Cloud AI | Offline AI | Voice Input | Handwriting | Translation | In-App Updates | Internet Permission | Min SDK | Approx Size |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Standard Full** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI/ML Kit)* | ✅ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~23 MB** |
+| **Standard (FOSS)** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ❌ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~11 MB** |
+| **Offline AI** | ❌ | ✅ *(GGUF)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 26 (8.0+) | **~67 MB** |
+| **Offline Lite** | ❌ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 21 (5.0+) | **~26 MB** |
 
 > [!TIP]
 > **Concurrent Installation**: The `offline` (`com.leanbitlab.leantype.offline`) and `offlinelite` (`com.leanbitlab.leantype.offlinelite`) builds use unique package IDs, allowing you to install them alongside `standardfull` on the same device!
-
-
-

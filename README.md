@@ -54,12 +54,12 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 | **Target Audience** | **Recommended** for full feature set | F-Droid / 100% Pure FOSS users | Privacy purists wanting **Local AI** | Minimalists wanting **Zero AI** |
 | **Cloud AI** *(Gemini, Groq, OpenAI)* | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
 | **Offline AI** *(Local GGUF via llama.cpp)* | ❌ No | ❌ No | ✅ **Yes** | ❌ No |
-| **Translation Engine** | ✅ **Built-in Offline (ML Kit)**<br>+ AI + Translation Plugin | ✅ **AI or Translation Plugin**<br>*(User Choice / Auto fallback)* | ⚙️ **Offline GGUF only** | ❌ No |
+| **Translation** *(Offline & AI)* | ✅ **Yes** *(Plugin, AI, or ML Kit)* | ✅ **Yes** *(Plugin or AI)* | ✅ **Yes** *(via Plugin)* | ✅ **Yes** *(via Plugin)* |
 | **Voice Typing** *(On-device Whisper)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* |
-| **Handwriting Input** *(ML Kit)* | ✅ **Yes** *(via plugin)* | ❌ No *(Proprietary-free)* | ❌ No | ❌ No |
+| **Handwriting Input** | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* |
 | **In-App Self-Updater** | ✅ **Yes** *(GitHub Releases)* | ❌ No *(F-Droid managed)* | ❌ No | ❌ No |
-| **Dynamic Downloader** | ✅ Dictionaries & Models | ✅ Dictionaries | ❌ Manual loading only | ❌ Manual loading only |
-| **Internet Permission** | 🌐 Required *(Opt-in features)* | 🌐 Required *(Opt-in features)* | 🚫 **None** *(OS-level blocked)* | 🚫 **None** *(OS-level blocked)* |
+| **Plugins & Models Setup** | In-app download or File import | In-app download or File import | Browser download + File import | Browser download + File import |
+| **Internet Permission** | 🌐 Optional *(Cloud AI/Updates)* | 🌐 Optional *(Cloud AI)* | 🚫 **None** *(OS-level blocked)* | 🚫 **None** *(OS-level blocked)* |
 | **Package ID** | `com.leanbitlab.leantype` | `com.leanbitlab.leantype` | `com.leanbitlab.leantype.offline` | `com.leanbitlab.leantype.offlinelite` |
 | **Min Android Version** | Android 6.0+ *(SDK 23)* | Android 6.0+ *(SDK 23)* | Android 8.0+ *(SDK 26)* | Android 5.0+ *(SDK 21)* |
 | **Approximate APK Size** | **~23 MB** | **~11 MB** | **~67 MB** | **~26 MB** |
@@ -75,13 +75,13 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 - **Multi-Provider Cloud & Self-Hosted AI**: Integrated proofreading, grammar correction, and text rewriting powered by **Google Gemini**, **Groq** (Llama 3.3, Mixtral, DeepSeek), **OpenAI**, or any **Self-Hosted local LLM server** (Ollama, LM Studio, LocalAI, vLLM, or custom OpenAI-compatible endpoints).
 - **Dynamic Model Fetching**: Automatically fetches and populates the latest available model IDs directly from your cloud or self-hosted provider.
 - **🛡️ Offline Neural Proofreading (GGUF)**: Run compact, quantized GGUF language models directly on your device via embedded `llama.cpp`—100% private, zero network access (`offline` flavor).
-- **🌐 Multi-Mode In-Keyboard Translation**: Translate text directly into any language without switching apps. Choose between **Built-in Offline Translation (ML Kit)** (`standardfull` flavor with in-app model manager), dedicated **Translation Plugin**, or your configured **Cloud / Self-Hosted AI Provider** (Gemini, Groq, OpenAI, Ollama, local GGUF) with seamless automatic fallback.
+- **🌐 Multi-Mode In-Keyboard Translation**: Translate text directly into any language without switching apps. Choose between **Offline Translation Plugin** (supported across all flavors), **Built-in Offline Translation (ML Kit)**, or your configured **Cloud / Self-Hosted AI Provider** (Gemini, Groq, OpenAI, Ollama) with seamless fallback.
 - **🧠 Custom AI Keys & Capsules**: Assign custom prompts, personas (`#editor`, `#proofread`), and themed tag capsules to 10 customizable toolbar keys.
 
 ### 🎙️ Voice & Handwriting Input
 - **On-Device Whisper Voice Typing**: High-accuracy speech recognition powered by compact quantized **Whisper models** via the [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin).
 - **Interactive Voice Toolbar**: Real-time waveform audio visualizer, silence detection sensitivity slider, and background keep-alive options.
-- **✍️ Handwriting Recognition**: Draw characters or words directly on an expansive writing canvas using the [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (`standardfull` flavor), with dedicated settings and model management.
+- **✍️ Handwriting Recognition**: Draw characters or words directly on an expansive writing canvas using the [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (supported across all flavors), with dedicated settings and in-app/offline model management.
 
 ### ⌨️ Layouts, Navigation & Typing
 - **👆 Gesture / Glide Typing**: Smooth swipe typing powered by native C++ libraries (`libjni_latinime.so`).
@@ -146,11 +146,9 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 
 ### 3. Translation Setup (Offline & Online)
 1. In LeanType, open **Settings → Translation**.
-2. Select your preferred **Translation Mode**:
-   - **Built-in Offline (ML Kit)** (`standardfull`): 100% on-device private translation. Tap **Offline Translation Models** to download 59+ language pairs directly with in-app progress.
-   - **Translation Plugin**: High-speed translation via the companion [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest).
-   - **AI Translation**: Translate using your configured Cloud or Self-Hosted AI provider.
-3. Tap the **Translate** icon on the keyboard toolbar to translate selected text or your input field instantly.
+2. Install the companion [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) (or configure Cloud/Self-Hosted AI for online builds).
+3. Download or import your required language translation models.
+4. Tap the **Translate** icon on the keyboard toolbar to translate selected text or your input field instantly.
 
 ### 4. Gesture Typing Setup
 1. In the `standard` and `standardfull` builds, open **Settings → Gesture typing** to download the gesture library automatically.
