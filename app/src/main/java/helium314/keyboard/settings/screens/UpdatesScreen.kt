@@ -73,6 +73,7 @@ import java.net.URL
 
 private val currentChangelogItems = listOf(
     "• Added offline handwriting and offline translation across all app flavors",
+    "• Google ML Kit completely removed from core keyboard and isolated into standalone plugins",
     "• Added offline model manager with browser download and file import support",
     "• Unified Plugins settings hub with automated plugin update checking",
     "• Added smart text expander clipboard modifiers and citation cleaner",

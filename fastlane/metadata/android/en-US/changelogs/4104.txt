@@ -1,4 +1,5 @@
 - Added offline handwriting and offline translation support across all app flavors.
+- Google ML Kit completely removed from core keyboard and isolated into standalone plugins.
 - Added offline model manager with browser download and multi-file import support.
 - Unified Plugins settings hub with automated update checking for Voice and Handwriting plugins.
 - Added smart text expander clipboard modifiers and citation cleaner.

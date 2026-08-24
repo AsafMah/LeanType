@@ -7,6 +7,7 @@ As an open-source, community-funded project, we operate on a very limited budget
 ### ✨ New Features & Enhancements
 
 - **Offline Handwriting & Translation Everywhere**: Offline handwriting recognition and translation plugins are now fully supported across all app flavors (Standard, Standard Full, Offline, and Offline Lite).
+- **ML Kit Isolated into Plugins**: Google ML Kit has been completely removed from the core keyboard and isolated into standalone companion plugins.
 - **Offline Model Downloader & Importer**: In-app model downloads for online flavors and direct browser download popups + multi-file import for offline flavors.
 - **Unified Plugins Dashboard**: Reorganized settings with a single Plugins hub showing active status and automated update checks for Voice and Handwriting plugins.
 
