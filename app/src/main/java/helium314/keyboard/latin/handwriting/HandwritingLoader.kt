@@ -67,9 +67,18 @@ object HandwritingLoader {
     private fun getNativeLoaderDex(context: Context): File {
         val dexFile = File(context.codeCacheDir, "native_loader.dex")
         if (!dexFile.exists() || dexFile.length() == 0L) {
-            val bytes = android.util.Base64.decode(NATIVE_LOADER_DEX_BASE64, android.util.Base64.DEFAULT)
-            dexFile.outputStream().use { it.write(bytes) }
+            try {
+                if (dexFile.exists()) {
+                    dexFile.setWritable(true)
+                    dexFile.delete()
+                }
+                val bytes = android.util.Base64.decode(NATIVE_LOADER_DEX_BASE64, android.util.Base64.DEFAULT)
+                dexFile.outputStream().use { it.write(bytes) }
+            } catch (e: Exception) {
+                Log.e("HandwritingLoader", "Failed to write native loader dex", e)
+            }
         }
+        dexFile.setReadOnly()
         return dexFile
     }
 
