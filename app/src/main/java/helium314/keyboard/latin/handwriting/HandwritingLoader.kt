@@ -103,6 +103,21 @@ object HandwritingLoader {
         }
     }
 
+    private fun getNativeLibDir(context: Context, apkFile: File): File {
+        val baseDir = File(context.filesDir, "plugin_libs")
+        if (!baseDir.exists()) baseDir.mkdirs()
+        val targetName = "handwriting_${apkFile.lastModified()}"
+        val targetDir = File(baseDir, targetName)
+        baseDir.listFiles()?.forEach { f ->
+            if (f.isDirectory && (f.name.startsWith("handwriting_") || f.name == "handwriting") && f.name != targetName) {
+                try {
+                    f.deleteRecursively()
+                } catch (_: Exception) {}
+            }
+        }
+        return targetDir
+    }
+
     @JvmStatic
     fun getRecognizer(context: Context): HandwritingRecognizer? {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return null
@@ -124,7 +139,7 @@ object HandwritingLoader {
 
         try {
             ensureWorkManagerInitialized(context)
-            val nativeLibDir = File(context.filesDir, "plugin_libs/handwriting")
+            val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
             val libFile = File(nativeLibDir, "libdigitalink.so")
             val nativeLoaderDex = getNativeLoaderDex(context)
@@ -235,7 +250,7 @@ object HandwritingLoader {
 
             // Verify the plugin loads successfully
             ensureWorkManagerInitialized(context)
-            val nativeLibDir = File(context.filesDir, "plugin_libs/handwriting")
+            val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
             val libFile = File(nativeLibDir, "libdigitalink.so")
             val nativeLoaderDex = getNativeLoaderDex(context)
@@ -265,7 +280,12 @@ object HandwritingLoader {
                 context.codeCacheDir.deleteRecursively()
             } catch (_: Exception) {}
             try {
-                File(context.filesDir, "plugin_libs/handwriting").deleteRecursively()
+                val baseDir = File(context.filesDir, "plugin_libs")
+                baseDir.listFiles()?.forEach { f ->
+                    if (f.isDirectory && (f.name.startsWith("handwriting_") || f.name == "handwriting")) {
+                        f.deleteRecursively()
+                    }
+                }
             } catch (_: Exception) {}
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
             activeRecognizer = null
@@ -281,7 +301,12 @@ object HandwritingLoader {
             context.codeCacheDir.deleteRecursively()
         } catch (_: Exception) {}
         try {
-            File(context.filesDir, "plugin_libs/handwriting").deleteRecursively()
+            val baseDir = File(context.filesDir, "plugin_libs")
+            baseDir.listFiles()?.forEach { f ->
+                if (f.isDirectory && (f.name.startsWith("handwriting_") || f.name == "handwriting")) {
+                    f.deleteRecursively()
+                }
+            }
         } catch (_: Exception) {}
         context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
         activeRecognizer = null
