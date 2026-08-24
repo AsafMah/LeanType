@@ -4,6 +4,7 @@ package helium314.keyboard.latin.handwriting
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import helium314.keyboard.latin.utils.locale
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -47,6 +48,85 @@ object HandwritingModelImporter {
         }
         Log.i(TAG, "Deleted handwriting model for $languageTag (deleted=$deleted)")
         return deleted
+    }
+
+    private val SCRIPT_TO_LANG = mapOf(
+        "malayalam" to "ml", "tamil" to "ta", "telugu" to "te", "devanagari" to "hi",
+        "bengali" to "bn", "gujarati" to "gu", "kannada" to "kn", "arabic" to "ar",
+        "japanese" to "ja", "korean" to "ko", "thai" to "th", "vietnamese" to "vi",
+        "myanmar" to "my", "sinhala" to "si", "odia" to "or", "punjabi" to "pa"
+    )
+
+    fun detectLanguageTag(filename: String): String? {
+        val name = filename.lowercase()
+        val qrnnRegex = Regex("""qrnn[._]([a-z]{2,3}(?:[_-][a-z0-9]+)?)[._]reco""")
+        qrnnRegex.find(name)?.let { return it.groupValues[1].replace('_', '-') }
+
+        val fstRegex = Regex("""^([a-z]{2,3}(?:[_-][a-z0-9]+)?)[._]\d+[._]compact""")
+        fstRegex.find(name)?.let { return it.groupValues[1].replace('_', '-') }
+
+        val zipRegex = Regex("""^([a-z]{2,3}(?:[_-][a-z0-9]+)?)(?:[._-]model)?\.zip$""")
+        zipRegex.find(name)?.let { return it.groupValues[1].replace('_', '-') }
+
+        val lstmRegex = Regex("""lstm[._]([a-z]+)[._]""")
+        lstmRegex.find(name)?.let {
+            val script = it.groupValues[1]
+            return SCRIPT_TO_LANG[script] ?: script
+        }
+
+        for ((script, lang) in SCRIPT_TO_LANG) {
+            if (name.contains(script)) return lang
+        }
+        return null
+    }
+
+    fun importAutoDetectedUris(context: Context, uris: List<Uri>): Set<String> {
+        val importedTags = mutableSetOf<String>()
+        val pendingSharedModels = mutableListOf<Pair<Uri, String>>()
+
+        for (uri in uris) {
+            val filename = getFilename(context, uri) ?: uri.lastPathSegment ?: ""
+            val detectedTag = detectLanguageTag(filename)
+            if (detectedTag != null && detectedTag != "latin") {
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        val ok = importForLanguageFromStream(context, detectedTag, stream, filename)
+                        if (ok) importedTags.add(detectedTag)
+                    }
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Failed auto import for $detectedTag from $uri", e)
+                }
+            } else {
+                pendingSharedModels.add(Pair(uri, filename))
+            }
+        }
+
+        if (importedTags.isNotEmpty()) {
+            for ((uri, filename) in pendingSharedModels) {
+                for (tag in importedTags) {
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            importForLanguageFromStream(context, tag, stream, filename)
+                        }
+                    } catch (_: Throwable) {}
+                }
+            }
+        } else if (pendingSharedModels.isNotEmpty()) {
+            val enabledSubtypes = helium314.keyboard.latin.utils.SubtypeSettings.getEnabledSubtypes(true)
+            for (sub in enabledSubtypes) {
+                val tag = sub.locale().toLanguageTag()
+                for ((uri, filename) in pendingSharedModels) {
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            val ok = importForLanguageFromStream(context, tag, stream, filename)
+                            if (ok) importedTags.add(tag)
+                        }
+                    } catch (_: Throwable) {}
+                }
+            }
+        }
+
+        return importedTags
     }
 
     fun importForLanguage(context: Context, languageTag: String, uri: Uri): Boolean {

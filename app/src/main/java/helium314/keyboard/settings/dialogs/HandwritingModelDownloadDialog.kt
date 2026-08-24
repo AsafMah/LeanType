@@ -76,17 +76,17 @@ fun HandwritingModelDownloadDialog(
     val recognizer = remember { HandwritingLoader.getRecognizer(context) }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri>? ->
-        val lang = targetImportLang
-        if (!uris.isNullOrEmpty() && lang != null) {
+        if (!uris.isNullOrEmpty()) {
             scope.launch(Dispatchers.IO) {
-                val success = HandwritingModelImporter.importMultipleUrisForLanguage(context, lang, uris)
-                val newStatus = HandwritingModelImporter.getComponentsStatus(context, lang)
+                val importedTags = HandwritingModelImporter.importAutoDetectedUris(context, uris)
                 withContext(Dispatchers.Main) {
-                    statusMap[lang] = newStatus
-                    downloadedMap[lang] = newStatus.isReady
-                    if (success) {
-                        val msg = if (newStatus.isComplete) "Model files imported for $lang" else "Handwriting model imported for $lang"
-                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    if (importedTags.isNotEmpty()) {
+                        for (tag in importedTags) {
+                            val newStatus = HandwritingModelImporter.getComponentsStatus(context, tag)
+                            statusMap[tag] = newStatus
+                            downloadedMap[tag] = newStatus.isReady
+                        }
+                        Toast.makeText(context, "Imported models for: ${importedTags.joinToString(", ")}", Toast.LENGTH_SHORT).show()
                         onModelChanged?.invoke()
                     } else {
                         Toast.makeText(context, "Failed to import model files", Toast.LENGTH_SHORT).show()
@@ -148,6 +148,28 @@ fun HandwritingModelDownloadDialog(
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp)
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isOffline) "Download models in browser, then import" else "Download in app or import files",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                    )
+                    Button(
+                        onClick = { importLauncher.launch("*/*") },
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text("Import Files", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -216,94 +238,66 @@ fun HandwritingModelDownloadDialog(
                                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                                     }
                                 } else if (isDownloaded) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        if (!status.isComplete) {
-                                            OutlinedButton(
-                                                onClick = {
-                                                    targetImportLang = item.code
-                                                    importLauncher.launch("*/*")
-                                                },
-                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                                modifier = Modifier.height(28.dp)
-                                            ) {
-                                                Text("Add FST", style = MaterialTheme.typography.labelSmall)
-                                            }
-                                        }
-
-                                        Button(
-                                            onClick = {
-                                                scope.launch(Dispatchers.IO) {
-                                                    HandwritingModelImporter.deleteModelForLanguage(context, item.code)
-                                                    recognizer?.removeModel(item.code)
-                                                    val newStatus = HandwritingModelImporter.getComponentsStatus(context, item.code)
-                                                    withContext(Dispatchers.Main) {
-                                                        statusMap[item.code] = newStatus
-                                                        downloadedMap[item.code] = newStatus.isReady
-                                                        Toast.makeText(context, "Model deleted", Toast.LENGTH_SHORT).show()
-                                                        onModelChanged?.invoke()
-                                                    }
+                                    Button(
+                                        onClick = {
+                                            scope.launch(Dispatchers.IO) {
+                                                HandwritingModelImporter.deleteModelForLanguage(context, item.code)
+                                                recognizer?.removeModel(item.code)
+                                                val newStatus = HandwritingModelImporter.getComponentsStatus(context, item.code)
+                                                withContext(Dispatchers.Main) {
+                                                    statusMap[item.code] = newStatus
+                                                    downloadedMap[item.code] = newStatus.isReady
+                                                    Toast.makeText(context, "Model deleted", Toast.LENGTH_SHORT).show()
+                                                    onModelChanged?.invoke()
                                                 }
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                            modifier = Modifier.height(28.dp)
-                                        ) {
-                                            Text("Delete", style = MaterialTheme.typography.labelSmall)
-                                        }
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                        modifier = Modifier.height(28.dp)
+                                    ) {
+                                        Text("Delete", style = MaterialTheme.typography.labelSmall)
                                     }
                                 } else {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                targetImportLang = item.code
-                                                importLauncher.launch("*/*")
-                                            },
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                            modifier = Modifier.height(28.dp)
-                                        ) {
-                                            Text("Import", style = MaterialTheme.typography.labelSmall)
-                                        }
-
-                                        Button(
-                                            onClick = {
-                                                if (isOffline) {
-                                                    val urls = HandwritingModelUrls.getDownloadUrls(item.code)
-                                                    for (url in urls) {
-                                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                        }
-                                                        try {
-                                                            context.startActivity(intent)
-                                                        } catch (_: Exception) {}
+                                    Button(
+                                        onClick = {
+                                            if (isOffline) {
+                                                val urls = HandwritingModelUrls.getDownloadUrls(item.code)
+                                                for (url in urls) {
+                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                                     }
-                                                    Toast.makeText(context, "Downloading model files in browser…", Toast.LENGTH_SHORT).show()
-                                                } else {
-                                                    downloadingMap[item.code] = true
-                                                    scope.launch(Dispatchers.IO) {
-                                                        val ok = HandwritingModelImporter.downloadPacksForLanguage(context, item.code)
-                                                        val newStatus = HandwritingModelImporter.getComponentsStatus(context, item.code)
-                                                        withContext(Dispatchers.Main) {
-                                                            downloadingMap[item.code] = false
-                                                            statusMap[item.code] = newStatus
-                                                            downloadedMap[item.code] = newStatus.isReady
-                                                            if (ok && newStatus.isReady) {
-                                                                Toast.makeText(context, "Downloaded ${item.displayName}", Toast.LENGTH_SHORT).show()
-                                                                onModelChanged?.invoke()
-                                                            } else {
-                                                                Toast.makeText(context, "Download failed", Toast.LENGTH_SHORT).show()
-                                                            }
+                                                    try {
+                                                        context.startActivity(intent)
+                                                    } catch (_: Exception) {}
+                                                }
+                                                Toast.makeText(context, "Downloading model files in browser…", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                downloadingMap[item.code] = true
+                                                scope.launch(Dispatchers.IO) {
+                                                    val ok = HandwritingModelImporter.downloadPacksForLanguage(context, item.code)
+                                                    val newStatus = HandwritingModelImporter.getComponentsStatus(context, item.code)
+                                                    withContext(Dispatchers.Main) {
+                                                        downloadingMap[item.code] = false
+                                                        statusMap[item.code] = newStatus
+                                                        downloadedMap[item.code] = newStatus.isReady
+                                                        if (ok && newStatus.isReady) {
+                                                            Toast.makeText(context, "Downloaded ${item.displayName}", Toast.LENGTH_SHORT).show()
+                                                            onModelChanged?.invoke()
+                                                        } else {
+                                                            Toast.makeText(context, "Download failed", Toast.LENGTH_SHORT).show()
                                                         }
                                                     }
                                                 }
-                                            },
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                            modifier = Modifier.height(28.dp)
-                                        ) {
-                                            Text("Download", style = MaterialTheme.typography.labelSmall)
-                                        }
+                                            }
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                        modifier = Modifier.height(28.dp)
+                                    ) {
+                                        Text("Download", style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
                             }
