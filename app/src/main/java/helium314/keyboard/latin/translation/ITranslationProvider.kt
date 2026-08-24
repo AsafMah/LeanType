@@ -4,7 +4,7 @@ package helium314.keyboard.latin.translation
 import android.content.Context
 
 fun interface TranslationModelDownloadListener {
-    fun onComplete(success: Boolean)
+    fun onComplete(success: Boolean, errorMessage: String?)
 }
 
 interface ITranslationProvider {
@@ -36,7 +36,7 @@ interface ITranslationProvider {
     fun isModelDownloaded(langCode: String): Boolean = false
 
     /** Trigger download of a language model. */
-    fun downloadModel(langCode: String, listener: TranslationModelDownloadListener) { listener.onComplete(false) }
+    fun downloadModel(langCode: String, listener: TranslationModelDownloadListener) { listener.onComplete(false, "Unsupported") }
 
     /** Delete a downloaded language model to free storage. */
     fun deleteModel(langCode: String): Boolean = false
