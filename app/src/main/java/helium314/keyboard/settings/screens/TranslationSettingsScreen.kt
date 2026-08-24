@@ -97,8 +97,8 @@ fun TranslationSettingsScreen(
                     }
                 }
 
-                // Offline ML Kit Translation Models Card (standardfull only)
-                if (BuildConfig.FLAVOR == "standardfull" && translationInstalled) {
+                // Offline ML Kit Translation Models Card
+                if (translationInstalled) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()

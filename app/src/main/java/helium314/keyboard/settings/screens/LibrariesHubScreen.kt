@@ -94,7 +94,7 @@ fun LibrariesHubScreen(
                         if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
                             val translationInstalled = TranslationLoader.hasPlugin(context)
                             val summary = if (translationInstalled) {
-                                if (BuildConfig.FLAVOR == "standardfull") "Offline ML Kit & Online engine" else "Online Translation Plugin"
+                                "Offline ML Kit & Online engine"
                             } else {
                                 "Configure plugin & translation backend"
                             }
