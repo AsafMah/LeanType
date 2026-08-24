@@ -57,9 +57,21 @@ object HandwritingModelUrls {
         "vi" to "vietnamese"
     )
 
+    fun getDownloadUrls(languageTag: String): List<String> {
+        val normalizedTag = languageTag.replace('_', '-')
+        val baseLang = languageTag.substringBefore('-').lowercase()
+        
+        HandwritingModelPackData.LANGUAGE_PACKS[normalizedTag]?.let { if (it.isNotEmpty()) return it }
+        HandwritingModelPackData.LANGUAGE_PACKS[languageTag]?.let { if (it.isNotEmpty()) return it }
+        HandwritingModelPackData.LANGUAGE_PACKS[baseLang]?.let { if (it.isNotEmpty()) return it }
+        
+        // Fallback to script URL
+        val script = LANG_TO_SCRIPT[baseLang] ?: "latin"
+        val fallback = SCRIPT_URLS[script] ?: SCRIPT_URLS["latin"]!!
+        return listOf(fallback)
+    }
+
     fun getDownloadUrl(languageTag: String): String {
-        val lang = languageTag.substringBefore('-').lowercase()
-        val script = LANG_TO_SCRIPT[lang] ?: "latin"
-        return SCRIPT_URLS[script] ?: SCRIPT_URLS["latin"]!!
+        return getDownloadUrls(languageTag).firstOrNull() ?: SCRIPT_URLS["latin"]!!
     }
 }

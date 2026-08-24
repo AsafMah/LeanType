@@ -61,24 +61,28 @@ fun HandwritingModelDownloadDialog(
     var searchQuery by remember { mutableStateOf("") }
 
     val downloadedMap = remember { mutableStateMapOf<String, Boolean>() }
+    val statusMap = remember { mutableStateMapOf<String, HandwritingModelImporter.ModelComponentsStatus>() }
     var allLanguages by remember { mutableStateOf<List<HandwritingLanguageItem>>(emptyList()) }
     var isLoadingList by remember { mutableStateOf(true) }
     var targetImportLang by remember { mutableStateOf<String?>(null) }
 
     val recognizer = remember { HandwritingLoader.getRecognizer(context) }
 
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri>? ->
         val lang = targetImportLang
-        if (uri != null && lang != null) {
+        if (!uris.isNullOrEmpty() && lang != null) {
             scope.launch(Dispatchers.IO) {
-                val success = HandwritingModelImporter.importForLanguage(context, lang, uri)
+                val success = HandwritingModelImporter.importMultipleUrisForLanguage(context, lang, uris)
+                val newStatus = HandwritingModelImporter.getComponentsStatus(context, lang)
                 withContext(Dispatchers.Main) {
+                    statusMap[lang] = newStatus
+                    downloadedMap[lang] = newStatus.isReady
                     if (success) {
-                        downloadedMap[lang] = true
-                        Toast.makeText(context, "Handwriting model imported for $lang", Toast.LENGTH_SHORT).show()
+                        val msg = if (newStatus.isComplete) "All model files imported for $lang" else "Handwriting model imported for $lang"
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         onModelChanged?.invoke()
                     } else {
-                        Toast.makeText(context, "Failed to import handwriting model", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Failed to import handwriting model files", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -117,36 +121,26 @@ fun HandwritingModelDownloadDialog(
                 isLoadingList = false
             }
 
-            if (recognizer != null) {
-                combined.forEach { item ->
-                    val isReady = recognizer.isLanguageReady(item.code)
-                    withContext(Dispatchers.Main) {
-                        downloadedMap[item.code] = isReady
-                    }
+            combined.forEach { item ->
+                val status = HandwritingModelImporter.getComponentsStatus(context, item.code)
+                val isReady = status.isReady || (recognizer?.isLanguageReady(item.code) == true)
+                withContext(Dispatchers.Main) {
+                    statusMap[item.code] = status
+                    downloadedMap[item.code] = isReady
                 }
             }
         }
     }
 
-    ThreeButtonAlertDialog(
+    PreferenceDialog(
         onDismissRequest = onDismissRequest,
-        onConfirmed = {},
-        confirmButtonText = null,
-        cancelButtonText = null,
-        title = { Text("Handwriting Models") },
+        title = "Handwriting Models",
         content = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(440.dp)
+                    .padding(horizontal = 8.dp)
             ) {
-                Text(
-                    text = "Download model in browser, then tap Import",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -158,7 +152,7 @@ fun HandwritingModelDownloadDialog(
                 )
 
                 if (isLoadingList) {
-                    Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 } else {
@@ -171,10 +165,11 @@ fun HandwritingModelDownloadDialog(
                     }
 
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().weight(1f)
+                        modifier = Modifier.fillMaxWidth().height(400.dp)
                     ) {
                         items(filtered, key = { it.code }) { item ->
-                            val isDownloaded = downloadedMap[item.code] == true
+                            val status = statusMap[item.code] ?: HandwritingModelImporter.getComponentsStatus(context, item.code)
+                            val isDownloaded = status.isReady || downloadedMap[item.code] == true
 
                             Row(
                                 modifier = Modifier
@@ -190,40 +185,61 @@ fun HandwritingModelDownloadDialog(
                                         fontWeight = if (isDownloaded) FontWeight.Bold else FontWeight.Normal
                                     )
                                     val statusText = when {
-                                        isDownloaded -> if (item.isEnabledSubtype) "Downloaded (Enabled Layout)" else "Downloaded (Offline ready)"
-                                        else -> if (item.isEnabledSubtype) "Available for layout" else "Available"
+                                        status.isComplete -> if (item.isEnabledSubtype) "● Ready (Complete • Layout enabled)" else "● Ready (Complete • Offline ready)"
+                                        status.isReady -> "▲ Ready (Missing Dictionary • Predictive only)"
+                                        else -> if (item.isEnabledSubtype) "○ Available for layout" else "○ Available"
+                                    }
+                                    val statusColor = when {
+                                        status.isComplete -> MaterialTheme.colorScheme.primary
+                                        status.isReady -> MaterialTheme.colorScheme.tertiary
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
                                     }
                                     Text(
                                         text = statusText,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (isDownloaded) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = statusColor
                                     )
                                 }
 
                                 if (isDownloaded) {
-                                    Button(
-                                        onClick = {
-                                            scope.launch(Dispatchers.IO) {
-                                                val removed = recognizer?.removeModel(item.code) == true
-                                                withContext(Dispatchers.Main) {
-                                                    if (removed) {
-                                                        downloadedMap[item.code] = false
-                                                        Toast.makeText(context, "Handwriting model deleted", Toast.LENGTH_SHORT).show()
-                                                        onModelChanged?.invoke()
-                                                    } else {
-                                                        Toast.makeText(context, "Failed to delete handwriting model", Toast.LENGTH_SHORT).show()
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        if (!status.isComplete) {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    targetImportLang = item.code
+                                                    importLauncher.launch("*/*")
+                                                },
+                                                modifier = Modifier.height(34.dp)
+                                            ) {
+                                                Text("Add Missing", style = MaterialTheme.typography.labelMedium)
+                                            }
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                scope.launch(Dispatchers.IO) {
+                                                    val removed = recognizer?.removeModel(item.code) == true
+                                                    val newStatus = HandwritingModelImporter.getComponentsStatus(context, item.code)
+                                                    withContext(Dispatchers.Main) {
+                                                        statusMap[item.code] = newStatus
+                                                        downloadedMap[item.code] = newStatus.isReady
+                                                        if (removed || !newStatus.isReady) {
+                                                            Toast.makeText(context, "Handwriting model deleted", Toast.LENGTH_SHORT).show()
+                                                            onModelChanged?.invoke()
+                                                        } else {
+                                                            Toast.makeText(context, "Failed to delete handwriting model", Toast.LENGTH_SHORT).show()
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                        ),
-                                        modifier = Modifier.height(34.dp)
-                                    ) {
-                                        Text("Delete", style = MaterialTheme.typography.labelMedium)
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                            ),
+                                            modifier = Modifier.height(34.dp)
+                                        ) {
+                                            Text("Delete", style = MaterialTheme.typography.labelMedium)
+                                        }
                                     }
                                 } else {
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -239,12 +255,18 @@ fun HandwritingModelDownloadDialog(
 
                                         Button(
                                             onClick = {
-                                                val url = HandwritingModelUrls.getDownloadUrl(item.code)
-                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                val urls = HandwritingModelUrls.getDownloadUrls(item.code)
+                                                for (url in urls) {
+                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                    }
+                                                    try {
+                                                        context.startActivity(intent)
+                                                    } catch (_: Exception) {}
                                                 }
-                                                context.startActivity(intent)
-                                                Toast.makeText(context, "Downloading in browser… tap Import once finished", Toast.LENGTH_LONG).show()
+                                                val msg = if (urls.size > 1) "Downloading all ${urls.size} model files in browser… tap Import once finished"
+                                                          else "Downloading model in browser… tap Import once finished"
+                                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                             },
                                             modifier = Modifier.height(34.dp)
                                         ) {
