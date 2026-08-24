@@ -137,7 +137,8 @@ object TranslationLoader {
                 return null
             }
 
-            provider.init(context.applicationContext)
+            val mergedContext = createMergedContext(context.applicationContext, apkFile)
+            provider.init(mergedContext)
             activeProviderRef = WeakReference(provider)
             provider
         } catch (e: Throwable) {
@@ -233,7 +234,8 @@ object TranslationLoader {
                 return false
             }
 
-            provider.init(context.applicationContext)
+            val mergedContext = createMergedContext(context.applicationContext, apkFile)
+            provider.init(mergedContext)
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
             activeProviderRef = WeakReference(provider)
             return true
@@ -301,22 +303,47 @@ object TranslationLoader {
         context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
     }
 
-    private class PluginContext(base: Context, private val apkPath: String) : android.content.ContextWrapper(base), androidx.work.Configuration.Provider {
-        private val pluginResources: android.content.res.Resources by lazy {
-            try {
-                val assetManager = android.content.res.AssetManager::class.java.getDeclaredConstructor().newInstance()
-                val addAssetPathMethod = android.content.res.AssetManager::class.java.getDeclaredMethod("addAssetPath", String::class.java)
-                addAssetPathMethod.invoke(assetManager, apkPath)
-                android.content.res.Resources(assetManager, base.resources.displayMetrics, base.resources.configuration)
-            } catch (e: Throwable) {
-                Log.e(TAG, "Failed to create plugin resources", e)
-                base.resources
+    private fun createMergedContext(host: Context, pluginApk: File): Context {
+        val hostRes = host.resources
+        val assetManager = try {
+            val am = android.content.res.AssetManager::class.java.getDeclaredConstructor().newInstance()
+            val addAssetPathMethod = android.content.res.AssetManager::class.java.getDeclaredMethod("addAssetPath", String::class.java)
+            val hostSourceDir = host.applicationInfo.sourceDir ?: host.packageResourcePath
+            if (hostSourceDir != null) {
+                addAssetPathMethod.invoke(am, hostSourceDir)
             }
+            addAssetPathMethod.invoke(am, pluginApk.absolutePath)
+            am
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to create merged AssetManager", e)
+            host.assets
         }
+        val mergedResources = try {
+            android.content.res.Resources(
+                assetManager,
+                hostRes.displayMetrics,
+                hostRes.configuration
+            )
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to create merged Resources", e)
+            hostRes
+        }
+        return MergedPluginContext(
+            host.applicationContext,
+            assetManager,
+            mergedResources
+        )
+    }
 
-        override fun getResources(): android.content.res.Resources = pluginResources
+    private class MergedPluginContext(
+        base: Context,
+        private val mergedAssets: android.content.res.AssetManager,
+        private val mergedResources: android.content.res.Resources
+    ) : android.content.ContextWrapper(base), androidx.work.Configuration.Provider {
 
-        override fun getAssets(): android.content.res.AssetManager = pluginResources.assets
+        override fun getResources(): android.content.res.Resources = mergedResources
+
+        override fun getAssets(): android.content.res.AssetManager = mergedAssets
 
         override fun getApplicationContext(): Context = this
 
