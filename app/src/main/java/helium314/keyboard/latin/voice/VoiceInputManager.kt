@@ -298,6 +298,7 @@ class VoiceInputManager(
     }
 
     private fun startAudioRecordingThread(): Boolean {
+        stopAudioLoop() // Prevent zombie thread overlap on rapid re-entry
         if (ContextCompat.checkSelfPermission(ims, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             Log.e(TAG, "startAudioRecordingThread: Missing RECORD_AUDIO permission")
             return false
@@ -479,26 +480,40 @@ class VoiceInputManager(
         if (!isRecording.getAndSet(false)) return
         Log.i(TAG, "stopAudioLoop() executing")
 
+        // 1. Unblock the blocking native read() call by stopping AudioRecord
         try {
             audioRecord?.stop()
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping AudioRecord", e)
         }
+
+        // 2. Wait for background VoiceAudioThread to fully exit native read() and terminate
+        audioThread?.let { thread ->
+            try {
+                thread.join(1000)
+                // 3. Edge-case guard: if driver hung, skip release to avoid native SIGABRT proxy crash
+                if (thread.isAlive) {
+                    Log.w(TAG, "VoiceAudioThread hung. Skipping release() to avoid native proxy crash.")
+                    audioThread = null
+                    audioRecord = null
+                    closeQuietly(audioPipeWriteSide)
+                    audioPipeWriteSide = null
+                    return
+                }
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                Log.w(TAG, "Interrupted while joining audioThread", e)
+            }
+        }
+        audioThread = null
+
+        // 4. Safe to destroy native proxy ONLY after thread is confirmed dead
         try {
             audioRecord?.release()
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing AudioRecord", e)
         }
         audioRecord = null
-
-        audioThread?.let { thread ->
-            try {
-                thread.join(500)
-            } catch (e: InterruptedException) {
-                Log.w(TAG, "Interrupted while joining audioThread", e)
-            }
-        }
-        audioThread = null
 
         closeQuietly(audioPipeWriteSide)
         audioPipeWriteSide = null
