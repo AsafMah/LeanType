@@ -83,10 +83,12 @@ object HandwritingLoader {
 
         try {
             ensureWorkManagerInitialized(context)
+            val nativeLibDir = File(context.filesDir, "plugin_libs/handwriting")
+            extractNativeLibs(apkFile, nativeLibDir)
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
-                null,
+                nativeLibDir.absolutePath,
                 context.classLoader
             )
             val clazz = classLoader.loadClass(PLUGIN_CLASS_NAME)
@@ -101,6 +103,42 @@ object HandwritingLoader {
             Log.e("HandwritingLoader", "Failed to link handwriting plugin (ML Kit incompatible on this OS)", e)
         }
         return null
+    }
+
+    private fun extractNativeLibs(apkFile: File, outputDir: File) {
+        if (!outputDir.exists()) outputDir.mkdirs()
+        try {
+            java.util.zip.ZipFile(apkFile).use { zip ->
+                val abis = android.os.Build.SUPPORTED_ABIS
+                var targetAbi: String? = null
+                for (abi in abis) {
+                    if (zip.entries().asSequence().any { it.name.startsWith("lib/$abi/") && it.name.endsWith(".so") }) {
+                        targetAbi = abi
+                        break
+                    }
+                }
+                if (targetAbi != null) {
+                    val prefix = "lib/$targetAbi/"
+                    for (entry in zip.entries().asSequence()) {
+                        if (entry.name.startsWith(prefix) && entry.name.endsWith(".so")) {
+                            val fileName = entry.name.substring(prefix.length)
+                            val outFile = File(outputDir, fileName)
+                            if (!outFile.exists() || outFile.length() != entry.size) {
+                                zip.getInputStream(entry).use { input ->
+                                    outFile.outputStream().use { output ->
+                                        input.copyTo(output)
+                                    }
+                                }
+                                outFile.setReadable(true, false)
+                                outFile.setExecutable(true, false)
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            Log.e("HandwritingLoader", "Failed to extract native libraries", e)
+        }
     }
 
     private fun ensureWorkManagerInitialized(context: Context) {
@@ -152,10 +190,12 @@ object HandwritingLoader {
 
             // Verify the plugin loads successfully
             ensureWorkManagerInitialized(context)
+            val nativeLibDir = File(context.filesDir, "plugin_libs/handwriting")
+            extractNativeLibs(apkFile, nativeLibDir)
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
-                null,
+                nativeLibDir.absolutePath,
                 context.classLoader
             )
             val clazz = classLoader.loadClass(PLUGIN_CLASS_NAME)
@@ -175,6 +215,9 @@ object HandwritingLoader {
             try {
                 context.codeCacheDir.deleteRecursively()
             } catch (_: Exception) {}
+            try {
+                File(context.filesDir, "plugin_libs/handwriting").deleteRecursively()
+            } catch (_: Exception) {}
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
             activeRecognizer = null
         }
@@ -187,6 +230,9 @@ object HandwritingLoader {
         } catch (_: Exception) {}
         try {
             context.codeCacheDir.deleteRecursively()
+        } catch (_: Exception) {}
+        try {
+            File(context.filesDir, "plugin_libs/handwriting").deleteRecursively()
         } catch (_: Exception) {}
         context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
         activeRecognizer = null
