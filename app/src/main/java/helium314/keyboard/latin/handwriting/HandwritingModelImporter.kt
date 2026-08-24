@@ -23,22 +23,30 @@ object HandwritingModelImporter {
 
     fun getComponentsStatus(context: Context, languageTag: String): ModelComponentsStatus {
         val baseDir = context.noBackupFilesDir ?: context.filesDir
-        val baseLang = languageTag.substringBefore('-').lowercase()
         val normalizedTag = languageTag.replace('_', '-')
-        val tagsToCheck = setOf(normalizedTag, baseLang, languageTag)
+        val dir = File(baseDir, "com.google.mlkit.models/$normalizedTag/DIGITAL_INK/0")
 
-        var hasModel = false
-        var hasFst = false
-        var hasRecospec = false
-
-        for (tag in tagsToCheck) {
-            val dir = File(baseDir, "com.google.mlkit.models/$tag/DIGITAL_INK/0")
-            if (File(dir, "model.tflite").exists() && File(dir, "model.tflite").length() > 0) hasModel = true
-            if (File(dir, "fst.compact").exists() && File(dir, "fst.compact").length() > 0) hasFst = true
-            if (File(dir, "recospec").exists() && File(dir, "recospec").length() > 0) hasRecospec = true
-        }
+        val hasModel = File(dir, "model.tflite").exists() && File(dir, "model.tflite").length() > 0
+        val hasFst = File(dir, "fst.compact").exists() && File(dir, "fst.compact").length() > 0
+        val hasRecospec = File(dir, "recospec").exists() && File(dir, "recospec").length() > 0
 
         return ModelComponentsStatus(hasModel, hasFst, hasRecospec)
+    }
+
+    fun deleteModelForLanguage(context: Context, languageTag: String): Boolean {
+        val baseDir = context.noBackupFilesDir ?: context.filesDir
+        val normalizedTag = languageTag.replace('_', '-')
+        var deleted = false
+        val dir = File(baseDir, "com.google.mlkit.models/$normalizedTag/DIGITAL_INK/0")
+        if (dir.exists()) {
+            deleted = dir.deleteRecursively()
+        }
+        val parent = File(baseDir, "com.google.mlkit.models/$normalizedTag")
+        if (parent.exists()) {
+            parent.deleteRecursively()
+        }
+        Log.i(TAG, "Deleted handwriting model for $languageTag (deleted=$deleted)")
+        return deleted
     }
 
     fun importForLanguage(context: Context, languageTag: String, uri: Uri): Boolean {
@@ -83,9 +91,7 @@ object HandwritingModelImporter {
         filenameHint: String
     ): Boolean {
         val baseDir = context.noBackupFilesDir ?: context.filesDir
-        val baseLang = languageTag.substringBefore('-').lowercase()
         val normalizedTag = languageTag.replace('_', '-')
-        val targetTags = setOf(normalizedTag, baseLang, languageTag)
 
         val tempExtractDir = File(context.cacheDir, "hw_import_${System.currentTimeMillis()}")
         tempExtractDir.mkdirs()
@@ -130,15 +136,13 @@ object HandwritingModelImporter {
             val extractedFiles = tempExtractDir.listFiles()?.filter { it.length() > 0 } ?: emptyList()
             if (extractedFiles.isEmpty()) return false
 
-            for (tag in targetTags) {
-                val targetDir = File(baseDir, "com.google.mlkit.models/$tag/DIGITAL_INK/0")
-                targetDir.mkdirs()
-                for (file in extractedFiles) {
-                    val targetFile = File(targetDir, file.name)
-                    file.copyTo(targetFile, overwrite = true)
-                }
+            val targetDir = File(baseDir, "com.google.mlkit.models/$normalizedTag/DIGITAL_INK/0")
+            targetDir.mkdirs()
+            for (file in extractedFiles) {
+                val targetFile = File(targetDir, file.name)
+                file.copyTo(targetFile, overwrite = true)
             }
-            Log.i(TAG, "Successfully imported handwriting model files for $languageTag (files: ${extractedFiles.map { it.name }} -> $targetTags)")
+            Log.i(TAG, "Successfully imported handwriting model files for $languageTag (files: ${extractedFiles.map { it.name }} -> $normalizedTag)")
             true
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to import handwriting model for $languageTag", e)
@@ -146,5 +150,37 @@ object HandwritingModelImporter {
         } finally {
             tempExtractDir.deleteRecursively()
         }
+    }
+
+    suspend fun downloadPacksForLanguage(
+        context: Context,
+        languageTag: String,
+        onProgress: ((Float) -> Unit)? = null
+    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val urls = HandwritingModelUrls.getDownloadUrls(languageTag)
+        if (urls.isEmpty()) return@withContext false
+
+        var successCount = 0
+        val total = urls.size
+        for ((index, urlStr) in urls.withIndex()) {
+            try {
+                val url = java.net.URL(urlStr)
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 15000
+                conn.readTimeout = 30000
+                conn.instanceFollowRedirects = true
+                if (conn.responseCode in 200..299) {
+                    val filename = urlStr.substringAfterLast('/')
+                    conn.inputStream.use { stream ->
+                        val ok = importForLanguageFromStream(context, languageTag, stream, filename)
+                        if (ok) successCount++
+                    }
+                }
+                onProgress?.invoke((index + 1).toFloat() / total)
+            } catch (e: Throwable) {
+                Log.e(TAG, "Error downloading model pack $urlStr for $languageTag", e)
+            }
+        }
+        successCount > 0
     }
 }
