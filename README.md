@@ -62,7 +62,7 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 | **Internet Permission** | 🌐 Optional *(Cloud AI/Updates)* | 🌐 Optional *(Cloud AI)* | 🚫 **None** *(OS-level blocked)* | 🚫 **None** *(OS-level blocked)* |
 | **Package ID** | `com.leanbitlab.leantype` | `com.leanbitlab.leantype` | `com.leanbitlab.leantype.offline` | `com.leanbitlab.leantype.offlinelite` |
 | **Min Android Version** | Android 6.0+ *(SDK 23)* | Android 6.0+ *(SDK 23)* | Android 8.0+ *(SDK 26)* | Android 5.0+ *(SDK 21)* |
-| **Approximate APK Size** | **~23 MB** | **~11 MB** | **~67 MB** | **~26 MB** |
+| **Approximate APK Size** | **~11 MB** | **~11 MB** | **~67 MB** | **~26 MB** |
 
 > [!TIP]
 > **APK Installation Notice**: Google Play Protect or your browser may block direct APK installations downloaded from web browsers. If you experience installation issues, install via [Obtainium](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/LeanBitLab/HeliboardL) or a package manager like [App Manager](https://github.com/MuntashirAkon/AppManager).
