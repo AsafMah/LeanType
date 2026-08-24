@@ -38,22 +38,38 @@
 -dontwarn com.google.api.client.**
 -dontwarn java.lang.management.**
 -dontwarn org.joda.time.**
+-dontwarn com.google.ai.client.generativeai.**
+-dontwarn de.kherud.llama.**
+-dontwarn org.nehuatl.llamacpp.**
 
-# Keep offline voice plugin AIDL interface and parcelable classes
+# Keep offline voice plugin AIDL interface, parcelables, and host managers
 -keep class com.leanbitlab.leantype.voice.** { *; }
 -keep interface com.leanbitlab.leantype.voice.** { *; }
+-keep class helium314.keyboard.latin.voice.** { *; }
 
+# Keep handwriting plugin interface and classes to prevent signature optimization or inlining
 -keep interface helium314.keyboard.latin.handwriting.HandwritingRecognizer {
     <methods>;
 }
 -keep interface helium314.keyboard.latin.handwriting.ModelDownloadListener {
     <methods>;
 }
+-keep class helium314.keyboard.latin.handwriting.** { *; }
+-keep interface helium314.keyboard.latin.handwriting.** { *; }
 
 # Keep translation plugin interface to prevent parameter removal/signature optimization
 -keep interface helium314.keyboard.latin.translation.ITranslationProvider {
     <methods>;
 }
+-keep interface helium314.keyboard.latin.translation.TranslationModelDownloadListener {
+    <methods>;
+}
+-keep class helium314.keyboard.latin.translation.** { *; }
+-keep interface helium314.keyboard.latin.translation.** { *; }
+
+# Keep WorkManager plugin factory & runtime for dynamically loaded plugins
+-keep class helium314.keyboard.latin.work.** { *; }
+-keep interface helium314.keyboard.latin.work.** { *; }
 
 # Keep ML Kit, DataTransport, GMS Tasks, and Firebase components for plugin dynamic linkage
 -keep class com.google.mlkit.** { *; }
