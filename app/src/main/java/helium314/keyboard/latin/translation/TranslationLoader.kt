@@ -138,6 +138,12 @@ object TranslationLoader {
             }
 
             val mergedContext = createMergedContext(context.applicationContext, apkFile)
+            val pluginRuntime = helium314.keyboard.latin.work.PluginRuntime(
+                classLoader = classLoader,
+                workerContext = mergedContext
+            )
+            helium314.keyboard.latin.App.pluginWorkerFactory.pluginRuntime = pluginRuntime
+
             provider.init(mergedContext)
             activeProviderRef = WeakReference(provider)
             provider
@@ -235,6 +241,12 @@ object TranslationLoader {
             }
 
             val mergedContext = createMergedContext(context.applicationContext, apkFile)
+            val pluginRuntime = helium314.keyboard.latin.work.PluginRuntime(
+                classLoader = classLoader,
+                workerContext = mergedContext
+            )
+            helium314.keyboard.latin.App.pluginWorkerFactory.pluginRuntime = pluginRuntime
+
             provider.init(mergedContext)
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
             activeProviderRef = WeakReference(provider)
@@ -286,8 +298,19 @@ object TranslationLoader {
 
     fun removePlugin(context: Context) {
         unloadPlugin()
+        helium314.keyboard.latin.App.pluginWorkerFactory.pluginRuntime = null
         try {
             File(context.filesDir, PLUGIN_FILENAME).delete()
+        } catch (_: Exception) {}
+        try {
+            File(context.cacheDir, "temp_translation_plugin.apk").delete()
+        } catch (_: Exception) {}
+        try {
+            context.cacheDir.listFiles()?.forEach { f ->
+                if (f.name.contains("translation_plugin")) {
+                    f.delete()
+                }
+            }
         } catch (_: Exception) {}
         try {
             context.codeCacheDir.deleteRecursively()

@@ -372,6 +372,16 @@ object HandwritingLoader {
             File(context.filesDir, PLUGIN_FILENAME).delete()
         } catch (_: Exception) {}
         try {
+            File(context.cacheDir, "temp_handwriting_plugin.apk").delete()
+        } catch (_: Exception) {}
+        try {
+            context.cacheDir.listFiles()?.forEach { f ->
+                if (f.name.contains("handwriting_plugin")) {
+                    f.delete()
+                }
+            }
+        } catch (_: Exception) {}
+        try {
             context.codeCacheDir.deleteRecursively()
         } catch (_: Exception) {}
         try {
