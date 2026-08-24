@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.dialogs
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -35,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.translation.ITranslationProvider
+import helium314.keyboard.latin.translation.TranslationModelImporter
+import helium314.keyboard.latin.translation.TranslationModelUrls
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,9 +60,29 @@ fun TranslationModelDownloadDialog(
     var searchQuery by remember { mutableStateOf("") }
     
     val downloadedMap = remember { mutableStateMapOf<String, Boolean>() }
-    val downloadingMap = remember { mutableStateMapOf<String, Boolean>() }
     var allLanguages by remember { mutableStateOf<List<TranslationLanguageItem>>(emptyList()) }
     var isLoadingList by remember { mutableStateOf(true) }
+
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                val importedModel = TranslationModelImporter.importFromUri(context, uri)
+                withContext(Dispatchers.Main) {
+                    if (importedModel != null) {
+                        allLanguages.forEach { item ->
+                            val mName = TranslationModelUrls.getModelName(item.code)
+                            if (mName == importedModel || item.code == importedModel) {
+                                downloadedMap[item.code] = true
+                            }
+                        }
+                        Toast.makeText(context, "Model $importedModel imported successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Failed to import translation model .zip", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -115,8 +140,29 @@ fun TranslationModelDownloadDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(420.dp)
+                    .height(440.dp)
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Download model in browser, then import .zip",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                    )
+                    Button(
+                        onClick = { importLauncher.launch("application/zip") },
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Text("Import .zip", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -141,32 +187,31 @@ fun TranslationModelDownloadDialog(
                     }
 
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().weight(1f)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
                     ) {
                         items(filtered, key = { it.code }) { item ->
-                            val isEnglish = item.code == "en"
                             val isDownloaded = downloadedMap[item.code] == true
-                            val isDownloading = downloadingMap[item.code] == true
+                            val isEnglish = item.code == "en"
 
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                    .padding(vertical = 6.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                                     Text(
                                         text = item.displayName,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = if (isDownloaded) FontWeight.Bold else FontWeight.Normal
                                     )
                                     Text(
-                                        text = if (isEnglish) "Built-in (Base)"
-                                        else if (isDownloaded) "Downloaded (~30 MB)"
-                                        else "Available (~30 MB)",
+                                        text = if (isEnglish) "Built-in" else if (isDownloaded) "Downloaded (Offline ready)" else "Not downloaded",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (isDownloaded || isEnglish)
+                                        color = if (isDownloaded)
                                             MaterialTheme.colorScheme.primary
                                         else
                                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -180,8 +225,6 @@ fun TranslationModelDownloadDialog(
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.padding(end = 8.dp)
                                     )
-                                } else if (isDownloading) {
-                                    CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(end = 8.dp), strokeWidth = 2.dp)
                                 } else if (isDownloaded) {
                                     Button(
                                         onClick = {
@@ -205,45 +248,27 @@ fun TranslationModelDownloadDialog(
                                             containerColor = MaterialTheme.colorScheme.errorContainer,
                                             contentColor = MaterialTheme.colorScheme.onErrorContainer
                                         ),
-                                        modifier = Modifier.height(36.dp)
+                                        modifier = Modifier.height(34.dp)
                                     ) {
-                                        Text("Delete")
+                                        Text("Delete", style = MaterialTheme.typography.labelMedium)
                                     }
                                 } else {
                                     OutlinedButton(
                                         onClick = {
-                                            downloadingMap[item.code] = true
-                                            scope.launch(Dispatchers.IO) {
-                                                try {
-                                                    provider.downloadModel(item.code, object : helium314.keyboard.latin.translation.TranslationModelDownloadListener {
-                                                        override fun onComplete(success: Boolean, errorMessage: String?) {
-                                                            scope.launch(Dispatchers.Main) {
-                                                                downloadingMap[item.code] = false
-                                                                if (success) {
-                                                                    downloadedMap[item.code] = true
-                                                                    Toast.makeText(context, "${item.displayName} model downloaded", Toast.LENGTH_SHORT).show()
-                                                                } else {
-                                                                    val msg = if (!errorMessage.isNullOrBlank()) "Download failed: $errorMessage" else "Download failed for ${item.displayName}"
-                                                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                                                                }
-                                                            }
-                                                        }
-                                                        override fun onComplete(success: Boolean) {
-                                                            onComplete(success, null)
-                                                        }
-                                                    })
-                                                } catch (e: Throwable) {
-                                                    android.util.Log.e("TranslationDialog", "downloadModel invocation exception", e)
-                                                    scope.launch(Dispatchers.Main) {
-                                                        downloadingMap[item.code] = false
-                                                        Toast.makeText(context, "Download failed: ${e.message ?: "error"}", Toast.LENGTH_SHORT).show()
-                                                    }
+                                            val url = TranslationModelUrls.getDownloadUrl(item.code)
+                                            if (url != null) {
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                                 }
+                                                context.startActivity(intent)
+                                                Toast.makeText(context, "Downloading in browser… import .zip once finished", Toast.LENGTH_LONG).show()
+                                            } else {
+                                                Toast.makeText(context, "Download URL not available", Toast.LENGTH_SHORT).show()
                                             }
                                         },
-                                        modifier = Modifier.height(36.dp)
+                                        modifier = Modifier.height(34.dp)
                                     ) {
-                                        Text("Download")
+                                        Text("Download", style = MaterialTheme.typography.labelMedium)
                                     }
                                 }
                             }
@@ -251,6 +276,7 @@ fun TranslationModelDownloadDialog(
                     }
                 }
             }
-        }
+        },
+        scrollContent = false
     )
 }
