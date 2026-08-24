@@ -226,10 +226,11 @@ fun TranslationModelDownloadDialog(
                                                             }
                                                         }
                                                     }
-                                                } catch (_: Throwable) {
+                                                } catch (e: Throwable) {
+                                                    android.util.Log.e("TranslationDialog", "downloadModel invocation exception", e)
                                                     scope.launch(Dispatchers.Main) {
                                                         downloadingMap[item.code] = false
-                                                        Toast.makeText(context, "Download failed for ${item.displayName}", Toast.LENGTH_SHORT).show()
+                                                        Toast.makeText(context, "Download failed: ${e.message ?: "error"}", Toast.LENGTH_SHORT).show()
                                                     }
                                                 }
                                             }
