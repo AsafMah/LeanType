@@ -137,8 +137,7 @@ object TranslationLoader {
                 return null
             }
 
-            val pluginContext = PluginContext(context.applicationContext, apkFile.absolutePath)
-            provider.init(pluginContext)
+            provider.init(context.applicationContext)
             activeProviderRef = WeakReference(provider)
             provider
         } catch (e: Throwable) {
@@ -234,8 +233,7 @@ object TranslationLoader {
                 return false
             }
 
-            val pluginContext = PluginContext(context.applicationContext, apkFile.absolutePath)
-            provider.init(pluginContext)
+            provider.init(context.applicationContext)
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
             activeProviderRef = WeakReference(provider)
             return true
