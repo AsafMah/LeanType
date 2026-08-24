@@ -180,35 +180,39 @@ class HandwritingView @JvmOverloads constructor(
                         toolbar?.visibility = View.VISIBLE
                         languageLabel.text = "$displayName (Tap to download model)"
                         downloadProgress.visibility = View.GONE
-                        languageLabel.setOnClickListener {
-                            languageLabel.setOnClickListener(null)
-                            languageLabel.text = "$displayName (Downloading...)"
-                            downloadProgress.visibility = View.VISIBLE
-                            downloadProgress.progress = 0
-                            recognizer.downloadModel(language, object : ModelDownloadListener {
-                                override fun onProgress(progress: Float) {
-                                    mainHandler.post {
-                                        val percent = (progress * 100).toInt()
-                                        languageLabel.text = "$displayName (Downloading $percent%)"
-                                        downloadProgress.progress = percent
-                                    }
-                                }
-                                override fun onComplete(success: Boolean) {
-                                    mainHandler.post {
-                                        downloadProgress.visibility = View.GONE
-                                        if (success) {
-                                            toolbar?.visibility = View.GONE
-                                            languageLabel.text = displayName
-                                            android.widget.Toast.makeText(context, "Handwriting model downloaded", android.widget.Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            toolbar?.visibility = View.VISIBLE
-                                            languageLabel.text = "$displayName (Download failed - tap to retry)"
-                                            android.widget.Toast.makeText(context, "Failed to download handwriting model", android.widget.Toast.LENGTH_LONG).show()
+                        fun setupDownloadClickListener() {
+                            languageLabel.setOnClickListener {
+                                languageLabel.setOnClickListener(null)
+                                languageLabel.text = "$displayName (Downloading...)"
+                                downloadProgress.visibility = View.VISIBLE
+                                downloadProgress.progress = 0
+                                recognizer.downloadModel(language, object : ModelDownloadListener {
+                                    override fun onProgress(progress: Float) {
+                                        mainHandler.post {
+                                            val percent = (progress * 100).toInt()
+                                            languageLabel.text = "$displayName (Downloading $percent%)"
+                                            downloadProgress.progress = percent
                                         }
                                     }
-                                }
-                            })
+                                    override fun onComplete(success: Boolean) {
+                                        mainHandler.post {
+                                            downloadProgress.visibility = View.GONE
+                                            if (success) {
+                                                toolbar?.visibility = View.GONE
+                                                languageLabel.text = displayName
+                                                android.widget.Toast.makeText(context, "Handwriting model downloaded", android.widget.Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                toolbar?.visibility = View.VISIBLE
+                                                languageLabel.text = "$displayName (Download failed - tap to retry)"
+                                                android.widget.Toast.makeText(context, "Failed to download handwriting model", android.widget.Toast.LENGTH_LONG).show()
+                                                setupDownloadClickListener()
+                                            }
+                                        }
+                                    }
+                                })
+                            }
                         }
+                        setupDownloadClickListener()
                     } else {
                         toolbar?.visibility = View.GONE
                         languageLabel.text = displayName

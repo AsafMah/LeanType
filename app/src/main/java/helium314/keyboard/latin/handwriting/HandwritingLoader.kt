@@ -62,6 +62,38 @@ object HandwritingLoader {
         return displayName
     }
 
+    private const val NATIVE_LOADER_DEX_BASE64 = "ZGV4CjAzNQAkiCvTdFX0r/3RrbselneGBCvx+cvJKtkwAwAAcAAAAHhWNBIAAAAAAAAAAJACAAAKAAAAcAAAAAUAAACYAAAAAgAAAKwAAAAAAAAAAAAAAAQAAADEAAAAAQAAAOQAAAAsAgAABAEAAEYBAABOAQAAhAEAAJgBAACsAQAAwAEAANMBAADWAQAA2gEAAOABAAABAAAAAgAAAAMAAAAEAAAABgAAAAYAAAAEAAAAAAAAAAcAAAAEAAAAQAEAAAAAAAAAAAAAAAABAAgAAAABAAAAAAAAAAMAAQAIAAAAAAAAAAEAAAABAAAAAAAAAAUAAAAAAAAAfgIAAAAAAAABAAEAAQAAADQBAAAEAAAAcBACAAAADgABAAEAAQAAADgBAAAEAAAAcRADAAAADgACAA4ABAEADjwAAAABAAAAAgAGPGluaXQ+ADRMaGVsaXVtMzE0L2tleWJvYXJkL2hhbmR3cml0aW5nL3BsdWdpbi9OYXRpdmVMb2FkZXI7ABJMamF2YS9sYW5nL09iamVjdDsAEkxqYXZhL2xhbmcvU3RyaW5nOwASTGphdmEvbGFuZy9TeXN0ZW07ABFOYXRpdmVMb2FkZXIuamF2YQABVgACVkwABGxvYWQAmwF+fkQ4eyJiYWNrZW5kIjoiZGV4IiwiY29tcGlsYXRpb24tbW9kZSI6ImRlYnVnIiwiaGFzLWNoZWNrc3VtcyI6ZmFsc2UsIm1pbi1hcGkiOjEsInNoYS0xIjoiNzUwYTIxYjRmNDI4MWIxZjQ1M2I2NDllMGI4NGYxYmE5YzA0ZjRmYyIsInZlcnNpb24iOiI5LjAuMy1kZXYifQAAAAIAAIGABIQCAQmcAgAAAAANAAAAAAAAAAEAAAAAAAAAAQAAAAoAAABwAAAAAgAAAAUAAACYAAAAAwAAAAIAAACsAAAABQAAAAQAAADEAAAABgAAAAEAAADkAAAAASAAAAIAAAAEAQAAAyAAAAIAAAA0AQAAARAAAAEAAABAAQAAAiAAAAoAAABGAQAAACAAAAEAAAB+AgAAAxAAAAEAAACMAgAAABAAAAEAAACQAgAA"
+
+    private fun getNativeLoaderDex(context: Context): File {
+        val dexFile = File(context.codeCacheDir, "native_loader.dex")
+        if (!dexFile.exists() || dexFile.length() == 0L) {
+            val bytes = android.util.Base64.decode(NATIVE_LOADER_DEX_BASE64, android.util.Base64.DEFAULT)
+            dexFile.outputStream().use { it.write(bytes) }
+        }
+        return dexFile
+    }
+
+    private fun loadNativeLibrariesInPlugin(classLoader: ClassLoader, libFile: File) {
+        if (!libFile.exists()) return
+        var loadedInPlugin = false
+        try {
+            val loaderClass = classLoader.loadClass("helium314.keyboard.handwriting.plugin.NativeLoader")
+            val loadMethod = loaderClass.getMethod("load", String::class.java)
+            loadMethod.invoke(null, libFile.absolutePath)
+            loadedInPlugin = true
+            Log.i("HandwritingLoader", "Successfully loaded native digitalink library into PluginClassLoader")
+        } catch (e: Throwable) {
+            Log.e("HandwritingLoader", "Failed to load digitalink library via NativeLoader in PluginClassLoader", e)
+        }
+        if (!loadedInPlugin) {
+            try {
+                System.load(libFile.absolutePath)
+            } catch (e: Throwable) {
+                Log.e("HandwritingLoader", "Failed to System.load libdigitalink.so", e)
+            }
+        }
+    }
+
     @JvmStatic
     fun getRecognizer(context: Context): HandwritingRecognizer? {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return null
@@ -86,19 +118,15 @@ object HandwritingLoader {
             val nativeLibDir = File(context.filesDir, "plugin_libs/handwriting")
             extractNativeLibs(apkFile, nativeLibDir)
             val libFile = File(nativeLibDir, "libdigitalink.so")
-            if (libFile.exists()) {
-                try {
-                    System.load(libFile.absolutePath)
-                } catch (e: Throwable) {
-                    Log.e("HandwritingLoader", "Failed to System.load libdigitalink.so", e)
-                }
-            }
+            val nativeLoaderDex = getNativeLoaderDex(context)
+            val dexPaths = "${apkFile.absolutePath}${File.pathSeparator}${nativeLoaderDex.absolutePath}"
             val classLoader = PluginClassLoader(
-                apkFile.absolutePath,
+                dexPaths,
                 context.codeCacheDir.absolutePath,
                 nativeLibDir.absolutePath,
                 context.classLoader
             )
+            loadNativeLibrariesInPlugin(classLoader, libFile)
             val clazz = classLoader.loadClass(PLUGIN_CLASS_NAME)
             val recognizer = clazz.getDeclaredConstructor().newInstance() as HandwritingRecognizer
             val pluginContext = PluginContext(context.applicationContext, apkFile.absolutePath)
@@ -201,19 +229,15 @@ object HandwritingLoader {
             val nativeLibDir = File(context.filesDir, "plugin_libs/handwriting")
             extractNativeLibs(apkFile, nativeLibDir)
             val libFile = File(nativeLibDir, "libdigitalink.so")
-            if (libFile.exists()) {
-                try {
-                    System.load(libFile.absolutePath)
-                } catch (e: Throwable) {
-                    Log.e("HandwritingLoader", "Failed to System.load libdigitalink.so", e)
-                }
-            }
+            val nativeLoaderDex = getNativeLoaderDex(context)
+            val dexPaths = "${apkFile.absolutePath}${File.pathSeparator}${nativeLoaderDex.absolutePath}"
             val classLoader = PluginClassLoader(
-                apkFile.absolutePath,
+                dexPaths,
                 context.codeCacheDir.absolutePath,
                 nativeLibDir.absolutePath,
                 context.classLoader
             )
+            loadNativeLibrariesInPlugin(classLoader, libFile)
             val clazz = classLoader.loadClass(PLUGIN_CLASS_NAME)
             val recognizer = clazz.getDeclaredConstructor().newInstance() as HandwritingRecognizer
             val pluginContext = PluginContext(context.applicationContext, apkFile.absolutePath)
