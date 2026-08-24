@@ -215,18 +215,23 @@ fun TranslationModelDownloadDialog(
                                             downloadingMap[item.code] = true
                                             scope.launch(Dispatchers.IO) {
                                                 try {
-                                                    provider.downloadModel(item.code) { success, errorMsg ->
-                                                        scope.launch(Dispatchers.Main) {
-                                                            downloadingMap[item.code] = false
-                                                            if (success) {
-                                                                downloadedMap[item.code] = true
-                                                                Toast.makeText(context, "${item.displayName} model downloaded", Toast.LENGTH_SHORT).show()
-                                                            } else {
-                                                                val msg = if (!errorMsg.isNullOrBlank()) "Download failed: $errorMsg" else "Download failed for ${item.displayName}"
-                                                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                                    provider.downloadModel(item.code, object : helium314.keyboard.latin.translation.TranslationModelDownloadListener {
+                                                        override fun onComplete(success: Boolean, errorMessage: String?) {
+                                                            scope.launch(Dispatchers.Main) {
+                                                                downloadingMap[item.code] = false
+                                                                if (success) {
+                                                                    downloadedMap[item.code] = true
+                                                                    Toast.makeText(context, "${item.displayName} model downloaded", Toast.LENGTH_SHORT).show()
+                                                                } else {
+                                                                    val msg = if (!errorMessage.isNullOrBlank()) "Download failed: $errorMessage" else "Download failed for ${item.displayName}"
+                                                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                                                }
                                                             }
                                                         }
-                                                    }
+                                                        override fun onComplete(success: Boolean) {
+                                                            onComplete(success, null)
+                                                        }
+                                                    })
                                                 } catch (e: Throwable) {
                                                     android.util.Log.e("TranslationDialog", "downloadModel invocation exception", e)
                                                     scope.launch(Dispatchers.Main) {
