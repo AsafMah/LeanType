@@ -18,11 +18,11 @@ As an open-source, community-funded project, we operate on a very limited budget
 
 ## 📦 Choose Your Flavor
 
-| Flavor | Primary Focus | AI Engine | Plugins Support | Internet Access | Self-Updater |
+| Flavor | Primary Focus | AI Engine | Plugins & Models | Internet Permission | Self-Updater |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`1-LeanType_4.1.4-standardfull-release.apk`** | **Recommended** | Cloud AI (Gemini, Groq, OpenAI) | In-app downloads | Required | ✅ In-App Auto Update |
-| **`1-LeanType_4.1.4-standard-release.apk`** | **F-Droid / FOSS** | Cloud AI (Gemini, Groq, OpenAI) | In-app downloads | Required | ❌ None (F-Droid rules) |
-| **`2-LeanType_4.1.4-offline-release.apk`** | **Offline AI** | On-Device Local LLM (GGUF) | Browser download + Import | 🚫 Zero Internet | ❌ None |
-| **`3-LeanType_4.1.4-offlinelite-release.apk`** | **Offline Lite** | None (Lightest size) | Browser download + Import | 🚫 Zero Internet | ❌ None |
+| **`1-LeanType_4.1.4-standardfull-release.apk`** | **Recommended** | Cloud AI (Gemini, Groq, OpenAI) | In-app download or File import | Optional (Used for AI/Updates) | ✅ In-App Auto Update |
+| **`1-LeanType_4.1.4-standard-release.apk`** | **F-Droid / FOSS** | Cloud AI (Gemini, Groq, OpenAI) | In-app download or File import | Optional (Used for AI) | ❌ None (F-Droid rules) |
+| **`2-LeanType_4.1.4-offline-release.apk`** | **Offline AI** | On-Device Local LLM (GGUF) | Browser download + File import | 🚫 Zero Internet (No Permission) | ❌ None |
+| **`3-LeanType_4.1.4-offlinelite-release.apk`** | **Offline Lite** | None (Lightest size) | Browser download + File import | 🚫 Zero Internet (No Permission) | ❌ None |
 
-> 💡 **Plugin Compatibility**: All 4 flavors support **Handwriting Recognition**, **Offline Translation**, and **Voice Dictation** via our dedicated companion plugins.
+> 💡 **Plugin Compatibility**: All 4 flavors support **Handwriting Recognition**, **Offline Translation**, and **Voice Dictation** via our dedicated companion plugins, and work 100% offline.
