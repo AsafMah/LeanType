@@ -33,6 +33,14 @@ object TranslationLoader {
         return try {
             val nativeLibDir = File(context.filesDir, "plugin_libs/translation")
             extractNativeLibs(apkFile, nativeLibDir)
+            val libFile = File(nativeLibDir, "libtranslate_jni.so")
+            if (libFile.exists()) {
+                try {
+                    System.load(libFile.absolutePath)
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Failed to System.load libtranslate_jni.so", e)
+                }
+            }
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
@@ -128,6 +136,14 @@ object TranslationLoader {
             // Verify the plugin loads successfully
             val nativeLibDir = File(context.filesDir, "plugin_libs/translation")
             extractNativeLibs(apkFile, nativeLibDir)
+            val libFile = File(nativeLibDir, "libtranslate_jni.so")
+            if (libFile.exists()) {
+                try {
+                    System.load(libFile.absolutePath)
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Failed to System.load libtranslate_jni.so", e)
+                }
+            }
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
@@ -210,9 +226,20 @@ object TranslationLoader {
     private class PluginClassLoader(
         dexPath: String,
         optimizedDirectory: String?,
-        librarySearchPath: String?,
+        private val librarySearchPath: String?,
         parent: ClassLoader
     ) : DexClassLoader(dexPath, optimizedDirectory, librarySearchPath, parent) {
+        override fun findLibrary(name: String): String? {
+            if (librarySearchPath != null) {
+                val filename = System.mapLibraryName(name)
+                val file = java.io.File(librarySearchPath, filename)
+                if (file.exists()) {
+                    return file.absolutePath
+                }
+            }
+            return super.findLibrary(name)
+        }
+
         override fun loadClass(name: String, resolve: Boolean): Class<*> {
             if (name.startsWith("helium314.keyboard.translation.plugin.") ||
                 name.startsWith("com.google.mlkit.") ||

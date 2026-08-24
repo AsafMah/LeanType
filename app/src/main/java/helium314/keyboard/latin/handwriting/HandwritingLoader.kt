@@ -85,6 +85,14 @@ object HandwritingLoader {
             ensureWorkManagerInitialized(context)
             val nativeLibDir = File(context.filesDir, "plugin_libs/handwriting")
             extractNativeLibs(apkFile, nativeLibDir)
+            val libFile = File(nativeLibDir, "libdigitalink.so")
+            if (libFile.exists()) {
+                try {
+                    System.load(libFile.absolutePath)
+                } catch (e: Throwable) {
+                    Log.e("HandwritingLoader", "Failed to System.load libdigitalink.so", e)
+                }
+            }
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
@@ -192,6 +200,14 @@ object HandwritingLoader {
             ensureWorkManagerInitialized(context)
             val nativeLibDir = File(context.filesDir, "plugin_libs/handwriting")
             extractNativeLibs(apkFile, nativeLibDir)
+            val libFile = File(nativeLibDir, "libdigitalink.so")
+            if (libFile.exists()) {
+                try {
+                    System.load(libFile.absolutePath)
+                } catch (e: Throwable) {
+                    Log.e("HandwritingLoader", "Failed to System.load libdigitalink.so", e)
+                }
+            }
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
@@ -265,9 +281,20 @@ object HandwritingLoader {
     private class PluginClassLoader(
         dexPath: String,
         optimizedDirectory: String?,
-        librarySearchPath: String?,
+        private val librarySearchPath: String?,
         parent: ClassLoader
     ) : DexClassLoader(dexPath, optimizedDirectory, librarySearchPath, parent) {
+        override fun findLibrary(name: String): String? {
+            if (librarySearchPath != null) {
+                val filename = System.mapLibraryName(name)
+                val file = java.io.File(librarySearchPath, filename)
+                if (file.exists()) {
+                    return file.absolutePath
+                }
+            }
+            return super.findLibrary(name)
+        }
+
         override fun loadClass(name: String, resolve: Boolean): Class<*> {
             if (name.startsWith("helium314.keyboard.handwriting.plugin.") ||
                 name.startsWith("com.google.mlkit.") ||
