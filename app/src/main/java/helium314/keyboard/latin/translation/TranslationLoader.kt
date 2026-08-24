@@ -123,14 +123,6 @@ object TranslationLoader {
             ensureWorkManagerInitialized(context)
             val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
-            val libFile = File(nativeLibDir, "libtranslate_jni.so")
-            if (libFile.exists()) {
-                try {
-                    System.load(libFile.absolutePath)
-                } catch (e: Throwable) {
-                    Log.e(TAG, "Failed to System.load libtranslate_jni.so", e)
-                }
-            }
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
@@ -181,6 +173,7 @@ object TranslationLoader {
                                 }
                                 outFile.setReadable(true, false)
                                 outFile.setExecutable(true, false)
+                                outFile.setReadOnly()
                             }
                         }
                     }
@@ -227,14 +220,6 @@ object TranslationLoader {
             ensureWorkManagerInitialized(context)
             val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
-            val libFile = File(nativeLibDir, "libtranslate_jni.so")
-            if (libFile.exists()) {
-                try {
-                    System.load(libFile.absolutePath)
-                } catch (e: Throwable) {
-                    Log.e(TAG, "Failed to System.load libtranslate_jni.so", e)
-                }
-            }
             val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
