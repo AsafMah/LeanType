@@ -482,17 +482,19 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
     Setting(context, SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS, R.string.ai_allow_insecure_connections_title, R.string.ai_allow_insecure_connections_summary) { setting ->
         SwitchPreference(setting, Defaults.PREF_AI_ALLOW_INSECURE_CONNECTIONS)
     },
-    Setting(context, SettingsWithoutKey.TRANSLATION_ENGINE, R.string.translation_engine_title, R.string.translation_engine_summary) { setting ->
-        ListPreference(
-            setting = setting,
-            items = listOf(
-                "Auto (Plugin if loaded, else AI)" to "auto",
-                "Translation Plugin" to "plugin",
-                "Built-in AI (Gemini/Groq/OpenAI)" to "ai"
-            ),
-            default = "auto"
-        )
-    },
+    if (BuildConfig.FLAVOR != "offline" && BuildConfig.FLAVOR != "offlinelite") {
+        Setting(context, SettingsWithoutKey.TRANSLATION_ENGINE, R.string.translation_engine_title, R.string.translation_engine_summary) { setting ->
+            ListPreference(
+                setting = setting,
+                items = listOf(
+                    "Auto (Plugin if loaded, else AI)" to "auto",
+                    "Translation Plugin" to "plugin",
+                    "Built-in AI (Gemini/Groq/OpenAI)" to "ai"
+                ),
+                default = "auto"
+            )
+        }
+    } else null,
     Setting(context, SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, R.string.translate_target_language_title, R.string.translate_target_language_summary) { setting ->
         val ctx = LocalContext.current
         val service = remember { helium314.keyboard.latin.utils.ProofreadService(ctx) }
