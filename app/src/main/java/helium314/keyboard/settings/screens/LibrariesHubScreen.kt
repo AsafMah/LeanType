@@ -70,17 +70,15 @@ fun LibrariesHubScreen(
                     Column {
                         PreferenceCategory(stringResource(R.string.plugins_title))
 
-                        // Handwriting Input Plugin (ML Kit based, standardfull only)
-                        if (BuildConfig.FLAVOR == "standardfull") {
-                            val handwritingInstalled = HandwritingLoader.hasPlugin(context)
-                            val summary = if (handwritingInstalled) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed)
-                            Preference(
-                                name = stringResource(R.string.libraries_hub_handwriting_title),
-                                description = summary,
-                                onClick = onClickHandwriting,
-                                icon = R.drawable.ic_edit
-                            ) { NextScreenIcon() }
-                        }
+                        // Handwriting Input Plugin (ML Kit based)
+                        val handwritingInstalled = HandwritingLoader.hasPlugin(context)
+                        val summary = if (handwritingInstalled) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed)
+                        Preference(
+                            name = stringResource(R.string.libraries_hub_handwriting_title),
+                            description = summary,
+                            onClick = onClickHandwriting,
+                            icon = R.drawable.ic_edit
+                        ) { NextScreenIcon() }
 
                         // Offline Voice Input
                         Preference(

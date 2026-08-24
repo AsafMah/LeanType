@@ -143,8 +143,8 @@ class HandwritingView @JvmOverloads constructor(
                 button.background = btnBackground
                 button.setTextColor(colors.get(ColorType.KEY_TEXT))
 
-                // ponytail: download plugin directly on standard flavor, otherwise go to Settings
-                if ("standardfull" == helium314.keyboard.latin.BuildConfig.FLAVOR) {
+                // ponytail: download plugin directly on standard/standardfull flavor, otherwise go to Settings
+                if ("standard" == helium314.keyboard.latin.BuildConfig.FLAVOR || "standardfull" == helium314.keyboard.latin.BuildConfig.FLAVOR) {
                     button.text = "Download Plugin"
                     button.setOnClickListener {
                         downloadPlugin(button)

@@ -82,7 +82,7 @@ object HandwritingLoader {
         }
 
         try {
-            val classLoader = DexClassLoader(
+            val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
                 null,
@@ -90,7 +90,8 @@ object HandwritingLoader {
             )
             val clazz = classLoader.loadClass(PLUGIN_CLASS_NAME)
             val recognizer = clazz.getDeclaredConstructor().newInstance() as HandwritingRecognizer
-            recognizer.init(context)
+            val pluginContext = PluginContext(context.applicationContext, apkFile.absolutePath)
+            recognizer.init(pluginContext)
             activeRecognizer = recognizer
             return recognizer
         } catch (e: Exception) {
@@ -135,7 +136,7 @@ object HandwritingLoader {
             apkFile.setReadOnly()
 
             // Verify the plugin loads successfully
-            val classLoader = DexClassLoader(
+            val classLoader = PluginClassLoader(
                 apkFile.absolutePath,
                 context.codeCacheDir.absolutePath,
                 null,
@@ -143,7 +144,8 @@ object HandwritingLoader {
             )
             val clazz = classLoader.loadClass(PLUGIN_CLASS_NAME)
             val recognizer = clazz.getDeclaredConstructor().newInstance() as HandwritingRecognizer
-            recognizer.init(context)
+            val pluginContext = PluginContext(context.applicationContext, apkFile.absolutePath)
+            recognizer.init(pluginContext)
             
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
             activeRecognizer = recognizer
@@ -172,5 +174,50 @@ object HandwritingLoader {
         } catch (_: Exception) {}
         context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
         activeRecognizer = null
+    }
+
+    private class PluginContext(base: Context, private val apkPath: String) : android.content.ContextWrapper(base) {
+        private val pluginResources: android.content.res.Resources by lazy {
+            try {
+                val assetManager = android.content.res.AssetManager::class.java.getDeclaredConstructor().newInstance()
+                val addAssetPathMethod = android.content.res.AssetManager::class.java.getDeclaredMethod("addAssetPath", String::class.java)
+                addAssetPathMethod.invoke(assetManager, apkPath)
+                android.content.res.Resources(assetManager, base.resources.displayMetrics, base.resources.configuration)
+            } catch (e: Throwable) {
+                Log.e("HandwritingLoader", "Failed to create plugin resources", e)
+                base.resources
+            }
+        }
+
+        override fun getResources(): android.content.res.Resources = pluginResources
+
+        override fun getAssets(): android.content.res.AssetManager = pluginResources.assets
+
+        override fun getApplicationContext(): Context = this
+    }
+
+    private class PluginClassLoader(
+        dexPath: String,
+        optimizedDirectory: String?,
+        librarySearchPath: String?,
+        parent: ClassLoader
+    ) : DexClassLoader(dexPath, optimizedDirectory, librarySearchPath, parent) {
+        override fun loadClass(name: String, resolve: Boolean): Class<*> {
+            if (name.startsWith("helium314.keyboard.handwriting.plugin.") ||
+                name.startsWith("com.google.mlkit.") ||
+                name.startsWith("com.google.android.datatransport.") ||
+                name.startsWith("com.google.android.gms.") ||
+                name.startsWith("com.google.firebase.")
+            ) {
+                val loaded = findLoadedClass(name)
+                if (loaded != null) return loaded
+                try {
+                    return findClass(name)
+                } catch (_: ClassNotFoundException) {
+                    // fallback to parent
+                }
+            }
+            return super.loadClass(name, resolve)
+        }
     }
 }

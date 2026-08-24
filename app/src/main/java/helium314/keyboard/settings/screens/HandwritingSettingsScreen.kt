@@ -91,8 +91,8 @@ fun HandwritingSettingsScreen(
                     }
                 }
 
-                // Offline Recognition Models Card (standardfull only)
-                if (BuildConfig.FLAVOR == "standardfull" && handwritingInstalled) {
+                // Offline Recognition Models Card
+                if (handwritingInstalled) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
