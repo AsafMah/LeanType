@@ -18,6 +18,95 @@ object TranslationLoader {
 
     private var activeProviderRef: WeakReference<ITranslationProvider>? = null
 
+    @JvmStatic
+    fun getTargetAbi(): String {
+        for (abi in android.os.Build.SUPPORTED_ABIS) {
+            when (abi) {
+                "arm64-v8a" -> return "arm64-v8a"
+                "armeabi-v7a" -> return "armeabi-v7a"
+                "x86_64" -> return "x86_64"
+                "x86" -> return "x86"
+            }
+        }
+        return "arm64-v8a"
+    }
+
+    @JvmStatic
+    fun getPluginDownloadUrl(tag: String? = null): String {
+        val abi = getTargetAbi()
+        val filename = "translation_plugin-$abi.apk"
+        return if (tag == null || tag == "latest") {
+            "https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest/download/$filename"
+        } else {
+            "https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/download/$tag/$filename"
+        }
+    }
+
+    @JvmStatic
+    fun downloadPluginApk(context: Context, tag: String? = null, tempFile: File): Boolean {
+        val urlsToTry = listOf(
+            getPluginDownloadUrl(tag),
+            if (tag == null || tag == "latest") {
+                "https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest/download/translation_plugin.apk"
+            } else {
+                "https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/download/$tag/translation_plugin.apk"
+            }
+        ).distinct()
+
+        for (urlStr in urlsToTry) {
+            try {
+                val url = java.net.URL(urlStr)
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.instanceFollowRedirects = true
+                conn.setRequestProperty("User-Agent", "HeliboardL")
+                conn.connect()
+
+                var redirectConn = conn
+                var status = redirectConn.responseCode
+                var redirectCount = 0
+                while ((status == java.net.HttpURLConnection.HTTP_MOVED_TEMP || status == java.net.HttpURLConnection.HTTP_MOVED_PERM || status == java.net.HttpURLConnection.HTTP_SEE_OTHER) && redirectCount < 5) {
+                    val newUrl = redirectConn.getHeaderField("Location")
+                    redirectConn.disconnect()
+                    val nextUrl = java.net.URL(newUrl)
+                    redirectConn = nextUrl.openConnection() as java.net.HttpURLConnection
+                    redirectConn.setRequestProperty("User-Agent", "HeliboardL")
+                    redirectConn.connect()
+                    status = redirectConn.responseCode
+                    redirectCount++
+                }
+
+                if (status == java.net.HttpURLConnection.HTTP_OK) {
+                    redirectConn.inputStream.use { input ->
+                        java.io.FileOutputStream(tempFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    redirectConn.disconnect()
+                    return true
+                }
+                redirectConn.disconnect()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to download from $urlStr", e)
+            }
+        }
+        return false
+    }
+
+    private fun getNativeLibDir(context: Context, apkFile: File): File {
+        val baseDir = File(context.filesDir, "plugin_libs")
+        if (!baseDir.exists()) baseDir.mkdirs()
+        val targetName = "translation_${apkFile.lastModified()}"
+        val targetDir = File(baseDir, targetName)
+        baseDir.listFiles()?.forEach { f ->
+            if (f.isDirectory && (f.name.startsWith("translation_") || f.name == "translation") && f.name != targetName) {
+                try {
+                    f.deleteRecursively()
+                } catch (_: Exception) {}
+            }
+        }
+        return targetDir
+    }
+
     fun getProvider(context: Context): ITranslationProvider? {
         val cached = activeProviderRef?.get()
         if (cached != null) return cached
@@ -31,7 +120,7 @@ object TranslationLoader {
         apkFile.setReadOnly()
 
         return try {
-            val nativeLibDir = File(context.filesDir, "plugin_libs/translation")
+            val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
             val libFile = File(nativeLibDir, "libtranslate_jni.so")
             if (libFile.exists()) {
@@ -134,7 +223,7 @@ object TranslationLoader {
             apkFile.setReadOnly()
 
             // Verify the plugin loads successfully
-            val nativeLibDir = File(context.filesDir, "plugin_libs/translation")
+            val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
             val libFile = File(nativeLibDir, "libtranslate_jni.so")
             if (libFile.exists()) {
@@ -172,7 +261,12 @@ object TranslationLoader {
                 context.codeCacheDir.deleteRecursively()
             } catch (_: Exception) {}
             try {
-                File(context.filesDir, "plugin_libs/translation").deleteRecursively()
+                val baseDir = File(context.filesDir, "plugin_libs")
+                baseDir.listFiles()?.forEach { f ->
+                    if (f.isDirectory && (f.name.startsWith("translation_") || f.name == "translation")) {
+                        f.deleteRecursively()
+                    }
+                }
             } catch (_: Exception) {}
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
             activeProviderRef = null
@@ -198,7 +292,12 @@ object TranslationLoader {
             context.codeCacheDir.deleteRecursively()
         } catch (_: Exception) {}
         try {
-            File(context.filesDir, "plugin_libs/translation").deleteRecursively()
+            val baseDir = File(context.filesDir, "plugin_libs")
+            baseDir.listFiles()?.forEach { f ->
+                if (f.isDirectory && (f.name.startsWith("translation_") || f.name == "translation")) {
+                    f.deleteRecursively()
+                }
+            }
         } catch (_: Exception) {}
         context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
     }

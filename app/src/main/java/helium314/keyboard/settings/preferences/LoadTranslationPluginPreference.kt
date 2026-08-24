@@ -115,42 +115,11 @@ fun LoadTranslationPluginPreference(
         scope.launch(Dispatchers.IO) {
             try {
                 val tag = remoteVersion ?: "latest"
-                val urlStr = if (tag == "latest") {
-                    "https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest/download/translation_plugin.apk"
-                } else {
-                    "https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/download/$tag/translation_plugin.apk"
-                }
-                val url = URL(urlStr)
-                val conn = url.openConnection() as HttpURLConnection
-                conn.instanceFollowRedirects = true
-                conn.setRequestProperty("User-Agent", "HeliboardL")
-                conn.connect()
-
-                var redirectConn = conn
-                var status = redirectConn.responseCode
-                var redirectCount = 0
-                while ((status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == HttpURLConnection.HTTP_SEE_OTHER) && redirectCount < 5) {
-                    val newUrl = redirectConn.getHeaderField("Location")
-                    redirectConn.disconnect()
-                    val nextUrl = URL(newUrl)
-                    redirectConn = nextUrl.openConnection() as HttpURLConnection
-                    redirectConn.setRequestProperty("User-Agent", "HeliboardL")
-                    redirectConn.connect()
-                    status = redirectConn.responseCode
-                    redirectCount++
-                }
-
-                if (status != HttpURLConnection.HTTP_OK) {
-                    throw IOException("Server returned HTTP $status")
-                }
-
                 val tempFile = File(ctx.cacheDir, "temp_translation_plugin.apk")
-                redirectConn.inputStream.use { input ->
-                    FileOutputStream(tempFile).use { output ->
-                        input.copyTo(output)
-                    }
+                val downloaded = TranslationLoader.downloadPluginApk(ctx, tag, tempFile)
+                if (!downloaded) {
+                    throw IOException("Failed to download translation plugin APK")
                 }
-                redirectConn.disconnect()
 
                 val success = TranslationLoader.importPlugin(ctx, Uri.fromFile(tempFile))
                 tempFile.delete()
