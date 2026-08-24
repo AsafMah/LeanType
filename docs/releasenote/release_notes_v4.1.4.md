@@ -16,11 +16,13 @@ As an open-source, community-funded project, we operate on a very limited budget
 - **Handwriting Tag Fix**: Fixed model loading so regional languages (like English Australia or Hindi) load without affecting other language variants.
 - **Emoji Search Setting**: Strictly honored the inline emoji search toggle when turned off.
 
-## 📦 Downloads (Choose Your Flavor)
+## 📦 Choose Your Flavor
 
-| File | Description | Permissions |
-| :--- | :--- | :--- |
-| **`1-LeanType_4.1.4-standardfull-release.apk`** | **Recommended**. Cloud AI + Plugins + In-App Updater | Internet | 
-| **`1-LeanType_4.1.4-standard-release.apk`** | **F-Droid Build**. Standard - FOSS Only | Internet |
-| **`2-LeanType_4.1.4-offline-release.apk`** | **Privacy Focused**. Offline AI (Local Models) | No Internet |
-| **`3-LeanType_4.1.4-offlinelite-release.apk`** | **Minimalist**. Pure FOSS. Zero AI integrations. | No Internet |
+| Flavor | Primary Focus | AI Engine | Plugins Support | Internet Access | Self-Updater |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`1-LeanType_4.1.4-standardfull-release.apk`** | **Recommended** | Cloud AI (Gemini, Groq, OpenAI) | In-app downloads | Required | ✅ In-App Auto Update |
+| **`1-LeanType_4.1.4-standard-release.apk`** | **F-Droid / FOSS** | Cloud AI (Gemini, Groq, OpenAI) | In-app downloads | Required | ❌ None (F-Droid rules) |
+| **`2-LeanType_4.1.4-offline-release.apk`** | **Offline AI** | On-Device Local LLM (GGUF) | Browser download + Import | 🚫 Zero Internet | ❌ None |
+| **`3-LeanType_4.1.4-offlinelite-release.apk`** | **Offline Lite** | None (Lightest size) | Browser download + Import | 🚫 Zero Internet | ❌ None |
+
+> 💡 **Plugin Compatibility**: All 4 flavors support **Handwriting Recognition**, **Offline Translation**, and **Voice Dictation** via our dedicated companion plugins.
