@@ -198,14 +198,6 @@ fun HandwritingModelDownloadDialog(
                         }
                     }
                 }
-            },
-            buttons = {
-                Button(
-                    onClick = { offlineDownloadItem = null },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Close")
-                }
             }
         )
     }
