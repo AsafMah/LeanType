@@ -185,12 +185,21 @@ fun HandwritingModelDownloadDialog(
                         CircularProgressIndicator()
                     }
                 } else {
-                    val filtered = remember(searchQuery, allLanguages) {
-                        if (searchQuery.isBlank()) allLanguages
+                    val filtered = remember(searchQuery, allLanguages, statusMap.toMap(), downloadedMap.toMap()) {
+                        val baseList = if (searchQuery.isBlank()) allLanguages
                         else allLanguages.filter {
                             it.displayName.contains(searchQuery, ignoreCase = true) ||
                                 it.code.contains(searchQuery, ignoreCase = true)
                         }
+                        baseList.sortedWith(
+                            compareByDescending<HandwritingLanguageItem> {
+                                val st = statusMap[it.code]
+                                if (st?.isComplete == true) 3
+                                else if (st?.isReady == true || downloadedMap[it.code] == true) 2
+                                else if (it.isEnabledSubtype) 1
+                                else 0
+                            }.thenBy { it.displayName.lowercase() }
+                        )
                     }
 
                     LazyColumn(

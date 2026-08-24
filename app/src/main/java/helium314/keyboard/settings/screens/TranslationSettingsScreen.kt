@@ -110,9 +110,6 @@ fun TranslationSettingsScreen(
                         Column {
                             PreferenceCategory("Offline Models")
 
-                            // Translation Mode Selection (Auto, Offline Only, Online Only)
-                            TranslationModePreference()
-
                             var showModelsDialog by remember { mutableStateOf(false) }
                             Preference(
                                 name = stringResource(R.string.offline_translation_models_title),

@@ -178,12 +178,17 @@ fun TranslationModelDownloadDialog(
                         CircularProgressIndicator()
                     }
                 } else {
-                    val filtered = remember(searchQuery, allLanguages) {
-                        if (searchQuery.isBlank()) allLanguages
+                    val filtered = remember(searchQuery, allLanguages, downloadedMap.toMap()) {
+                        val baseList = if (searchQuery.isBlank()) allLanguages
                         else allLanguages.filter {
                             it.displayName.contains(searchQuery, ignoreCase = true) ||
                                 it.code.contains(searchQuery, ignoreCase = true)
                         }
+                        baseList.sortedWith(
+                            compareByDescending<TranslationLanguageItem> {
+                                if (it.code == "en") 2 else if (downloadedMap[it.code] == true) 1 else 0
+                            }.thenBy { it.displayName.lowercase() }
+                        )
                     }
 
                     LazyColumn(
