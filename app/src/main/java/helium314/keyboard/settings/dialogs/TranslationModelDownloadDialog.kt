@@ -9,17 +9,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,8 +37,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.translation.ITranslationProvider
+import helium314.keyboard.latin.translation.TranslationModelDownloadListener
 import helium314.keyboard.latin.translation.TranslationModelImporter
 import helium314.keyboard.latin.translation.TranslationModelUrls
 import kotlinx.coroutines.Dispatchers
@@ -57,9 +60,11 @@ fun TranslationModelDownloadDialog(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val isOffline = BuildConfig.FLAVOR == "offline" || BuildConfig.FLAVOR == "offlinelite"
     var searchQuery by remember { mutableStateOf("") }
     
     val downloadedMap = remember { mutableStateMapOf<String, Boolean>() }
+    val downloadingMap = remember { mutableStateMapOf<String, Boolean>() }
     var allLanguages by remember { mutableStateOf<List<TranslationLanguageItem>>(emptyList()) }
     var isLoadingList by remember { mutableStateOf(true) }
 
@@ -130,12 +135,9 @@ fun TranslationModelDownloadDialog(
         }
     }
 
-    ThreeButtonAlertDialog(
+    PreferenceDialog(
         onDismissRequest = onDismissRequest,
-        onConfirmed = {},
-        confirmButtonText = null,
-        cancelButtonText = null,
-        title = { Text(stringResource(R.string.offline_translation_models_title)) },
+        title = stringResource(R.string.offline_translation_models_title),
         content = {
             Column(
                 modifier = Modifier
@@ -150,14 +152,15 @@ fun TranslationModelDownloadDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Download model in browser, then import .zip",
+                        text = if (isOffline) "Download model in browser, then import .zip" else "Download in app or import .zip",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f).padding(end = 8.dp)
                     )
                     Button(
                         onClick = { importLauncher.launch("application/zip") },
-                        modifier = Modifier.height(34.dp)
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier.height(32.dp)
                     ) {
                         Text("Import .zip", style = MaterialTheme.typography.labelMedium)
                     }
@@ -178,7 +181,7 @@ fun TranslationModelDownloadDialog(
                         CircularProgressIndicator()
                     }
                 } else {
-                    val filtered = remember(searchQuery, allLanguages, downloadedMap.toMap()) {
+                    val filtered = remember(searchQuery, allLanguages, downloadedMap.toMap(), downloadingMap.toMap()) {
                         val baseList = if (searchQuery.isBlank()) allLanguages
                         else allLanguages.filter {
                             it.displayName.contains(searchQuery, ignoreCase = true) ||
@@ -198,6 +201,7 @@ fun TranslationModelDownloadDialog(
                     ) {
                         items(filtered, key = { it.code }) { item ->
                             val isDownloaded = downloadedMap[item.code] == true
+                            val isDownloading = downloadingMap[item.code] == true
                             val isEnglish = item.code == "en"
 
                             Row(
@@ -214,7 +218,7 @@ fun TranslationModelDownloadDialog(
                                         fontWeight = if (isDownloaded) FontWeight.Bold else FontWeight.Normal
                                     )
                                     Text(
-                                        text = if (isEnglish) "Built-in" else if (isDownloaded) "Downloaded (Offline ready)" else "Not downloaded",
+                                        text = if (isEnglish) "Built-in" else if (isDownloaded) "Downloaded (Offline ready)" else if (isDownloading) "Downloading…" else "Not downloaded",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = if (isDownloaded)
                                             MaterialTheme.colorScheme.primary
@@ -230,6 +234,10 @@ fun TranslationModelDownloadDialog(
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.padding(end = 8.dp)
                                     )
+                                } else if (isDownloading) {
+                                    Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                    }
                                 } else if (isDownloaded) {
                                     Button(
                                         onClick = {
@@ -253,27 +261,55 @@ fun TranslationModelDownloadDialog(
                                             containerColor = MaterialTheme.colorScheme.errorContainer,
                                             contentColor = MaterialTheme.colorScheme.onErrorContainer
                                         ),
-                                        modifier = Modifier.height(34.dp)
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                        modifier = Modifier.height(28.dp)
                                     ) {
-                                        Text("Delete", style = MaterialTheme.typography.labelMedium)
+                                        Text("Delete", style = MaterialTheme.typography.labelSmall)
                                     }
                                 } else {
-                                    OutlinedButton(
+                                    Button(
                                         onClick = {
-                                            val url = TranslationModelUrls.getDownloadUrl(item.code)
-                                            if (url != null) {
-                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            if (isOffline) {
+                                                val url = TranslationModelUrls.getDownloadUrl(item.code)
+                                                if (url != null) {
+                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                    }
+                                                    context.startActivity(intent)
+                                                    Toast.makeText(context, "Downloading in browser… import .zip once finished", Toast.LENGTH_LONG).show()
+                                                } else {
+                                                    Toast.makeText(context, "Download URL not available", Toast.LENGTH_SHORT).show()
                                                 }
-                                                context.startActivity(intent)
-                                                Toast.makeText(context, "Downloading in browser… import .zip once finished", Toast.LENGTH_LONG).show()
                                             } else {
-                                                Toast.makeText(context, "Download URL not available", Toast.LENGTH_SHORT).show()
+                                                downloadingMap[item.code] = true
+                                                try {
+                                                    provider.downloadModel(item.code, object : TranslationModelDownloadListener {
+                                                        override fun onComplete(success: Boolean, errorMessage: String?) {
+                                                            scope.launch(Dispatchers.Main) {
+                                                                downloadingMap[item.code] = false
+                                                                if (success) {
+                                                                    downloadedMap[item.code] = true
+                                                                    Toast.makeText(context, "Downloaded ${item.displayName}", Toast.LENGTH_SHORT).show()
+                                                                } else {
+                                                                    val err = if (!errorMessage.isNullOrBlank() && errorMessage != "Unsupported") ": $errorMessage" else ""
+                                                                    Toast.makeText(context, "Download failed$err", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            }
+                                                        }
+                                                        override fun onComplete(success: Boolean) {
+                                                            onComplete(success, null)
+                                                        }
+                                                    })
+                                                } catch (e: Throwable) {
+                                                    downloadingMap[item.code] = false
+                                                    Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         },
-                                        modifier = Modifier.height(34.dp)
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                        modifier = Modifier.height(28.dp)
                                     ) {
-                                        Text("Download", style = MaterialTheme.typography.labelMedium)
+                                        Text("Download", style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
                             }
@@ -281,7 +317,6 @@ fun TranslationModelDownloadDialog(
                     }
                 }
             }
-        },
-        scrollContent = false
+        }
     )
 }
