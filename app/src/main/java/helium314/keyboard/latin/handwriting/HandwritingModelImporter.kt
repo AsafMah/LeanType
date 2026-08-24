@@ -46,6 +46,28 @@ object HandwritingModelImporter {
         return ModelComponentsStatus(false, false, false)
     }
 
+    fun getInstalledLanguageStatuses(context: Context): Map<String, ModelComponentsStatus> {
+        val result = mutableMapOf<String, ModelComponentsStatus>()
+        val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
+        for (baseDir in baseDirs) {
+            val modelsRoot = File(baseDir, "com.google.mlkit.models")
+            if (modelsRoot.exists() && modelsRoot.isDirectory) {
+                modelsRoot.listFiles()?.forEach { langDir ->
+                    if (langDir.isDirectory) {
+                        val tag = langDir.name.replace('_', '-')
+                        val status = getComponentsStatus(context, tag)
+                        if (status.hasModel || status.hasFst || status.hasRecospec) {
+                            result[tag] = status
+                            result[langDir.name] = status
+                            result[tag.lowercase()] = status
+                        }
+                    }
+                }
+            }
+        }
+        return result
+    }
+
     fun deleteModelForLanguage(context: Context, languageTag: String): Boolean {
         val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
         val normalizedTag = languageTag.replace('_', '-')
