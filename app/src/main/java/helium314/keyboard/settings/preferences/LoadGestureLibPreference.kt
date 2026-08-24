@@ -3,6 +3,7 @@ package helium314.keyboard.settings.preferences
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -28,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -149,6 +151,13 @@ fun LoadGestureLibPreference(
         onClick = { showDialog = true }
     )
 
+    val hasInternet = remember {
+        ctx.packageManager.checkPermission(
+            "android.permission.INTERNET",
+            ctx.packageName
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
     if (showDialog) {
         val isInstalled = libFile.exists() || JniUtils.sHaveNativeGestureLib
         helium314.keyboard.settings.dialogs.PreferenceDialog(
@@ -178,12 +187,31 @@ fun LoadGestureLibPreference(
                             .padding(top = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (!isInstalled && BuildConfig.FLAVOR != "offline") {
-                            Button(
-                                onClick = { startDownload() },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(stringResource(R.string.load_gesture_library_button_download))
+                        if (!isInstalled) {
+                            if (hasInternet) {
+                                Button(
+                                    onClick = { startDownload() },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(stringResource(R.string.load_gesture_library_button_download))
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        showDialog = false
+                                        val url = GestureLibraryDownloader.getDownloadUrl() ?: "https://github.com/Helium314/HeliBoard/releases"
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        try {
+                                            ctx.startActivity(intent)
+                                            android.widget.Toast.makeText(ctx, "Opening browser to download library… use 'Load from file' after download", android.widget.Toast.LENGTH_LONG).show()
+                                        } catch (_: Exception) {}
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(stringResource(R.string.load_gesture_library_button_download))
+                                }
                             }
                         }
 

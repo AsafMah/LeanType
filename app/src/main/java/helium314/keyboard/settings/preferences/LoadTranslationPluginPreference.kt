@@ -68,10 +68,18 @@ fun LoadTranslationPluginPreference(
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val hasInternet = remember {
+        ctx.packageManager.checkPermission(
+            "android.permission.INTERNET",
+            ctx.packageName
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
     val hasPlugin = TranslationLoader.hasPlugin(ctx)
     val localVersion = remember(hasPlugin) { TranslationLoader.getPluginVersion(ctx) }
 
     LaunchedEffect(hasPlugin) {
+        if (!hasInternet) return@LaunchedEffect
         isCheckingUpdate = true
         scope.launch(Dispatchers.IO) {
             try {
@@ -111,6 +119,21 @@ fun LoadTranslationPluginPreference(
     }
 
     fun startDownload() {
+        if (!hasInternet) {
+            showDialog = false
+            val url = "https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            try {
+                ctx.startActivity(intent)
+                Toast.makeText(ctx, "Opening GitHub releases in browser… download the APK and use 'Load from file'", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(ctx, "Failed to open browser: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
         isDownloading = true
         scope.launch(Dispatchers.IO) {
             try {

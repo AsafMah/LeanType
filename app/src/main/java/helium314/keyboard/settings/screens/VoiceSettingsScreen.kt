@@ -123,10 +123,12 @@ fun VoiceSettingsScreen(
     var showVoicePluginDialog by rememberSaveable { mutableStateOf(false) }
 
     var remoteVersion by remember { mutableStateOf<String?>(null) }
+    val hasInternet = remember { VoiceDownloadDispatcher.hasInternetPermission(context) }
     var updateAvailable by remember { mutableStateOf(false) }
     var isCheckingUpdate by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isPluginInstalled, pluginVersion) {
+    LaunchedEffect(isPluginInstalled) {
+        if (!hasInternet) return@LaunchedEffect
         isCheckingUpdate = true
         scope.launch(Dispatchers.IO) {
             try {
@@ -569,7 +571,7 @@ fun VoiceSettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (!isPluginInstalled || updateAvailable) {
-                            if (BuildConfig.FLAVOR == "standardfull") {
+                            if (hasInternet) {
                                 Button(
                                     onClick = { downloadAndInstallPlugin() },
                                     modifier = Modifier.fillMaxWidth()
