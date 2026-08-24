@@ -130,7 +130,7 @@ fun HandwritingModelDownloadDialog(
 
             combined.forEach { item ->
                 val status = HandwritingModelImporter.getComponentsStatus(context, item.code)
-                val isReady = status.isReady || (recognizer?.isLanguageReady(item.code) == true)
+                val isReady = status.isReady || try { recognizer?.isLanguageReady(item.code) == true } catch (_: Throwable) { false }
                 withContext(Dispatchers.Main) {
                     statusMap[item.code] = status
                     downloadedMap[item.code] = isReady

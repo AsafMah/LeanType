@@ -88,21 +88,19 @@ fun LibrariesHubScreen(
                             icon = R.drawable.sym_keyboard_voice_holo
                         ) { NextScreenIcon() }
 
-                        // Translation Settings Screen (available on standard and standardfull)
-                        if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
-                            val translationInstalled = TranslationLoader.hasPlugin(context)
-                            val summary = if (translationInstalled) {
-                                "Offline ML Kit & Online engine"
-                            } else {
-                                "Configure plugin & translation backend"
-                            }
-                            Preference(
-                                name = stringResource(R.string.translation_settings_title),
-                                description = summary,
-                                onClick = onClickTranslation,
-                                icon = R.drawable.ic_translate
-                            ) { NextScreenIcon() }
+                        // Translation Settings Screen (available for all flavors)
+                        val translationInstalled = TranslationLoader.hasPlugin(context)
+                        val translationSummary = if (translationInstalled) {
+                            stringResource(R.string.libraries_status_active)
+                        } else {
+                            stringResource(R.string.libraries_status_not_installed)
                         }
+                        Preference(
+                            name = stringResource(R.string.translation_settings_title),
+                            description = translationSummary,
+                            onClick = onClickTranslation,
+                            icon = R.drawable.ic_translate
+                        ) { NextScreenIcon() }
                     }
                 }
 
