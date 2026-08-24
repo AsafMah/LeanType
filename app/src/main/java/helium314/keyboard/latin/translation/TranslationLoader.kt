@@ -45,7 +45,8 @@ object TranslationLoader {
                 return null
             }
 
-            provider.init(context.applicationContext)
+            val pluginContext = PluginContext(context.applicationContext, apkFile.absolutePath)
+            provider.init(pluginContext)
             activeProviderRef = WeakReference(provider)
             provider
         } catch (e: Throwable) {
@@ -101,7 +102,8 @@ object TranslationLoader {
                 return false
             }
 
-            provider.init(context.applicationContext)
+            val pluginContext = PluginContext(context.applicationContext, apkFile.absolutePath)
+            provider.init(pluginContext)
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
             activeProviderRef = WeakReference(provider)
             return true
@@ -137,6 +139,26 @@ object TranslationLoader {
             context.codeCacheDir.deleteRecursively()
         } catch (_: Exception) {}
         context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
+    }
+
+    private class PluginContext(base: Context, private val apkPath: String) : android.content.ContextWrapper(base) {
+        private val pluginResources: android.content.res.Resources by lazy {
+            try {
+                val assetManager = android.content.res.AssetManager::class.java.getDeclaredConstructor().newInstance()
+                val addAssetPathMethod = android.content.res.AssetManager::class.java.getDeclaredMethod("addAssetPath", String::class.java)
+                addAssetPathMethod.invoke(assetManager, apkPath)
+                android.content.res.Resources(assetManager, base.resources.displayMetrics, base.resources.configuration)
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to create plugin resources", e)
+                base.resources
+            }
+        }
+
+        override fun getResources(): android.content.res.Resources = pluginResources
+
+        override fun getAssets(): android.content.res.AssetManager = pluginResources.assets
+
+        override fun getApplicationContext(): Context = this
     }
 
     private class PluginClassLoader(
