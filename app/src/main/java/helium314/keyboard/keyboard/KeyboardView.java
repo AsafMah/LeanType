@@ -403,7 +403,9 @@ public class KeyboardView extends View {
     protected void onDrawKeyBackground(@NonNull final Key key, @NonNull final Canvas canvas,
             @NonNull final Drawable background) {
         int customColor = 0;
-        if (KeyboardActionListenerImpl.sPersistentTextEditModeActive) {
+        final boolean isTextEditMode = KeyboardActionListenerImpl.sPersistentTextEditModeActive
+                || (getKeyboard() != null && getKeyboard().mId.mElementId == KeyboardId.ELEMENT_TEXT_EDIT);
+        if (isTextEditMode) {
             switch (key.getCode()) {
                 case -131: // Undo
                 case -132: // Redo
@@ -436,6 +438,11 @@ public class KeyboardView extends View {
                 case -10016: // Word Right
                     customColor = mColors.get(ColorType.EDIT_MODE_JUMP_BACKGROUND);
                     break;
+                default:
+                    if (key.hasActionKeyBackground()) {
+                        customColor = mColors.get(ColorType.ACTION_KEY_BACKGROUND);
+                    }
+                    break;
             }
         }
 
@@ -448,6 +455,7 @@ public class KeyboardView extends View {
         final int keyHeight = key.getHeight();
         final int bgWidth, bgHeight, bgX, bgY;
         if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags)
+                && !isTextEditMode
                 // HACK: To disable expanding normal/functional key background.
                 && !key.hasCustomActionLabel()) {
             bgWidth = (int) (drawBackground.getIntrinsicWidth() * mIconScaleFactor);
@@ -552,7 +560,9 @@ public class KeyboardView extends View {
             }
             if (key.needsAutoXScale() || (StringUtilsKt.isEmoji(label) && Settings.getValues().mEmojiKeyFit)) {
                 final int width;
-                if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags)) {
+                final boolean isTextEditMode = KeyboardActionListenerImpl.sPersistentTextEditModeActive
+                        || (keyboard != null && keyboard.mId.mElementId == KeyboardId.ELEMENT_TEXT_EDIT);
+                if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags) && !isTextEditMode) {
                     // make sure the text stays inside bounds of background drawable
                     Drawable bg = key.selectBackgroundDrawable(mKeyBackground, mFunctionalKeyBackground,
                             mSpacebarBackground, mActionKeyBackground);
