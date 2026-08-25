@@ -72,14 +72,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "• Added offline handwriting and offline translation across all app flavors",
-    "• Google ML Kit completely removed from core keyboard and isolated into standalone plugins",
-    "• Added offline model manager with browser download and file import support",
-    "• Unified Plugins settings hub with automated plugin update checking",
-    "• Added smart text expander clipboard modifiers and citation cleaner",
-    "• Fixed symbol keyboard resetting when typing emoticons (:), :()",
-    "• Fixed personal dictionary auto-learning threshold",
-    "• Fixed regional handwriting model isolation"
+    "• Ergonomic default text edit layout with central Select key and D-Pad navigation",
+    "• Preserved classic text edit layout option (editing_classic)",
+    "• Fixed rectangular tile rendering for Enter/Action keys in text edit mode",
+    "• Improved plugin ClassLoader lifecycle and native model directory resolution",
+    "• Enhanced ProGuard rules for plugin WorkManager runtime components"
 )
 
 @Composable
