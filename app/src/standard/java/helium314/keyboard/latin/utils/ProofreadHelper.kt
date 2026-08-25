@@ -336,12 +336,10 @@ object ProofreadHelper {
                         )
                     }
 
-                    val isDownloaded = if (langCode == "en") true else {
-                        try {
-                            pluginProvider.isModelDownloaded(langCode)
-                        } catch (_: Throwable) {
-                            false
-                        }
+                    val isDownloaded = try {
+                        pluginProvider.isModelDownloaded(langCode)
+                    } catch (_: Throwable) {
+                        false
                     }
 
                     if (!isDownloaded) {

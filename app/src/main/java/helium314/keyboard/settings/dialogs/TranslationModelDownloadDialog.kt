@@ -122,16 +122,12 @@ fun TranslationModelDownloadDialog(
 
             // Check download status for all languages
             codes.forEach { code ->
-                if (code == "en") {
-                    withContext(Dispatchers.Main) { downloadedMap[code] = true }
-                } else {
-                    val downloaded = try {
-                        provider.isModelDownloaded(code)
-                    } catch (_: Throwable) {
-                        false
-                    }
-                    withContext(Dispatchers.Main) { downloadedMap[code] = downloaded }
+                val downloaded = try {
+                    provider.isModelDownloaded(code)
+                } catch (_: Throwable) {
+                    false
                 }
+                withContext(Dispatchers.Main) { downloadedMap[code] = downloaded }
             }
         }
     }
@@ -190,7 +186,7 @@ fun TranslationModelDownloadDialog(
                         }
                         baseList.sortedWith(
                             compareByDescending<TranslationLanguageItem> {
-                                if (it.code == "en") 2 else if (downloadedMap[it.code] == true) 1 else 0
+                                if (downloadedMap[it.code] == true) 1 else 0
                             }.thenBy { it.displayName.lowercase() }
                         )
                     }
@@ -203,7 +199,6 @@ fun TranslationModelDownloadDialog(
                         items(filtered, key = { it.code }) { item ->
                             val isDownloaded = downloadedMap[item.code] == true
                             val isDownloading = downloadingMap[item.code] == true
-                            val isEnglish = item.code == "en"
 
                             Row(
                                 modifier = Modifier
@@ -219,7 +214,7 @@ fun TranslationModelDownloadDialog(
                                         fontWeight = if (isDownloaded) FontWeight.Bold else FontWeight.Normal
                                     )
                                     Text(
-                                        text = if (isEnglish) "Built-in" else if (isDownloaded) "Downloaded (Offline ready)" else if (isDownloading) "Downloading…" else "Not downloaded",
+                                        text = if (isDownloaded) "Downloaded (Offline ready)" else if (isDownloading) "Downloading…" else "Not downloaded",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = if (isDownloaded)
                                             MaterialTheme.colorScheme.primary
@@ -228,14 +223,7 @@ fun TranslationModelDownloadDialog(
                                     )
                                 }
 
-                                if (isEnglish) {
-                                    Text(
-                                        text = "Active",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    )
-                                } else if (isDownloading) {
+                                if (isDownloading) {
                                     Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
                                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                                     }

@@ -192,12 +192,10 @@ object ProofreadHelper {
         val targetLang = prefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "Spanish") ?: "Spanish"
         val langCode = getLangCode(targetLang)
 
-        val isDownloaded = if (langCode == "en") true else {
-            try {
-                provider.isModelDownloaded(langCode)
-            } catch (_: Throwable) {
-                false
-            }
+        val isDownloaded = try {
+            provider.isModelDownloaded(langCode)
+        } catch (_: Throwable) {
+            false
         }
 
         if (!isDownloaded) {
