@@ -1289,6 +1289,9 @@ public class LatinIME extends InputMethodService implements
             if (hasSuggestionStripView() && currentSettingsValues.mAutoShowToolbar && !tryShowClipboardSuggestion()) {
                 mSuggestionStripView.setToolbarVisibility(true);
             }
+            if (shouldRequestInitialPredictions(currentSettingsValues)) {
+                mHandler.postUpdateSuggestionStrip(SuggestedWords.INPUT_STYLE_RECORRECTION);
+            }
         }
 
         mainKeyboardView.setMainDictionaryAvailability(mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary());
@@ -2126,6 +2129,34 @@ public class LatinIME extends InputMethodService implements
                 mSuggestionStripView.setToolbarVisibility(mSuggestionStripView.isToolbarManuallyOpen());
             }
         }
+    }
+
+    private boolean shouldRequestInitialPredictions(final SettingsValues settingsValues) {
+        if (!mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary()) {
+            return false;
+        }
+        if (!settingsValues.needsToLookupSuggestions()) {
+            return false;
+        }
+        final boolean firstWordEnabled = settingsValues.mFirstWordPredictionEnabled;
+        final boolean bigramEnabled = settingsValues.mBigramPredictionEnabled;
+        if (!firstWordEnabled && !bigramEnabled) {
+            return false;
+        }
+        if (firstWordEnabled && bigramEnabled) {
+            if (DebugFlags.DEBUG_ENABLED) {
+                Log.d(TAG, "Initial prediction check: dictReady=true, firstWordEnabled=true, bigramEnabled=true");
+            }
+            return true;
+        }
+        final NgramContext ngramContext = mInputLogic.getNgramContextFromNthPreviousWordForSuggestion(
+                settingsValues.mSpacingAndPunctuations, 1);
+        final boolean firstWordContext = ngramContext == null || ngramContext.isBeginningOfSentenceContext();
+        if (DebugFlags.DEBUG_ENABLED) {
+            Log.d(TAG, "Initial prediction check: dictReady=true, firstWordEnabled=" + firstWordEnabled
+                    + ", bigramEnabled=" + bigramEnabled + ", firstWordContext=" + firstWordContext);
+        }
+        return firstWordContext ? firstWordEnabled : bigramEnabled;
     }
 
     public void showTranslateLanguageSelector() {
