@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.translation.TranslationLoader
 import kotlinx.coroutines.CoroutineScope
@@ -146,6 +147,37 @@ object ProofreadHelper {
         }
     }
 
+    private fun detectSourceLanguage(text: String): String {
+        for (cp in text.codePoints()) {
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_TAMIL)) return "ta"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_MALAYALAM)) return "ml"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_TELUGU)) return "te"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_KANNADA)) return "kn"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_GUJARATI)) return "gu"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_BENGALI)) return "bn"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_DEVANAGARI)) return "hi"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_ARABIC)) return "ar"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_GREEK)) return "el"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_HEBREW)) return "he"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_HANGUL)) return "ko"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_THAI)) return "th"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_GEORGIAN)) return "ka"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_ARMENIAN)) return "hy"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_SINHALA)) return "si"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_MYANMAR)) return "my"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_KHMER)) return "km"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_LAO)) return "lo"
+        }
+        try {
+            val currentSubtype = RichInputMethodManager.getInstance().currentSubtype
+            val lang = currentSubtype.locale.language
+            if (lang.isNotBlank() && lang != "zz") {
+                return lang.lowercase()
+            }
+        } catch (_: Throwable) {}
+        return "auto"
+    }
+
     @JvmStatic
     fun translateAsync(
         context: Context,
@@ -164,8 +196,7 @@ object ProofreadHelper {
             return
         }
 
-        val hasPlugin = TranslationLoader.hasPlugin(context)
-        if (!hasPlugin) {
+        if (!TranslationLoader.hasPlugin(context)) {
             mainHandler.post {
                 KeyboardSwitcher.getInstance().showToast(
                     "Translation plugin not installed. Download in Settings > Plugins",
@@ -190,12 +221,18 @@ object ProofreadHelper {
 
         val prefs = context.prefs()
         val targetLang = prefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "Spanish") ?: "Spanish"
-        val langCode = getLangCode(targetLang)
+        val targetLangCode = getLangCode(targetLang)
+        val sourceLangCode = detectSourceLanguage(text)
+        val requiredModelCode = if (targetLangCode == "en") sourceLangCode else targetLangCode
 
-        val isDownloaded = try {
-            provider.isModelDownloaded(langCode)
-        } catch (_: Throwable) {
-            false
+        val isDownloaded = if (requiredModelCode == "auto" || requiredModelCode == "en") {
+            true
+        } else {
+            try {
+                provider.isModelDownloaded(requiredModelCode)
+            } catch (_: Throwable) {
+                false
+            }
         }
 
         if (!isDownloaded) {
@@ -217,7 +254,7 @@ object ProofreadHelper {
 
         currentJob = scope.launch(Dispatchers.IO) {
             try {
-                val result = provider.translate(text, targetLang)
+                val result = provider.translate(text, targetLangCode, sourceLangCode)
                 mainHandler.post {
                     currentJob = null
                     KeyboardSwitcher.getInstance().hideLoadingAnimation()

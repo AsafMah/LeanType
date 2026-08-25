@@ -10,6 +10,7 @@ import android.os.Looper
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.RichInputConnection
+import helium314.keyboard.latin.RichInputMethodManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -281,6 +282,37 @@ object ProofreadHelper {
         }
     }
 
+    private fun detectSourceLanguage(text: String): String {
+        for (cp in text.codePoints()) {
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_TAMIL)) return "ta"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_MALAYALAM)) return "ml"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_TELUGU)) return "te"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_KANNADA)) return "kn"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_GUJARATI)) return "gu"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_BENGALI)) return "bn"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_DEVANAGARI)) return "hi"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_ARABIC)) return "ar"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_GREEK)) return "el"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_HEBREW)) return "he"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_HANGUL)) return "ko"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_THAI)) return "th"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_GEORGIAN)) return "ka"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_ARMENIAN)) return "hy"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_SINHALA)) return "si"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_MYANMAR)) return "my"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_KHMER)) return "km"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_LAO)) return "lo"
+        }
+        try {
+            val currentSubtype = RichInputMethodManager.getInstance().currentSubtype
+            val lang = currentSubtype.locale.language
+            if (lang.isNotBlank() && lang != "zz") {
+                return lang.lowercase()
+            }
+        } catch (_: Throwable) {}
+        return "auto"
+    }
+
     /**
      * Translate text asynchronously and call the callback with the result.
      * 
@@ -321,7 +353,9 @@ object ProofreadHelper {
             apiCall = { service ->
                 val pluginProvider = if (usePlugin) helium314.keyboard.latin.translation.TranslationLoader.getProvider(context) else null
                 val targetLang = service.getTargetLanguage()
-                val langCode = getLangCode(targetLang)
+                val targetLangCode = getLangCode(targetLang)
+                val sourceLangCode = detectSourceLanguage(text)
+                val requiredModelCode = if (targetLangCode == "en") sourceLangCode else targetLangCode
 
                 if (isOfflineOnly) {
                     if (pluginProvider == null || !pluginProvider.isAvailable()) {
@@ -336,10 +370,14 @@ object ProofreadHelper {
                         )
                     }
 
-                    val isDownloaded = try {
-                        pluginProvider.isModelDownloaded(langCode)
-                    } catch (_: Throwable) {
-                        false
+                    val isDownloaded = if (requiredModelCode == "auto" || requiredModelCode == "en") {
+                        true
+                    } else {
+                        try {
+                            pluginProvider.isModelDownloaded(requiredModelCode)
+                        } catch (_: Throwable) {
+                            false
+                        }
                     }
 
                     if (!isDownloaded) {
@@ -355,8 +393,8 @@ object ProofreadHelper {
                     }
 
                     try {
-                        Log.i("ProofreadHelper", "Translating via Offline ML Kit (target: $targetLang, code: $langCode)")
-                        val result = pluginProvider.translate(text, targetLang)
+                        Log.i("ProofreadHelper", "Translating via Offline ML Kit (source: $sourceLangCode, target: $targetLangCode, model: $requiredModelCode)")
+                        val result = pluginProvider.translate(text, targetLangCode, sourceLangCode)
                         if (result.isNotBlank()) {
                             Result.success(result)
                         } else {
@@ -380,8 +418,8 @@ object ProofreadHelper {
                     }
                 } else if (pluginProvider != null && pluginProvider.isAvailable()) {
                     try {
-                        Log.i("ProofreadHelper", "Translating via Translation Plugin (target: $targetLang)")
-                        val result = pluginProvider.translate(text, targetLang)
+                        Log.i("ProofreadHelper", "Translating via Translation Plugin (source: $sourceLangCode, target: $targetLangCode)")
+                        val result = pluginProvider.translate(text, targetLangCode, sourceLangCode)
                         if (result.isNotBlank()) {
                             Result.success(result)
                         } else if (translationEngine == "plugin") {
