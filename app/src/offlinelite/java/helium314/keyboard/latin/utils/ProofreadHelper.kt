@@ -223,14 +223,14 @@ object ProofreadHelper {
                 mainHandler.post {
                     currentJob = null
                     KeyboardSwitcher.getInstance().hideLoadingAnimation()
-                    if (result.isNotBlank() && result != text) {
+                    if (result.isNotBlank()) {
                         onSuccess(result)
                     } else {
                         KeyboardSwitcher.getInstance().showToast(
                             context.getString(R.string.translation_model_not_downloaded),
                             true
                         )
-                        onError("Translation produced no change")
+                        onError("Translation returned empty result")
                     }
                 }
             } catch (e: Throwable) {

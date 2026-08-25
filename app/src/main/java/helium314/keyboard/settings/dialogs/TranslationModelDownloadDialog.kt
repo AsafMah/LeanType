@@ -91,6 +91,7 @@ fun TranslationModelDownloadDialog(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
+            TranslationModelImporter.migrateLegacyModels(context)
             val codes = try {
                 provider.getSupportedLanguages()
             } catch (_: Throwable) {

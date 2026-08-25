@@ -16,7 +16,7 @@ object TranslationLoader {
     private const val PREF_HAS_PLUGIN = "pref_translation_has_plugin"
     private const val TAG = "TranslationLoader"
 
-    private var activeProviderRef: WeakReference<ITranslationProvider>? = null
+    private var activeProvider: ITranslationProvider? = null
 
     @JvmStatic
     fun getTargetAbi(): String {
@@ -108,7 +108,7 @@ object TranslationLoader {
     }
 
     fun getProvider(context: Context): ITranslationProvider? {
-        val cached = activeProviderRef?.get()
+        val cached = activeProvider
         if (cached != null) return cached
         if (!hasPlugin(context)) return null
 
@@ -120,6 +120,7 @@ object TranslationLoader {
         apkFile.setReadOnly()
 
         return try {
+            TranslationModelImporter.migrateLegacyModels(context)
             ensureWorkManagerInitialized(context)
             val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
@@ -145,7 +146,7 @@ object TranslationLoader {
             helium314.keyboard.latin.App.pluginWorkerFactory.pluginRuntime = pluginRuntime
 
             provider.init(mergedContext)
-            activeProviderRef = WeakReference(provider)
+            activeProvider = provider
             provider
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to load translation plugin", e)
@@ -249,7 +250,7 @@ object TranslationLoader {
 
             provider.init(mergedContext)
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
-            activeProviderRef = WeakReference(provider)
+            activeProvider = provider
             return true
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to import translation plugin APK", e)
@@ -268,7 +269,7 @@ object TranslationLoader {
                 }
             } catch (_: Exception) {}
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
-            activeProviderRef = null
+            activeProvider = null
         }
         return false
     }
@@ -289,11 +290,11 @@ object TranslationLoader {
 
     fun unloadPlugin() {
         try {
-            activeProviderRef?.get()?.cleanup()
+            activeProvider?.cleanup()
         } catch (e: Throwable) {
             Log.e(TAG, "Error during plugin cleanup", e)
         }
-        activeProviderRef = null
+        activeProvider = null
     }
 
     fun removePlugin(context: Context) {

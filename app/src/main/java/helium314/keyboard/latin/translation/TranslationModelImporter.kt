@@ -12,7 +12,33 @@ import java.util.zip.ZipInputStream
 object TranslationModelImporter {
     private const val TAG = "TranslationModelImporter"
 
+    fun migrateLegacyModels(context: Context) {
+        try {
+            val baseDir = context.noBackupFilesDir ?: context.filesDir
+            val modelsDir = File(baseDir, "com.google.mlkit.translate.models")
+            if (!modelsDir.exists() || !modelsDir.isDirectory) return
+
+            modelsDir.listFiles()?.forEach { modelDir ->
+                if (modelDir.isDirectory) {
+                    val versionZeroDir = File(modelDir, "0")
+                    if (versionZeroDir.exists() && versionZeroDir.isDirectory) {
+                        versionZeroDir.listFiles()?.forEach { file ->
+                            val dest = File(modelDir, file.name)
+                            if (dest.exists()) dest.delete()
+                            file.renameTo(dest)
+                        }
+                        versionZeroDir.deleteRecursively()
+                        Log.i(TAG, "Restored files from $versionZeroDir to $modelDir")
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "Error cleaning legacy translation model folders", e)
+        }
+    }
+
     fun importFromUri(context: Context, uri: Uri): String? {
+        migrateLegacyModels(context)
         return try {
             context.contentResolver.openInputStream(uri)?.use { stream ->
                 importFromStream(context, stream)
@@ -24,6 +50,7 @@ object TranslationModelImporter {
     }
 
     fun importFromStream(context: Context, inputStream: InputStream): String? {
+        migrateLegacyModels(context)
         val tempZip = File(context.cacheDir, "import_translation_model_${System.currentTimeMillis()}.zip")
         return try {
             FileOutputStream(tempZip).use { out ->

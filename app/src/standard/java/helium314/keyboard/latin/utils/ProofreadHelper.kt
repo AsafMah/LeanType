@@ -359,7 +359,7 @@ object ProofreadHelper {
                     try {
                         Log.i("ProofreadHelper", "Translating via Offline ML Kit (target: $targetLang, code: $langCode)")
                         val result = pluginProvider.translate(text, targetLang)
-                        if (result.isNotBlank() && !result.equals(text, ignoreCase = false)) {
+                        if (result.isNotBlank()) {
                             Result.success(result)
                         } else {
                             mainHandler.post {
@@ -384,12 +384,12 @@ object ProofreadHelper {
                     try {
                         Log.i("ProofreadHelper", "Translating via Translation Plugin (target: $targetLang)")
                         val result = pluginProvider.translate(text, targetLang)
-                        if (result.isNotBlank() && !result.equals(text, ignoreCase = false)) {
+                        if (result.isNotBlank()) {
                             Result.success(result)
                         } else if (translationEngine == "plugin") {
-                            Result.failure(Exception("Plugin translation returned unmodified text"))
+                            Result.failure(Exception("Plugin translation returned empty result"))
                         } else {
-                            Log.w("ProofreadHelper", "Plugin returned blank or unmodified text, falling back to built-in AI")
+                            Log.w("ProofreadHelper", "Plugin returned blank text, falling back to built-in AI")
                             service.translate(text)
                         }
                     } catch (e: Throwable) {
