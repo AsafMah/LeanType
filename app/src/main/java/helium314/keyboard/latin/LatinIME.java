@@ -2145,7 +2145,7 @@ public class LatinIME extends InputMethodService implements
         }
         if (firstWordEnabled && bigramEnabled) {
             if (DebugFlags.DEBUG_ENABLED) {
-                Log.d(TAG, "Initial prediction check: dictReady=true, firstWordEnabled=true, bigramEnabled=true");
+                Log.i(TAG, "Initial prediction check: dictReady=true, firstWordEnabled=true, bigramEnabled=true");
             }
             return true;
         }
@@ -2153,7 +2153,7 @@ public class LatinIME extends InputMethodService implements
                 settingsValues.mSpacingAndPunctuations, 1);
         final boolean firstWordContext = ngramContext == null || ngramContext.isBeginningOfSentenceContext();
         if (DebugFlags.DEBUG_ENABLED) {
-            Log.d(TAG, "Initial prediction check: dictReady=true, firstWordEnabled=" + firstWordEnabled
+            Log.i(TAG, "Initial prediction check: dictReady=true, firstWordEnabled=" + firstWordEnabled
                     + ", bigramEnabled=" + bigramEnabled + ", firstWordContext=" + firstWordContext);
         }
         return firstWordContext ? firstWordEnabled : bigramEnabled;

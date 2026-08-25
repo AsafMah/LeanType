@@ -659,7 +659,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         if (DebugFlags.DEBUG_ENABLED && composedData.mTypedWord.isEmpty()) {
             val topScores = suggestionResults.take(3).map { "${it.mSourceDict?.mDictType ?: "unknown"}:${it.mScore}" }
-            Log.d("ScoreAudit", "next-word results: count=${suggestionResults.size} isBOS=${ngramContext.isBeginningOfSentenceContext} top3=$topScores")
+            Log.i("ScoreAudit", "next-word results: count=${suggestionResults.size} isBOS=${ngramContext.isBeginningOfSentenceContext} top3=$topScores")
         }
 
         return suggestionResults
@@ -755,7 +755,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                         info.mScore
                     }
                     if (DebugFlags.DEBUG_ENABLED) {
-                        Log.d("ScoreAudit", "source=$dictType raw=${info.mScore} boosted=$boostedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
+                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boosted=$boostedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
                     }
                     val boostedInfo = SuggestedWordInfo(
                         info.mWord, info.mPrevWordsContext, boostedScore, info.mKindAndFlags,
@@ -764,7 +764,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     suggestions.add(boostedInfo)
                 } else {
                     if (DebugFlags.DEBUG_ENABLED && composedData.mTypedWord.isEmpty()) {
-                        Log.d("ScoreAudit", "source=$dictType raw=${info.mScore} boosted=${info.mScore} isBOS=${ngramContext.isBeginningOfSentenceContext}")
+                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boosted=${info.mScore} isBOS=${ngramContext.isBeginningOfSentenceContext}")
                     }
                     suggestions.add(info)
                 }
