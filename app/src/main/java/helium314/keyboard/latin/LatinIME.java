@@ -157,6 +157,7 @@ public class LatinIME extends InputMethodService implements
     private final DictionaryFacilitator mDictionaryFacilitator = DictionaryFacilitatorProvider
             .getDictionaryFacilitator(false);
     final InputLogic mInputLogic = new InputLogic(this, this, mDictionaryFacilitator);
+    private boolean mLastMainDictionaryAvailable = false;
 
     // TODO: Move these {@link View}s to {@link KeyboardSwitcher}.
     View mInputView;
@@ -717,10 +718,21 @@ public class LatinIME extends InputMethodService implements
         if (mainKeyboardView != null) {
             mainKeyboardView.setMainDictionaryAvailability(isMainDictionaryAvailable);
         }
-        if (mHandler.hasPendingWaitForDictionaryLoad()) {
-            mHandler.cancelWaitForDictionaryLoad();
-            mHandler.postResumeSuggestions(false /* shouldDelay */);
-        }
+        mHandler.post(() -> {
+            if (mLastMainDictionaryAvailable != isMainDictionaryAvailable) {
+                if (mInputLogic != null) {
+                    mInputLogic.getSuggest().clearNextWordSuggestionsCache();
+                }
+                if (isMainDictionaryAvailable && !mHandler.hasPendingWaitForDictionaryLoad()) {
+                    mHandler.postUpdateSuggestionStrip(SuggestedWords.INPUT_STYLE_TYPING);
+                }
+            }
+            mLastMainDictionaryAvailable = isMainDictionaryAvailable;
+            if (mHandler.hasPendingWaitForDictionaryLoad()) {
+                mHandler.cancelWaitForDictionaryLoad();
+                mHandler.postResumeSuggestions(false /* shouldDelay */);
+            }
+        });
     }
 
     void resetDictionaryFacilitatorIfNecessary() {
@@ -749,6 +761,12 @@ public class LatinIME extends InputMethodService implements
                 mSettings.getCurrent().mUsePersonalizedDicts)) {
             return;
         }
+        mHandler.post(() -> {
+            if (mInputLogic != null) {
+                mInputLogic.getSuggest().clearNextWordSuggestionsCache();
+            }
+            mLastMainDictionaryAvailable = false;
+        });
         resetDictionaryFacilitator(subtypeLocale);
     }
 

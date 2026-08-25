@@ -438,7 +438,12 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         if (Settings.getValues().mDisableMultiWordSuggestions) {
             newResults.removeAll { it.mWord.contains(' ') }
         }
-        nextWordSuggestionsCache.put(ngramContext, newResults.copy())
+        val mainReady = mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary()
+        val mainLoadPending = mDictionaryFacilitator.isMainDictionaryLoadPending()
+        val shouldCache = newResults.isNotEmpty() || mainReady || !mainLoadPending
+        if (shouldCache) {
+            nextWordSuggestionsCache.put(ngramContext, newResults.copy())
+        }
         return newResults
     }
 

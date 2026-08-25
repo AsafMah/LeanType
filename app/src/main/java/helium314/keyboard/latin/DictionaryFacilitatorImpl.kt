@@ -68,8 +68,18 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private var mLoadedDownloadPrefs: Map<String, Any?> = emptyMap()
     private var dictionaryGroups = listOf(DictionaryGroup())
 
+    private val initializedMainDictionary = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val pendingMainDictionaryLoad = java.util.concurrent.atomic.AtomicBoolean(false)
+
     @Volatile
     private var mLatchForWaitingLoadingMainDictionaries = CountDownLatch(0)
+
+    private fun refreshMainDictionaryReadinessState() {
+        val ready = dictionaryGroups.any { group ->
+            group.getDict(Dictionary.TYPE_MAIN)?.isInitialized == true
+        }
+        initializedMainDictionary.set(ready)
+    }
 
     // The library does not deal well with ngram history for auto-capitalized words, so we adjust
     // the ngram context to store next word suggestions for such cases.
@@ -209,6 +219,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         synchronized(this) {
             oldDictionaryGroups = dictionaryGroups
             dictionaryGroups = newDictionaryGroups
+            refreshMainDictionaryReadinessState()
             if (hasAtLeastOneUninitializedMainDictionary()) {
                 asyncReloadUninitializedMainDictionaries(context, locales, listener)
             }
@@ -295,6 +306,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     ) {
         val latchForWaitingLoadingMainDictionary = CountDownLatch(1)
         mLatchForWaitingLoadingMainDictionaries = latchForWaitingLoadingMainDictionary
+        pendingMainDictionaryLoad.set(true)
         scope.launch {
             try {
                 val useEmojiDict = Settings.getValues().mSuggestEmojis
@@ -309,16 +321,19 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     if (dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.isInitialized == true) null
                     else dictionaryGroup to DictionaryFactory.createMainDictionaryCollection(context, it, useEmojiDict)
                 }
-                synchronized(this) {
+                synchronized(this@DictionaryFacilitatorImpl) {
                     dictGroupsWithNewMainDict.forEach { (dictGroup, mainDict) ->
                         dictGroup.setMainDict(mainDict)
                     }
+                    refreshMainDictionaryReadinessState()
                 }
 
                 listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
             } catch (e: Throwable) {
                 Log.e(TAG, "could not initialize main dictionaries for $locales", e)
             } finally {
+                pendingMainDictionaryLoad.set(false)
+                refreshMainDictionaryReadinessState()
                 latchForWaitingLoadingMainDictionary.countDown()
             }
         }
@@ -330,6 +345,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         synchronized(this) {
             dictionaryGroupsToClose = dictionaryGroups
             dictionaryGroups = listOf(DictionaryGroup())
+            pendingMainDictionaryLoad.set(false)
+            refreshMainDictionaryReadinessState()
         }
         for (dictionaryGroup in dictionaryGroupsToClose) {
             for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
@@ -338,9 +355,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         }
     }
 
-    // The main dictionaries are loaded asynchronously. Don't cache the return value of these methods.
     override fun hasAtLeastOneInitializedMainDictionary(): Boolean =
-        dictionaryGroups.any { it.getDict(Dictionary.TYPE_MAIN)?.isInitialized == true }
+        initializedMainDictionary.get()
+
+    override fun isMainDictionaryLoadPending(): Boolean =
+        pendingMainDictionaryLoad.get()
 
     override fun hasAtLeastOneUninitializedMainDictionary(): Boolean =
         dictionaryGroups.any { it.getDict(Dictionary.TYPE_MAIN)?.isInitialized != true }

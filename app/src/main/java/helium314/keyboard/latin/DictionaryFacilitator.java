@@ -118,6 +118,9 @@ public interface DictionaryFacilitator {
     /** main dictionaries are loaded asynchronously after resetDictionaries */
     boolean hasAtLeastOneInitializedMainDictionary();
 
+    /** whether main dictionary loading is currently pending/in-progress */
+    boolean isMainDictionaryLoadPending();
+
     /** main dictionaries are loaded asynchronously after resetDictionaries */
     boolean hasAtLeastOneUninitializedMainDictionary();
 
