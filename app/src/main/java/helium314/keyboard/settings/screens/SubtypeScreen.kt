@@ -142,6 +142,23 @@ fun SubtypeScreen(
     var showMorePopupsDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val customMainLayouts = LayoutUtilsCustom.getLayoutFiles(LayoutType.MAIN, ctx, currentSubtype.locale).map { it.name }
+
+    val recognizer = remember { HandwritingLoader.getRecognizer(ctx) }
+    val languageTag = HandwritingLoader.getEffectiveLanguage(ctx, currentSubtype.locale.toLanguageTag())
+    var isHandwritingDownloaded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(languageTag) {
+        withContext(Dispatchers.IO) {
+            val ready = try {
+                recognizer?.isLanguageReady(languageTag) == true
+            } catch (t: Throwable) {
+                false
+            }
+            withContext(Dispatchers.Main) {
+                isHandwritingDownloaded = ready
+            }
+        }
+    }
     SearchScreen(
         onClickBack = onClickBack,
         icon = { if (currentSubtype.isAdditionalSubtype(prefs)) DeleteButton {
