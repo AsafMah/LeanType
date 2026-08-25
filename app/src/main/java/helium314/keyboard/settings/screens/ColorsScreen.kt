@@ -184,39 +184,52 @@ fun ColorsScreen(
                 Text( // not a colorSetting, but still best done as part of the list
                     stringResource(R.string.all_colors_warning),
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             else
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                androidx.compose.material3.Card(
                     modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clickable { chosenColorString = Json.encodeToString(colorSetting) }
-                ) {
-                    Spacer(
-                        modifier = Modifier
-                            .background(Color(colorSetting.displayColor()), shape = CircleShape)
-                            .size(50.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
-                    Column(Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp)) {
-                        Text(colorSetting.displayName)
-                        if (colorSetting.auto == true)
-                            CompositionLocalProvider(
-                                LocalTextStyle provides MaterialTheme.typography.bodyMedium,
-                                LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant
-                            ) {
-                                Text(stringResource(R.string.auto_user_color))
-                            }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { chosenColorString = Json.encodeToString(colorSetting) }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Spacer(
+                            modifier = Modifier
+                                .background(Color(colorSetting.displayColor()), shape = CircleShape)
+                                .size(44.dp)
+                        )
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            Text(colorSetting.displayName, style = MaterialTheme.typography.bodyLarge)
+                            if (colorSetting.auto == true)
+                                CompositionLocalProvider(
+                                    LocalTextStyle provides MaterialTheme.typography.bodyMedium,
+                                    LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant
+                                ) {
+                                    Text(stringResource(R.string.auto_user_color))
+                                }
+                        }
+                        if (colorSetting.auto != null)
+                            Switch(colorSetting.auto, onCheckedChange = { checked ->
+                                val oldUserColors = KeyboardTheme.readUserColors(prefs, newThemeName.text)
+                                val newUserColors = (oldUserColors + ColorSetting(colorSetting.name, checked, colorSetting.color))
+                                    .reversed().distinctBy { it.displayName }
+                                KeyboardTheme.writeUserColors(prefs, newThemeName.text, newUserColors)
+                            })
                     }
-                    if (colorSetting.auto != null)
-                        Switch(colorSetting.auto, onCheckedChange = { checked ->
-                            val oldUserColors = KeyboardTheme.readUserColors(prefs, newThemeName.text)
-                            val newUserColors = (oldUserColors + ColorSetting(colorSetting.name, checked, colorSetting.color))
-                                .reversed().distinctBy { it.displayName }
-                            KeyboardTheme.writeUserColors(prefs, newThemeName.text, newUserColors)
-                        })
                 }
         }
     )
