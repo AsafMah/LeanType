@@ -739,6 +739,9 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     }
                 }
             }
+            if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
+                Log.i("ScoreAudit", "source=$dictType count=${dictionarySuggestions?.size ?: 0} isBOS=${ngramContext.isBeginningOfSentenceContext}")
+            }
             if (dictionarySuggestions == null) continue
 
             // For some reason "garbage" words are produced when glide typing. For user history

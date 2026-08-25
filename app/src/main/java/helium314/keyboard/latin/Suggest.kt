@@ -9,6 +9,7 @@ import android.text.TextUtils
 import android.util.LruCache
 import com.android.inputmethod.latin.utils.BinaryDictionaryUtils
 import helium314.keyboard.keyboard.Keyboard
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
 import helium314.keyboard.latin.common.ComposedData
 import helium314.keyboard.latin.common.Constants
@@ -431,12 +432,20 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     private fun getNextWordSuggestions(ngramContext: NgramContext, keyboard: Keyboard, inputStyle: Int,
                                        settingsValuesForSuggestion: SettingsValuesForSuggestion): SuggestionResults {
         val cachedResults = nextWordSuggestionsCache.get(ngramContext)
-        if (cachedResults != null) return cachedResults.copy()
+        if (cachedResults != null) {
+            if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT) {
+                Log.i("ScoreAudit", "nextWord: cacheHit=true prevCount=${ngramContext.prevWordCount} isBOS=${ngramContext.isBeginningOfSentenceContext} count=${cachedResults.size}")
+            }
+            return cachedResults.copy()
+        }
         val newResults = mDictionaryFacilitator.getSuggestionResults(ComposedData(InputPointers(1),
             false, ""), ngramContext, keyboard, settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyle)
         // ponytail: filter out multi-word suggestions if enabled
         if (Settings.getValues().mDisableMultiWordSuggestions) {
             newResults.removeAll { it.mWord.contains(' ') }
+        }
+        if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT) {
+            Log.i("ScoreAudit", "nextWord: cacheHit=false prevCount=${ngramContext.prevWordCount} isBOS=${ngramContext.isBeginningOfSentenceContext} count=${newResults.size}")
         }
         val mainReady = mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary()
         val mainLoadPending = mDictionaryFacilitator.isMainDictionaryLoadPending()

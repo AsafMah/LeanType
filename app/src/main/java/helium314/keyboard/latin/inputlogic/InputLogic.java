@@ -347,6 +347,9 @@ public final class InputLogic {
         final Event event = Event.createSuggestionPickedEvent(suggestionInfo);
         final InputTransaction inputTransaction = new InputTransaction(settingsValues,
                 event, SystemClock.uptimeMillis(), mSpaceState, keyboardShiftState);
+        if (DebugFlags.DEBUG_ENABLED) {
+            Log.i("SuggestTrace", "pickSuggestion: composingBefore=" + mWordComposer.isComposingWord());
+        }
         // Manual pick affects the contents of the editor, so we take note of this. It's
         // important
         // for the sequence of language switching.
@@ -1708,6 +1711,10 @@ public final class InputLogic {
             mSpaceState = SpaceState.SWAP_PUNCTUATION;
             mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
         } else if (Constants.CODE_SPACE == codePoint) {
+            if (DebugFlags.DEBUG_ENABLED) {
+                Log.i("SuggestTrace", "space: wasComposing=" + wasComposingWord
+                        + " suggestedWordsEmpty=" + mSuggestedWords.isEmpty());
+            }
             if (!mSuggestedWords.isPunctuationSuggestions()) {
                 mSpaceState = SpaceState.WEAK;
             }
@@ -2442,6 +2449,12 @@ public final class InputLogic {
                     && isInlineEmojiSearchAction()) {
                 mSuggestionStripViewAccessor.showSuggestionStrip();
             }
+        }
+        if (DebugFlags.DEBUG_ENABLED && suggestedWords != null) {
+            Log.i("SuggestTrace", "updateStrip: composing=" + mWordComposer.isComposingWord()
+                    + " typedLen=" + mWordComposer.getTypedWord().length()
+                    + " suggestedSize=" + suggestedWords.size()
+                    + " punctuation=" + suggestedWords.isPunctuationSuggestions());
         }
         if (DebugFlags.DEBUG_ENABLED) {
             long runTimeMillis = System.currentTimeMillis() - startTimeMillis;
