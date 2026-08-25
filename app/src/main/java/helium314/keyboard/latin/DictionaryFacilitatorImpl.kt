@@ -749,13 +749,14 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
                 if (composedData.mTypedWord.isEmpty() && (dictType == Dictionary.TYPE_USER_HISTORY || dictType == Dictionary.TYPE_USER)) {
                     val settingsValues = Settings.getValues()
-                    val boostedScore = if (settingsValues.mPrioritizePersonalSuggestions) {
-                        info.mScore + settingsValues.mNextWordBoostLevel
+                    val boost = if (settingsValues.mPrioritizePersonalSuggestions) {
+                        minOf(MAX_PERSONALIZATION_BOOST, settingsValues.mNextWordBoostLevel)
                     } else {
-                        info.mScore
+                        0
                     }
+                    val boostedScore = info.mScore + boost
                     if (DebugFlags.DEBUG_ENABLED) {
-                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boosted=$boostedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
+                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boost=$boost boosted=$boostedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
                     }
                     val boostedInfo = SuggestedWordInfo(
                         info.mWord, info.mPrevWordsContext, boostedScore, info.mKindAndFlags,
@@ -764,7 +765,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     suggestions.add(boostedInfo)
                 } else {
                     if (DebugFlags.DEBUG_ENABLED && composedData.mTypedWord.isEmpty()) {
-                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boosted=${info.mScore} isBOS=${ngramContext.isBeginningOfSentenceContext}")
+                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boost=0 boosted=${info.mScore} isBOS=${ngramContext.isBeginningOfSentenceContext}")
                     }
                     suggestions.add(info)
                 }
@@ -874,6 +875,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         // Multiplier to convert session boost values into score-space (native scores are ~1_000_000)
         private const val BOOST_SCORE_MULTIPLIER = 1000f
+
+        // Native binary dictionary scores cap around 255. A boost of 500 destroys native bigram confidence.
+        // We cap personalization boost to ~20% of the native ceiling so it supports, rather than overrides,
+        // high-confidence dictionary bigrams.
+        private const val MAX_PERSONALIZATION_BOOST = 48
 
         private fun createSubDict(
             dictType: String, context: Context, locale: Locale, dictFile: File?, dictNamePrefix: String
