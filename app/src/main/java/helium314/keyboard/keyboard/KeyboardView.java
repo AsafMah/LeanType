@@ -410,6 +410,7 @@ public class KeyboardView extends View {
                 case -131: // Undo
                 case -132: // Redo
                 case -7:   // delete
+                case -9:   // forward delete
                     customColor = mColors.get(ColorType.EDIT_MODE_DELETE_BACKGROUND);
                     break;
                 case -35:  // All
