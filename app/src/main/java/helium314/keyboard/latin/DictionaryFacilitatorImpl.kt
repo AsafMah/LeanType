@@ -21,6 +21,7 @@ import helium314.keyboard.latin.common.StringUtils
 import helium314.keyboard.latin.common.decapitalize
 import helium314.keyboard.latin.common.mightBeEmoji
 import helium314.keyboard.latin.common.splitOnWhitespace
+import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.dictionary.AppsBinaryDictionary
 import helium314.keyboard.latin.dictionary.ContactsBinaryDictionary
 import helium314.keyboard.latin.dictionary.Dictionary
@@ -656,6 +657,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         includeAtLeastTwoWordSuggestions(suggestionResults, suggestionsArray, composedData.mTypedWord)
 
+        if (DebugFlags.DEBUG_ENABLED && composedData.mTypedWord.isEmpty()) {
+            val topScores = suggestionResults.take(3).map { "${it.mSourceDict?.mDictType ?: "unknown"}:${it.mScore}" }
+            Log.d("ScoreAudit", "next-word results: count=${suggestionResults.size} isBOS=${ngramContext.isBeginningOfSentenceContext} top3=$topScores")
+        }
+
         return suggestionResults
     }
 
@@ -748,12 +754,18 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     } else {
                         info.mScore
                     }
+                    if (DebugFlags.DEBUG_ENABLED) {
+                        Log.d("ScoreAudit", "source=$dictType raw=${info.mScore} boosted=$boostedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
+                    }
                     val boostedInfo = SuggestedWordInfo(
                         info.mWord, info.mPrevWordsContext, boostedScore, info.mKindAndFlags,
                         info.mSourceDict, info.mIndexOfTouchPointOfSecondWord, info.mAutoCommitFirstWordConfidence
                     )
                     suggestions.add(boostedInfo)
                 } else {
+                    if (DebugFlags.DEBUG_ENABLED && composedData.mTypedWord.isEmpty()) {
+                        Log.d("ScoreAudit", "source=$dictType raw=${info.mScore} boosted=${info.mScore} isBOS=${ngramContext.isBeginningOfSentenceContext}")
+                    }
                     suggestions.add(info)
                 }
             }
