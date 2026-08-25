@@ -25,8 +25,12 @@ object DebugFlags {
     @JvmField
     var DEBUG_ENABLED = false
 
+    @JvmField
+    var SCORE_AUDIT = false
+
     fun init(context: Context) {
         DEBUG_ENABLED = BuildConfig.DEBUG || context.prefs().getBoolean(DebugSettings.PREF_DEBUG_MODE, Defaults.PREF_DEBUG_MODE)
+        SCORE_AUDIT = DEBUG_ENABLED
         CrashReportExceptionHandler(context.applicationContext).install()
     }
 }

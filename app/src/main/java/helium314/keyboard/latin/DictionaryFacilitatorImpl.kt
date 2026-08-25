@@ -12,6 +12,7 @@ import android.provider.UserDictionary
 import android.util.LruCache
 import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.DictionaryFacilitator.DictionaryInitializationListener
 import helium314.keyboard.latin.NgramContext.WordInfo
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
@@ -657,12 +658,31 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         includeAtLeastTwoWordSuggestions(suggestionResults, suggestionsArray, composedData.mTypedWord)
 
-        if (DebugFlags.DEBUG_ENABLED && composedData.mTypedWord.isEmpty()) {
+        if (composedData.mTypedWord.isEmpty()) {
+            pruneNextWordCandidates(suggestionResults)
+        }
+
+        if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
             val topScores = suggestionResults.take(3).map { "${it.mSourceDict?.mDictType ?: "unknown"}:${it.mScore}" }
             Log.i("ScoreAudit", "next-word results: count=${suggestionResults.size} isBOS=${ngramContext.isBeginningOfSentenceContext} top3=$topScores")
         }
 
         return suggestionResults
+    }
+
+    private fun pruneNextWordCandidates(results: SuggestionResults) {
+        if (results.size <= 3) return
+        val bestScore = results.first().mScore
+        val beamThreshold = bestScore - BEAM_DELTA
+        val toRemove = mutableListOf<SuggestedWordInfo>()
+        results.forEachIndexed { index, info ->
+            if (index >= 3 && info.mScore < beamThreshold) {
+                toRemove.add(info)
+            }
+        }
+        for (item in toRemove) {
+            results.remove(item)
+        }
     }
 
     private fun getSuggestions(
@@ -755,7 +775,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                         0
                     }
                     val boostedScore = info.mScore + boost
-                    if (DebugFlags.DEBUG_ENABLED) {
+                    if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT) {
                         Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boost=$boost boosted=$boostedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
                     }
                     val boostedInfo = SuggestedWordInfo(
@@ -764,7 +784,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     )
                     suggestions.add(boostedInfo)
                 } else {
-                    if (DebugFlags.DEBUG_ENABLED && composedData.mTypedWord.isEmpty()) {
+                    if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
                         Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boost=0 boosted=${info.mScore} isBOS=${ngramContext.isBeginningOfSentenceContext}")
                     }
                     suggestions.add(info)
@@ -880,6 +900,9 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // We cap personalization boost to ~20% of the native ceiling so it supports, rather than overrides,
         // high-confidence dictionary bigrams.
         private const val MAX_PERSONALIZATION_BOOST = 48
+
+        // Threshold delta for beam pruning next-word candidates below top candidate score.
+        private const val BEAM_DELTA = 60
 
         private fun createSubDict(
             dictType: String, context: Context, locale: Locale, dictFile: File?, dictNamePrefix: String
