@@ -26,7 +26,7 @@ object DebugFlags {
     var DEBUG_ENABLED = false
 
     fun init(context: Context) {
-        DEBUG_ENABLED = context.prefs().getBoolean(DebugSettings.PREF_DEBUG_MODE, Defaults.PREF_DEBUG_MODE)
+        DEBUG_ENABLED = BuildConfig.DEBUG || context.prefs().getBoolean(DebugSettings.PREF_DEBUG_MODE, Defaults.PREF_DEBUG_MODE)
         CrashReportExceptionHandler(context.applicationContext).install()
     }
 }
