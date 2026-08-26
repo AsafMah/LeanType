@@ -114,9 +114,16 @@ object OfflineAiLoader {
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
             return null
         }
-        apkFile.setReadOnly()
+        val provider = loadProviderInternal(context, apkFile)
+        if (provider != null) {
+            activeProvider = provider
+        }
+        return provider
+    }
 
+    private fun loadProviderInternal(context: Context, apkFile: File): IOfflineAiProvider? {
         return try {
+            apkFile.setReadOnly()
             val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
             val classLoader = PluginClassLoader(
@@ -134,7 +141,7 @@ object OfflineAiLoader {
             }
 
             provider.init(context)
-            activeProvider = provider
+            Log.i(TAG, "Offline AI provider loaded successfully")
             provider
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to load offline AI plugin", e)
@@ -160,6 +167,9 @@ object OfflineAiLoader {
                             }
                         }
                     }
+                    outFile.setReadable(true, false)
+                    outFile.setExecutable(true, false)
+                    outFile.setReadOnly()
                 }
             }
             zip.close()
@@ -189,6 +199,10 @@ object OfflineAiLoader {
 
     fun loadPlugin(context: Context, sourceUri: Uri): Boolean {
         return try {
+            try {
+                context.codeCacheDir.deleteRecursively()
+            } catch (_: Exception) {}
+
             val targetFile = File(context.filesDir, PLUGIN_FILENAME)
             if (targetFile.exists()) targetFile.delete()
 
@@ -202,9 +216,17 @@ object OfflineAiLoader {
             activeProvider?.cleanup()
             activeProvider = null
 
-            val provider = getProvider(context)
+            val provider = loadProviderInternal(context, targetFile)
             val success = provider != null && provider.isAvailable()
-            context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, success).apply()
+            if (success) {
+                activeProvider = provider
+                context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
+                Log.i(TAG, "Plugin imported and registered successfully")
+            } else {
+                targetFile.delete()
+                context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
+                Log.w(TAG, "Plugin import verification failed")
+            }
             success
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to load plugin from URI", e)
@@ -214,6 +236,10 @@ object OfflineAiLoader {
 
     fun loadPluginFromTempFile(context: Context, tempFile: File): Boolean {
         return try {
+            try {
+                context.codeCacheDir.deleteRecursively()
+            } catch (_: Exception) {}
+
             val targetFile = File(context.filesDir, PLUGIN_FILENAME)
             if (targetFile.exists()) targetFile.delete()
 
@@ -224,9 +250,17 @@ object OfflineAiLoader {
             activeProvider?.cleanup()
             activeProvider = null
 
-            val provider = getProvider(context)
+            val provider = loadProviderInternal(context, targetFile)
             val success = provider != null && provider.isAvailable()
-            context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, success).apply()
+            if (success) {
+                activeProvider = provider
+                context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
+                Log.i(TAG, "Plugin imported from temp file successfully")
+            } else {
+                targetFile.delete()
+                context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
+                Log.w(TAG, "Plugin temp file verification failed")
+            }
             success
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to load plugin from temp file", e)
@@ -247,6 +281,7 @@ object OfflineAiLoader {
                 }
             }
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
+            Log.i(TAG, "Plugin removed successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error removing plugin", e)
         }
