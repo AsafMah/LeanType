@@ -72,11 +72,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "• Ergonomic default text edit layout with central Select key and D-Pad navigation",
-    "• Preserved classic text edit layout option (editing_classic)",
-    "• Fixed rectangular tile rendering for Enter/Action keys in text edit mode",
-    "• Improved plugin ClassLoader lifecycle and native model directory resolution",
-    "• Enhanced ProGuard rules for plugin WorkManager runtime components"
+    "• Suggestion Balance Master Slider (1–5 slider for dictionary vs. personalization)",
+    "• Next-word prediction & scoring optimization with beam pruning and instant focus readiness",
+    "• Ergonomic text edit layout with central Select key and D-Pad navigation",
+    "• Material 3 card-based settings redesign across Subtype, Colors, and Dictionaries",
+    "• Offline translation enhancements (script detection, explicit language pairs, English model)"
 )
 
 @Composable

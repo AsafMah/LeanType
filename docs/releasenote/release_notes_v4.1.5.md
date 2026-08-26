@@ -4,16 +4,11 @@ As an open-source, community-funded project, we operate on a very limited budget
 
 ## 🚀 What's New in v4.1.5
 
-### ✨ New Features & Enhancements
-
-- **Ergonomic Default Text Edit Layout**: Redesigned default text edit layout featuring a central Select key surrounded by directional navigation arrows for intuitive one-handed editing.
-- **Classic Text Edit Option**: Retained the original editing layout as `editing_classic` for users who prefer the legacy layout.
-- **Plugin ClassLoader & Path Resolution**: Refined plugin ClassLoader lifecycle management and native model directory resolution for seamless offline translation and companion plugin integration.
-
-### 🐛 Bug Fixes
-
-- **Text Edit Key Border Rendering**: Fixed Enter and Action keys in text editing mode to consistently fill rectangular tiles when key borders are turned off.
-- **ProGuard & WorkManager Runtime**: Ensured `androidx.work` and `ListenableWorker` classes are preserved under R8 minification for reliable background plugin tasks.
+- **Suggestion Balance Master Slider**: Added an intuitive 1–5 slider in Text Correction settings to customize suggestion prioritization from strict dictionary accuracy to heavy personalization.
+- **Next-Word Prediction & Scoring Optimization**: Refined prediction scoring with balanced personalization boosts, beam pruning to eliminate low-confidence noise, and instant prediction readiness on text focus.
+- **Ergonomic Text Edit Mode**: Redesigned the default text edit layout with a central Select key and directional D-Pad navigation (classic layout retained as `editing_classic`), with fixed rectangular key background rendering.
+- **Material 3 Settings Redesign**: Modernized Subtype, Colors, Personal Dictionary, and Blocked Words screens with consistent, clean Material 3 Card-based containers.
+- **Offline Translation & Plugin Enhancements**: Added input script detection, explicit language pair routing, support for downloading English translation models, and improved plugin ClassLoader lifecycle management.
 
 ## 📦 Choose Your Flavor
 
