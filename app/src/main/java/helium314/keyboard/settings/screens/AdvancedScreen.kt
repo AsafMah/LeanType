@@ -482,15 +482,25 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
     Setting(context, SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS, R.string.ai_allow_insecure_connections_title, R.string.ai_allow_insecure_connections_summary) { setting ->
         SwitchPreference(setting, Defaults.PREF_AI_ALLOW_INSECURE_CONNECTIONS)
     },
-    if (BuildConfig.FLAVOR != "offline" && BuildConfig.FLAVOR != "offlinelite") {
+    if (BuildConfig.FLAVOR != "offlinelite") {
         Setting(context, SettingsWithoutKey.TRANSLATION_ENGINE, R.string.translation_engine_title, R.string.translation_engine_summary) { setting ->
-            ListPreference(
-                setting = setting,
-                items = listOf(
+            val isOfflineFlavor = BuildConfig.FLAVOR == "offline"
+            val items = if (isOfflineFlavor) {
+                listOf(
+                    "Auto (Plugin if loaded, else Local AI)" to "auto",
+                    "Translation Plugin" to "plugin",
+                    "Built-in AI (Local GGUF)" to "ai"
+                )
+            } else {
+                listOf(
                     "Auto (Plugin if loaded, else AI)" to "auto",
                     "Translation Plugin" to "plugin",
                     "Built-in AI (Gemini/Groq/OpenAI)" to "ai"
-                ),
+                )
+            }
+            ListPreference(
+                setting = setting,
+                items = items,
                 default = "auto"
             )
         }
@@ -557,6 +567,10 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                                     .fillMaxWidth()
                                     .clickable {
                                         service.setTargetLanguage(code)
+                                        ctx.prefs().edit().apply {
+                                            putString(setting.key, code)
+                                            putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, name)
+                                        }.apply()
                                         helium314.keyboard.latin.utils.TranslationUtils.saveLanguageHistory(ctx.prefs(), name, code)
                                         selectedLanguage = code
                                         showPickerDialog = false
@@ -568,6 +582,10 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                                     selected = isSelected,
                                     onClick = {
                                         service.setTargetLanguage(code)
+                                        ctx.prefs().edit().apply {
+                                            putString(setting.key, code)
+                                            putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, name)
+                                        }.apply()
                                         helium314.keyboard.latin.utils.TranslationUtils.saveLanguageHistory(ctx.prefs(), name, code)
                                         selectedLanguage = code
                                         showPickerDialog = false
@@ -611,7 +629,10 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                     val trimmed = customLang.trim()
                     if (trimmed.isNotEmpty()) {
                         service.setTargetLanguage(trimmed)
-                        ctx.prefs().edit().putString(setting.key, trimmed).apply()
+                        ctx.prefs().edit().apply {
+                            putString(setting.key, trimmed)
+                            putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, trimmed)
+                        }.apply()
                         helium314.keyboard.latin.utils.TranslationUtils.saveLanguageHistory(ctx.prefs(), trimmed, trimmed)
                         selectedLanguage = trimmed
                     }
@@ -771,16 +792,6 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                 name = "Translate Instruction",
                 description = service.getTranslateSystemPrompt().takeIf { it.isNotBlank() } ?: "Default",
                 onClick = { showTranslateSystemPromptDialog = true }
-            )
-
-            // Target Language for Translation
-            val languageSetting = Setting(context, Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, R.string.translate_target_language_title, R.string.translate_target_language_summary) { }
-            val languages = listOf("French", "German", "Romanian", "Spanish", "Italian", "Dutch", "Portuguese", "Russian", "Chinese", "Japanese")
-            val languageItems = languages.map { it to it }
-            ListPreference(
-                setting = languageSetting,
-                items = languageItems,
-                default = Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE
             )
             
             Spacer(modifier = Modifier.height(16.dp))

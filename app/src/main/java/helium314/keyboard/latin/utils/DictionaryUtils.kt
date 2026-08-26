@@ -3,6 +3,8 @@
 package helium314.keyboard.latin.utils
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -311,6 +313,7 @@ fun downloadDictionary(context: Context, locale: Locale, type: String, linkUrl: 
 @Composable
 fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refreshTrigger: Int = 0, onRefresh: () -> Unit) {
     val ctx = LocalContext.current
+    val isOffline = helium314.keyboard.latin.BuildConfig.FLAVOR == "offline" || helium314.keyboard.latin.BuildConfig.FLAVOR == "offlinelite"
     val type = remember(link) { link.substringAfterLast("/").substringBefore("_") }
     // ponytail: extract the specific dictionary locale from the download link to avoid directory collision
     val dictLocale = remember(link) {
@@ -326,7 +329,7 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
     }
     var onlineLastModified by remember(link) { mutableStateOf(0L) }
     LaunchedEffect(link, isInstalled) {
-        if (isInstalled) {
+        if (isInstalled && !isOffline) {
             withContext(Dispatchers.IO) {
                 try {
                     val url = java.net.URL(link)
@@ -411,14 +414,22 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
             ) {
                 Button(
                     onClick = {
-                        downloading = true
-                        downloadDictionary(ctx, dictLocale, type, link) { success ->
-                            downloading = false
-                            if (success) {
-                                ctx.prefs().edit().putString("pref_dict_download_link_${type}_${dictLocale}", link).apply()
-                                onRefresh()
-                            } else {
-                                android.widget.Toast.makeText(ctx, ctx.getString(R.string.download_failed), android.widget.Toast.LENGTH_SHORT).show()
+                        if (isOffline) {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            ctx.startActivity(intent)
+                            android.widget.Toast.makeText(ctx, "Downloading in browser… import dictionary once finished", android.widget.Toast.LENGTH_LONG).show()
+                        } else {
+                            downloading = true
+                            downloadDictionary(ctx, dictLocale, type, link) { success ->
+                                downloading = false
+                                if (success) {
+                                    ctx.prefs().edit().putString("pref_dict_download_link_${type}_${dictLocale}", link).apply()
+                                    onRefresh()
+                                } else {
+                                    android.widget.Toast.makeText(ctx, ctx.getString(R.string.download_failed), android.widget.Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     },
@@ -459,14 +470,22 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
         } else {
             OutlinedButton(
                 onClick = {
-                    downloading = true
-                    downloadDictionary(ctx, dictLocale, type, link) { success ->
-                        downloading = false
-                        if (success) {
-                            ctx.prefs().edit().putString("pref_dict_download_link_${type}_${dictLocale}", link).apply()
-                            onRefresh()
-                        } else {
-                            android.widget.Toast.makeText(ctx, ctx.getString(R.string.download_failed), android.widget.Toast.LENGTH_SHORT).show()
+                    if (isOffline) {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        ctx.startActivity(intent)
+                        android.widget.Toast.makeText(ctx, "Downloading in browser… import dictionary once finished", android.widget.Toast.LENGTH_LONG).show()
+                    } else {
+                        downloading = true
+                        downloadDictionary(ctx, dictLocale, type, link) { success ->
+                            downloading = false
+                            if (success) {
+                                ctx.prefs().edit().putString("pref_dict_download_link_${type}_${dictLocale}", link).apply()
+                                onRefresh()
+                            } else {
+                                android.widget.Toast.makeText(ctx, ctx.getString(R.string.download_failed), android.widget.Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 },

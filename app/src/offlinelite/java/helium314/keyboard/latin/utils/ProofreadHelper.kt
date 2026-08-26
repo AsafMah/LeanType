@@ -178,6 +178,17 @@ object ProofreadHelper {
         return "auto"
     }
 
+    private fun getLanguageDisplayName(context: Context, code: String): String {
+        val names = context.resources.getStringArray(R.array.translate_language_names)
+        val codes = context.resources.getStringArray(R.array.translate_language_codes)
+        val index = codes.indexOfFirst { it.equals(code, ignoreCase = true) }
+        if (index != -1 && index < names.size) {
+            return names[index]
+        }
+        val localeName = java.util.Locale(code).getDisplayLanguage(java.util.Locale.ENGLISH)
+        return if (localeName.isNotBlank()) localeName else code.uppercase()
+    }
+
     @JvmStatic
     fun translateAsync(
         context: Context,
@@ -219,30 +230,38 @@ object ProofreadHelper {
             return
         }
 
-        val prefs = context.prefs()
-        val targetLang = prefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "Spanish") ?: "Spanish"
+        val service = ProofreadService(context)
+        val targetLang = service.getTargetLanguage()
         val targetLangCode = getLangCode(targetLang)
         val sourceLangCode = detectSourceLanguage(text)
-        val requiredModelCode = if (targetLangCode == "en") sourceLangCode else targetLangCode
 
-        val isDownloaded = if (requiredModelCode == "auto" || requiredModelCode == "en") {
-            true
-        } else {
+        val missingModels = mutableListOf<String>()
+        if (sourceLangCode != "auto" && sourceLangCode != "en") {
             try {
-                provider.isModelDownloaded(requiredModelCode)
+                if (!provider.isModelDownloaded(sourceLangCode)) {
+                    missingModels.add(sourceLangCode)
+                }
             } catch (_: Throwable) {
-                false
+                missingModels.add(sourceLangCode)
+            }
+        }
+        if (targetLangCode != "en" && !missingModels.contains(targetLangCode)) {
+            try {
+                if (!provider.isModelDownloaded(targetLangCode)) {
+                    missingModels.add(targetLangCode)
+                }
+            } catch (_: Throwable) {
+                missingModels.add(targetLangCode)
             }
         }
 
-        if (!isDownloaded) {
+        if (missingModels.isNotEmpty()) {
+            val missingNames = missingModels.joinToString(", ") { getLanguageDisplayName(context, it) }
+            val errorMsg = context.getString(R.string.translation_specific_model_not_downloaded, missingNames)
             mainHandler.post {
-                KeyboardSwitcher.getInstance().showToast(
-                    context.getString(R.string.translation_model_not_downloaded),
-                    true
-                )
+                KeyboardSwitcher.getInstance().showToast(errorMsg, true)
             }
-            onError("Model for $targetLang not downloaded")
+            onError(errorMsg)
             return
         }
 

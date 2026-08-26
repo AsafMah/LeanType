@@ -7,8 +7,11 @@ package helium314.keyboard.latin.utils
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.RichInputMethodManager
+import helium314.keyboard.latin.translation.TranslationLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -72,6 +75,7 @@ object ProofreadHelper {
         text: String,
         noTextErrorResId: Int,
         errorResId: Int,
+        skipModelCheck: Boolean = false,
         apiCall: suspend (ProofreadService) -> Result<String>,
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
@@ -79,10 +83,10 @@ object ProofreadHelper {
         val service = ProofreadService(context)
 
         // Check if Model is configured
-        if (service.getModelPath().isNullOrBlank()) {
+        if (!skipModelCheck && service.getModelPath().isNullOrBlank()) {
             mainHandler.post {
                 KeyboardSwitcher.getInstance().showToast(
-                    "No local model selected. Please select an ONNX model in Settings.",
+                    "No local model selected. Please select a GGUF model in Settings.",
                     true
                 )
             }
@@ -130,6 +134,119 @@ object ProofreadHelper {
                 )
             }
         }
+    }
+
+    private fun getLangCode(targetLang: String): String {
+        val trimmed = targetLang.trim()
+        if (trimmed.length == 2) return trimmed.lowercase()
+        if (trimmed.contains("-")) return trimmed.substringBefore("-").lowercase()
+        return when (trimmed.lowercase()) {
+            "english" -> "en"
+            "spanish" -> "es"
+            "french" -> "fr"
+            "german" -> "de"
+            "italian" -> "it"
+            "portuguese" -> "pt"
+            "chinese", "chinese (simplified)", "chinese (traditional)" -> "zh"
+            "japanese" -> "ja"
+            "korean" -> "ko"
+            "arabic" -> "ar"
+            "russian" -> "ru"
+            "hindi" -> "hi"
+            "bengali" -> "bn"
+            "indonesian" -> "id"
+            "dutch" -> "nl"
+            "turkish" -> "tr"
+            "polish" -> "pl"
+            "ukrainian" -> "uk"
+            "swedish" -> "sv"
+            "danish" -> "da"
+            "norwegian" -> "no"
+            "finnish" -> "fi"
+            "greek" -> "el"
+            "hebrew" -> "he"
+            "thai" -> "th"
+            "vietnamese" -> "vi"
+            "tamil" -> "ta"
+            "telugu" -> "te"
+            "marathi" -> "mr"
+            "gujarati" -> "gu"
+            "kannada" -> "kn"
+            "malayalam" -> "ml"
+            "urdu" -> "ur"
+            "persian (farsi)", "persian", "farsi" -> "fa"
+            "swahili" -> "sw"
+            "romanian" -> "ro"
+            "czech" -> "cs"
+            "hungarian" -> "hu"
+            "filipino (tagalog)", "tagalog", "filipino" -> "tl"
+            "malay" -> "ms"
+            "serbian" -> "sr"
+            "croatian" -> "hr"
+            "bulgarian" -> "bg"
+            "slovak" -> "sk"
+            "slovenian" -> "sl"
+            "lithuanian" -> "lt"
+            "latvian" -> "lv"
+            "estonian" -> "et"
+            "catalan" -> "ca"
+            "basque" -> "eu"
+            "afrikaans" -> "af"
+            "albanian" -> "sq"
+            "belarusian" -> "be"
+            "esperanto" -> "eo"
+            "galician" -> "gl"
+            "georgian" -> "ka"
+            "haitian creole", "haitian" -> "ht"
+            "icelandic" -> "is"
+            "irish" -> "ga"
+            "macedonian" -> "mk"
+            "maltese" -> "mt"
+            "welsh" -> "cy"
+            else -> trimmed.take(2).lowercase()
+        }
+    }
+
+    private fun detectSourceLanguage(text: String): String {
+        for (cp in text.codePoints()) {
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_TAMIL)) return "ta"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_MALAYALAM)) return "ml"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_TELUGU)) return "te"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_KANNADA)) return "kn"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_GUJARATI)) return "gu"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_BENGALI)) return "bn"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_DEVANAGARI)) return "hi"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_ARABIC)) return "ar"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_GREEK)) return "el"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_HEBREW)) return "he"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_HANGUL)) return "ko"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_THAI)) return "th"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_GEORGIAN)) return "ka"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_ARMENIAN)) return "hy"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_SINHALA)) return "si"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_MYANMAR)) return "my"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_KHMER)) return "km"
+            if (ScriptUtils.isLetterPartOfScript(cp, ScriptUtils.SCRIPT_LAO)) return "lo"
+        }
+        try {
+            val currentSubtype = RichInputMethodManager.getInstance().currentSubtype
+            val lang = currentSubtype.locale.language
+            if (lang.isNotBlank() && lang != "zz") {
+                return lang.lowercase()
+            }
+        } catch (_: Throwable) {}
+        return "auto"
+    }
+
+    private fun getLanguageDisplayName(context: Context, code: String): String {
+        val names = context.resources.getStringArray(R.array.translate_language_names)
+        val codes = context.resources.getStringArray(R.array.translate_language_codes)
+        val index = codes.indexOfFirst { it.equals(code, ignoreCase = true) }
+        if (index != -1 && index < names.size) {
+            return names[index]
+        }
+        val localeName = java.util.Locale(code).getDisplayLanguage(java.util.Locale.ENGLISH)
+        return if (localeName.isNotBlank()) localeName else code.uppercase()
     }
 
     /**
@@ -183,12 +300,121 @@ object ProofreadHelper {
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
     ) {
+        val prefs = context.prefs()
+        val translationEngine = prefs.getString("pref_translation_engine", prefs.getString("pref_translation_method", "auto") ?: "auto") ?: "auto"
+
+        val hasPlugin = TranslationLoader.hasPlugin(context)
+        val usePlugin = when (translationEngine) {
+            "plugin" -> hasPlugin
+            "ai" -> false
+            else -> hasPlugin
+        }
+
         performAsyncOperation(
             context = context,
             text = text,
-            noTextErrorResId = R.string.proofread_no_text, // Reuse proofread string
-            errorResId = R.string.proofread_error,
-            apiCall = { service -> service.translate(text) },
+            noTextErrorResId = R.string.translate_no_text,
+            errorResId = R.string.translate_error,
+            skipModelCheck = usePlugin,
+            apiCall = { service ->
+                val pluginProvider = if (usePlugin) TranslationLoader.getProvider(context) else null
+                val targetLang = service.getTargetLanguage()
+                val targetLangCode = getLangCode(targetLang)
+                val sourceLangCode = detectSourceLanguage(text)
+
+                val hasLocalModel = !service.getModelPath().isNullOrBlank()
+
+                if (pluginProvider != null && pluginProvider.isAvailable()) {
+                    val missingModels = mutableListOf<String>()
+                    if (sourceLangCode != "auto" && sourceLangCode != "en") {
+                        try {
+                            if (!pluginProvider.isModelDownloaded(sourceLangCode)) {
+                                missingModels.add(sourceLangCode)
+                            }
+                        } catch (_: Throwable) {
+                            missingModels.add(sourceLangCode)
+                        }
+                    }
+                    if (targetLangCode != "en" && !missingModels.contains(targetLangCode)) {
+                        try {
+                            if (!pluginProvider.isModelDownloaded(targetLangCode)) {
+                                missingModels.add(targetLangCode)
+                            }
+                        } catch (_: Throwable) {
+                            missingModels.add(targetLangCode)
+                        }
+                    }
+
+                    if (missingModels.isNotEmpty()) {
+                        val missingNames = missingModels.joinToString(", ") { getLanguageDisplayName(context, it) }
+                        val errorMsg = context.getString(R.string.translation_specific_model_not_downloaded, missingNames)
+                        if (translationEngine == "plugin" || !hasLocalModel) {
+                            mainHandler.post {
+                                KeyboardSwitcher.getInstance().showToast(errorMsg, true)
+                            }
+                            return@performAsyncOperation Result.failure(Exception(errorMsg))
+                        } else {
+                            mainHandler.post {
+                                KeyboardSwitcher.getInstance().showToast(
+                                    context.getString(R.string.translation_switching_to_ai, missingNames),
+                                    false
+                                )
+                            }
+                            Log.i("ProofreadHelper", "Plugin model for $missingNames not downloaded, falling back to local AI")
+                            return@performAsyncOperation service.translate(text)
+                        }
+                    }
+
+                    try {
+                        Log.i("ProofreadHelper", "Translating via Translation Plugin (source: $sourceLangCode, target: $targetLangCode)")
+                        val result = pluginProvider.translate(text, targetLangCode, sourceLangCode)
+                        if (result.isNotBlank()) {
+                            Result.success(result)
+                        } else if (translationEngine == "plugin" || !hasLocalModel) {
+                            Result.failure(Exception("Plugin translation returned empty result"))
+                        } else {
+                            mainHandler.post {
+                                KeyboardSwitcher.getInstance().showToast(
+                                    context.getString(R.string.translation_plugin_fallback_to_ai),
+                                    false
+                                )
+                            }
+                            Log.w("ProofreadHelper", "Plugin returned blank text, falling back to local AI")
+                            service.translate(text)
+                        }
+                    } catch (e: Throwable) {
+                        if (translationEngine == "plugin" || !hasLocalModel) {
+                            Result.failure(e)
+                        } else {
+                            mainHandler.post {
+                                KeyboardSwitcher.getInstance().showToast(
+                                    context.getString(R.string.translation_plugin_fallback_to_ai),
+                                    false
+                                )
+                            }
+                            Log.e("ProofreadHelper", "Plugin translation failed, falling back to local AI", e)
+                            service.translate(text)
+                        }
+                    }
+                } else if (translationEngine == "plugin" || !hasLocalModel) {
+                    mainHandler.post {
+                        KeyboardSwitcher.getInstance().showToast(
+                            context.getString(R.string.translation_model_not_downloaded),
+                            true
+                        )
+                    }
+                    Result.failure(Exception("Translation plugin not available"))
+                } else {
+                    mainHandler.post {
+                        KeyboardSwitcher.getInstance().showToast(
+                            context.getString(R.string.translation_plugin_fallback_to_ai),
+                            false
+                        )
+                    }
+                    Log.i("ProofreadHelper", "Plugin unavailable, translating via local AI model")
+                    service.translate(text)
+                }
+            },
             onSuccess = onSuccess,
             onError = onError
         )

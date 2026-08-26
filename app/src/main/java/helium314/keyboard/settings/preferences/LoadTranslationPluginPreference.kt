@@ -302,6 +302,20 @@ fun TranslationModePreference() {
 @Composable
 fun TranslationEnginePreference() {
     val ctx = LocalContext.current
+    val isOfflineFlavor = helium314.keyboard.latin.BuildConfig.FLAVOR == "offline"
+    val items = if (isOfflineFlavor) {
+        listOf(
+            "Auto (Plugin if loaded, else Local AI)" to "auto",
+            "Translation Plugin" to "plugin",
+            "Built-in AI (Local GGUF)" to "ai"
+        )
+    } else {
+        listOf(
+            "Auto (Plugin if loaded, else AI)" to "auto",
+            "Translation Plugin" to "plugin",
+            "Built-in AI (Gemini/Groq/OpenAI)" to "ai"
+        )
+    }
     val setting = remember {
         helium314.keyboard.settings.Setting(
             ctx,
@@ -311,11 +325,7 @@ fun TranslationEnginePreference() {
         ) { setting ->
             ListPreference(
                 setting = setting,
-                items = listOf(
-                    "Auto (Plugin if loaded, else AI)" to "auto",
-                    "Translation Plugin" to "plugin",
-                    "Built-in AI (Gemini/Groq/OpenAI)" to "ai"
-                ),
+                items = items,
                 default = "auto",
                 icon = R.drawable.ic_translate
             )
@@ -400,6 +410,10 @@ fun TranslationTargetLanguagePreference() {
                                     TextButton(
                                         onClick = {
                                             service.setTargetLanguage(code)
+                                            ctx.prefs().edit().apply {
+                                                putString(helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, code)
+                                                putString(helium314.keyboard.latin.settings.Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, name)
+                                            }.apply()
                                             selectedLanguage = code
                                             helium314.keyboard.latin.utils.TranslationUtils.saveLanguageHistory(ctx.prefs(), name, code)
                                             showPickerDialog = false
@@ -442,6 +456,10 @@ fun TranslationTargetLanguagePreference() {
                             val cleanName = customLangName.trim()
                             val cleanCode = customLangCode.trim()
                             helium314.keyboard.latin.utils.TranslationUtils.saveLanguageHistory(ctx.prefs(), cleanName, cleanCode)
+                            ctx.prefs().edit().apply {
+                                putString(helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, cleanCode)
+                                putString(helium314.keyboard.latin.settings.Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, cleanName)
+                            }.apply()
                             service.setTargetLanguage(cleanCode)
                             selectedLanguage = cleanCode
                             listVersion++

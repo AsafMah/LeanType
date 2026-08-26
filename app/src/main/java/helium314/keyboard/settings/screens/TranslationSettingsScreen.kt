@@ -87,8 +87,8 @@ fun TranslationSettingsScreen(
                     )
                 ) {
                     Column {
-                        // Translation Engine Selection (Auto / Plugin / AI) - Only for online flavors with AI
-                        if (BuildConfig.FLAVOR != "offline" && BuildConfig.FLAVOR != "offlinelite") {
+                        // Translation Engine Selection (Auto / Plugin / AI) - Shown for all flavors with AI
+                        if (BuildConfig.FLAVOR != "offlinelite") {
                             TranslationEnginePreference()
                         }
 

@@ -1,0 +1,5 @@
+- Suggestion Balance Master Slider: 1–5 slider to balance suggestions between dictionary accuracy and personal history.
+- Next-Word Prediction & Scoring: Balanced personalization boosts, beam pruning, and instant readiness on focus.
+- Ergonomic Text Edit Mode: Redesigned layout with central Select key and D-Pad navigation (editing_classic retained).
+- Material 3 Settings: Modernized Subtype, Colors, Personal Dictionary, and Blocked Words screens into Card layouts.
+- Offline Translation & Plugins: Target language persistence fix, translation engine source selection in offline flavor, script detection, and English model support.

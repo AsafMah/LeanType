@@ -23,9 +23,9 @@ android {
         applicationId = "com.leanbitlab.leantype"
         minSdk = 21
         targetSdk = 35
-        // ponytail: release version 4.1.5
-        versionCode = 4105
-        versionName = "4.1.5"
+        // ponytail: release version 4.1.6
+        versionCode = 4106
+        versionName = "4.1.6"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
@@ -133,14 +133,12 @@ android {
                 variant.proguardFiles.add(project.layout.buildDirectory.file(getDefaultProguardFile("proguard-android.txt").absolutePath))
                 variant.proguardFiles.add(project.layout.buildDirectory.file(project.buildFile.parent + "/proguard-rules.pro"))
             }
-            if (variant.flavorName == "standard" || variant.flavorName == "standardfull") {
-                // Ignore all dictionary assets in standard/standardfull flavors
-                val dictsDir = project.file("src/main/assets/dicts")
-                if (dictsDir.exists() && dictsDir.isDirectory) {
-                    dictsDir.listFiles()?.forEach { file ->
-                        if (file.name.endsWith(".dict")) {
-                            patterns.add(file.name)
-                        }
+            // Exclude all dictionary assets across all flavors (all downloaded on-demand)
+            val dictsDir = project.file("src/main/assets/dicts")
+            if (dictsDir.exists() && dictsDir.isDirectory) {
+                dictsDir.listFiles()?.forEach { file ->
+                    if (file.name.endsWith(".dict")) {
+                        patterns.add(file.name)
                     }
                 }
             }

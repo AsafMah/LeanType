@@ -310,8 +310,17 @@ class ProofreadService(private val context: Context) {
 
     fun setModelName(name: String) { /* No-op */ }
     
-    fun getTargetLanguage(): String = "English"
-    fun setTargetLanguage(language: String) { /* No-op */ }
+    fun getTargetLanguage(): String = sharedPrefs.getString(
+        helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE,
+        sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "English")
+    ) ?: "English"
+
+    fun setTargetLanguage(language: String) {
+        sharedPrefs.edit()
+            .putString(helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, language)
+            .putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, language)
+            .apply()
+    }
 
     fun getTranslateModelName(): String = ""
     fun setTranslateModelName(modelName: String) { /* No-op */ }
@@ -330,7 +339,7 @@ class ProofreadService(private val context: Context) {
      * Run llamacpp inference for translation.
      */
     suspend fun translate(text: String): Result<String> {
-        val target = sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE) ?: Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE
+        val target = getTargetLanguage()
         val systemPromptTemplate = getTranslateSystemPrompt().takeIf { it.isNotBlank() } ?: Defaults.PREF_OFFLINE_TRANSLATE_SYSTEM_PROMPT
         val prompt = systemPromptTemplate.replace("{lang}", target)
         return proofread(text, overridePrompt = prompt, targetLanguage = target)

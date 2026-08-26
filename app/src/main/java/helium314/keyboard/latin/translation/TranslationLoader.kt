@@ -332,10 +332,6 @@ object TranslationLoader {
         val assetManager = try {
             val am = android.content.res.AssetManager::class.java.getDeclaredConstructor().newInstance()
             val addAssetPathMethod = android.content.res.AssetManager::class.java.getDeclaredMethod("addAssetPath", String::class.java)
-            val hostSourceDir = host.applicationInfo.sourceDir ?: host.packageResourcePath
-            if (hostSourceDir != null) {
-                addAssetPathMethod.invoke(am, hostSourceDir)
-            }
             addAssetPathMethod.invoke(am, pluginApk.absolutePath)
             am
         } catch (e: Throwable) {

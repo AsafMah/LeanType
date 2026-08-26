@@ -19,21 +19,32 @@ object TranslationModelImporter {
             if (!modelsDir.exists() || !modelsDir.isDirectory) return
 
             modelsDir.listFiles()?.forEach { modelDir ->
-                if (modelDir.isDirectory) {
+                if (modelDir.isDirectory && modelDir.name != "0") {
                     val versionZeroDir = File(modelDir, "0")
-                    if (versionZeroDir.exists() && versionZeroDir.isDirectory) {
-                        versionZeroDir.listFiles()?.forEach { file ->
-                            val dest = File(modelDir, file.name)
-                            if (dest.exists()) dest.delete()
-                            file.renameTo(dest)
+                    if (!versionZeroDir.exists()) {
+                        versionZeroDir.mkdirs()
+                    }
+                    // Ensure all model files exist in both modelDir and modelDir/0
+                    modelDir.listFiles()?.forEach { file ->
+                        if (file.isFile) {
+                            val dest = File(versionZeroDir, file.name)
+                            if (!dest.exists() || dest.length() != file.length()) {
+                                file.copyTo(dest, overwrite = true)
+                            }
                         }
-                        versionZeroDir.deleteRecursively()
-                        Log.i(TAG, "Restored files from $versionZeroDir to $modelDir")
+                    }
+                    versionZeroDir.listFiles()?.forEach { file ->
+                        if (file.isFile) {
+                            val dest = File(modelDir, file.name)
+                            if (!dest.exists() || dest.length() != file.length()) {
+                                file.copyTo(dest, overwrite = true)
+                            }
+                        }
                     }
                 }
             }
         } catch (e: Throwable) {
-            Log.w(TAG, "Error cleaning legacy translation model folders", e)
+            Log.w(TAG, "Error synchronizing translation model folders", e)
         }
     }
 
@@ -50,7 +61,6 @@ object TranslationModelImporter {
     }
 
     fun importFromStream(context: Context, inputStream: InputStream): String? {
-        migrateLegacyModels(context)
         val tempZip = File(context.cacheDir, "import_translation_model_${System.currentTimeMillis()}.zip")
         return try {
             FileOutputStream(tempZip).use { out ->
@@ -81,30 +91,32 @@ object TranslationModelImporter {
             val modelName = detectedModelName!!
             val baseDir = context.noBackupFilesDir ?: context.filesDir
             val targetDir = File(baseDir, "com.google.mlkit.translate.models/$modelName")
+            val targetDirZero = File(targetDir, "0")
             targetDir.mkdirs()
+            targetDirZero.mkdirs()
 
             ZipInputStream(tempZip.inputStream().buffered()).use { zipIn ->
                 var entry = zipIn.nextEntry
                 while (entry != null) {
                     val entryName = entry.name
-                    val relPath = if (entryName.contains("/")) entryName.substringAfter("/") else entryName
-                    if (relPath.isNotEmpty()) {
+                    val relPath = if (entryName.contains("/")) entryName.substringAfterLast("/") else entryName
+                    if (relPath.isNotEmpty() && !entry.isDirectory) {
                         val outFile = File(targetDir, relPath)
-                        if (entry.isDirectory) {
-                            outFile.mkdirs()
-                        } else {
-                            outFile.parentFile?.mkdirs()
-                            FileOutputStream(outFile).use { out ->
-                                zipIn.copyTo(out)
-                            }
+                        val outFileZero = File(targetDirZero, relPath)
+                        outFile.parentFile?.mkdirs()
+                        outFileZero.parentFile?.mkdirs()
+                        FileOutputStream(outFile).use { out ->
+                            zipIn.copyTo(out)
                         }
+                        outFile.copyTo(outFileZero, overwrite = true)
                     }
                     zipIn.closeEntry()
                     entry = zipIn.nextEntry
                 }
             }
 
-            Log.i(TAG, "Successfully imported translation model $modelName into $targetDir")
+            Log.i(TAG, "Successfully imported translation model $modelName into $targetDir and $targetDirZero")
+            migrateLegacyModels(context)
             modelName
         } catch (e: Throwable) {
             Log.e(TAG, "Error extracting translation model zip", e)

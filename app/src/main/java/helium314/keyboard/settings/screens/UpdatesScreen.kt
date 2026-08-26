@@ -76,7 +76,7 @@ private val currentChangelogItems = listOf(
     "• Next-word prediction & scoring optimization with beam pruning and instant focus readiness",
     "• Ergonomic text edit layout with central Select key and D-Pad navigation",
     "• Material 3 card-based settings redesign across Subtype, Colors, and Dictionaries",
-    "• Offline translation enhancements (script detection, explicit language pairs, English model)"
+    "• Offline translation enhancements (target language persistence, engine source in offline flavor, script detection)"
 )
 
 @Composable
