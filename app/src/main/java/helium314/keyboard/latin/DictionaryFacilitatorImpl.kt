@@ -691,6 +691,14 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         proximityInfoHandle: Long, weightOfLangModelVsSpatialModel: FloatArray, dictGroup: DictionaryGroup
     ): List<SuggestedWordInfo> {
         val suggestions = ArrayList<SuggestedWordInfo>()
+        if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
+            val prevWords = (0 until ngramContext.prevWordCount).map { i ->
+                val w = ngramContext.getNthPrevWord(i + 1)
+                val bos = ngramContext.isNthPrevWordBeginningOfSentence(i + 1)
+                if (bos) "<BOS>" else (w?.toString() ?: "<null>")
+            }
+            Log.i("ScoreAudit", "NgramContext words: $prevWords")
+        }
         val weightForLocale = dictGroup.getWeightForLocale(dictionaryGroups, composedData.mIsBatchMode)
         for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
             val dictionary = dictGroup.getDict(dictType) ?: continue
@@ -706,37 +714,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 )
                 if (!backoffSuggestions.isNullOrEmpty()) {
                     dictionarySuggestions = backoffSuggestions
-                }
-            }
-            if (composedData.mTypedWord.isEmpty() && (dictionarySuggestions == null || dictionarySuggestions.isEmpty())
-                && dictType == Dictionary.TYPE_USER
-            ) {
-                if (!Settings.getValues().mNextWordStrictNgram && Settings.getValues().mPrioritizePersonalSuggestions) {
-                    val allWords = try {
-                        dictionary.allWordsWithFrequency
-                    } catch (e: Exception) {
-                        null
-                    }
-                    if (allWords != null && allWords.isNotEmpty()) {
-                        val topWords = allWords.entries
-                            .sortedByDescending { it.value }
-                            .take(15)
-                        val unigramSuggestions = ArrayList<SuggestedWordInfo>()
-                        for (entry in topWords) {
-                            unigramSuggestions.add(
-                                SuggestedWordInfo(
-                                    entry.key,
-                                    "",
-                                    entry.value,
-                                    SuggestedWordInfo.KIND_PREDICTION,
-                                    dictionary,
-                                    SuggestedWordInfo.NOT_AN_INDEX,
-                                    SuggestedWordInfo.NOT_A_CONFIDENCE
-                                )
-                            )
-                        }
-                        dictionarySuggestions = unigramSuggestions
-                    }
                 }
             }
             if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
@@ -770,16 +747,39 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 if (word.length == 1 && info.mSourceDict.mDictType == Dictionary.TYPE_EMOJI && !StringUtils.mightBeEmoji(word[0].code))
                     continue
 
+                val settingsValues = Settings.getValues()
+                val balance = settingsValues.mSuggestionBalance
+                val (mainWeight, historyWeight, userWeight) = when (balance) {
+                    Settings.SUGGESTION_BALANCE_DICTIONARY_FOCUSED -> Triple(1.10f, 0.75f, 1.00f)
+                    Settings.SUGGESTION_BALANCE_CONSERVATIVE -> Triple(1.05f, 0.85f, 1.00f)
+                    Settings.SUGGESTION_BALANCE_PERSONALIZED -> Triple(0.95f, 1.15f, 1.20f)
+                    Settings.SUGGESTION_BALANCE_HIGHLY_PERSONALIZED -> Triple(0.90f, 1.30f, 1.40f)
+                    else -> Triple(1.00f, 1.00f, 1.00f)
+                }
+                val dictWeight = when (dictType) {
+                    Dictionary.TYPE_MAIN -> mainWeight
+                    Dictionary.TYPE_USER_HISTORY -> historyWeight
+                    Dictionary.TYPE_USER -> userWeight
+                    else -> 1.00f
+                }
+
                 if (composedData.mTypedWord.isEmpty() && (dictType == Dictionary.TYPE_USER_HISTORY || dictType == Dictionary.TYPE_USER)) {
-                    val settingsValues = Settings.getValues()
-                    val boost = if (settingsValues.mPrioritizePersonalSuggestions) {
-                        minOf(MAX_PERSONALIZATION_BOOST, settingsValues.mNextWordBoostLevel)
-                    } else {
-                        0
+                    val baseBoost = when (balance) {
+                        Settings.SUGGESTION_BALANCE_DICTIONARY_FOCUSED -> 0
+                        Settings.SUGGESTION_BALANCE_CONSERVATIVE -> 16
+                        Settings.SUGGESTION_BALANCE_PERSONALIZED -> 48
+                        Settings.SUGGESTION_BALANCE_HIGHLY_PERSONALIZED -> 64
+                        else -> 32
                     }
-                    val boostedScore = info.mScore + boost
+                    val boost = if (settingsValues.mPrioritizePersonalSuggestions) {
+                        maxOf(baseBoost, minOf(MAX_PERSONALIZATION_BOOST, settingsValues.mNextWordBoostLevel))
+                    } else {
+                        baseBoost
+                    }
+                    val rawScore = (info.mScore * dictWeight).toInt()
+                    val boostedScore = rawScore + boost
                     if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT) {
-                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boost=$boost boosted=$boostedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
+                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} weighted=$rawScore boost=$boost boosted=$boostedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
                     }
                     val boostedInfo = SuggestedWordInfo(
                         info.mWord, info.mPrevWordsContext, boostedScore, info.mKindAndFlags,
@@ -787,14 +787,93 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     )
                     suggestions.add(boostedInfo)
                 } else {
+                    val weightedScore = (info.mScore * dictWeight).toInt()
                     if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
-                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} boost=0 boosted=${info.mScore} isBOS=${ngramContext.isBeginningOfSentenceContext}")
+                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} weighted=$weightedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
                     }
-                    suggestions.add(info)
+                    if (dictWeight == 1.00f) {
+                        suggestions.add(info)
+                    } else {
+                        suggestions.add(
+                            SuggestedWordInfo(
+                                info.mWord, info.mPrevWordsContext, weightedScore, info.mKindAndFlags,
+                                info.mSourceDict, info.mIndexOfTouchPointOfSecondWord, info.mAutoCommitFirstWordConfidence
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        if (composedData.mTypedWord.isEmpty() && suggestions.isEmpty() && !ngramContext.isBeginningOfSentenceContext) {
+            // Level 1: Primary grammatical language continuation connectors
+            val fallbackUnigrams = getLanguageFallbackUnigrams(dictGroup.locale)
+            val mainDict = dictGroup.getDict(Dictionary.TYPE_MAIN)
+            var fallbackScore = 95
+            for (word in fallbackUnigrams) {
+                if (suggestions.size >= 4) break
+                if (isBlacklisted(word)) continue
+                suggestions.add(
+                    SuggestedWordInfo(
+                        word,
+                        "",
+                        fallbackScore,
+                        SuggestedWordInfo.KIND_PREDICTION,
+                        mainDict,
+                        SuggestedWordInfo.NOT_AN_INDEX,
+                        SuggestedWordInfo.NOT_A_CONFIDENCE
+                    )
+                )
+                fallbackScore -= 2
+            }
+
+            // Level 2: Fill remaining slots with user history/personal frequent words
+            if (suggestions.size < 5) {
+                val historyDict = dictGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)
+                val topHistoryWords = try {
+                    historyDict?.allWordsWithFrequency
+                } catch (e: Exception) {
+                    null
+                }
+                if (!topHistoryWords.isNullOrEmpty()) {
+                    val existingWords = suggestions.map { it.mWord }.toSet()
+                    val sortedHistory = topHistoryWords.entries
+                        .filter { !isBlacklisted(it.key) && it.key.length > 1 && !existingWords.contains(it.key) }
+                        .sortedByDescending { it.value }
+                        .take(5)
+                    var historyFallbackScore = 85
+                    for (entry in sortedHistory) {
+                        if (suggestions.size >= 5) break
+                        suggestions.add(
+                            SuggestedWordInfo(
+                                entry.key,
+                                "",
+                                historyFallbackScore,
+                                SuggestedWordInfo.KIND_PREDICTION,
+                                historyDict,
+                                SuggestedWordInfo.NOT_AN_INDEX,
+                                SuggestedWordInfo.NOT_A_CONFIDENCE
+                            )
+                        )
+                        historyFallbackScore -= 2
+                    }
                 }
             }
         }
         return suggestions
+    }
+
+    private fun getLanguageFallbackUnigrams(locale: Locale): List<String> {
+        val lang = locale.language.lowercase()
+        return when (lang) {
+            "en" -> listOf("is", "are", "the", "to", "you", "and", "can", "will", "in", "it", "that", "have")
+            "es" -> listOf("de", "la", "que", "el", "en", "y", "a", "los", "es", "un", "por", "con")
+            "de" -> listOf("ist", "die", "der", "das", "und", "in", "nicht", "zu", "den", "ich", "ein", "mit")
+            "fr" -> listOf("est", "de", "la", "le", "et", "en", "que", "un", "pour", "dans", "une", "qui")
+            "it" -> listOf("è", "di", "la", "il", "che", "in", "e", "un", "per", "non", "una", "sono")
+            "pt" -> listOf("de", "a", "o", "que", "e", "do", "da", "em", "um", "para", "com", "não")
+            "ru" -> listOf("и", "в", "не", "на", "я", "что", "быть", "с", "он", "как", "это", "по")
+            else -> listOf("the", "is", "to", "and", "you", "are", "in", "it", "that", "have")
+        }
     }
 
     /**
@@ -804,10 +883,17 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
      * remove and re-add entries with adjusted scores.
      */
     private fun applySessionBoost(results: SuggestionResults, boost: SessionWordBoost) {
+        val sessionMultiplier = when (Settings.getValues().mSuggestionBalance) {
+            Settings.SUGGESTION_BALANCE_DICTIONARY_FOCUSED -> 0.25f
+            Settings.SUGGESTION_BALANCE_CONSERVATIVE -> 0.50f
+            Settings.SUGGESTION_BALANCE_PERSONALIZED -> 1.50f
+            Settings.SUGGESTION_BALANCE_HIGHLY_PERSONALIZED -> 2.00f
+            else -> 1.00f
+        }
         val boosted = mutableListOf<SuggestedWordInfo>()
         val toRemove = mutableListOf<SuggestedWordInfo>()
         for (info in results) {
-            val boostAmount = boost.getBoost(info.mWord)
+            val boostAmount = boost.getBoost(info.mWord) * sessionMultiplier
             if (boostAmount > 0f) {
                 toRemove.add(info)
                 boosted.add(SuggestedWordInfo(

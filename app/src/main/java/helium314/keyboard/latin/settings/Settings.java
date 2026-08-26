@@ -130,6 +130,12 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_ALWAYS_INCOGNITO_MODE = "always_incognito_mode";
     public static final String PREF_BIGRAM_PREDICTIONS = "next_word_prediction";
     public static final String PREF_PRIORITIZE_PERSONAL_SUGGESTIONS = "prioritize_personal_suggestions";
+    public static final String PREF_SUGGESTION_BALANCE = "suggestion_balance";
+    public static final int SUGGESTION_BALANCE_DICTIONARY_FOCUSED = 1;
+    public static final int SUGGESTION_BALANCE_CONSERVATIVE = 2;
+    public static final int SUGGESTION_BALANCE_BALANCED = 3;
+    public static final int SUGGESTION_BALANCE_PERSONALIZED = 4;
+    public static final int SUGGESTION_BALANCE_HIGHLY_PERSONALIZED = 5;
     public static final String PREF_NEXT_WORD_BOOST_LEVEL = "next_word_boost_level";
     public static final String PREF_NEXT_WORD_STRICT_NGRAM = "next_word_strict_ngram";
     public static final String PREF_IMMEDIATE_AUTO_SPACE = "immediate_auto_space";

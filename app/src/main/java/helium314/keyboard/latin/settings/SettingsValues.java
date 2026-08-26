@@ -188,6 +188,7 @@ public class SettingsValues {
         public final boolean mBackspaceRevertsAutocorrect;
         public final boolean mDisableMultiWordSuggestions;
         public final boolean mPrioritizePersonalSuggestions;
+        public final int mSuggestionBalance;
         public final int mNextWordBoostLevel;
         public final boolean mNextWordStrictNgram;
         public final int mScoreLimitForAutocorrect;
@@ -322,6 +323,8 @@ public class SettingsValues {
                                 Defaults.PREF_BIGRAM_PREDICTIONS);
                 mPrioritizePersonalSuggestions = prefs.getBoolean(Settings.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS,
                                 Defaults.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS);
+                mSuggestionBalance = prefs.getInt(Settings.PREF_SUGGESTION_BALANCE,
+                                Defaults.PREF_SUGGESTION_BALANCE);
                 int boostLevel = 500;
                 try {
                         boostLevel = Integer.parseInt(prefs.getString(Settings.PREF_NEXT_WORD_BOOST_LEVEL, Defaults.PREF_NEXT_WORD_BOOST_LEVEL));

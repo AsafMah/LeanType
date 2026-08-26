@@ -194,9 +194,21 @@
     <string name="prioritize_personal_suggestions">Prioritize personal &amp; learned words</string>
     <!-- Description for prioritize personal suggestions option. -->
     <string name="prioritize_personal_suggestions_summary">Give higher score priority to personal dictionary and learned words during next-word prediction</string>
-    <!-- Option to adjust boost level for personal dictionary and learned words. -->
+    <!-- Option to adjust suggestion balance between dictionary and personal history -->
+    <string name="suggestion_balance_title">Suggestion balance</string>
+    <string name="suggestion_balance_summary">Adjust the balance between dictionary accuracy and personal typing history</string>
+    <string name="suggestion_balance_1">Dictionary-focused</string>
+    <string name="suggestion_balance_2">Conservative</string>
+    <string name="suggestion_balance_3">Balanced (Default)</string>
+    <string name="suggestion_balance_4">Personalized</string>
+    <string name="suggestion_balance_5">Highly personalized</string>
+    <string name="suggestion_balance_desc_1">Dictionary-focused\nPrioritizes standard language dictionaries; minimizes unverified learned words.</string>
+    <string name="suggestion_balance_desc_2">Conservative\nMild preference for standard dictionaries with low personal word boost.</string>
+    <string name="suggestion_balance_desc_3">Balanced (Default)\nStandard balance between dictionary vocabulary and personal typing habits.</string>
+    <string name="suggestion_balance_desc_4">Personalized\nPrioritizes words and phrases you have frequently typed.</string>
+    <string name="suggestion_balance_desc_5">Highly personalized\nStrongly favors learned history and personal words over standard vocabulary.</string>
+    <!-- Legacy option kept for translation compatibility -->
     <string name="next_word_boost_level">Learned word boost level</string>
-    <!-- Description for boost level option. -->
     <string name="next_word_boost_level_summary">Set score priority boost strength for learned and personal dictionary entries</string>
     <!-- Option to require strict preceding context for learned word suggestions. -->
     <string name="next_word_strict_ngram">Require context match for learned words</string>

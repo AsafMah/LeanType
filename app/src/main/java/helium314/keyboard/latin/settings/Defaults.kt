@@ -138,6 +138,7 @@ object Defaults {
     const val PREF_ALWAYS_INCOGNITO_MODE = false
     const val PREF_BIGRAM_PREDICTIONS = true
     const val PREF_PRIORITIZE_PERSONAL_SUGGESTIONS = false
+    const val PREF_SUGGESTION_BALANCE = 3
     const val PREF_NEXT_WORD_BOOST_LEVEL = "500"
     const val PREF_NEXT_WORD_STRICT_NGRAM = false
     const val PREF_IMMEDIATE_AUTO_SPACE = false
