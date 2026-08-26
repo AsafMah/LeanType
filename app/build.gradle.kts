@@ -251,8 +251,7 @@ dependencies {
     "standardfullImplementation"("com.google.ai.client.generativeai:generativeai:0.9.0")
     "standardfullImplementation"("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // local llm proofreading (offline)
-    "offlineImplementation"("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
+    // local llm proofreading is now dynamically provided by LeanType-Offline-AI-Plugin
 
     // Force 16 KB page-aligned version of graphics-path
     implementation("androidx.graphics:graphics-path:1.1.0")

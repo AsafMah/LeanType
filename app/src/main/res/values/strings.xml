@@ -362,6 +362,11 @@
     <string name="load_translation_plugin_button_delete">Delete plugin</string>
     <string name="load_translation_plugin_success">Translation plugin imported successfully</string>
     <string name="load_translation_plugin_failed">Failed to load translation plugin APK</string>
+    <string name="load_offline_ai_plugin">Offline AI Plugin</string>
+    <string name="load_offline_ai_plugin_summary">Provide an APK plugin to enable on-device GGUF models</string>
+    <string name="load_offline_ai_plugin_button_delete">Delete plugin</string>
+    <string name="load_offline_ai_plugin_success">Offline AI plugin imported successfully</string>
+    <string name="load_offline_ai_plugin_failed">Failed to load Offline AI plugin APK</string>
     <string name="handwriting">Handwriting</string>
     <string name="delete_handwriting_model">Delete downloaded model</string>
     <string name="handwriting_model_deleted">Handwriting model deleted</string>

@@ -93,6 +93,7 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
 @Composable
 private fun OfflineAIIntegrationScreen(onClickBack: () -> Unit) {
     val items = listOf(
+        SettingsWithoutKey.LOAD_OFFLINE_AI_PLUGIN,
         SettingsWithoutKey.CUSTOM_AI_KEYS,
         SettingsWithoutKey.OFFLINE_MODEL_PATH,
         SettingsWithoutKey.OFFLINE_KEEP_MODEL_LOADED
