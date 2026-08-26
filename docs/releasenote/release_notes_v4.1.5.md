@@ -12,9 +12,9 @@ As an open-source, community-funded project, we operate on a very limited budget
 
 ## 📦 Choose Your Flavor
 
-| Flavor                                          | Primary Focus    | AI Engine        | Plugins Setup                  | Internet                         | Self-Updater         |
-|:----------------------------------------------- |:---------------- |:---------------- |:------------------------------ |:-------------------------------- |:-------------------- |
-| **`1-LeanType_4.1.5-standardfull-release.apk`** | **Recommended**  | Cloud AI         | In-app download or File import | Optional ( AI/Updates/plugins)   | ✅ In-App Auto Update |
+| Flavor                                          | Primary Focus                  | AI Engine        | Plugins Setup                  | Internet                         | Self-Updater         |
+|:----------------------------------------------- |:------------------------------ |:---------------- |:------------------------------ |:-------------------------------- |:-------------------- |
+| **`1-LeanType_4.1.5-standardfull-release.apk`** | **Convenience (Recommended)**  | Cloud AI         | In-app download or File import | Optional ( AI/Updates/plugins)   | ✅ In-App Auto Update |
 | **`1-LeanType_4.1.5-standard-release.apk`**     | **F-Droid**      | Cloud AI         | In-app download or File import | Optional ( AI/plugins)           | ❌ None               |
 | **`2-LeanType_4.1.5-offline-release.apk`**      | **Offline AI**   | Local LLM (GGUF) | Browser download + File import | 🚫 Zero Internet (No Permission) | ❌ None               |
 | **`3-LeanType_4.1.5-offlinelite-release.apk`**  | **Offline Lite** | None             | Browser download + File import | 🚫 Zero Internet (No Permission) | ❌ None               |
