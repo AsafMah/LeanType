@@ -11,7 +11,7 @@ As an open-source, community-funded project, we operate on a very limited budget
 
 > ⚠️ **Important Notice for Offline & Offline Lite Users**:
 > - **Offline AI Plugin Detachment**: The local GGUF AI engine is now modularized into the standalone [**`LeanType-Offline-AI-Plugin`**](https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin). Existing **Offline** flavor users are recommended to **backup their settings** (**Settings &rarr; Advanced &rarr; Backup**) before updating just in case. After updating, simply load the Offline AI Plugin from **Settings &rarr; Plugins &rarr; Offline AI** to continue using local GGUF model proofreading.
-> - **Offline Lite Users**: You can now also enable local GGUF AI proofreading on demand by loading the **Offline AI Plugin**! In the upcoming release, `offline` and `offlinelite` will merge into a single unified lightweight Offline edition.
+> - **Offline Lite Users**: In the upcoming release, `offline` and `offlinelite` will merge into a single unified lightweight Offline edition with optional Offline AI plugin support.
 
 ## 📦 Choose Your Flavor
 
