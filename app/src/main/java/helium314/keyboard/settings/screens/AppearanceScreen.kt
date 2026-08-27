@@ -67,6 +67,7 @@ fun AppearanceScreen(
         SettingsWithoutKey.BACKGROUND_IMAGE_LANDSCAPE,
         R.string.settings_category_miscellaneous,
         Settings.PREF_PERSIST_FLOATING_KEYBOARD,
+        Settings.PREF_REMEMBER_FLOATING_KEYBOARD,
         // ponytail: persist text edit mode settings item
         Settings.PREF_PERSIST_TEXT_EDIT_MODE,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD,
@@ -212,6 +213,9 @@ fun createAppearanceSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_PERSIST_FLOATING_KEYBOARD, R.string.persist_floating_keyboard_title, R.string.persist_floating_keyboard_summary) {
         SwitchPreference(it, Defaults.PREF_PERSIST_FLOATING_KEYBOARD)
+    },
+    Setting(context, Settings.PREF_REMEMBER_FLOATING_KEYBOARD, R.string.remember_floating_keyboard_title, R.string.remember_floating_keyboard_summary) {
+        SwitchPreference(it, Defaults.PREF_REMEMBER_FLOATING_KEYBOARD)
     },
     // ponytail: persist text edit mode preference widget
     Setting(context, Settings.PREF_PERSIST_TEXT_EDIT_MODE, R.string.persist_text_edit_mode_title, R.string.persist_text_edit_mode_summary) {

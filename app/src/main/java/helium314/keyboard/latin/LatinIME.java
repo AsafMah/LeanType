@@ -1315,6 +1315,11 @@ public class LatinIME extends InputMethodService implements
         if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
             mInputView.setVisibility(View.GONE);
             requestHideSelf(0);
+        } else if (currentSettingsValues.mRememberFloatingKeyboard
+                && mFloatingKeyboardManager != null
+                && mFloatingKeyboardManager.wasFloatingLastTime()
+                && mFloatingKeyboardManager.canDrawOverlays()) {
+            mFloatingKeyboardManager.show();
         }
 
         if (isInputViewShown()) {

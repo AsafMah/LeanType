@@ -42,6 +42,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
         private const val PREF_Y = "floating_y"
         private const val PREF_WIDTH = "floating_width"
         private const val PREF_SCALE = "floating_scale"
+        private const val PREF_IS_ACTIVE = "floating_is_active"
         private const val FLOATING_WIDTH_FRACTION = 0.75f
         private const val HEADER_HEIGHT_DP = 28
         private const val CORNER_RADIUS_DP = 16f
@@ -50,6 +51,8 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
     private val prefs: SharedPreferences by lazy {
         DeviceProtectedUtils.getSharedPreferences(context, PREFS_NAME)
     }
+
+    fun wasFloatingLastTime(): Boolean = prefs.getBoolean(PREF_IS_ACTIVE, false)
 
     var overlayRoot: FrameLayout? = null
         private set
@@ -180,6 +183,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
         }
 
         isFloating = true
+        prefs.edit().putBoolean(PREF_IS_ACTIVE, true).apply()
         
         // Manually trigger reparenting of the current input view into the overlay.
         // reloadKeyboard() alone won't trigger setInputView() if the theme hasn't changed.
@@ -201,6 +205,10 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
 
     fun hide(showDockedKeyboard: Boolean = true) {
         if (!isFloating) return
+
+        if (showDockedKeyboard) {
+            prefs.edit().putBoolean(PREF_IS_ACTIVE, false).apply()
+        }
 
         // Clear the floating overrides FIRST
         ResourceUtils.setFloatingKeyboardWidth(0)
