@@ -48,7 +48,7 @@
     <fraction name="config_gesture_dynamic_distance_threshold_from">600%</fraction>
     <fraction name="config_gesture_dynamic_distance_threshold_to">50%</fraction>
     <!-- Parameter for gesture sampling (keyWidth%/sec) -->
-    <fraction name="config_gesture_sampling_minimum_distance">16.6666%</fraction>
+    <fraction name="config_gesture_sampling_minimum_distance">12.5%</fraction>
     <!-- Parameters for gesture recognition (msec) and (keyWidth%/sec) -->
     <integer name="config_gesture_recognition_minimum_time">100</integer>
     <integer name="config_gesture_recognition_update_time">100</integer>

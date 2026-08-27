@@ -667,18 +667,22 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             suggestionsContainer: ArrayList<SuggestedWordInfo>,
             nextWordSuggestions: SuggestionResults, rejected: SuggestedWordInfo?
         ): SuggestedWordInfo? {
-            if (pseudoTypedWordInfo == null || !Settings.getValues().mUsePersonalizedDicts
-                || pseudoTypedWordInfo.mSourceDict.mDictType != Dictionary.TYPE_MAIN || suggestionsContainer.size < 2
-            ) return pseudoTypedWordInfo
-            nextWordSuggestions.removeAll { info: SuggestedWordInfo -> info.mScore < 170 } // we only want reasonably often typed words, value may require tuning
+            if (pseudoTypedWordInfo == null || !Settings.getValues().mUsePersonalizedDicts || suggestionsContainer.size < 2) {
+                return pseudoTypedWordInfo
+            }
+            val dictType = pseudoTypedWordInfo.mSourceDict.mDictType
+            if (dictType != Dictionary.TYPE_MAIN && dictType != Dictionary.TYPE_USER_HISTORY && dictType != Dictionary.TYPE_USER) {
+                return pseudoTypedWordInfo
+            }
+            nextWordSuggestions.removeAll { info: SuggestedWordInfo -> info.mScore < 160 } // we only want reasonably often typed words
             if (nextWordSuggestions.isEmpty()) return pseudoTypedWordInfo
 
             // for each suggestion, check whether the word was already typed in this ngram context (i.e. is nextWordSuggestion)
             for (suggestion in suggestionsContainer) {
-                if (suggestion.mScore < pseudoTypedWordInfo.mScore * 0.93) break // we only want reasonably good suggestions, value may require tuning
+                if (suggestion.mScore < pseudoTypedWordInfo.mScore * 0.90) break // we only want reasonably good suggestions
                 if (suggestion === rejected) continue  // ignore rejected suggestions
                 for (nextWordSuggestion in nextWordSuggestions) {
-                    if (nextWordSuggestion.mWord != suggestion.mWord) continue
+                    if (!nextWordSuggestion.mWord.equals(suggestion.mWord, ignoreCase = true)) continue
                     // if we have a high scoring suggestion in next word suggestions, take it (because it's expected that user might want to type it again)
                     suggestionsContainer.remove(suggestion)
                     suggestionsContainer.add(0, suggestion)

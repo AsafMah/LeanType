@@ -654,15 +654,15 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             suggestionResults.mRawSuggestions?.addAll(it)
         }
 
-        // Apply session word boost to suggestion scores
+        // Apply session word boost to suggestion scores (for both typing and gesture modes)
         val boost = sessionWordBoost
-        if (boost != null && composedData.mTypedWord.isNotEmpty()) {
+        if (boost != null && (composedData.mTypedWord.isNotEmpty() || composedData.mIsBatchMode)) {
             applySessionBoost(suggestionResults, boost)
         }
 
         includeAtLeastTwoWordSuggestions(suggestionResults, suggestionsArray, composedData.mTypedWord)
 
-        if (composedData.mTypedWord.isEmpty()) {
+        if (composedData.mTypedWord.isEmpty() && !composedData.mIsBatchMode) {
             pruneNextWordCandidates(suggestionResults)
         }
 

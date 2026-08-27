@@ -48,7 +48,7 @@ public final class GestureStrokeRecognitionParams {
         mDynamicDistanceThresholdFrom = 6.0f; // keyWidth
         mDynamicDistanceThresholdTo = 0.35f; // keyWidth
         // The following parameters' change will affect the result of regression test.
-        mSamplingMinimumDistance = 1.0f / 6.0f; // keyWidth
+        mSamplingMinimumDistance = 1.0f / 8.0f; // keyWidth
         mRecognitionMinimumTime = 100; // msec
         mRecognitionSpeedThreshold = 5.5f; // keyWidth/sec
     }
