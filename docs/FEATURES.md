@@ -114,15 +114,17 @@ Include these hashtags in your custom prompts to enforce strict system roles:
 ## 3. Offline Neural Proofreading (GGUF)
 
 > [!IMPORTANT]
-> **Zero-Network Guarantee**: This feature runs 100% locally via embedded `llama.cpp` and is available in the **Offline** build flavor (`-offline-release.apk`). No internet permission exists in the manifest.
+> **Zero-Network Guarantee**: This feature runs 100% locally via the companion [**LeanType Offline AI Plugin**](https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin) powered by `llama.cpp` and is available in the **Offline** build flavor (`-offline-release.apk`). No internet permission exists in the manifest.
 
 ### Setup Instructions
-1. Download a compact GGUF model:
+1. Download `ai_plugin-arm64-v8a.apk` (or `ai_plugin-x86_64.apk`) from the [LeanType Offline AI Plugin Releases](https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin/releases/latest).
+2. In LeanType, open **Settings → Plugins → Offline AI** and tap **Load Offline AI plugin** to load the `.apk`.
+3. Download a compact GGUF model:
    - **Qwen 2.5 0.5B Instruct (Q4_K_M)**: Extremely lightweight & fast (~350 MB).
    - **Llama 3.2 1B Instruct (Q4_K_M)**: High-quality compact reasoning (~900 MB).
    - **Qwen 2.5 1.5B Instruct (Q4_K_M)**: High intelligence for modern devices (~1.1 GB).
-2. Open **Settings → Advanced → GGUF Model (.gguf)** and select the `.gguf` file from your storage.
-3. Configure sampling temperature, Top-K, Top-P, and custom system instructions.
+4. Open **Settings → Advanced → GGUF Model (.gguf)** and select the `.gguf` file from your storage.
+5. Configure sampling temperature, Top-K, Top-P, and custom system instructions.
 
 ---
 
@@ -371,10 +373,10 @@ LeanType is published in **4 purpose-built flavors**:
  
 | Flavor | Cloud AI | Offline AI | Voice Input | Handwriting | Translation | In-App Updates | Internet Permission | Min SDK | Approx Size |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Standard Full** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI/ML Kit)* | ✅ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~11 MB** |
-| **Standard (FOSS)** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ❌ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~11 MB** |
-| **Offline AI** | ❌ | ✅ *(GGUF)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 26 (8.0+) | **~67 MB** |
-| **Offline Lite** | ❌ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 21 (5.0+) | **~26 MB** |
+| **Standard Full** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ✅ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~9.8 MB** |
+| **Standard (FOSS)** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ❌ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~9.8 MB** |
+| **Offline AI** | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 26 (8.0+) | **~9.8 MB** |
+| **Offline Lite** | ❌ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 21 (5.0+) | **~9.8 MB** |
 
 > [!TIP]
 > **Concurrent Installation**: The `offline` (`com.leanbitlab.leantype.offline`) and `offlinelite` (`com.leanbitlab.leantype.offlinelite`) builds use unique package IDs, allowing you to install them alongside `standardfull` on the same device!
