@@ -22,6 +22,44 @@ object HandwritingModelImporter {
         val isReady: Boolean get() = hasModel && hasFst
     }
 
+    private val COMMON_REGIONAL_VARIANTS = mapOf(
+        "en" to listOf("en", "en-US", "en_US", "en-GB", "en_GB", "en-IN", "en_IN", "en-AU", "en_AU", "en-CA", "en_CA", "en-NZ", "en_NZ", "en-ZA", "en_ZA", "en-SG", "en_SG", "en-PH", "en_PH", "en-IE", "en_IE"),
+        "es" to listOf("es", "es-ES", "es_ES", "es-US", "es_US", "es-419", "es_419", "es-MX", "es_MX", "es-AR", "es_AR", "es-CO", "es_CO", "es-CL", "es_CL", "es-PE", "es_PE"),
+        "fr" to listOf("fr", "fr-FR", "fr_FR", "fr-CA", "fr_CA", "fr-BE", "fr_BE", "fr-CH", "fr_CH"),
+        "de" to listOf("de", "de-DE", "de_DE", "de-AT", "de_AT", "de-CH", "de_CH"),
+        "pt" to listOf("pt", "pt-BR", "pt_BR", "pt-PT", "pt_PT"),
+        "zh" to listOf("zh", "zh-CN", "zh_CN", "zh-TW", "zh_TW", "zh-HK", "zh_HK", "zh-Hans", "zh_Hans", "zh-Hant", "zh_Hant"),
+        "ar" to listOf("ar", "ar-EG", "ar_EG", "ar-SA", "ar_SA", "ar-AE", "ar_AE"),
+        "it" to listOf("it", "it-IT", "it_IT", "it-CH", "it_CH"),
+        "nl" to listOf("nl", "nl-NL", "nl_NL", "nl-BE", "nl_BE"),
+        "ru" to listOf("ru", "ru-RU", "ru_RU", "ru-UA", "ru_UA", "ru-BY", "ru_BY", "ru-KZ", "ru_KZ"),
+        "hi" to listOf("hi", "hi-IN", "hi_IN"),
+        "ta" to listOf("ta", "ta-IN", "ta_IN", "ta-LK", "ta_LK", "ta-SG", "ta_SG"),
+        "bn" to listOf("bn", "bn-BD", "bn_BD", "bn-IN", "bn_IN"),
+        "ml" to listOf("ml", "ml-IN", "ml_IN"),
+        "te" to listOf("te", "te-IN", "te_IN"),
+        "kn" to listOf("kn", "kn-IN", "kn_IN"),
+        "gu" to listOf("gu", "gu-IN", "gu_IN"),
+        "mr" to listOf("mr", "mr-IN", "mr_IN"),
+        "pa" to listOf("pa", "pa-IN", "pa_IN", "pa-PK", "pa_PK"),
+        "ur" to listOf("ur", "ur-PK", "ur_PK", "ur-IN", "ur_IN"),
+        "tr" to listOf("tr", "tr-TR", "tr_TR"),
+        "ko" to listOf("ko", "ko-KR", "ko_KR"),
+        "ja" to listOf("ja", "ja-JP", "ja_JP"),
+        "sv" to listOf("sv", "sv-SE", "sv_SE", "sv-FI", "sv_FI"),
+        "no" to listOf("no", "nb", "nn", "nb-NO", "nb_NO", "nn-NO", "nn_NO", "no-NO", "no_NO"),
+        "da" to listOf("da", "da-DK", "da_DK"),
+        "fi" to listOf("fi", "fi-FI", "fi_FI"),
+        "pl" to listOf("pl", "pl-PL", "pl_PL"),
+        "uk" to listOf("uk", "uk-UA", "uk_UA"),
+        "el" to listOf("el", "el-GR", "el_GR", "el-CY", "el_CY"),
+        "he" to listOf("he", "iw", "he-IL", "he_IL", "iw-IL", "iw_IL"),
+        "th" to listOf("th", "th-TH", "th_TH"),
+        "vi" to listOf("vi", "vi-VN", "vi_VN"),
+        "id" to listOf("id", "id-ID", "id_ID"),
+        "ms" to listOf("ms", "ms-MY", "ms_MY")
+    )
+
     fun getAllTagVariants(languageTag: String): List<String> {
         val raw = languageTag.trim()
         if (raw.isEmpty()) return emptyList()
@@ -50,8 +88,9 @@ object HandwritingModelImporter {
             baseLang
         )
 
-        if (baseLang == "en" || lower.startsWith("en")) {
-            variants.addAll(listOf("en", "en-US", "en_US", "en-us", "en_us", "en-GB", "en_GB", "en-IN", "en_IN", "en-AU", "en_AU", "en-CA", "en_CA"))
+        COMMON_REGIONAL_VARIANTS[baseLang]?.let { regionalList ->
+            variants.addAll(regionalList)
+            variants.addAll(regionalList.map { it.lowercase() })
         }
 
         return variants.filter { it.isNotEmpty() }.distinct()
