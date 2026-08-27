@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.handwriting.HandwritingLoader
 import helium314.keyboard.latin.handwriting.HandwritingModelImporter
+import helium314.keyboard.latin.handwriting.HandwritingModelPackData
 import helium314.keyboard.latin.handwriting.HandwritingModelUrls
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.locale
@@ -105,33 +106,29 @@ fun HandwritingModelDownloadDialog(
             val enabledSubtypes = SubtypeSettings.getEnabledSubtypes(true).map { it.locale() }
             val sysLocale = context.resources.configuration.locales[0] ?: Locale.getDefault()
 
-            val enabledItems = enabledSubtypes.map { loc ->
-                val tag = loc.toLanguageTag()
-                val name = loc.getDisplayName(sysLocale).ifBlank { loc.displayName }
-                HandwritingLanguageItem(tag, "$name ($tag)", isEnabledSubtype = true)
-            }
+            val supportedCodes = HandwritingModelPackData.LANGUAGE_PACKS.keys.toList()
 
-            val availableLocales = Locale.getAvailableLocales()
-                .filter { !it.language.isNullOrEmpty() && it.toLanguageTag() != "und" }
-                .distinctBy { it.toLanguageTag() }
-                .sortedBy { it.getDisplayName(sysLocale).lowercase(sysLocale) }
-
-            val otherItems = availableLocales.mapNotNull { loc ->
-                val tag = loc.toLanguageTag()
-                if (enabledSubtypes.any { it.toLanguageTag() == tag }) null
-                else {
-                    val name = loc.getDisplayName(sysLocale).ifBlank { loc.displayName }
-                    HandwritingLanguageItem(tag, "$name ($tag)", isEnabledSubtype = false)
+            val items = supportedCodes.map { tag ->
+                val loc = Locale.forLanguageTag(tag)
+                val rawName = loc.getDisplayName(sysLocale).ifBlank { loc.displayName }
+                val displayName = if (rawName.isNotBlank()) "$rawName ($tag)" else tag
+                val isEnabled = enabledSubtypes.any { subLoc ->
+                    subLoc.toLanguageTag().equals(tag, ignoreCase = true) ||
+                        subLoc.language.equals(loc.language, ignoreCase = true)
                 }
-            }
+                HandwritingLanguageItem(tag, displayName, isEnabledSubtype = isEnabled)
+            }.sortedWith(
+                compareByDescending<HandwritingLanguageItem> { it.isEnabledSubtype }
+                    .thenBy { it.displayName }
+            )
 
-            val combined = (enabledItems + otherItems).distinctBy { it.code }
-
-            // Ultra-fast scan of only installed model directories on disk (1ms instead of 4000ms)
+            // Ultra-fast scan of only installed model directories on disk
             val installedMap = HandwritingModelImporter.getInstalledLanguageStatuses(context)
 
             withContext(Dispatchers.Main) {
-                allLanguages = combined
+                allLanguages = items
+                statusMap.clear()
+                downloadedMap.clear()
                 installedMap.forEach { (tag, status) ->
                     statusMap[tag] = status
                     downloadedMap[tag] = status.isReady
@@ -248,7 +245,7 @@ fun HandwritingModelDownloadDialog(
                         CircularProgressIndicator()
                     }
                 } else {
-                    val filtered = remember(searchQuery, allLanguages, statusMap.toMap(), downloadedMap.toMap()) {
+                    val filtered = remember(searchQuery, allLanguages, statusMap.size, downloadedMap.size) {
                         val baseList = if (searchQuery.isBlank()) allLanguages
                         else allLanguages.filter {
                             it.displayName.contains(searchQuery, ignoreCase = true) ||
@@ -270,7 +267,7 @@ fun HandwritingModelDownloadDialog(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(filtered, key = { it.code }) { item ->
-                            val status = statusMap[item.code] ?: HandwritingModelImporter.getComponentsStatus(context, item.code)
+                            val status = statusMap[item.code] ?: HandwritingModelImporter.ModelComponentsStatus(hasRecospec = false, hasModel = false, hasFst = false)
                             val isDownloaded = status.isReady || downloadedMap[item.code] == true
                             val isDownloading = downloadingMap[item.code] == true
 
