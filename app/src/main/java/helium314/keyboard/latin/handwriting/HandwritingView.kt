@@ -71,7 +71,7 @@ class HandwritingView @JvmOverloads constructor(
 
         canvas.onRecognitionTriggered = { strokes ->
             performRecognition(strokes)
-            canvas.clear()
+            canvas.fadeOutAndClear()
         }
     }
 
@@ -93,7 +93,8 @@ class HandwritingView @JvmOverloads constructor(
 
         languageLabel.setTextColor(colors.get(ColorType.KEY_TEXT))
         colors.setColor(clearButton, ColorType.KEY_ICON)
-        canvas.setStrokeColor(colors.get(ColorType.KEY_TEXT))
+        canvas.setColors(colors.get(ColorType.KEY_TEXT), colors.get(ColorType.KEY_HINT_TEXT))
+        canvas.hintText = context.getString(R.string.handwriting_hint_write_here)
 
         languageLabel.text = language
         downloadProgress.visibility = View.GONE
