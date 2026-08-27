@@ -31,11 +31,26 @@ object HandwritingLoader {
     @JvmStatic
     fun getEffectiveLanguage(context: Context, subtypeLanguage: String): String {
         val pref = getHandwritingLanguagePref(context)
-        return if (pref == LANG_FOLLOW_KEYBOARD || pref.isBlank()) {
+        val target = if (pref == LANG_FOLLOW_KEYBOARD || pref.isBlank()) {
             subtypeLanguage
         } else {
             pref
         }
+        // 1. Direct match (e.g. "en-US", "ml")
+        if (HandwritingModelImporter.hasModelDirectly(context, target)) {
+            return target
+        }
+        // 2. Dash/underscore normalized (e.g. "en_US" -> "en-US")
+        val alt = target.replace('_', '-')
+        if (HandwritingModelImporter.hasModelDirectly(context, alt)) {
+            return alt
+        }
+        // 3. Base language fallback (e.g. "en-US" -> "en", "ml-IN" -> "ml")
+        val base = target.substringBefore('-').substringBefore('_')
+        if (HandwritingModelImporter.hasModelDirectly(context, base)) {
+            return base
+        }
+        return target
     }
 
     private class DisplayNameCache(val tag: String, val name: String)
