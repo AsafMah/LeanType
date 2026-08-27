@@ -675,58 +675,58 @@
         <item>Basque</item>
     </string-array>
     
-    <string-array name="translate_language_codes">
-        <item>English</item>
-        <item>Spanish</item>
-        <item>French</item>
-        <item>German</item>
-        <item>Italian</item>
-        <item>Portuguese</item>
-        <item>Chinese (Simplified)</item>
-        <item>Chinese (Traditional)</item>
-        <item>Japanese</item>
-        <item>Korean</item>
-        <item>Arabic</item>
-        <item>Russian</item>
-        <item>Hindi</item>
-        <item>Bengali</item>
-        <item>Indonesian</item>
-        <item>Dutch</item>
-        <item>Turkish</item>
-        <item>Polish</item>
-        <item>Ukrainian</item>
-        <item>Swedish</item>
-        <item>Danish</item>
-        <item>Norwegian</item>
-        <item>Finnish</item>
-        <item>Greek</item>
-        <item>Hebrew</item>
-        <item>Thai</item>
-        <item>Vietnamese</item>
-        <item>Tamil</item>
-        <item>Telugu</item>
-        <item>Marathi</item>
-        <item>Gujarati</item>
-        <item>Kannada</item>
-        <item>Malayalam</item>
-        <item>Urdu</item>
-        <item>Persian (Farsi)</item>
-        <item>Swahili</item>
-        <item>Romanian</item>
-        <item>Czech</item>
-        <item>Hungarian</item>
-        <item>Filipino (Tagalog)</item>
-        <item>Malay</item>
-        <item>Serbian</item>
-        <item>Croatian</item>
-        <item>Bulgarian</item>
-        <item>Slovak</item>
-        <item>Slovenian</item>
-        <item>Lithuanian</item>
-        <item>Latvian</item>
-        <item>Estonian</item>
-        <item>Catalan</item>
-        <item>Basque</item>
+    <string-array name="translate_language_codes" translatable="false">
+        <item>en</item>
+        <item>es</item>
+        <item>fr</item>
+        <item>de</item>
+        <item>it</item>
+        <item>pt</item>
+        <item>zh</item>
+        <item>zh</item>
+        <item>ja</item>
+        <item>ko</item>
+        <item>ar</item>
+        <item>ru</item>
+        <item>hi</item>
+        <item>bn</item>
+        <item>id</item>
+        <item>nl</item>
+        <item>tr</item>
+        <item>pl</item>
+        <item>uk</item>
+        <item>sv</item>
+        <item>da</item>
+        <item>no</item>
+        <item>fi</item>
+        <item>el</item>
+        <item>he</item>
+        <item>th</item>
+        <item>vi</item>
+        <item>ta</item>
+        <item>te</item>
+        <item>mr</item>
+        <item>gu</item>
+        <item>kn</item>
+        <item>ml</item>
+        <item>ur</item>
+        <item>fa</item>
+        <item>sw</item>
+        <item>ro</item>
+        <item>cs</item>
+        <item>hu</item>
+        <item>tl</item>
+        <item>ms</item>
+        <item>sr</item>
+        <item>hr</item>
+        <item>bg</item>
+        <item>sk</item>
+        <item>sl</item>
+        <item>lt</item>
+        <item>lv</item>
+        <item>et</item>
+        <item>ca</item>
+        <item>eu</item>
     </string-array>
     <!-- Title of the setting to set clipboard toolbar keys -->
     <string name="clipboard_toolbar_keys">Select clipboard toolbar keys</string>

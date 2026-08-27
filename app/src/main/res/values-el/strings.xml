@@ -482,59 +482,6 @@
   <item>Καταλανικά</item>
   <item>Βασκικά</item>
 </string-array>
-    <string-array name="translate_language_codes">
-  <item>Αγγλικά</item>
-  <item>Ισπανικά</item>
-  <item>Γαλλικά</item>
-  <item>Γερμανικά</item>
-  <item>Ιταλικά</item>
-  <item>Πορτογαλικά</item>
-  <item>Κινεζικά (Απλοποιημένα)</item>
-  <item>Κινεζικά (Παραδοσιακά)</item>
-  <item>Ιαπωνικά</item>
-  <item>Κορεατικά</item>
-  <item>Αραβικά</item>
-  <item>Ρωσικά</item>
-  <item>Χίντι</item>
-  <item>Μπενγκάλι</item>
-  <item>Ινδονησιακά</item>
-  <item>Ολλανδικά</item>
-  <item>Τουρκικά</item>
-  <item>Πολωνικά</item>
-  <item>Ουκρανικά</item>
-  <item>Σουηδικά</item>
-  <item>Δανικά</item>
-  <item>Νορβηγικά</item>
-  <item>Φινλανδικά</item>
-  <item>Ελληνικά</item>
-  <item>Εβραϊκά</item>
-  <item>Ταϊλανδικά</item>
-  <item>Βιετναμέζικα</item>
-  <item>Ταμίλ</item>
-  <item>Τελούγκου</item>
-  <item>Μαράθι</item>
-  <item>Γκουτζαράτι</item>
-  <item>Κανάντα</item>
-  <item>Μαλαγιαλάμ</item>
-  <item>Ούρντου</item>
-  <item>Περσικά (Φαρσί)</item>
-  <item>Σουαχίλι</item>
-  <item>Ρουμανικά</item>
-  <item>Τσέχικα</item>
-  <item>Ουγγρικά</item>
-  <item>Φιλιππινέζικα (Τάγκαλογκ)</item>
-  <item>Μαλαισιανά</item>
-  <item>Σερβικά</item>
-  <item>Κροατικά</item>
-  <item>Βουλγαρικά</item>
-  <item>Σλοβακικά</item>
-  <item>Σλοβενικά</item>
-  <item>Λιθουανικά</item>
-  <item>Λετονικά</item>
-  <item>Εσθονικά</item>
-  <item>Καταλανικά</item>
-  <item>Βασκικά</item>
-</string-array>
     <string name="clipboard_toolbar_keys">Επιλογή πλήκτρων γραμμής εργαλείων προχείρου</string>
     <string name="pinned_toolbar_keys">Επιλογή καρφιτσωμένων πλήκτρων γραμμής εργαλείων</string>
     <string name="quick_pin_toolbar_keys">Καρφίτσωμα πλήκτρου γραμμής εργαλείων με παρατεταμένο πάτημα</string>

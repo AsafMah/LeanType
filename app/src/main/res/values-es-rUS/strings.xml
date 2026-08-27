@@ -640,59 +640,6 @@
   <item>Catalán</item>
   <item>Euskera</item>
 </string-array>
-    <string-array name="translate_language_codes">
-  <item>Inglés</item>
-  <item>Español</item>
-  <item>Francés</item>
-  <item>Alemán</item>
-  <item>Italiano</item>
-  <item>Portugués</item>
-  <item>Chino (Simplificado)</item>
-  <item>Chino (Tradicional)</item>
-  <item>Japonés</item>
-  <item>Coreano</item>
-  <item>Árabe</item>
-  <item>Ruso</item>
-  <item>Hindi</item>
-  <item>Bengalí</item>
-  <item>Indonesio</item>
-  <item>Neerlandés</item>
-  <item>Turco</item>
-  <item>Polaco</item>
-  <item>Ucraniano</item>
-  <item>Sueco</item>
-  <item>Danés</item>
-  <item>Noruego</item>
-  <item>Finlandés</item>
-  <item>Griego</item>
-  <item>Hebreo</item>
-  <item>Tailandés</item>
-  <item>Vietnamita</item>
-  <item>Tamil</item>
-  <item>Telugu</item>
-  <item>Maratí</item>
-  <item>Guyaratí</item>
-  <item>Canarés</item>
-  <item>Malayalam</item>
-  <item>Urdu</item>
-  <item>Persa (Farsi)</item>
-  <item>Suajili</item>
-  <item>Rumano</item>
-  <item>Checo</item>
-  <item>Húngaro</item>
-  <item>Filipino (Tagalo)</item>
-  <item>Malayo</item>
-  <item>Serbio</item>
-  <item>Croata</item>
-  <item>Búlgaro</item>
-  <item>Eslovaco</item>
-  <item>Esloveno</item>
-  <item>Lituano</item>
-  <item>Letón</item>
-  <item>Estonio</item>
-  <item>Catalán</item>
-  <item>Euskera</item>
-</string-array>
     <string name="toolbar_long_press_hint">Mostrar puntos de sugerencia de pulsación larga</string>
     <string name="toolbar_long_press_hint_summary">Mostrar puntos en las teclas de la barra que tienen acción de pulsación larga</string>
     <string name="prefs_narrow_key_gaps_level">Nivel de estrechez</string>

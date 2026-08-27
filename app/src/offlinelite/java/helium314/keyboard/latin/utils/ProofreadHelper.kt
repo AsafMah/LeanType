@@ -78,72 +78,93 @@ object ProofreadHelper {
 
     private fun getLangCode(targetLang: String): String {
         val trimmed = targetLang.trim()
-        if (trimmed.length == 2) return trimmed.lowercase()
-        if (trimmed.contains("-")) return trimmed.substringBefore("-").lowercase()
-        return when (trimmed.lowercase()) {
-            "english" -> "en"
-            "spanish" -> "es"
-            "french" -> "fr"
-            "german" -> "de"
-            "italian" -> "it"
-            "portuguese" -> "pt"
-            "chinese", "chinese (simplified)", "chinese (traditional)" -> "zh"
-            "japanese" -> "ja"
-            "korean" -> "ko"
-            "arabic" -> "ar"
-            "russian" -> "ru"
-            "hindi" -> "hi"
-            "bengali" -> "bn"
-            "indonesian" -> "id"
-            "dutch" -> "nl"
-            "turkish" -> "tr"
-            "polish" -> "pl"
-            "ukrainian" -> "uk"
-            "swedish" -> "sv"
-            "danish" -> "da"
-            "norwegian" -> "no"
-            "finnish" -> "fi"
-            "greek" -> "el"
-            "hebrew" -> "he"
-            "thai" -> "th"
-            "vietnamese" -> "vi"
-            "tamil" -> "ta"
-            "telugu" -> "te"
-            "marathi" -> "mr"
-            "gujarati" -> "gu"
-            "kannada" -> "kn"
-            "malayalam" -> "ml"
-            "urdu" -> "ur"
-            "persian (farsi)", "persian", "farsi" -> "fa"
-            "swahili" -> "sw"
-            "romanian" -> "ro"
-            "czech" -> "cs"
-            "hungarian" -> "hu"
-            "filipino (tagalog)", "tagalog", "filipino" -> "tl"
-            "malay" -> "ms"
-            "serbian" -> "sr"
-            "croatian" -> "hr"
-            "bulgarian" -> "bg"
-            "slovak" -> "sk"
-            "slovenian" -> "sl"
-            "lithuanian" -> "lt"
-            "latvian" -> "lv"
-            "estonian" -> "et"
-            "catalan" -> "ca"
-            "basque" -> "eu"
+        if (trimmed.isEmpty()) return "en"
+        if (trimmed.length in 2..3 && trimmed.all { it.isLetter() }) return trimmed.lowercase()
+        if (trimmed.contains("-") || trimmed.contains("_")) {
+            val prefix = trimmed.split('-', '_')[0].trim().lowercase()
+            if (prefix.length in 2..3 && prefix.all { it.isLetter() }) return prefix
+        }
+        val lower = trimmed.lowercase()
+        return when (lower) {
+            "english", "anglais", "englisch", "inglés", "inglese", "inglês", "английский", "انگریزی", "الإنجليزية", "ഇംഗ്ലീഷ്", "αγγλικά", "İngilizce" -> "en"
+            "spanish", "espagnol", "spanisch", "español", "spagnolo", "espanhol", "испанский", "ہسپانوی", "الإسبانية", "സ്പാനിഷ്", "ισπανικά", "İspanyolca" -> "es"
+            "french", "français", "französisch", "francés", "francese", "francês", "французский", "فرانسیسی", "الفرنسية", "ഫ്രഞ്ച്", "γαλλικά", "Fransızca" -> "fr"
+            "german", "allemand", "deutsch", "alemán", "tedesco", "alemão", "немецкий", "جرمن", "الألمانية", "ജർമ്മൻ", "γερμανικά", "Almanca" -> "de"
+            "italian", "italien", "italienisch", "italiano", "итальянский", "اطالوی", "الإيطالية", "ഇറ്റാലിയൻ", "ιταλικά", "İtalyanca" -> "it"
+            "portuguese", "portugais", "portugiesisch", "portugués", "portoghese", "português", "португальский", "پرتگالی", "البرتغالية", "പോർച്ചുഗീസ്", "πορτογαλικά", "Portekizce" -> "pt"
+            "chinese", "chinese (simplified)", "chinese (traditional)", "chinois", "chinois (simplifié)", "chinois (traditionnel)", "chinesisch", "chino", "cinese", "chinês", "китайский", "چینی", "الصينية", "ചൈനീസ്", "κινεζικά", "Çince" -> "zh"
+            "japanese", "japonais", "japanisch", "japonés", "giapponese", "japonês", "японский", "جاپانی", "اليابانية", "ജാപ്പനീസ്", "ιαπωνικά", "Japonca" -> "ja"
+            "korean", "coréen", "koreanisch", "coreano", "корейский", "کوریائی", "الكورية", "കൊറിയൻ", "κορεατικά", "Korece" -> "ko"
+            "arabic", "arabe", "arabisch", "árabe", "arabo", "арабский", "عربی", "العربية", "അറബിക്", "αραβικά", "Arapça" -> "ar"
+            "russian", "russe", "russisch", "ruso", "russo", "русский", "روسی", "الروسية", "റഷ്യൻ", "ρωσικά", "Rusça" -> "ru"
+            "hindi", "indien", "индийский", "хинди", "ہندی", "الهندية", "ഹിന്ദി", "χίντι", "Hintçe" -> "hi"
+            "bengali", "bengalí", "бенгальский", "بنگالی", "البنغالية", "ബംഗാളി", "μπενγκάλι", "Bengalce" -> "bn"
+            "indonesian", "indonésien", "indonesisch", "indonesio", "indonesiano", "индонезийский", "انڈونیشیائی", "الإندونيسية", "ഇന്തോനേഷ്യൻ", "ινδονησιακά", "Endonezce" -> "id"
+            "dutch", "néerlandais", "niederländisch", "holandés", "olandese", "holandês", "нидерландский", "голландский", "ولندیزی", "الهولندية", "ഡച്ച്", "ολλανδικά", "Felemenkçe" -> "nl"
+            "turkish", "turc", "türkisch", "turco", "турецкий", "ترکی", "التركية", "ടർക്കിഷ്", "τουρκικά", "Türkçe" -> "tr"
+            "polish", "polonais", "polnisch", "polaco", "polacco", "польский", "پولش", "البولندية", "പോളിഷ്", "πολωνικά", "Lehçe" -> "pl"
+            "ukrainian", "ukrainien", "ukrainisch", "ucraniano", "ucraino", "украинский", "یوکرائنی", "الأوكرانية", "ഉക്രേനിയൻ", "ουκρανικά", "Ukraynaca" -> "uk"
+            "swedish", "suédois", "schwedisch", "sueco", "svedese", "шведский", "سویڈش", "السويدية", "സ്വീഡിഷ്", "σουηδικά", "İsveççe" -> "sv"
+            "danish", "danois", "dänisch", "danés", "danese", "dinamarquês", "датский", "ڈینش", "الدنماركية", "ഡാനിഷ്", "δανικά", "Danca" -> "da"
+            "norwegian", "norvégien", "norwegisch", "noruego", "norvegese", "norueguês", "норвежский", "نارویجن", "النرويجية", "നോർവീജിയൻ", "νορβηγικά", "Norveççe" -> "no"
+            "finnish", "finnois", "finnisch", "finlandés", "finlandese", "finlandês", "финский", "فنش", "الفنلندية", "ഫിന്നിഷ്", "φινλανδικά", "Fince" -> "fi"
+            "greek", "grec", "griechisch", "griego", "greco", "grego", "греческий", "یونانی", "اليونانية", "ഗ്രീക്ക്", "ελληνικά", "Yunanca" -> "el"
+            "hebrew", "hébreu", "hebräisch", "hebreo", "ebraico", "hebraico", "иврит", "عبرانی", "العبرية", "ഹീബ്രു", "εβραϊκά", "İbranice" -> "he"
+            "thai", "thaï", "thailändisch", "tailandés", "thailandese", "tailandês", "тайский", "تھائی", "التايلاندية", "തായ്", "ταϊλανδικά", "Tayca" -> "th"
+            "vietnamese", "vietnamien", "vietnamesisch", "vietnamita", "вьетнамский", "ویتنامی", "الفيتنامية", "വിയറ്റ്നാമീസ്", "βιετναμέζικα", "Vietnamca" -> "vi"
+            "tamil", "tamoul", "тамильский", "تامل", "التاميلية", "തമിഴ്", "ταμίλ", "Tamilce" -> "ta"
+            "telugu", "télougou", "телугу", "تیلگو", "التيلوغوية", "തെലുങ്ക്", "τελούγκου", "Teluguca" -> "te"
+            "marathi", "marathe", "маратхи", "مراٹھی", "الماراثية", "മറാത്തി", "μαράθι", "Marathice" -> "mr"
+            "gujarati", "goudjarati", "гуджарати", "گجراتی", "الغوجاراتية", "ഗുജറാത്തി", "γκουτζαράτι", "Guceratça" -> "gu"
+            "kannada", "каннада", "کنڑ", "الكانادية", "കന്നഡ", "κανάντα", "Kannadaca" -> "kn"
+            "malayalam", "малаялам", "ملیالم", "المالايالامية", "മലയാളം", "μαλαγιαλάм", "Malayalamca" -> "ml"
+            "urdu", "ourdou", "урду", "اردو", "الأردية", "ഉർദു", "ούρντου", "Urduca" -> "ur"
+            "persian (farsi)", "persian", "farsi", "persan (farsi)", "persan", "персидский", "فارسی", "الفارسية", "പേർഷ്യൻ", "περσικά", "Farsça" -> "fa"
+            "swahili", "souahéli", "суахили", "سواحلی", "السواحيلية", "സ്വാഹിലി", "σουαχίλι", "Svahilice" -> "sw"
+            "romanian", "roumain", "rumänisch", "rumano", "rumeno", "romeno", "румынский", "رومانیہ", "الرومانية", "റൊമാനിയൻ", "ρουμανικά", "Romence" -> "ro"
+            "czech", "tchèque", "tschechisch", "checo", "ceco", "чешский", "چیک", "التشيكية", "ചെക്ക്", "τσέχικα", "Çekçe" -> "cs"
+            "hungarian", "hongrois", "ungarisch", "húngaro", "ungherese", "венгерский", "ہنگری", "المجرية", "ഹംഗേറിയൻ", "ουγγρικά", "Macarca" -> "hu"
+            "filipino (tagalog)", "tagalog", "filipino", "philippin (tagalog)", "тагальский", "فلپائنی", "الفلبينية", "ഫിലിപ്പിനോ", "φιλιππινέζικα", "Filipince" -> "tl"
+            "malay", "malais", "malaiisch", "malayo", "malese", "малайский", "ملائی", "الملايوية", "മലായ്", "μαλαισιανά", "Malayca" -> "ms"
+            "serbian", "serbe", "serbisch", "serbio", "сербский", "سربین", "الصربية", "സെർബിയൻ", "σερβικά", "Sırpça" -> "sr"
+            "croatian", "croate", "kroatisch", "croata", "хорватский", "کروشین", "الكرواتية", "ക്രൊയേഷ്യൻ", "κροατικά", "Hırvatça" -> "hr"
+            "bulgarian", "bulgare", "bulgarisch", "búlgaro", "болгарский", "بلغاریائی", "البلغارية", "ബൾഗേറിയൻ", "βουλγαρικά", "Bulgarca" -> "bg"
+            "slovak", "slovaque", "slowakisch", "eslovaco", "словацкий", "سلوواک", "السلوفاكية", "സ്ലോവാക്", "σλοβακικά", "Slovakça" -> "sk"
+            "slovenian", "slovène", "slowenisch", "esloveno", "словенский", "سلووین", "السلوفينية", "സ്ലൊവേനിയൻ", "σλοβενικά", "Slovence" -> "sl"
+            "lithuanian", "lituanien", "litauisch", "lituano", "литовский", "لتھواینین", "الليتوانية", "ലിത്വാനിയൻ", "λιθουανικά", "Litvanca" -> "lt"
+            "latvian", "letton", "lettisch", "letón", "латышский", "لاطویائی", "اللاتفية", "ലാത്വിയൻ", "λετονικά", "Letonca" -> "lv"
+            "estonian", "estonien", "estnisch", "estonio", "эстонский", "اسٹونین", "الإستونية", "എസ്റ്റോണിയൻ", "εσθονικά", "Estonca" -> "et"
+            "catalan", "catalán", "katalanisch", "каталанский", "کیٹالان", "الكتالانية", "കറ്റാലൻ", "καταλανικά", "Katalanca" -> "ca"
+            "basque", "baskisch", "vasco", "euskera", "баскский", "باسکی", "الباسكية", "ബാസ്ക്", "βασκικά", "Baskça" -> "eu"
             "afrikaans" -> "af"
-            "albanian" -> "sq"
-            "belarusian" -> "be"
+            "albanian", "albanais", "albanisch", "albanés", "албанский" -> "sq"
+            "belarusian", "biélorusse", "belarussisch", "bielorruso", "белорусский" -> "be"
             "esperanto" -> "eo"
-            "galician" -> "gl"
-            "georgian" -> "ka"
-            "haitian creole", "haitian" -> "ht"
-            "icelandic" -> "is"
-            "irish" -> "ga"
-            "macedonian" -> "mk"
-            "maltese" -> "mt"
-            "welsh" -> "cy"
-            else -> trimmed.take(2).lowercase()
+            "galician", "galicien", "galizisch", "gallego", "галисийский" -> "gl"
+            "georgian", "géorgien", "georgisch", "georgiano", "грузинский" -> "ka"
+            "haitian creole", "haitian", "haïtien" -> "ht"
+            "icelandic", "islandais", "isländisch", "islandés", "исландский" -> "is"
+            "irish", "irlandais", "irisch", "irlandés", "ирландский" -> "ga"
+            "macedonian", "macédonien", "mazedonisch", "macedonio", "македонский" -> "mk"
+            "maltese", "maltais", "maltesisch", "maltés", "мальтийский" -> "mt"
+            "welsh", "gallois", "walisisch", "galés", "валлийский" -> "cy"
+            else -> {
+                try {
+                    val matched = java.util.Locale.getAvailableLocales().firstOrNull {
+                        it.getDisplayLanguage(it).equals(lower, ignoreCase = true) ||
+                        it.getDisplayLanguage(java.util.Locale.ENGLISH).equals(lower, ignoreCase = true) ||
+                        it.getDisplayLanguage(java.util.Locale.getDefault()).equals(lower, ignoreCase = true)
+                    }
+                    if (matched != null && matched.language.isNotBlank()) {
+                        matched.language.lowercase()
+                    } else {
+                        val parsed = java.util.Locale.forLanguageTag(lower).language
+                        if (parsed.isNotBlank() && parsed.length in 2..3) parsed.lowercase() else "en"
+                    }
+                } catch (_: Throwable) {
+                    "en"
+                }
+            }
         }
     }
 

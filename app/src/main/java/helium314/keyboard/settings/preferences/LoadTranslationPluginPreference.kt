@@ -367,7 +367,12 @@ fun TranslationTargetLanguagePreference() {
             }
 
             val displayLabel = remember(selectedLanguage, items) {
-                items.find { it.second.equals(selectedLanguage, ignoreCase = true) }?.first ?: selectedLanguage
+                val found = items.find { it.second.equals(selectedLanguage, ignoreCase = true) }
+                if (found != null) {
+                    "${found.first} (${found.second})"
+                } else {
+                    selectedLanguage
+                }
             }
 
             Preference(

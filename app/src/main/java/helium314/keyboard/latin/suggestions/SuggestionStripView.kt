@@ -1009,7 +1009,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val prefs = context.prefs()
 
         val defaultList = languageNames.zip(languageCodes).toMutableList()
-        val currentLanguageCode = prefs.getString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, "English") ?: "English"
+        val rawCode = prefs.getString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, "en") ?: "en"
+        val currentLanguageCode = if (rawCode.equals("English", ignoreCase = true)) "en" else rawCode
         val currentLanguageName = prefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, currentLanguageCode) ?: currentLanguageCode
         
         val history = getLanguageHistory(prefs).toMutableList()

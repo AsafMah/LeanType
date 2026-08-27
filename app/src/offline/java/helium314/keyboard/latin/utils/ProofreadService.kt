@@ -239,10 +239,13 @@ class ProofreadService(private val context: Context) {
 
     fun setModelName(name: String) { /* No-op */ }
     
-    fun getTargetLanguage(): String = sharedPrefs.getString(
-        helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE,
-        sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "English")
-    ) ?: "English"
+    fun getTargetLanguage(): String {
+        val lang = sharedPrefs.getString(
+            helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE,
+            sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "en")
+        ) ?: "en"
+        return if (lang.equals("English", ignoreCase = true)) "en" else lang
+    }
 
     fun setTargetLanguage(language: String) {
         sharedPrefs.edit()

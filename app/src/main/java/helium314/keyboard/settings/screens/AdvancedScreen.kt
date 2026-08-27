@@ -532,7 +532,12 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
         }
 
         val displayLabel = remember(selectedLanguage, items) {
-            items.find { it.second.equals(selectedLanguage, ignoreCase = true) }?.first ?: selectedLanguage
+            val found = items.find { it.second.equals(selectedLanguage, ignoreCase = true) }
+            if (found != null) {
+                "${found.first} (${found.second})"
+            } else {
+                selectedLanguage
+            }
         }
 
         helium314.keyboard.settings.preferences.Preference(
@@ -592,7 +597,7 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                                     }
                                 )
                                 Text(
-                                    text = name,
+                                    text = "$name ($code)",
                                     modifier = androidx.compose.ui.Modifier
                                         .weight(1f)
                                         .padding(start = 8.dp)
@@ -601,7 +606,7 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                                     onClick = {
                                         helium314.keyboard.latin.utils.TranslationUtils.removeLanguageHistory(ctx.prefs(), code)
                                         if (isSelected) {
-                                            val fallback = "English"
+                                            val fallback = "en"
                                             service.setTargetLanguage(fallback)
                                             selectedLanguage = fallback
                                         }

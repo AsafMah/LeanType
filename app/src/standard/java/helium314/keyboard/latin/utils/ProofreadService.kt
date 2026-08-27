@@ -192,7 +192,10 @@ class ProofreadService(private val context: Context) {
     }
 
     // Target language
-    fun getTargetLanguage(): String = securePrefs.getString(KEY_TARGET_LANGUAGE, DEFAULT_TARGET_LANGUAGE) ?: DEFAULT_TARGET_LANGUAGE
+    fun getTargetLanguage(): String {
+        val lang = securePrefs.getString(KEY_TARGET_LANGUAGE, DEFAULT_TARGET_LANGUAGE) ?: DEFAULT_TARGET_LANGUAGE
+        return if (lang.equals("English", ignoreCase = true)) "en" else lang
+    }
 
     fun setTargetLanguage(language: String) {
         securePrefs.edit().putString(KEY_TARGET_LANGUAGE, language).apply()
@@ -651,7 +654,7 @@ class ProofreadService(private val context: Context) {
         private const val KEY_GROQ_TOKEN = "groq_token"
         private const val KEY_GROQ_MODEL = "groq_model"
         private const val KEY_TRANSLATE_GROQ_MODEL = "translate_groq_model"
-        private const val DEFAULT_TARGET_LANGUAGE = "English"
+        private const val DEFAULT_TARGET_LANGUAGE = "en"
         private const val DEFAULT_HF_MODEL = "gpt-4o-mini"
         
         val AVAILABLE_MODELS = listOf(
