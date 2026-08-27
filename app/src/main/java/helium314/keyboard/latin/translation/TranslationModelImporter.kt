@@ -12,32 +12,87 @@ import java.util.zip.ZipInputStream
 object TranslationModelImporter {
     private const val TAG = "TranslationModelImporter"
 
+    fun isModelInstalled(context: Context, langCode: String): Boolean {
+        val modelName = TranslationModelUrls.getModelName(langCode) ?: langCode
+        val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
+        val normalized = if (langCode == "he") "iw" else if (langCode == "iw") "he" else langCode
+        val possibleNames = listOf(
+            modelName,
+            "${langCode}_en", "en_${langCode}",
+            "${normalized}_en", "en_${normalized}",
+            langCode, normalized
+        ).distinct()
+
+        for (baseDir in baseDirs) {
+            for (name in possibleNames) {
+                val dir = File(baseDir, "com.google.mlkit.translate.models/$name")
+                if (dir.exists() && dir.isDirectory) {
+                    val hasRootFiles = dir.listFiles()?.any { it.isFile && it.length() > 0 } == true
+                    val dirZero = File(dir, "0")
+                    val hasZeroFiles = dirZero.exists() && dirZero.isDirectory &&
+                        dirZero.listFiles()?.any { it.isFile && it.length() > 0 } == true
+                    if (hasRootFiles || hasZeroFiles) return true
+                }
+            }
+        }
+        return false
+    }
+
+    fun deleteModel(context: Context, langCode: String): Boolean {
+        val modelName = TranslationModelUrls.getModelName(langCode) ?: langCode
+        val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
+        val normalized = if (langCode == "he") "iw" else if (langCode == "iw") "he" else langCode
+        val possibleNames = listOf(
+            modelName,
+            "${langCode}_en", "en_${langCode}",
+            "${normalized}_en", "en_${normalized}",
+            langCode, normalized
+        ).distinct()
+
+        var anyDeleted = false
+        for (baseDir in baseDirs) {
+            for (name in possibleNames) {
+                val dir = File(baseDir, "com.google.mlkit.translate.models/$name")
+                if (dir.exists()) {
+                    if (dir.deleteRecursively()) anyDeleted = true
+                }
+            }
+        }
+        Log.i(TAG, "Deleted translation model for $langCode (deleted=$anyDeleted)")
+        if (anyDeleted) {
+            TranslationLoader.unloadPlugin()
+        }
+        return anyDeleted
+    }
+
     fun migrateLegacyModels(context: Context) {
         try {
-            val baseDir = context.noBackupFilesDir ?: context.filesDir
-            val modelsDir = File(baseDir, "com.google.mlkit.translate.models")
-            if (!modelsDir.exists() || !modelsDir.isDirectory) return
+            val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
+            for (baseDir in baseDirs) {
+                val modelsDir = File(baseDir, "com.google.mlkit.translate.models")
+                if (!modelsDir.exists() || !modelsDir.isDirectory) continue
 
-            modelsDir.listFiles()?.forEach { modelDir ->
-                if (modelDir.isDirectory && modelDir.name != "0") {
-                    val versionZeroDir = File(modelDir, "0")
-                    if (!versionZeroDir.exists()) {
-                        versionZeroDir.mkdirs()
-                    }
-                    // Ensure all model files exist in both modelDir and modelDir/0
-                    modelDir.listFiles()?.forEach { file ->
-                        if (file.isFile) {
-                            val dest = File(versionZeroDir, file.name)
-                            if (!dest.exists() || dest.length() != file.length()) {
-                                file.copyTo(dest, overwrite = true)
+                modelsDir.listFiles()?.forEach { modelDir ->
+                    if (modelDir.isDirectory && modelDir.name != "0") {
+                        val versionZeroDir = File(modelDir, "0")
+                        if (!versionZeroDir.exists()) {
+                            versionZeroDir.mkdirs()
+                        }
+                        // Ensure all model files exist in both modelDir and modelDir/0
+                        modelDir.listFiles()?.forEach { file ->
+                            if (file.isFile) {
+                                val dest = File(versionZeroDir, file.name)
+                                if (!dest.exists() || dest.length() != file.length()) {
+                                    file.copyTo(dest, overwrite = true)
+                                }
                             }
                         }
-                    }
-                    versionZeroDir.listFiles()?.forEach { file ->
-                        if (file.isFile) {
-                            val dest = File(modelDir, file.name)
-                            if (!dest.exists() || dest.length() != file.length()) {
-                                file.copyTo(dest, overwrite = true)
+                        versionZeroDir.listFiles()?.forEach { file ->
+                            if (file.isFile) {
+                                val dest = File(modelDir, file.name)
+                                if (!dest.exists() || dest.length() != file.length()) {
+                                    file.copyTo(dest, overwrite = true)
+                                }
                             }
                         }
                     }
@@ -117,6 +172,7 @@ object TranslationModelImporter {
 
             Log.i(TAG, "Successfully imported translation model $modelName into $targetDir and $targetDirZero")
             migrateLegacyModels(context)
+            TranslationLoader.unloadPlugin()
             modelName
         } catch (e: Throwable) {
             Log.e(TAG, "Error extracting translation model zip", e)

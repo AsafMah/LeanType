@@ -1,5 +1,4 @@
-- Suggestion Balance Master Slider: 1–5 slider to balance suggestions between dictionary accuracy and personal history.
-- Next-Word Prediction & Scoring: Balanced personalization boosts, beam pruning, and instant readiness on focus.
-- Ergonomic Text Edit Mode: Redesigned layout with central Select key and D-Pad navigation (editing_classic retained).
-- Material 3 Settings: Modernized Subtype, Colors, Personal Dictionary, and Blocked Words screens into Card layouts.
-- Offline Translation & Plugins: Target language persistence fix, translation engine source selection in offline flavor, script detection, and English model support.
+- Ultra-Lightweight APKs: Unbundled dictionaries across all flavors in favor of on-demand downloads via DictManager.
+- Modular Offline AI Dynamic Plugin: Decoupled local GGUF AI engine into a standalone dynamic plugin (LeanType-Offline-AI-Plugin).
+- Instant Offline Translation Hot-Reload: Direct filesystem inspection and proactive cache invalidation for seamless model imports.
+- Refined Setup Wizard & Unified Plugins Hub: Modernized Welcome Wizard and integrated Offline AI into Plugins Hub.

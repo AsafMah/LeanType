@@ -344,9 +344,8 @@ object ProofreadHelper {
     ) {
         val prefs = context.prefs()
         val translationEngine = prefs.getString("pref_translation_engine", prefs.getString("pref_translation_method", "auto") ?: "auto") ?: "auto"
-        val translationMode = prefs.getString(SettingsWithoutKey.TRANSLATION_MODE, "auto") ?: "auto"
-        val isOfflineOnly = translationMode == "offline_only" || translationEngine == "plugin"
-        val isOnlineOnly = translationMode == "online_only" || translationEngine == "ai"
+        val isOfflineOnly = translationEngine == "plugin"
+        val isOnlineOnly = translationEngine == "ai"
 
         val hasPlugin = helium314.keyboard.latin.translation.TranslationLoader.hasPlugin(context)
         val usePlugin = !isOnlineOnly && hasPlugin
@@ -368,20 +367,22 @@ object ProofreadHelper {
                 if (pluginProvider != null && pluginProvider.isAvailable()) {
                     val missingModels = mutableListOf<String>()
                     if (sourceLangCode != "auto" && sourceLangCode != "en") {
-                        try {
-                            if (!pluginProvider.isModelDownloaded(sourceLangCode)) {
-                                missingModels.add(sourceLangCode)
-                            }
+                        val isDownloaded = try {
+                            pluginProvider.isModelDownloaded(sourceLangCode)
                         } catch (_: Throwable) {
+                            false
+                        } || helium314.keyboard.latin.translation.TranslationModelImporter.isModelInstalled(context, sourceLangCode)
+                        if (!isDownloaded) {
                             missingModels.add(sourceLangCode)
                         }
                     }
                     if (targetLangCode != "en" && !missingModels.contains(targetLangCode)) {
-                        try {
-                            if (!pluginProvider.isModelDownloaded(targetLangCode)) {
-                                missingModels.add(targetLangCode)
-                            }
+                        val isDownloaded = try {
+                            pluginProvider.isModelDownloaded(targetLangCode)
                         } catch (_: Throwable) {
+                            false
+                        } || helium314.keyboard.latin.translation.TranslationModelImporter.isModelInstalled(context, targetLangCode)
+                        if (!isDownloaded) {
                             missingModels.add(targetLangCode)
                         }
                     }

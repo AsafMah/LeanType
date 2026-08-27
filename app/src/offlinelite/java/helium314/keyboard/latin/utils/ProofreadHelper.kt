@@ -237,20 +237,22 @@ object ProofreadHelper {
 
         val missingModels = mutableListOf<String>()
         if (sourceLangCode != "auto" && sourceLangCode != "en") {
-            try {
-                if (!provider.isModelDownloaded(sourceLangCode)) {
-                    missingModels.add(sourceLangCode)
-                }
+            val isDownloaded = try {
+                provider.isModelDownloaded(sourceLangCode)
             } catch (_: Throwable) {
+                false
+            } || helium314.keyboard.latin.translation.TranslationModelImporter.isModelInstalled(context, sourceLangCode)
+            if (!isDownloaded) {
                 missingModels.add(sourceLangCode)
             }
         }
         if (targetLangCode != "en" && !missingModels.contains(targetLangCode)) {
-            try {
-                if (!provider.isModelDownloaded(targetLangCode)) {
-                    missingModels.add(targetLangCode)
-                }
+            val isDownloaded = try {
+                provider.isModelDownloaded(targetLangCode)
             } catch (_: Throwable) {
+                false
+            } || helium314.keyboard.latin.translation.TranslationModelImporter.isModelInstalled(context, targetLangCode)
+            if (!isDownloaded) {
                 missingModels.add(targetLangCode)
             }
         }

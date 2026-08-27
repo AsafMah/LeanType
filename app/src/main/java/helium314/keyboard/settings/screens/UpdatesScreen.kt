@@ -72,11 +72,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "• Suggestion Balance Master Slider (1–5 slider for dictionary vs. personalization)",
-    "• Next-word prediction & scoring optimization with beam pruning and instant focus readiness",
-    "• Ergonomic text edit layout with central Select key and D-Pad navigation",
-    "• Material 3 card-based settings redesign across Subtype, Colors, and Dictionaries",
-    "• Offline translation enhancements (target language persistence, engine source in offline flavor, script detection)"
+    "• Ultra-Lightweight APKs (~9.8 MB): Unbundled dictionaries in favor of on-demand DictManager downloads",
+    "• Modular Offline AI Dynamic Plugin: Decoupled local GGUF AI engine into a standalone dynamic plugin",
+    "• Instant Offline Translation Hot-Reload: Direct filesystem inspection and proactive cache invalidation",
+    "• Refined Setup Wizard & Unified Plugins Hub: Modernized Welcome Wizard and centralized Plugins Hub",
+    "• Notice: Offline & Offline Lite will merge next release; Offline AI will be loadable on-demand via plugin"
 )
 
 @Composable

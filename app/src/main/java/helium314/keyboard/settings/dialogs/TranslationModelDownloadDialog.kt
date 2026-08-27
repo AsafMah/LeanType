@@ -76,7 +76,7 @@ fun TranslationModelDownloadDialog(
                     if (importedModel != null) {
                         allLanguages.forEach { item ->
                             val mName = TranslationModelUrls.getModelName(item.code)
-                            if (mName == importedModel || item.code == importedModel) {
+                            if (mName == importedModel || item.code == importedModel || TranslationModelImporter.isModelInstalled(context, item.code)) {
                                 downloadedMap[item.code] = true
                             }
                         }
@@ -126,7 +126,7 @@ fun TranslationModelDownloadDialog(
                     provider.isModelDownloaded(code)
                 } catch (_: Throwable) {
                     false
-                }
+                } || TranslationModelImporter.isModelInstalled(context, code)
                 withContext(Dispatchers.Main) { downloadedMap[code] = downloaded }
             }
         }
@@ -231,11 +231,11 @@ fun TranslationModelDownloadDialog(
                                     Button(
                                         onClick = {
                                             scope.launch(Dispatchers.IO) {
-                                                val deleted = try {
+                                                val deleted = (try {
                                                     provider.deleteModel(item.code)
                                                 } catch (_: Throwable) {
                                                     false
-                                                }
+                                                }) || TranslationModelImporter.deleteModel(context, item.code)
                                                 withContext(Dispatchers.Main) {
                                                     if (deleted) {
                                                         downloadedMap[item.code] = false
