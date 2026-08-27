@@ -1035,6 +1035,12 @@ public class LatinIME extends InputMethodService implements
         mHandler.onFinishInputView(finishingInput);
         mStatsUtilsManager.onFinishInputView();
         mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
+        // Auto-dismiss floating keyboard when input view finishes (e.g. search closed, field unfocused)
+        if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
+            if (!Settings.getInstance().getCurrent().mPersistFloatingKeyboard) {
+                mFloatingKeyboardManager.hide(false);
+            }
+        }
         // ponytail: reset text edit mode when input view finishes if persist is false
         if (KeyboardActionListenerImpl.sPersistentTextEditModeActive) {
             if (!Settings.getInstance().getCurrent().mPersistTextEditMode) {
@@ -1335,6 +1341,11 @@ public class LatinIME extends InputMethodService implements
     public void onWindowHidden() {
         super.onWindowHidden();
         Log.i(TAG, "onWindowHidden");
+        if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
+            if (!Settings.getInstance().getCurrent().mPersistFloatingKeyboard) {
+                mFloatingKeyboardManager.hide(false);
+            }
+        }
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
             mainKeyboardView.closing();
