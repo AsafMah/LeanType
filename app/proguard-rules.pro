@@ -67,6 +67,13 @@
 -keep class helium314.keyboard.latin.translation.** { *; }
 -keep interface helium314.keyboard.latin.translation.** { *; }
 
+# Keep offline AI plugin interface to prevent parameter removal/signature optimization
+-keep interface helium314.keyboard.latin.ai.IOfflineAiProvider {
+    <methods>;
+}
+-keep class helium314.keyboard.latin.ai.** { *; }
+-keep interface helium314.keyboard.latin.ai.** { *; }
+
 # Keep WorkManager plugin factory & runtime for dynamically loaded plugins
 -keep class helium314.keyboard.latin.work.** { *; }
 -keep interface helium314.keyboard.latin.work.** { *; }

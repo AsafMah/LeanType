@@ -138,7 +138,7 @@ fun MainSettingsScreen(
                     )
                 ) {
                     Column {
-                        if (BuildConfig.FLAVOR != "offlinelite") {
+                        if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
                             Preference(
                                 name = stringResource(R.string.settings_screen_ai_integration),
                                 onClick = onClickAIIntegration,

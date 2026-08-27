@@ -40,6 +40,7 @@ fun LibrariesHubScreen(
     onClickOfflineVoice: () -> Unit = {},
     onClickTranslation: () -> Unit = {},
     onClickHandwriting: () -> Unit = {},
+    onClickAIIntegration: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -69,6 +70,22 @@ fun LibrariesHubScreen(
                 ) {
                     Column {
                         PreferenceCategory(stringResource(R.string.plugins_title))
+
+                        // Offline AI Plugin (offline flavor only)
+                        if (BuildConfig.FLAVOR == "offline") {
+                            val aiPluginInstalled = helium314.keyboard.latin.ai.OfflineAiLoader.hasPlugin(context)
+                            val aiSummary = if (aiPluginInstalled) {
+                                stringResource(R.string.libraries_status_active)
+                            } else {
+                                stringResource(R.string.libraries_status_not_installed)
+                            }
+                            Preference(
+                                name = stringResource(R.string.settings_screen_ai_integration),
+                                description = aiSummary,
+                                onClick = onClickAIIntegration,
+                                icon = R.drawable.ic_proofread
+                            ) { NextScreenIcon() }
+                        }
 
                         // Handwriting Input Plugin (ML Kit based)
                         val handwritingInstalled = HandwritingLoader.hasPlugin(context)

@@ -117,7 +117,8 @@ fun SettingsNavHost(
                 onClickBack = ::goBack,
                 onClickOfflineVoice = { navController.navigate(SettingsDestination.OfflineVoice) },
                 onClickTranslation = { navController.navigate(SettingsDestination.Translation) },
-                onClickHandwriting = { navController.navigate(SettingsDestination.Handwriting) }
+                onClickHandwriting = { navController.navigate(SettingsDestination.Handwriting) },
+                onClickAIIntegration = { navController.navigate(SettingsDestination.AIIntegration) }
             )
         }
         composable(SettingsDestination.CustomAIKeys) {
