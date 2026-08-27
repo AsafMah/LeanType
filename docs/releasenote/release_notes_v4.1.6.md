@@ -9,7 +9,7 @@ As an open-source, community-funded project, we operate on a very limited budget
 - **Instant Offline Translation Hot-Reload & Persistence**: Direct filesystem inspection and proactive plugin cache invalidation ensure imported translation models (`.zip`) are instantly recognized and retained across dialog reopenings without requiring a keyboard restart.
 - **Refined Setup Wizard & Unified Plugins Hub**: Streamlined the Welcome Wizard across all flavors and integrated Offline AI into the centralized Plugins Hub alongside Voice, Handwriting, and Translation.
 
-> ⚠️ **Important Notice for Offline Edition Users**: Because the local GGUF AI engine is now detached from the app into the standalone [**`LeanType-Offline-AI-Plugin`**](https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin), existing **Offline** flavor users are advised to **backup their settings** (Settings &rarr; Advanced &rarr; Backup) before updating. After updating, simply load the Offline AI Plugin from **Settings &rarr; Plugins &rarr; Offline AI** to continue using local GGUF model proofreading.
+> ⚠️ **Important Notice for Offline Edition Users**: The local GGUF AI engine is now detached from the app into the standalone [**`LeanType-Offline-AI-Plugin`**](https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin). Existing **Offline** flavor users are recommended to **backup their settings** (**Settings &rarr; Advanced &rarr; Backup**) before updating just in case. After updating, simply load the Offline AI Plugin from **Settings &rarr; Plugins &rarr; Offline AI** to continue using local GGUF model proofreading.
 
 ## 📦 Choose Your Flavor
 
