@@ -374,8 +374,8 @@ LeanType is published in **4 purpose-built flavors**:
  
 | Flavor | Cloud AI | Offline AI | Voice Input | Handwriting | Translation | In-App Updates | Internet Permission | Min SDK | Approx Size |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Standard Full** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ✅ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~9.8 MB** |
-| **Standard (FOSS)** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ❌ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~9.8 MB** |
+| **Standard Full** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ✅ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~10.8 MB** |
+| **Standard (FOSS)** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ❌ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~10.8 MB** |
 | **Offline AI** | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 26 (8.0+) | **~9.8 MB** |
 | **Offline Lite** | ❌ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 21 (5.0+) | **~9.8 MB** |
 
