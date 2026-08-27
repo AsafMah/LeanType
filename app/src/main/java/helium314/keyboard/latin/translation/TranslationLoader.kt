@@ -17,6 +17,8 @@ object TranslationLoader {
     private const val TAG = "TranslationLoader"
 
     private var activeProvider: ITranslationProvider? = null
+    private var cachedClassLoader: PluginClassLoader? = null
+    private var cachedApkModified: Long = 0L
 
     @JvmStatic
     fun getTargetAbi(): String {
@@ -124,12 +126,19 @@ object TranslationLoader {
             ensureWorkManagerInitialized(context)
             val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
-            val classLoader = PluginClassLoader(
-                apkFile.absolutePath,
-                context.codeCacheDir.absolutePath,
-                nativeLibDir.absolutePath,
-                context.classLoader
-            )
+            val classLoader = if (cachedClassLoader != null && cachedApkModified == apkFile.lastModified()) {
+                cachedClassLoader!!
+            } else {
+                val cl = PluginClassLoader(
+                    apkFile.absolutePath,
+                    context.codeCacheDir.absolutePath,
+                    nativeLibDir.absolutePath,
+                    context.classLoader
+                )
+                cachedClassLoader = cl
+                cachedApkModified = apkFile.lastModified()
+                cl
+            }
             val clazz = classLoader.loadClass(PLUGIN_CLASS_NAME)
             val provider = clazz.getDeclaredConstructor().newInstance() as ITranslationProvider
             
@@ -299,6 +308,8 @@ object TranslationLoader {
 
     fun removePlugin(context: Context) {
         unloadPlugin()
+        cachedClassLoader = null
+        cachedApkModified = 0L
         helium314.keyboard.latin.App.pluginWorkerFactory.pluginRuntime = null
         try {
             File(context.filesDir, PLUGIN_FILENAME).delete()
