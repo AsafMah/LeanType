@@ -138,27 +138,34 @@ LeanType is available in **4 distinct flavors** designed to match your exact pri
 4. Select your provider (or choose **Custom (OpenAI-compatible)** for self-hosted instances), enter your endpoint URL/token, and choose your preferred model and target language.
 5. 👉 **[Read the Full AI & Prompts Guide](docs/FEATURES.md)**
 
-### 2. Voice Input Setup (Whisper AI)
-1. Install the companion [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin/releases/latest).
-2. Open **Settings → Voice typing → Whisper Speech Models**.
-3. Download or import your preferred Multilingual Whisper model (e.g. *Tiny* ~32 MB, *Base* ~57 MB, or *Small* ~182 MB supporting 99+ languages).
-4. Tap the microphone icon on the keyboard toolbar to start typing with your voice!
+### 2. Voice Input Setup (On-Device Whisper AI)
+1. Download and install the [LeanType Voice Plugin APK](https://github.com/LeanBitLab/LeanType-Voice-Plugin/releases/latest) on your Android device (installed as a background IPC service).
+2. Grant **Microphone permission** to the LeanType Voice Plugin.
+3. In LeanType, open **Settings → Voice typing** (or **Settings → Plugins → Voice**) and tap **Whisper Speech Models**.
+4. Download or import your preferred Whisper model (e.g. *Base* ~74 MB recommended).
+5. Tap the microphone icon on the keyboard toolbar to start speech-to-text!
 
 ### 3. Translation Setup (Offline & Online)
-1. In LeanType, open **Settings → Translation**.
-2. Install the companion [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) (or configure Cloud/Self-Hosted AI for online builds).
-3. Download or import your required language translation models.
-4. Tap the **Translate** icon on the keyboard toolbar to translate selected text or your input field instantly.
+1. **Online Flavors (`Standard` / `Standard Full`)**: Open **Settings → Translation** and tap **Download Plugin** to install the [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) automatically.
+2. **Offline Flavors (`Offline` / `Offline Lite`)**: Download `translation_plugin-arm64-v8a.apk` from [GitHub Releases](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) and load it in **Settings → Plugins → Translation**.
+3. Download or import your required language translation models (~30 MB per language).
+4. Tap the **Translate** icon on the keyboard toolbar to translate selected text or input fields instantly.
 
-### 4. Gesture Typing Setup
-1. In the `standard` and `standardfull` builds, open **Settings → Gesture typing** to download the gesture library automatically.
-2. In `offline` builds, [download the library manually](https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs) and load it via *Settings → Gesture typing → Load gesture library*.
+### 4. Handwriting Recognition Setup
+1. **Online Flavors**: Open **Settings → Handwriting** and tap **Download Plugin** to fetch the [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest).
+2. **Offline Flavors**: Download `handwriting_plugin-arm64-v8a.apk` from [GitHub Releases](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest) and load it in **Settings → Plugins → Handwriting**.
+3. Download or import handwriting recognition models for your languages.
+4. Tap the **Handwriting key** on the toolbar or long-press spacebar to draw characters on the writing canvas.
 
-### 5. Offline AI Setup (GGUF Models)
+### 5. Offline AI Setup (Local GGUF Models)
 1. Download `ai_plugin-arm64-v8a.apk` (or `ai_plugin-x86_64.apk`) from the [LeanType Offline AI Plugin Releases](https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin/releases/latest).
 2. In LeanType (`offline` build), navigate to **Settings → Plugins → Offline AI** and tap **Load Offline AI plugin** to load the `.apk`.
-3. Download a compatible GGUF model (such as `Qwen2.5-0.5B-Instruct-Q4_K_M.gguf` or `Llama-3.2-1B-Instruct-Q4_K_M.gguf`).
-4. In LeanType, navigate to **Settings → Advanced → GGUF Model (.gguf)** and select the file from your local storage.
+3. Download a compatible GGUF model (e.g. `Qwen2.5-0.5B-Instruct-Q4_K_M.gguf` or `Llama-3.2-1B-Instruct-Q4_K_M.gguf`).
+4. In LeanType, navigate to **Settings → Advanced → GGUF Model (.gguf)** and select the model file from storage.
+
+### 6. Dictionaries & Gesture Typing Setup
+1. **Dictionaries**: With unbundled dictionaries in v4.1.6, open **Settings → Dictionaries** (or tap the dictionary icon on the toolbar when missing) to download or import your language dictionary (`.dict`).
+2. **Gesture Typing**: In online builds, open **Settings → Gesture typing** to download the gesture library automatically. In offline builds, [download the library](https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs) and load via *Settings → Gesture typing → Load gesture library*.
 
 ---
 

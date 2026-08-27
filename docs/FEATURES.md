@@ -142,8 +142,8 @@ LeanType offers a flexible translation architecture supporting all app flavors:
    - Uses your configured **AI Provider** (Google Gemini, Groq, OpenAI, Ollama, or local GGUF models) with customizable translation prompts.
 
 ### How to Setup
-1. In LeanType, open **Settings → Translation**.
-2. Install the companion [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) (or configure AI on online builds).
+1. **Online Flavors (`Standard` / `Standard Full`)**: Open **Settings → Translation** and tap **Download Plugin** to install the [LeanType Translation Plugin](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) automatically.
+2. **Offline Flavors (`Offline` / `Offline Lite`)**: Download `translation_plugin-arm64-v8a.apk` from [GitHub Releases](https://github.com/LeanBitLab/LeanType-Translation-Plugin/releases/latest) and load it in **Settings → Plugins → Translation**.
 3. Download or import your required source and target language pairs.
 4. Tap the **Translate** icon on the keyboard toolbar to instantly translate selected text or entire input fields.
 
@@ -151,24 +151,25 @@ LeanType offers a flexible translation architecture supporting all app flavors:
 
 ## 5. On-Device Whisper Voice Typing
 
-LeanType integrates high-accuracy, private speech-to-text powered by OpenAI's Whisper architecture via `whisper.cpp` and the [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin).
+LeanType integrates high-accuracy, private speech-to-text powered by OpenAI's Whisper architecture via `whisper.cpp` and the [LeanType Voice Plugin](https://github.com/LeanBitLab/LeanType-Voice-Plugin).
 
 ### Available Multilingual Whisper Models
-- **Tiny** (`ggml-tiny-q5_1.bin`): **~32 MB** — Ultra-fast, minimal memory usage, 99+ languages.
-- **Base** (`ggml-base-q5_1.bin`): **~57 MB** — Best balance of accuracy and speed for daily typing.
-- **Small** (`ggml-small-q5_1.bin`): **~182 MB** — High accuracy for complex vocabulary and accents.
+- **Tiny** (`ggml-tiny.bin`): **~39 MB** — Ultra-fast, minimal memory usage, 99+ languages.
+- **Base** (`ggml-base.bin`): **~74 MB** — Best balance of accuracy and speed for daily typing.
+- **Small** (`ggml-small.bin`): **~244 MB** — High accuracy for complex vocabulary and accents.
 - **Custom Model**: Import any standard `.bin` GGML Whisper model from device storage.
 
 ### Setup Instructions
-1. Install the companion [LeanType Voice Plugin](https://github.com/LeanBitLab/Leantype-Voice-Plugin/releases/latest).
-2. Open **Settings → Voice typing → Whisper Speech Models**.
-3. Tap **Download** on your preferred model (e.g. *Multilingual Base* ~57 MB).
-4. Configure voice options:
+1. Download and install the [LeanType Voice Plugin APK](https://github.com/LeanBitLab/LeanType-Voice-Plugin/releases/latest) on your Android device (installed as a background IPC service).
+2. Grant **Microphone permission** to the LeanType Voice Plugin.
+3. In LeanType, open **Settings → Voice typing** (or **Settings → Plugins → Voice**) and tap **Whisper Speech Models**.
+4. Download or import your preferred model (e.g. *Multilingual Base* ~74 MB).
+5. Configure voice options:
    - **Voice Recognition Language**: Choose **Follow keyboard language (Default)**, **Auto-detect spoken language (`auto`)**, or pick from 99+ specific Whisper languages.
    - **Audio Visualizer**: Displays a real-time sound waveform directly on the keyboard toolbar.
    - **Silence Detection**: Configurable auto-stop sensitivity slider.
    - **Keep Model in Memory**: Prevents model reload latency during consecutive voice typing sessions.
-5. Tap the **Microphone** icon on the toolbar to start voice typing.
+6. Tap the **Microphone** icon on the toolbar to start voice typing.
 
 ---
 
@@ -177,8 +178,8 @@ LeanType integrates high-accuracy, private speech-to-text powered by OpenAI's Wh
 Draw letters, words, or symbols directly on a handwriting recognition canvas using your finger or stylus via the companion [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (supported across all flavors).
 
 ### Setup Instructions
-1. Open **Settings → Handwriting**.
-2. Tap **Download Plugin** to install the companion [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin) (with automated update checking and version notifications).
+1. **Online Flavors**: Open **Settings → Handwriting** and tap **Download Plugin** to install the [LeanType Handwriting Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest).
+2. **Offline Flavors**: Download `handwriting_plugin-arm64-v8a.apk` from [GitHub Releases](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest) and load it in **Settings → Plugins → Handwriting**.
 3. Use the **Offline Handwriting Models** dialog to download recognition packs directly (or import downloaded `.zip` model packs on offline builds).
 4. Customize stroke width, stroke fade timeout, and recognition sensitivity.
 5. Tap the **Handwriting (Pencil)** icon on the keyboard toolbar to open the drawing canvas and write naturally.
