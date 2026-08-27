@@ -22,13 +22,79 @@ object HandwritingModelImporter {
         val isReady: Boolean get() = hasModel && hasFst
     }
 
-    fun getComponentsStatus(context: Context, languageTag: String): ModelComponentsStatus {
-        val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
-        val normalizedTag = languageTag.replace('_', '-')
-        val lowerTag = normalizedTag.lowercase()
-        val underscoreTag = languageTag.replace('-', '_')
+    fun getAllTagVariants(languageTag: String): List<String> {
+        val raw = languageTag.trim()
+        if (raw.isEmpty()) return emptyList()
+        val normalized = raw.replace('_', '-')
+        val lower = normalized.lowercase()
+        val underscore = raw.replace('-', '_')
+        val lowerUnderscore = lower.replace('-', '_')
 
-        val possibleTags = listOf(normalizedTag, lowerTag, underscoreTag).distinct()
+        val formatted = try {
+            val loc = java.util.Locale.forLanguageTag(normalized)
+            if (loc.toLanguageTag() != "und") loc.toLanguageTag() else normalized
+        } catch (_: Throwable) {
+            normalized
+        }
+        val formattedUnderscore = formatted.replace('-', '_')
+        val baseLang = normalized.substringBefore('-').lowercase()
+
+        val variants = mutableListOf(
+            raw,
+            normalized,
+            lower,
+            underscore,
+            lowerUnderscore,
+            formatted,
+            formattedUnderscore,
+            baseLang
+        )
+
+        if (baseLang == "en" || lower.startsWith("en")) {
+            variants.addAll(listOf("en", "en-US", "en_US", "en-us", "en_us", "en-GB", "en_GB", "en-IN", "en_IN", "en-AU", "en_AU", "en-CA", "en_CA"))
+        }
+
+        return variants.filter { it.isNotEmpty() }.distinct()
+    }
+
+    fun ensureTagVariants(context: Context) {
+        val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
+        for (baseDir in baseDirs) {
+            val modelsRoot = File(baseDir, "com.google.mlkit.models")
+            if (!modelsRoot.exists() || !modelsRoot.isDirectory) continue
+            modelsRoot.listFiles()?.filter { it.isDirectory }?.forEach { langDir ->
+                val srcDir = File(langDir, "DIGITAL_INK/0")
+                if (srcDir.exists() && srcDir.isDirectory) {
+                    val files = srcDir.listFiles()?.filter { it.isFile && it.length() > 0 } ?: emptyList()
+                    if (files.isNotEmpty()) {
+                        val variants = getAllTagVariants(langDir.name)
+                        for (variant in variants) {
+                            if (variant == langDir.name) continue
+                            for (bDir in baseDirs) {
+                                val destDir = File(bDir, "com.google.mlkit.models/$variant/DIGITAL_INK/0")
+                                if (!destDir.exists() || destDir.listFiles().isNullOrEmpty()) {
+                                    destDir.mkdirs()
+                                    for (file in files) {
+                                        val destFile = File(destDir, file.name)
+                                        if (!destFile.exists() || destFile.length() == 0L) {
+                                            try {
+                                                file.copyTo(destFile, overwrite = true)
+                                            } catch (_: Throwable) {}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun getComponentsStatus(context: Context, languageTag: String): ModelComponentsStatus {
+        ensureTagVariants(context)
+        val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
+        val possibleTags = getAllTagVariants(languageTag)
 
         for (baseDir in baseDirs) {
             for (tag in possibleTags) {
@@ -47,6 +113,7 @@ object HandwritingModelImporter {
     }
 
     fun getInstalledLanguageStatuses(context: Context): Map<String, ModelComponentsStatus> {
+        ensureTagVariants(context)
         val result = mutableMapOf<String, ModelComponentsStatus>()
         val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
         for (baseDir in baseDirs) {
@@ -54,12 +121,12 @@ object HandwritingModelImporter {
             if (modelsRoot.exists() && modelsRoot.isDirectory) {
                 modelsRoot.listFiles()?.forEach { langDir ->
                     if (langDir.isDirectory) {
-                        val tag = langDir.name.replace('_', '-')
-                        val status = getComponentsStatus(context, tag)
+                        val status = getComponentsStatus(context, langDir.name)
                         if (status.hasModel || status.hasFst || status.hasRecospec) {
-                            result[tag] = status
-                            result[langDir.name] = status
-                            result[tag.lowercase()] = status
+                            val variants = getAllTagVariants(langDir.name)
+                            for (v in variants) {
+                                result[v] = status
+                            }
                         }
                     }
                 }
@@ -70,11 +137,7 @@ object HandwritingModelImporter {
 
     fun deleteModelForLanguage(context: Context, languageTag: String): Boolean {
         val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
-        val normalizedTag = languageTag.replace('_', '-')
-        val lowerTag = normalizedTag.lowercase()
-        val underscoreTag = languageTag.replace('-', '_')
-
-        val possibleTags = listOf(normalizedTag, lowerTag, underscoreTag).distinct()
+        val possibleTags = getAllTagVariants(languageTag)
         var deleted = false
         for (baseDir in baseDirs) {
             for (tag in possibleTags) {
@@ -259,9 +322,7 @@ object HandwritingModelImporter {
             if (extractedFiles.isEmpty()) return false
 
             val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
-            val lowerTag = normalizedTag.lowercase()
-            val underscoreTag = languageTag.replace('-', '_')
-            val targetTags = listOf(normalizedTag, lowerTag, underscoreTag).distinct()
+            val targetTags = getAllTagVariants(languageTag)
             for (bDir in baseDirs) {
                 for (tTag in targetTags) {
                     val targetDir = File(bDir, "com.google.mlkit.models/$tTag/DIGITAL_INK/0")

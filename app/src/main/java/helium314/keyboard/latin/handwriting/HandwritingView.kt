@@ -178,41 +178,61 @@ class HandwritingView @JvmOverloads constructor(
                 mainHandler.post {
                     if (!isReady) {
                         toolbar?.visibility = View.VISIBLE
-                        languageLabel.text = "$displayName (Tap to download model)"
+                        val isOnlineFlavor = "standard" == helium314.keyboard.latin.BuildConfig.FLAVOR || "standardfull" == helium314.keyboard.latin.BuildConfig.FLAVOR
                         downloadProgress.visibility = View.GONE
-                        fun setupDownloadClickListener() {
-                            languageLabel.setOnClickListener {
-                                languageLabel.setOnClickListener(null)
-                                languageLabel.text = "$displayName (Downloading...)"
-                                downloadProgress.visibility = View.VISIBLE
-                                downloadProgress.progress = 0
-                                recognizer.downloadModel(language, object : ModelDownloadListener {
-                                    override fun onProgress(progress: Float) {
-                                        mainHandler.post {
-                                            val percent = (progress * 100).toInt()
-                                            languageLabel.text = "$displayName (Downloading $percent%)"
-                                            downloadProgress.progress = percent
-                                        }
-                                    }
-                                    override fun onComplete(success: Boolean) {
-                                        mainHandler.post {
-                                            downloadProgress.visibility = View.GONE
-                                            if (success) {
-                                                toolbar?.visibility = View.GONE
-                                                languageLabel.text = displayName
-                                                android.widget.Toast.makeText(context, "Handwriting model downloaded", android.widget.Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                toolbar?.visibility = View.VISIBLE
-                                                languageLabel.text = "$displayName (Download failed - tap to retry)"
-                                                android.widget.Toast.makeText(context, "Failed to download handwriting model", android.widget.Toast.LENGTH_LONG).show()
-                                                setupDownloadClickListener()
+                        if (isOnlineFlavor) {
+                            languageLabel.text = "$displayName (Tap to download model)"
+                            fun setupDownloadClickListener() {
+                                languageLabel.setOnClickListener {
+                                    languageLabel.setOnClickListener(null)
+                                    languageLabel.text = "$displayName (Downloading...)"
+                                    downloadProgress.visibility = View.VISIBLE
+                                    downloadProgress.progress = 0
+                                    recognizer.downloadModel(language, object : ModelDownloadListener {
+                                        override fun onProgress(progress: Float) {
+                                            mainHandler.post {
+                                                val percent = (progress * 100).toInt()
+                                                languageLabel.text = "$displayName (Downloading $percent%)"
+                                                downloadProgress.progress = percent
                                             }
                                         }
-                                    }
-                                })
+                                        override fun onComplete(success: Boolean) {
+                                            mainHandler.post {
+                                                downloadProgress.visibility = View.GONE
+                                                if (success) {
+                                                    toolbar?.visibility = View.GONE
+                                                    languageLabel.text = displayName
+                                                    android.widget.Toast.makeText(context, "Handwriting model downloaded", android.widget.Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    toolbar?.visibility = View.VISIBLE
+                                                    languageLabel.text = "$displayName (Download failed - tap to retry)"
+                                                    android.widget.Toast.makeText(context, "Failed to download handwriting model", android.widget.Toast.LENGTH_LONG).show()
+                                                    setupDownloadClickListener()
+                                                }
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                            setupDownloadClickListener()
+                        } else {
+                            // Offline flavor has no internet access; redirect directly to handwriting settings for model management
+                            languageLabel.text = "$displayName (No model - tap for settings)"
+                            languageLabel.setOnClickListener {
+                                val intent = android.content.Intent().apply {
+                                    setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
+                                    putExtra("screen", helium314.keyboard.settings.SettingsDestination.Handwriting)
+                                    putExtra("from_ime", true)
+                                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Log.e("HandwritingView", "Failed to start handwriting settings activity", e)
+                                }
+                                KeyboardSwitcher.getInstance().latinIME?.requestHideSelf(0)
                             }
                         }
-                        setupDownloadClickListener()
                     } else {
                         toolbar?.visibility = View.GONE
                         languageLabel.text = displayName
