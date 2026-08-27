@@ -1141,49 +1141,45 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
         
         // ponytail: show/hide dictionary download button if dictionary is missing
-        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
-            val currentLocale = SubtypeSettings.getSelectedSubtype(context.prefs()).locale()
-            val showDownloadButton = Settings.getValues().mShowDownloadButtonInToolbar
-            if (showDownloadButton && isMainDictionaryMissing(context, currentLocale) && !hideToolbarKeys) {
-                if (dictDownloadButton == null) {
-                    dictDownloadButton = ImageButton(context, null, R.attr.suggestionWordStyle).apply {
-                        scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-                        val padding = 6.dpToPx(resources)
-                        setPadding(padding, padding, padding, padding)
-                        setImageResource(R.drawable.ic_dictionary)
-                        contentDescription = context.getString(R.string.download)
-                        setOnClickListener {
-                            val intent = android.content.Intent().apply {
-                                setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
-                                putExtra("screen", "dictionaries")
-                                putExtra("from_ime", true)
-                                setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                        or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                                        or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                            }
-                            context.startActivity(intent)
+        val currentLocale = SubtypeSettings.getSelectedSubtype(context.prefs()).locale()
+        val showDownloadButton = Settings.getValues().mShowDownloadButtonInToolbar
+        if (showDownloadButton && isMainDictionaryMissing(context, currentLocale) && !hideToolbarKeys) {
+            if (dictDownloadButton == null) {
+                dictDownloadButton = ImageButton(context, null, R.attr.suggestionWordStyle).apply {
+                    scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                    val padding = 6.dpToPx(resources)
+                    setPadding(padding, padding, padding, padding)
+                    setImageResource(R.drawable.ic_dictionary)
+                    contentDescription = context.getString(R.string.download)
+                    setOnClickListener {
+                        val intent = android.content.Intent().apply {
+                            setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
+                            putExtra("screen", "dictionaries")
+                            putExtra("from_ime", true)
+                            setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                    or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                                    or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
                         }
+                        context.startActivity(intent)
                     }
-                    val configHeight = resources.getDimension(R.dimen.config_suggestions_strip_height).toInt()
-                    val rawHeight = toolbarExpandKey.layoutParams.height
-                    val toolbarHeight = if (rawHeight > 0) min(rawHeight, configHeight) else configHeight
-                    dictDownloadButton?.layoutParams = LinearLayout.LayoutParams(toolbarHeight, toolbarHeight).apply {
-                        gravity = android.view.Gravity.CENTER_VERTICAL
-                    }
-                    
-                    val wrapper = findViewById<LinearLayout>(R.id.suggestions_strip_wrapper)
-                    val expandIndex = wrapper.indexOfChild(toolbarExpandKey)
-                    wrapper.addView(dictDownloadButton, expandIndex + 1)
                 }
-                val colors = Settings.getValues().mColors
-                dictDownloadButton?.let { btn ->
-                    colors.setColor(btn, ColorType.TOOL_BAR_KEY)
-                    btn.setBackgroundResource(R.drawable.toolbar_key_background)
-                    btn.background?.let { bg -> colors.setColor(bg, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND) }
-                    btn.isVisible = true
+                val configHeight = resources.getDimension(R.dimen.config_suggestions_strip_height).toInt()
+                val rawHeight = toolbarExpandKey.layoutParams.height
+                val toolbarHeight = if (rawHeight > 0) min(rawHeight, configHeight) else configHeight
+                dictDownloadButton?.layoutParams = LinearLayout.LayoutParams(toolbarHeight, toolbarHeight).apply {
+                    gravity = android.view.Gravity.CENTER_VERTICAL
                 }
-            } else {
-                dictDownloadButton?.isVisible = false
+                
+                val wrapper = findViewById<LinearLayout>(R.id.suggestions_strip_wrapper)
+                val expandIndex = wrapper.indexOfChild(toolbarExpandKey)
+                wrapper.addView(dictDownloadButton, expandIndex + 1)
+            }
+            val colors = Settings.getValues().mColors
+            dictDownloadButton?.let { btn ->
+                colors.setColor(btn, ColorType.TOOL_BAR_KEY)
+                btn.setBackgroundResource(R.drawable.toolbar_key_background)
+                btn.background?.let { bg -> colors.setColor(bg, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND) }
+                btn.isVisible = true
             }
         } else {
             dictDownloadButton?.isVisible = false

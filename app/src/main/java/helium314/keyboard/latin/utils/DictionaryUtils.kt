@@ -132,9 +132,7 @@ fun MissingDictionaryDialog(onDismissRequest: () -> Unit, locale: Locale, inline
     var annotatedString = message.htmlToAnnotated()
     // ponytail: in standard flavor, if there are known dicts we show them as downloadable rows instead of bullet links
     val knownDicts = remember {
-        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
-            getKnownDictionariesForLocale(locale, context)
-        } else emptyList()
+        getKnownDictionariesForLocale(locale, context)
     }
     if (availableDicts.isNotEmpty() && knownDicts.isEmpty())
         annotatedString += AnnotatedString("\n") + availableDicts

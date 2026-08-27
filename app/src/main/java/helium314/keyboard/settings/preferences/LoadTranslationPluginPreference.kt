@@ -305,14 +305,12 @@ fun TranslationEnginePreference() {
     val isOfflineFlavor = helium314.keyboard.latin.BuildConfig.FLAVOR == "offline"
     val items = if (isOfflineFlavor) {
         listOf(
-            "Auto (Plugin if loaded, else Local AI)" to "auto",
-            "Translation Plugin" to "plugin",
+            "Translation Plugin (ML Kit)" to "plugin",
             "Built-in AI (Local GGUF)" to "ai"
         )
     } else {
         listOf(
-            "Auto (Plugin if loaded, else AI)" to "auto",
-            "Translation Plugin" to "plugin",
+            "Translation Plugin (ML Kit)" to "plugin",
             "Built-in AI (Gemini/Groq/OpenAI)" to "ai"
         )
     }
@@ -326,7 +324,7 @@ fun TranslationEnginePreference() {
             ListPreference(
                 setting = setting,
                 items = items,
-                default = "auto",
+                default = "plugin",
                 icon = R.drawable.ic_translate
             )
         }

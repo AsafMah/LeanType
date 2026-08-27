@@ -301,14 +301,10 @@ object ProofreadHelper {
         onError: (String) -> Unit
     ) {
         val prefs = context.prefs()
-        val translationEngine = prefs.getString("pref_translation_engine", prefs.getString("pref_translation_method", "auto") ?: "auto") ?: "auto"
+        val translationEngine = prefs.getString("pref_translation_engine", prefs.getString("pref_translation_method", "plugin") ?: "plugin") ?: "plugin"
 
         val hasPlugin = TranslationLoader.hasPlugin(context)
-        val usePlugin = when (translationEngine) {
-            "plugin" -> hasPlugin
-            "ai" -> false
-            else -> hasPlugin
-        }
+        val usePlugin = translationEngine != "ai"
 
         performAsyncOperation(
             context = context,
