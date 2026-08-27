@@ -114,15 +114,17 @@ fun LoadOfflineAiPluginPreference(
 
     fun startDownload() {
         if (!hasInternet) {
-            val browserUrl = OfflineAiLoader.getPluginDownloadUrl(remoteVersion)
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(browserUrl)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            showDialog = false
+            val url = "https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin/releases"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             try {
                 ctx.startActivity(intent)
-                Toast.makeText(ctx, "Downloading in browser… load APK once finished", Toast.LENGTH_LONG).show()
-                showDialog = false
-            } catch (_: Exception) {}
+                Toast.makeText(ctx, "Opening GitHub releases in browser… download the APK and use 'Load from file'", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(ctx, "Failed to open browser: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
             return
         }
 
