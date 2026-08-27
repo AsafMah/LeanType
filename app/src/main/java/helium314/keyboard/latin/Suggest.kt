@@ -283,6 +283,15 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             // is determined, see #isAllowedByAutoCorrectionWithSpaceFilter.
             val allowed = isAllowedByAutoCorrectionWithSpaceFilter(firstSuggestion)
             if (allowed && typedWordInfo != null && typedWordInfo.mScore > scoreLimit) {
+                val isExactOrCaseMatch = firstSuggestion.mWord.equals(typedWordString, ignoreCase = true)
+                val isWhitelist = firstSuggestion.isKindOf(SuggestedWordInfo.KIND_WHITELIST)
+
+                // If user typed a completely valid dictionary word, never auto-replace it with a different word or contraction
+                // (e.g. "does" -> "doesn't", "do" -> "don't") unless the suggestion is an explicit dictionary whitelist replacement
+                if (!isWhitelist && !isExactOrCaseMatch) {
+                    return true to false
+                }
+
                 // typed word is valid and has good score
                 // do not auto-correct if typed word is better match than first suggestion
                 val dictLocale = mDictionaryFacilitator.currentLocale

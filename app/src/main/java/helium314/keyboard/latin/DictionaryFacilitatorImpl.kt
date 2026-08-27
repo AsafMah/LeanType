@@ -381,8 +381,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // and appear in no other language model are not considered valid.
         putWordIntoValidSpellingWordCache("addToUserHistory", suggestion)
 
+        val preferredGroup = currentlyPreferredDictionaryGroup
+        val lowerCasedSuggestion = suggestion.lowercase(preferredGroup.locale)
+        val isMainDictWord = preferredGroup.getDict(Dictionary.TYPE_MAIN)?.isValidWord(lowerCasedSuggestion) == true
+        val recordAsAutoCap = wasAutoCapitalized || (suggestion != lowerCasedSuggestion && isMainDictWord)
+
         // Record in session boost for personalized ranking across restarts
-        sessionWordBoost?.recordWord(suggestion)
+        sessionWordBoost?.recordWord(suggestion, recordAsAutoCap)
 
         val words = suggestion.splitOnWhitespace().dropLastWhile { it.isEmpty() }
 
@@ -391,7 +396,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             adjustConfidences(suggestion, wasAutoCapitalized)
 
         var ngramContextForCurrentWord = ngramContext
-        val preferredGroup = currentlyPreferredDictionaryGroup
         for (i in words.indices) {
             val currentWord = words[i]
             val wasCurrentWordAutoCapitalized = (i == 0) && wasAutoCapitalized
@@ -893,12 +897,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val boosted = mutableListOf<SuggestedWordInfo>()
         val toRemove = mutableListOf<SuggestedWordInfo>()
         for (info in results) {
-            val boostAmount = boost.getBoost(info.mWord) * sessionMultiplier
+            val rawBoost = boost.getBoost(info.mWord) * sessionMultiplier * BOOST_SCORE_MULTIPLIER
+            val boostAmount = rawBoost.coerceAtMost(MAX_PERSONALIZATION_BOOST.toFloat())
             if (boostAmount > 0f) {
                 toRemove.add(info)
                 boosted.add(SuggestedWordInfo(
                     info.mWord, info.mPrevWordsContext,
-                    info.mScore + (boostAmount * BOOST_SCORE_MULTIPLIER).toInt(),
+                    info.mScore + boostAmount.toInt(),
                     info.mKindAndFlags, info.mSourceDict,
                     info.mIndexOfTouchPointOfSecondWord,
                     info.mAutoCommitFirstWordConfidence
@@ -938,6 +943,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     override fun isBlacklisted(word: String): Boolean = dictionaryGroups.any { it.isBlacklisted(word) }
 
     override fun removeWord(word: String) {
+        sessionWordBoost?.removeWord(word)
         for (dictionaryGroup in dictionaryGroups) {
             dictionaryGroup.removeWord(word)
         }
@@ -950,6 +956,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     }
 
     override fun clearUserHistoryDictionary(context: Context) {
+        sessionWordBoost?.clear()
         for (dictionaryGroup in dictionaryGroups) {
             dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)?.clear()
         }
@@ -982,13 +989,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // HACK: This threshold is being used when adding a capitalized entry in the User History dictionary.
         private const val CAPITALIZED_FORM_MAX_PROBABILITY_FOR_INSERT = 140
 
-        // Multiplier to convert session boost values into score-space (native scores are ~1_000_000)
-        private const val BOOST_SCORE_MULTIPLIER = 1000f
+        // Multiplier to convert session boost values into native score-space (native scores are ~0-255)
+        private const val BOOST_SCORE_MULTIPLIER = 1.0f
 
         // Native binary dictionary scores cap around 255. A boost of 500 destroys native bigram confidence.
         // We cap personalization boost to ~20% of the native ceiling so it supports, rather than overrides,
         // high-confidence dictionary bigrams.
-        private const val MAX_PERSONALIZATION_BOOST = 48
+        private const val MAX_PERSONALIZATION_BOOST = 32
 
         // Threshold delta for beam pruning next-word candidates below top candidate score.
         private const val BEAM_DELTA = 60
@@ -1088,26 +1095,39 @@ private class DictionaryGroup(
 
     /** Removes a word from all dictionaries in this group. If the word is in a read-only dictionary, it is blacklisted. */
     fun removeWord(word: String) {
-        addToBlacklist(word)
         val lowercase = word.lowercase(locale)
+        val mainDict = getDict(Dictionary.TYPE_MAIN)
+        val isLowercaseInMainDict = mainDict?.isValidWord(lowercase) == true
+
+        // Remove from user history
+        getSubDict(Dictionary.TYPE_USER_HISTORY)?.removeUnigramEntryDynamically(word)
         if (word != lowercase) {
-            addToBlacklist(lowercase)
+            getSubDict(Dictionary.TYPE_USER_HISTORY)?.removeUnigramEntryDynamically(lowercase)
         }
 
-        // remove from user history
-        getSubDict(Dictionary.TYPE_USER_HISTORY)?.removeUnigramEntryDynamically(word)
-
-        // and from personal dictionary
+        // Remove from personal dictionary
         getSubDict(Dictionary.TYPE_USER)?.removeUnigramEntryDynamically(word)
+        if (word != lowercase) {
+            getSubDict(Dictionary.TYPE_USER)?.removeUnigramEntryDynamically(lowercase)
+        }
 
         val contactsDict = getSubDict(Dictionary.TYPE_CONTACTS)
         if (contactsDict != null && contactsDict.isInDictionary(word)) {
-            contactsDict.removeUnigramEntryDynamically(word) // will be gone until next reload of dict
+            contactsDict.removeUnigramEntryDynamically(word)
         }
 
         val appsDict = getSubDict(Dictionary.TYPE_APPS)
         if (appsDict != null && appsDict.isInDictionary(word)) {
-            appsDict.removeUnigramEntryDynamically(word) // will be gone until next reload of dict
+            appsDict.removeUnigramEntryDynamically(word)
+        }
+
+        // Only add to blacklist if the word is NOT a standard valid word in the main system dictionary.
+        // Never blacklist core dictionary words (e.g. "in", "is", "me", "ok") when deleting suggestions.
+        if (!isLowercaseInMainDict) {
+            addToBlacklist(lowercase)
+        } else {
+            // If it's a main dict word, un-blacklist it in case it was previously mistakenly blacklisted
+            removeFromBlacklist(lowercase)
         }
     }
 
