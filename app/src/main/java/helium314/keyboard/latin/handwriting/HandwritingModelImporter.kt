@@ -125,25 +125,36 @@ object HandwritingModelImporter {
         "myanmar" to "my", "sinhala" to "si", "odia" to "or", "punjabi" to "pa"
     )
 
+    fun formatBcp47(tag: String): String {
+        val normalized = tag.trim().replace('_', '-')
+        return try {
+            val loc = java.util.Locale.forLanguageTag(normalized)
+            if (loc.toLanguageTag() != "und") loc.toLanguageTag() else normalized
+        } catch (_: Throwable) {
+            normalized
+        }
+    }
+
     fun detectLanguageTag(filename: String): String? {
         val name = filename.lowercase()
         val qrnnRegex = Regex("""qrnn[._]([a-z]{2,3}(?:[_-][a-z0-9]+)?)[._]reco""")
-        qrnnRegex.find(name)?.let { return it.groupValues[1].replace('_', '-') }
+        qrnnRegex.find(name)?.let { return formatBcp47(it.groupValues[1]) }
 
         val fstRegex = Regex("""^([a-z]{2,3}(?:[_-][a-z0-9]+)?)[._]\d+[._]compact""")
-        fstRegex.find(name)?.let { return it.groupValues[1].replace('_', '-') }
+        fstRegex.find(name)?.let { return formatBcp47(it.groupValues[1]) }
 
         val zipRegex = Regex("""^([a-z]{2,3}(?:[_-][a-z0-9]+)?)(?:[._-]model)?\.zip$""")
-        zipRegex.find(name)?.let { return it.groupValues[1].replace('_', '-') }
+        zipRegex.find(name)?.let { return formatBcp47(it.groupValues[1]) }
 
         val lstmRegex = Regex("""lstm[._]([a-z]+)[._]""")
         lstmRegex.find(name)?.let {
             val script = it.groupValues[1]
-            return SCRIPT_TO_LANG[script] ?: script
+            val lang = SCRIPT_TO_LANG[script] ?: script
+            return formatBcp47(lang)
         }
 
         for ((script, lang) in SCRIPT_TO_LANG) {
-            if (name.contains(script)) return lang
+            if (name.contains(script)) return formatBcp47(lang)
         }
         return null
     }
@@ -291,7 +302,18 @@ object HandwritingModelImporter {
             if (extractedFiles.isEmpty()) return false
 
             val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
-            val targetTags = listOf(languageTag, normalizedTag, languageTag.replace('-', '_')).distinct()
+            val bcp47 = formatBcp47(normalizedTag)
+            val baseLang = normalizedTag.substringBefore('-').substringBefore('_')
+            val targetTags = listOf(
+                languageTag,
+                normalizedTag,
+                bcp47,
+                languageTag.lowercase(),
+                languageTag.uppercase(),
+                languageTag.replace('-', '_'),
+                bcp47.replace('-', '_'),
+                baseLang
+            ).filter { it.isNotBlank() }.distinct()
             for (bDir in baseDirs) {
                 for (tTag in targetTags) {
                     val targetDir = File(bDir, "com.google.mlkit.models/$tTag/DIGITAL_INK/0")
