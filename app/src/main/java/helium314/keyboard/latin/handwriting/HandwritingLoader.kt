@@ -35,6 +35,38 @@ object HandwritingLoader {
     }
 
     @JvmStatic
+    fun findInstalledModelForLanguage(context: Context, languageTag: String): String? {
+        // 1. Direct match (e.g. "fr-CA", "en-US", "ml")
+        if (HandwritingModelImporter.hasModelDirectly(context, languageTag)) {
+            return languageTag
+        }
+        // 2. Dash/underscore normalized
+        val alt = languageTag.replace('_', '-')
+        if (HandwritingModelImporter.hasModelDirectly(context, alt)) {
+            return alt
+        }
+        val altUnderscore = languageTag.replace('-', '_')
+        if (HandwritingModelImporter.hasModelDirectly(context, altUnderscore)) {
+            return altUnderscore
+        }
+        // 3. Base language (e.g. "fr-CA" -> "fr", "en-US" -> "en")
+        val base = languageTag.substringBefore('-').substringBefore('_').lowercase()
+        if (HandwritingModelImporter.hasModelDirectly(context, base)) {
+            return base
+        }
+        // 4. Any installed variant of the same base language (e.g. target is "fr-CA", but "fr-FR" is installed)
+        val installedMap = HandwritingModelImporter.getInstalledLanguageStatuses(context)
+        val sibling = installedMap.keys.firstOrNull { installedTag ->
+            val installedBase = installedTag.substringBefore('-').substringBefore('_').lowercase()
+            installedBase == base && installedMap[installedTag]?.isReady == true
+        }
+        if (sibling != null) {
+            return sibling
+        }
+        return null
+    }
+
+    @JvmStatic
     fun getEffectiveLanguage(context: Context, subtypeLanguage: String): String {
         val pref = getHandwritingLanguagePref(context)
         val target = if (pref == LANG_FOLLOW_KEYBOARD || pref.isBlank()) {
@@ -42,21 +74,7 @@ object HandwritingLoader {
         } else {
             pref
         }
-        // 1. Direct match (e.g. "en-US", "ml")
-        if (HandwritingModelImporter.hasModelDirectly(context, target)) {
-            return target
-        }
-        // 2. Dash/underscore normalized (e.g. "en_US" -> "en-US")
-        val alt = target.replace('_', '-')
-        if (HandwritingModelImporter.hasModelDirectly(context, alt)) {
-            return alt
-        }
-        // 3. Base language fallback (e.g. "en-US" -> "en", "ml-IN" -> "ml")
-        val base = target.substringBefore('-').substringBefore('_')
-        if (HandwritingModelImporter.hasModelDirectly(context, base)) {
-            return base
-        }
-        return target
+        return findInstalledModelForLanguage(context, target) ?: target
     }
 
     private class DisplayNameCache(val tag: String, val name: String)
