@@ -43,7 +43,7 @@ jobs:
           if [[ "${{ github.ref_name }}" == beta-* ]]; then
             ./gradlew assembleStandardfullRelease
           else
-            ./gradlew assembleStandardRelease assembleStandardfullRelease assembleOfflineRelease assembleOfflineliteRelease
+            ./gradlew assembleStandardRelease assembleStandardfullRelease assembleOfflineRelease
           fi
 
       - name: Generate Release Notes
@@ -68,4 +68,3 @@ jobs:
             app/build/outputs/apk/standard/release/*.apk
             app/build/outputs/apk/standardfull/release/*.apk
             app/build/outputs/apk/offline/release/*.apk
-            app/build/outputs/apk/offlinelite/release/*.apk
