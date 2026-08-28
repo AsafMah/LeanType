@@ -36,33 +36,36 @@ object HandwritingLoader {
 
     @JvmStatic
     fun findInstalledModelForLanguage(context: Context, languageTag: String): String? {
-        // 1. Direct match (e.g. "fr-CA", "en-US", "ml")
-        if (HandwritingModelImporter.hasModelDirectly(context, languageTag)) {
-            return languageTag
+        val target = languageTag.trim()
+        if (target.isBlank()) return null
+        val targetCanonical = HandwritingModelImporter.canonicalTagKey(target)
+        val targetBase = targetCanonical.substringBefore('-')
+
+        // 1. Direct / Canonical match for target (e.g. "fr-CA", "en-US", "ml")
+        if (HandwritingModelImporter.hasModelDirectly(context, target)) {
+            return target
         }
-        // 2. Dash/underscore normalized
-        val alt = languageTag.replace('_', '-')
-        if (HandwritingModelImporter.hasModelDirectly(context, alt)) {
-            return alt
+        if (HandwritingModelImporter.hasModelDirectly(context, targetCanonical)) {
+            return targetCanonical
         }
-        val altUnderscore = languageTag.replace('-', '_')
-        if (HandwritingModelImporter.hasModelDirectly(context, altUnderscore)) {
-            return altUnderscore
+
+        // 2. Base language match (e.g. "fr" for "fr-CA", "en" for "en-IN", "ml" for "ml-IN")
+        if (HandwritingModelImporter.hasModelDirectly(context, targetBase)) {
+            return targetBase
         }
-        // 3. Base language (e.g. "fr-CA" -> "fr", "en-US" -> "en")
-        val base = languageTag.substringBefore('-').substringBefore('_').lowercase()
-        if (HandwritingModelImporter.hasModelDirectly(context, base)) {
-            return base
-        }
-        // 4. Any installed variant of the same base language (e.g. target is "fr-CA", but "fr-FR" is installed)
+
+        // 3. Sibling regional variant of same base language (e.g. "fr-FR" for "fr-CA", "en-US" for "en-IN")
         val installedMap = HandwritingModelImporter.getInstalledLanguageStatuses(context)
-        val sibling = installedMap.keys.firstOrNull { installedTag ->
-            val installedBase = installedTag.substringBefore('-').substringBefore('_').lowercase()
-            installedBase == base && installedMap[installedTag]?.isReady == true
+        for ((installedTag, status) in installedMap) {
+            if (status.isReady) {
+                val installedCanonical = HandwritingModelImporter.canonicalTagKey(installedTag)
+                val installedBase = installedCanonical.substringBefore('-')
+                if (installedBase == targetBase) {
+                    return installedTag
+                }
+            }
         }
-        if (sibling != null) {
-            return sibling
-        }
+
         return null
     }
 

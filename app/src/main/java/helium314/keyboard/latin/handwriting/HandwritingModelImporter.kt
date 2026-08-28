@@ -22,25 +22,27 @@ object HandwritingModelImporter {
         val isReady: Boolean get() = hasModel && hasFst
     }
 
+    @JvmStatic
+    fun canonicalTagKey(tag: String): String {
+        return tag.trim().lowercase().replace('_', '-')
+    }
+
     fun hasModelDirectly(context: Context, languageTag: String): Boolean {
-        val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
-        val tagsToTry = listOf(languageTag, languageTag.replace('_', '-'), languageTag.replace('-', '_')).distinct()
-        for (baseDir in baseDirs) {
-            for (tag in tagsToTry) {
-                val dir = File(baseDir, "com.google.mlkit.models/$tag/DIGITAL_INK/0")
-                if (dir.exists()) {
-                    val hasModel = File(dir, "model.tflite").exists() && File(dir, "model.tflite").length() > 0
-                    val hasFst = File(dir, "fst.compact").exists() && File(dir, "fst.compact").length() > 0
-                    if (hasModel && hasFst) return true
-                }
-            }
-        }
-        return false
+        return getComponentsStatus(context, languageTag).isReady
     }
 
     fun getComponentsStatus(context: Context, languageTag: String): ModelComponentsStatus {
         val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
-        val tagsToTry = listOf(languageTag, languageTag.replace('_', '-'), languageTag.replace('-', '_')).distinct()
+        val canonical = canonicalTagKey(languageTag)
+        val tagsToTry = listOf(
+            languageTag,
+            languageTag.replace('_', '-'),
+            languageTag.replace('-', '_'),
+            canonical,
+            canonical.replace('-', '_'),
+            languageTag.lowercase(),
+            languageTag.uppercase()
+        ).distinct()
 
         for (baseDir in baseDirs) {
             for (tag in tagsToTry) {
@@ -72,7 +74,9 @@ object HandwritingModelImporter {
                             val hasFst = File(dir, "fst.compact").exists() && File(dir, "fst.compact").length() > 0
                             val hasRecospec = File(dir, "recospec").exists() && File(dir, "recospec").length() > 0
                             if (hasModel || hasFst || hasRecospec) {
-                                result[langDir.name] = ModelComponentsStatus(hasModel, hasFst, hasRecospec)
+                                val status = ModelComponentsStatus(hasModel, hasFst, hasRecospec)
+                                result[langDir.name] = status
+                                result[canonicalTagKey(langDir.name)] = status
                             }
                         }
                     }
@@ -84,7 +88,16 @@ object HandwritingModelImporter {
 
     fun deleteModelForLanguage(context: Context, languageTag: String): Boolean {
         val baseDirs = listOfNotNull(context.noBackupFilesDir, context.filesDir).distinct()
-        val tagsToTry = listOf(languageTag, languageTag.replace('_', '-'), languageTag.replace('-', '_')).distinct()
+        val canonical = canonicalTagKey(languageTag)
+        val tagsToTry = listOf(
+            languageTag,
+            languageTag.replace('_', '-'),
+            languageTag.replace('-', '_'),
+            canonical,
+            canonical.replace('-', '_'),
+            languageTag.lowercase(),
+            languageTag.uppercase()
+        ).distinct()
         var deleted = false
         for (baseDir in baseDirs) {
             for (tag in tagsToTry) {

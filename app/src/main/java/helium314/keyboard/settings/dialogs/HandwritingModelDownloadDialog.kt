@@ -86,8 +86,11 @@ fun HandwritingModelDownloadDialog(
                         statusMap.clear()
                         downloadedMap.clear()
                         installedMap.forEach { (tag, status) ->
+                            val canonical = HandwritingModelImporter.canonicalTagKey(tag)
                             statusMap[tag] = status
+                            statusMap[canonical] = status
                             downloadedMap[tag] = status.isReady
+                            downloadedMap[canonical] = status.isReady
                         }
                         Toast.makeText(context, "Imported models for: ${importedTags.joinToString(", ")}", Toast.LENGTH_SHORT).show()
                         onModelChanged?.invoke()
@@ -130,8 +133,11 @@ fun HandwritingModelDownloadDialog(
                 statusMap.clear()
                 downloadedMap.clear()
                 installedMap.forEach { (tag, status) ->
+                    val canonical = HandwritingModelImporter.canonicalTagKey(tag)
                     statusMap[tag] = status
+                    statusMap[canonical] = status
                     downloadedMap[tag] = status.isReady
+                    downloadedMap[canonical] = status.isReady
                 }
                 isLoadingList = false
             }
@@ -267,9 +273,10 @@ fun HandwritingModelDownloadDialog(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(filtered, key = { it.code }) { item ->
-                            val status = statusMap[item.code] ?: HandwritingModelImporter.ModelComponentsStatus(hasRecospec = false, hasModel = false, hasFst = false)
-                            val isDownloaded = status.isReady || downloadedMap[item.code] == true
-                            val isDownloading = downloadingMap[item.code] == true
+                            val canonicalCode = HandwritingModelImporter.canonicalTagKey(item.code)
+                            val status = statusMap[item.code] ?: statusMap[canonicalCode] ?: HandwritingModelImporter.ModelComponentsStatus(hasRecospec = false, hasModel = false, hasFst = false)
+                            val isDownloaded = status.isReady || downloadedMap[item.code] == true || downloadedMap[canonicalCode] == true
+                            val isDownloading = downloadingMap[item.code] == true || downloadingMap[canonicalCode] == true
 
                             Row(
                                 modifier = Modifier
@@ -308,6 +315,7 @@ fun HandwritingModelDownloadDialog(
                                     Button(
                                         onClick = {
                                             val code = item.code
+                                            val canonical = HandwritingModelImporter.canonicalTagKey(code)
                                             scope.launch(Dispatchers.IO) {
                                                 HandwritingModelImporter.deleteModelForLanguage(context, code)
                                                 recognizer?.removeModel(code)
@@ -315,7 +323,9 @@ fun HandwritingModelDownloadDialog(
                                                 val isReady = newStatus.isReady || try { recognizer?.isLanguageReady(code) == true } catch (_: Throwable) { false }
                                                 withContext(Dispatchers.Main) {
                                                     statusMap[code] = newStatus
+                                                    statusMap[canonical] = newStatus
                                                     downloadedMap[code] = isReady
+                                                    downloadedMap[canonical] = isReady
                                                     Toast.makeText(context, "Model deleted", Toast.LENGTH_SHORT).show()
                                                     onModelChanged?.invoke()
                                                 }
@@ -336,14 +346,20 @@ fun HandwritingModelDownloadDialog(
                                             if (isOffline) {
                                                 offlineDownloadItem = item
                                             } else {
-                                                downloadingMap[item.code] = true
+                                                val code = item.code
+                                                val canonical = HandwritingModelImporter.canonicalTagKey(code)
+                                                downloadingMap[code] = true
+                                                downloadingMap[canonical] = true
                                                 scope.launch(Dispatchers.IO) {
-                                                    val ok = HandwritingModelImporter.downloadPacksForLanguage(context, item.code)
-                                                    val newStatus = HandwritingModelImporter.getComponentsStatus(context, item.code)
+                                                    val ok = HandwritingModelImporter.downloadPacksForLanguage(context, code)
+                                                    val newStatus = HandwritingModelImporter.getComponentsStatus(context, code)
                                                     withContext(Dispatchers.Main) {
-                                                        downloadingMap[item.code] = false
-                                                        statusMap[item.code] = newStatus
-                                                        downloadedMap[item.code] = newStatus.isReady
+                                                        downloadingMap[code] = false
+                                                        downloadingMap[canonical] = false
+                                                        statusMap[code] = newStatus
+                                                        statusMap[canonical] = newStatus
+                                                        downloadedMap[code] = newStatus.isReady
+                                                        downloadedMap[canonical] = newStatus.isReady
                                                         if (ok && newStatus.isReady) {
                                                             Toast.makeText(context, "Downloaded ${item.displayName}", Toast.LENGTH_SHORT).show()
                                                             onModelChanged?.invoke()

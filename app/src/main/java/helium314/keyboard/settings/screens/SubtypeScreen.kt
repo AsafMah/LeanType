@@ -48,6 +48,7 @@ import helium314.keyboard.keyboard.internal.keyboard_parser.POPUP_KEYS_NORMAL
 import helium314.keyboard.keyboard.internal.keyboard_parser.hasLocalizedNumberRow
 import helium314.keyboard.keyboard.internal.keyboard_parser.morePopupKeysResId
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.handwriting.HandwritingModelImporter
 import helium314.keyboard.latin.common.Constants.Separators
 import helium314.keyboard.latin.common.Constants.Subtype.ExtraValue
 import helium314.keyboard.latin.common.Links
@@ -239,7 +240,9 @@ fun SubtypeScreen(
                                     )
                                     DeleteButton {
                                         scope.launch(Dispatchers.IO) {
-                                            val deleted = recognizer?.removeModel(languageTag) == true
+                                            val deletedByImporter = HandwritingModelImporter.deleteModelForLanguage(ctx, languageTag)
+                                            val deletedByRecognizer = recognizer?.removeModel(languageTag) == true
+                                            val deleted = deletedByImporter || deletedByRecognizer
                                             withContext(Dispatchers.Main) {
                                                 if (deleted) {
                                                     isHandwritingDownloaded = false
