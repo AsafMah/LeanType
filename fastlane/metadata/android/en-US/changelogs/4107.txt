@@ -1,0 +1,5 @@
+- Unified Offline Edition: Merged offline and offlinelite into a unified offline flavor with Android 5.0+ (API 21) support and dynamic OS plugin guards.
+- Modernized Handwriting Canvas: Added Bezier curve ink smoothing, writing guidelines, subtle watermark hint, smooth fade-out animation, and instant model resolution.
+- Gesture Typing & Accuracy: Improved swiped word recognition with session word boost, 12.5% high-DPI stroke corner sampling, and context reranking.
+- Auto-Correction & Capitalization: Fixed sentence-starter auto-capitalization session pollution, exact in-dictionary word replacement, and safe suggestion purging.
+- Remember Floating Mode: Added setting to automatically reopen the keyboard in floating mode across sessions until explicitly docked.

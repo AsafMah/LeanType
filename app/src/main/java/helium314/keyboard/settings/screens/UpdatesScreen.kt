@@ -72,11 +72,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "• Ultra-Lightweight APKs (~9.8 MB): Unbundled dictionaries in favor of on-demand DictManager downloads",
-    "• Modular Offline AI Dynamic Plugin: Decoupled local GGUF AI engine into a standalone dynamic plugin",
-    "• Instant Offline Translation Hot-Reload: Direct filesystem inspection and proactive cache invalidation",
-    "• Refined Setup Wizard & Unified Plugins Hub: Modernized Welcome Wizard and centralized Plugins Hub",
-    "• Notice: Offline & Offline Lite will merge next release; Offline AI will be loadable on-demand via plugin"
+    "• Unified Offline Edition: Merged offline and offlinelite into a unified offline flavor with Android 5.0+ (API 21) support and dynamic OS plugin guards",
+    "• Modernized Handwriting Canvas: Added Bezier curve ink smoothing, writing guidelines, watermark hint, smooth fade-out, and instant model resolution",
+    "• Gesture Typing & Accuracy: Improved swiped gesture word boost, 12.5% high-DPI stroke sampling, and context reranking",
+    "• Auto-Correction & Capitalization: Fixed sentence-starter auto-capitalization session pollution, exact in-dictionary word replacement, and safe suggestion purging",
+    "• Remember Floating Mode: Added setting to automatically reopen the keyboard in floating mode across sessions until explicitly docked"
 )
 
 @Composable
