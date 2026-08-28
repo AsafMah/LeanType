@@ -305,15 +305,21 @@ enum class ToolbarMode {
 
 val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
 
-// ponytail: Split excluded keys into flavor-specific exclusions and main-toolbar-only exclusions to allow clipboard toolbar to render clipboard search and close history.
 private val flavorExcludedKeys by lazy {
     val customAiKeys = if (BuildConfig.FLAVOR != "standard" && BuildConfig.FLAVOR != "standardfull" && BuildConfig.FLAVOR != "offline")
         ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") }
     else emptyList()
-    val otherKeys = if (BuildConfig.FLAVOR == "offline" && android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O)
-        listOf(PROOFREAD) + ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") }
-    else
-        emptyList()
+    val otherKeys = mutableListOf<ToolbarKey>()
+    if (BuildConfig.FLAVOR == "offline" && android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
+        otherKeys.add(PROOFREAD)
+        otherKeys.addAll(ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") })
+    }
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
+        otherKeys.add(HANDWRITING)
+    }
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) {
+        otherKeys.add(TRANSLATE)
+    }
     (customAiKeys + otherKeys).distinct()
 }
 

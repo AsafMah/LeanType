@@ -73,29 +73,37 @@ fun LibrariesHubScreen(
 
                         // Offline AI Plugin (offline flavor only)
                         if (BuildConfig.FLAVOR == "offline") {
-                            val aiPluginInstalled = helium314.keyboard.latin.ai.OfflineAiLoader.hasPlugin(context)
-                            val aiSummary = if (aiPluginInstalled) {
-                                stringResource(R.string.libraries_status_active)
-                            } else {
-                                stringResource(R.string.libraries_status_not_installed)
+                            val isSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+                            val aiPluginInstalled = isSupported && helium314.keyboard.latin.ai.OfflineAiLoader.hasPlugin(context)
+                            val aiSummary = when {
+                                !isSupported -> "Requires Android 8.0+"
+                                aiPluginInstalled -> stringResource(R.string.libraries_status_active)
+                                else -> stringResource(R.string.libraries_status_not_installed)
                             }
                             Preference(
                                 name = stringResource(R.string.settings_screen_ai_integration),
                                 description = aiSummary,
-                                onClick = onClickAIIntegration,
+                                onClick = if (isSupported) onClickAIIntegration else ({}),
+                                enabled = isSupported,
                                 icon = R.drawable.ic_proofread
-                            ) { NextScreenIcon() }
+                            ) { if (isSupported) NextScreenIcon() }
                         }
 
                         // Handwriting Input Plugin (ML Kit based)
-                        val handwritingInstalled = HandwritingLoader.hasPlugin(context)
-                        val summary = if (handwritingInstalled) stringResource(R.string.libraries_status_active) else stringResource(R.string.libraries_status_not_installed)
+                        val isHandwritingSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+                        val handwritingInstalled = isHandwritingSupported && HandwritingLoader.hasPlugin(context)
+                        val summary = when {
+                            !isHandwritingSupported -> "Requires Android 8.0+"
+                            handwritingInstalled -> stringResource(R.string.libraries_status_active)
+                            else -> stringResource(R.string.libraries_status_not_installed)
+                        }
                         Preference(
                             name = stringResource(R.string.libraries_hub_handwriting_title),
                             description = summary,
-                            onClick = onClickHandwriting,
+                            onClick = if (isHandwritingSupported) onClickHandwriting else ({}),
+                            enabled = isHandwritingSupported,
                             icon = R.drawable.ic_edit
-                        ) { NextScreenIcon() }
+                        ) { if (isHandwritingSupported) NextScreenIcon() }
 
                         // Offline Voice Input
                         val voicePluginManager = remember { helium314.keyboard.latin.voice.VoicePluginManager(context) }
@@ -113,18 +121,20 @@ fun LibrariesHubScreen(
                         ) { NextScreenIcon() }
 
                         // Translation Settings Screen (available for all flavors)
-                        val translationInstalled = TranslationLoader.hasPlugin(context)
-                        val translationSummary = if (translationInstalled) {
-                            stringResource(R.string.libraries_status_active)
-                        } else {
-                            stringResource(R.string.libraries_status_not_installed)
+                        val isTranslationSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N
+                        val translationInstalled = isTranslationSupported && TranslationLoader.hasPlugin(context)
+                        val translationSummary = when {
+                            !isTranslationSupported -> "Requires Android 7.0+"
+                            translationInstalled -> stringResource(R.string.libraries_status_active)
+                            else -> stringResource(R.string.libraries_status_not_installed)
                         }
                         Preference(
                             name = stringResource(R.string.translation_settings_title),
                             description = translationSummary,
-                            onClick = onClickTranslation,
+                            onClick = if (isTranslationSupported) onClickTranslation else ({}),
+                            enabled = isTranslationSupported,
                             icon = R.drawable.ic_translate
-                        ) { NextScreenIcon() }
+                        ) { if (isTranslationSupported) NextScreenIcon() }
                     }
                 }
 
