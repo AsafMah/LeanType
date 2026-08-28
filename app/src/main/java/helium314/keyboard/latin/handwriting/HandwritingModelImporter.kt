@@ -172,6 +172,9 @@ object HandwritingModelImporter {
                 }
             }
         }
+        if (deleted) {
+            HandwritingLoader.resetRecognizer()
+        }
         Log.i(TAG, "Deleted handwriting model for $languageTag (deleted=$deleted)")
         return deleted
     }
@@ -252,6 +255,9 @@ object HandwritingModelImporter {
             }
         }
 
+        if (importedTags.isNotEmpty()) {
+            HandwritingLoader.resetRecognizer()
+        }
         return importedTags
     }
 
@@ -272,6 +278,9 @@ object HandwritingModelImporter {
             } catch (e: Throwable) {
                 Log.e(TAG, "Failed to import handwriting file for $languageTag from $uri", e)
             }
+        }
+        if (anySuccess) {
+            HandwritingLoader.resetRecognizer()
         }
         return anySuccess
     }
@@ -392,6 +401,9 @@ object HandwritingModelImporter {
             } catch (e: Throwable) {
                 Log.e(TAG, "Error downloading model pack $urlStr for $languageTag", e)
             }
+        }
+        if (successCount > 0) {
+            HandwritingLoader.resetRecognizer()
         }
         successCount > 0
     }

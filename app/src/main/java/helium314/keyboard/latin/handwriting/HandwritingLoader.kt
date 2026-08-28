@@ -19,6 +19,12 @@ object HandwritingLoader {
     private var activeRecognizer: HandwritingRecognizer? = null
 
     @JvmStatic
+    fun resetRecognizer() {
+        activeRecognizer = null
+        displayNameCache = null
+    }
+
+    @JvmStatic
     fun getHandwritingLanguagePref(context: Context): String {
         return context.prefs().getString(PREF_HANDWRITING_LANGUAGE, LANG_FOLLOW_KEYBOARD) ?: LANG_FOLLOW_KEYBOARD
     }

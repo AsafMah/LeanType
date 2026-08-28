@@ -113,7 +113,10 @@ fun HandwritingSettingsScreen(
                             )
                             if (showModelsDialog) {
                                 HandwritingModelDownloadDialog(
-                                    onDismissRequest = { showModelsDialog = false }
+                                    onDismissRequest = { showModelsDialog = false },
+                                    onModelChanged = {
+                                        HandwritingLoader.resetRecognizer()
+                                    }
                                 )
                             }
                         }
