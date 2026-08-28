@@ -482,7 +482,7 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
     Setting(context, SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS, R.string.ai_allow_insecure_connections_title, R.string.ai_allow_insecure_connections_summary) { setting ->
         SwitchPreference(setting, Defaults.PREF_AI_ALLOW_INSECURE_CONNECTIONS)
     },
-    if (BuildConfig.FLAVOR != "offlinelite") {
+    if (BuildConfig.FLAVOR != "offline" || android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
         Setting(context, SettingsWithoutKey.TRANSLATION_ENGINE, R.string.translation_engine_title, R.string.translation_engine_summary) { setting ->
             val isOfflineFlavor = BuildConfig.FLAVOR == "offline"
             val items = if (isOfflineFlavor) {

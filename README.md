@@ -47,22 +47,22 @@
 
 ## 📦 Flavor Comparison
 
-LeanType is available in **4 distinct flavors** designed to match your exact privacy preferences, hardware specifications, and feature requirements:
+LeanType is available in **3 distinct flavors** designed to match your exact privacy preferences, hardware specifications, and feature requirements:
 
-| Feature / Capability | 🌟 Standard Full<br>`-standardfull-release.apk` | 🌿 Standard (FOSS)<br>`-standard-release.apk` | 🛡️ Offline AI<br>`-offline-release.apk` | ⚡ Offline Lite<br>`-offlinelite-release.apk` |
-| :--- | :---: | :---: | :---: | :---: |
-| **Target Audience** | **Recommended** for full feature set | F-Droid / 100% Pure FOSS users | Privacy purists wanting **Local AI** | Minimalists wanting **Zero AI** |
-| **Cloud AI** *(Gemini, Groq, OpenAI)* | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
-| **Offline AI** *(Local GGUF via llama.cpp)* | ❌ No | ❌ No | ✅ **Yes** *(via plugin)* | ❌ No |
-| **Translation** *(Offline & AI)* | ✅ **Yes** *(Plugin or AI)* | ✅ **Yes** *(Plugin or AI)* | ✅ **Yes** *(via Plugin)* | ✅ **Yes** *(via Plugin)* |
-| **Voice Typing** *(On-device Whisper)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* |
-| **Handwriting Input** | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* |
-| **In-App Self-Updater** | ✅ **Yes** *(GitHub Releases)* | ❌ No *(F-Droid managed)* | ❌ No | ❌ No |
-| **Plugins & Models Setup** | In-app download or File import | In-app download or File import | Browser download + File import | Browser download + File import |
-| **Internet Permission** | 🌐 Optional *(Cloud AI/Updates)* | 🌐 Optional *(Cloud AI)* | 🚫 **None** *(OS-level blocked)* | 🚫 **None** *(OS-level blocked)* |
-| **Package ID** | `com.leanbitlab.leantype` | `com.leanbitlab.leantype` | `com.leanbitlab.leantype.offline` | `com.leanbitlab.leantype.offlinelite` |
-| **Min Android Version** | Android 6.0+ *(SDK 23)* | Android 6.0+ *(SDK 23)* | Android 8.0+ *(SDK 26)* | Android 5.0+ *(SDK 21)* |
-| **Approximate APK Size** | **~10.8 MB** | **~10.8 MB** | **~9.8 MB** | **~9.8 MB** |
+| Feature / Capability | 🌟 Standard Full<br>`-standardfull-release.apk` | 🌿 Standard (FOSS)<br>`-standard-release.apk` | 🛡️ Offline<br>`-offline-release.apk` |
+| :--- | :---: | :---: | :---: |
+| **Target Audience** | **Recommended** for full feature set | F-Droid / 100% Pure FOSS users | Privacy purists & Offline users |
+| **Cloud AI** *(Gemini, Groq, OpenAI)* | ✅ Yes | ✅ Yes | ❌ No |
+| **Offline AI** *(Local GGUF via llama.cpp)* | ❌ No | ❌ No | ✅ **Yes** *(Android 8.0+ via plugin)* |
+| **Translation** *(Offline & AI)* | ✅ **Yes** *(Plugin or AI)* | ✅ **Yes** *(Plugin or AI)* | ✅ **Yes** *(via Plugin)* |
+| **Voice Typing** *(On-device Whisper)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* |
+| **Handwriting Input** | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* | ✅ **Yes** *(via plugin)* |
+| **In-App Self-Updater** | ✅ **Yes** *(GitHub Releases)* | ❌ No *(F-Droid managed)* | ❌ No |
+| **Plugins & Models Setup** | In-app download or File import | In-app download or File import | Browser download + File import |
+| **Internet Permission** | 🌐 Optional *(Cloud AI/Updates)* | 🌐 Optional *(Cloud AI)* | 🚫 **None** *(OS-level blocked)* |
+| **Package ID** | `com.leanbitlab.leantype` | `com.leanbitlab.leantype` | `com.leanbitlab.leantype.offline` |
+| **Min Android Version** | Android 6.0+ *(SDK 23)* | Android 6.0+ *(SDK 23)* | Android 5.0+ *(SDK 21)* |
+| **Approximate APK Size** | **~10.8 MB** | **~10.8 MB** | **~9.8 MB** |
 
 > [!TIP]
 > **APK Installation Notice**: Google Play Protect or your browser may block direct APK installations downloaded from web browsers. If you experience installation issues, install via [Obtainium](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/LeanBitLab/HeliboardL) or a package manager like [App Manager](https://github.com/MuntashirAkon/AppManager).

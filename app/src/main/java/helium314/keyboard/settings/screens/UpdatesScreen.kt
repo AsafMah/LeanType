@@ -309,7 +309,7 @@ fun UpdatesScreen(
                     .padding(innerPadding)
                     .padding(vertical = 8.dp)
             ) {
-                // Section 1: App Updates (OMITTED entirely on offline / offlinelite flavors)
+                // Section 1: App Updates (OMITTED entirely on offline flavor)
                 if (isOnlineFlavor) {
                     // Minimal Update Indicator Banner if update is available
                     if (isUpdateAvailable && latestVersionTag != null) {

@@ -100,8 +100,13 @@ fun createToolbarSettings(context: Context): List<Setting> {
     val filter = { name: String ->
         val lowerName = name.lowercase()
         when {
-            lowerName.startsWith("custom_ai_") -> BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull" || BuildConfig.FLAVOR == "offline"
-            lowerName == "proofread" -> BuildConfig.FLAVOR != "offlinelite"
+            lowerName.startsWith("custom_ai_") || lowerName == "proofread" -> {
+                if (BuildConfig.FLAVOR == "offline") {
+                    android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+                } else {
+                    BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull"
+                }
+            }
             else -> true
         }
     }

@@ -19,9 +19,8 @@ As an open-source, community-funded project, we operate on a very limited budget
 |:----------------------------------------------- |:------------------------------ |:---------------- |:------------------------------ |:-------------------------------- |:-------------------- |
 | **`1-LeanType_4.1.6-standardfull-release.apk`** | **Convenience (Recommended)**  | Cloud AI         | In-app download or File import | Optional (AI/Updates/plugins)    | ✅ In-App Auto Update |
 | **`1-LeanType_4.1.6-standard-release.apk`**     | **F-Droid**                    | Cloud AI         | In-app download or File import | Optional (AI/plugins)            | ❌ None               |
-| **`2-LeanType_4.1.6-offline-release.apk`**      | **Offline AI**                 | Local LLM Plugin | Browser download + File import | 🚫 Zero Internet (No Permission) | ❌ None               |
-| **`3-LeanType_4.1.6-offlinelite-release.apk`**  | **Offline Lite**               | None             | Browser download + File import | 🚫 Zero Internet (No Permission) | ❌ None               |
+| **`2-LeanType_4.1.6-offline-release.apk`**      | **Offline**                    | Local LLM Plugin (8.0+) | Browser download + File import | 🚫 Zero Internet (No Permission) | ❌ None               |
 
-> 💡 **Plugin Compatibility**: All 4 flavors support **Offline Handwriting Recognition**, **Offline Translation**, and **Offline Voice Dictation** via plugins, and work 100% offline.
+> 💡 **Plugin Compatibility**: All flavors support **Offline Handwriting Recognition**, **Offline Translation**, and **Offline Voice Dictation** via plugins, and work 100% offline.
 
-> 📢 **Upcoming Flavor Consolidation (Next Release)**: Starting from the next release, the `offline` and `offlinelite` flavors will be merged into a single unified **Offline** edition (lightweight without bundled AI). Users who want local LLM offline AI proofreading can easily load the dynamic **Offline AI Plugin** from the Plugins Hub at any time.
+> 📢 **Unified Offline Edition**: `offline` and `offlinelite` have merged into a single unified **Offline** edition with `minSdk = 21` (Android 5.0+ compatible). Users on Android 8.0+ can optionally load the dynamic **Offline AI Plugin** from the Plugins Hub at any time.

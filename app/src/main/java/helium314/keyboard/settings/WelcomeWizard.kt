@@ -385,12 +385,10 @@ fun WelcomeWizard(
                 } else if (step == 5) {
                     val stepTitle = when (BuildConfig.FLAVOR) {
                         "offline" -> "Offline AI Integration"
-                        "offlinelite" -> "Offline Lite Edition"
                         else -> "AI Integration"
                     }
                     val stepInstruction = when (BuildConfig.FLAVOR) {
                         "offline" -> "Configure on-device GGUF AI models for local proofreading and translation without internet."
-                        "offlinelite" -> "LeanType Offline Lite is optimized for minimal size (~9.7 MB) and zero network access. AI proofreading is omitted."
                         else -> "Configure cloud AI services (Groq, Gemini, or OpenAI compatible) for smart proofreading and rewriting."
                     }
 

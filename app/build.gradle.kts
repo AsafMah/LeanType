@@ -49,11 +49,7 @@ android {
         create("offline") {
             dimension = "privacy"
             applicationIdSuffix = ".offline"
-            minSdk = 26
-        }
-        create("offlinelite") {
-            dimension = "privacy"
-            applicationIdSuffix = ".offlinelite"
+            minSdk = 21
         }
     }
 
@@ -112,7 +108,6 @@ android {
                 "standard" -> "1"
                 "standardfull" -> "1"
                 "offline" -> "2"
-                "offlinelite" -> "3"
                 else -> ""
             }
             if (number.isNotEmpty()) {

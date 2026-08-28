@@ -88,7 +88,7 @@ fun TranslationSettingsScreen(
                 ) {
                     Column {
                         // Translation Engine Selection (Auto / Plugin / AI) - Shown for all flavors with AI
-                        if (BuildConfig.FLAVOR != "offlinelite") {
+                        if (BuildConfig.FLAVOR != "offline" || android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                             TranslationEnginePreference()
                         }
 

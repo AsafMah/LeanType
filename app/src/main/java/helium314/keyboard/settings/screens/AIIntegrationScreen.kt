@@ -21,8 +21,8 @@ import helium314.keyboard.settings.SettingsWithoutKey
 fun AIIntegrationScreen(
     onClickBack: () -> Unit,
 ) {
-    // Hide AI settings completely in offlinelite flavor
-    if (BuildConfig.FLAVOR == "offlinelite") {
+    // Hide AI settings on devices below Android 8.0 (API 26) in offline flavor
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O && BuildConfig.FLAVOR == "offline") {
         onClickBack()
         return
     }

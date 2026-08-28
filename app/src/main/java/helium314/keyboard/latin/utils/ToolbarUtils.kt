@@ -310,11 +310,11 @@ private val flavorExcludedKeys by lazy {
     val customAiKeys = if (BuildConfig.FLAVOR != "standard" && BuildConfig.FLAVOR != "standardfull" && BuildConfig.FLAVOR != "offline")
         ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") }
     else emptyList()
-    val otherKeys = if (BuildConfig.FLAVOR == "offlinelite")
-        listOf(PROOFREAD)
+    val otherKeys = if (BuildConfig.FLAVOR == "offline" && android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O)
+        listOf(PROOFREAD) + ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") }
     else
         emptyList()
-    customAiKeys + otherKeys
+    (customAiKeys + otherKeys).distinct()
 }
 
 private val mainToolbarExcludedKeys = listOf(CLOSE_HISTORY, CLIPBOARD_SEARCH)
@@ -326,7 +326,6 @@ private val excludedKeys by lazy {
 val defaultToolbarPref by lazy {
     val default = when (helium314.keyboard.latin.BuildConfig.FLAVOR) {
         "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE, TEXT_EDIT)
-        "offlinelite" -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, TRANSLATE, UNDO, INCOGNITO, COPY, PASTE)
         else -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, TEXT_EDIT, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL, SELECT_MODE)
     }
         
@@ -336,10 +335,7 @@ val defaultToolbarPref by lazy {
 }
 
 val defaultPinnedToolbarPref by lazy {
-    val pinnedDefault = when (helium314.keyboard.latin.BuildConfig.FLAVOR) {
-        "offlinelite" -> listOf(CLIPBOARD)
-        else -> listOf(CLIPBOARD, PROOFREAD, TOUCHPAD, TEXT_EDIT, FLOATING)
-    }
+    val pinnedDefault = listOf(CLIPBOARD, PROOFREAD, TOUCHPAD, TEXT_EDIT, FLOATING)
 
     entries.filterNot { it in excludedKeys }.joinToString(Separators.ENTRY) {
         it.name + Separators.KV + (it in pinnedDefault)

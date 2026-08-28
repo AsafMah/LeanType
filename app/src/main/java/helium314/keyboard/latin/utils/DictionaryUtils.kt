@@ -311,7 +311,7 @@ fun downloadDictionary(context: Context, locale: Locale, type: String, linkUrl: 
 @Composable
 fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refreshTrigger: Int = 0, onRefresh: () -> Unit) {
     val ctx = LocalContext.current
-    val isOffline = helium314.keyboard.latin.BuildConfig.FLAVOR == "offline" || helium314.keyboard.latin.BuildConfig.FLAVOR == "offlinelite"
+    val isOffline = helium314.keyboard.latin.BuildConfig.FLAVOR == "offline"
     val type = remember(link) { link.substringAfterLast("/").substringBefore("_") }
     // ponytail: extract the specific dictionary locale from the download link to avoid directory collision
     val dictLocale = remember(link) {
