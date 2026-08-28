@@ -65,6 +65,4 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
           body_path: docs/releasenote/release_notes_temp.md
           files: |
-            app/build/outputs/apk/standard/release/*.apk
-            app/build/outputs/apk/standardfull/release/*.apk
-            app/build/outputs/apk/offline/release/*.apk
+            app/build/outputs/apk/**/release/*.apk

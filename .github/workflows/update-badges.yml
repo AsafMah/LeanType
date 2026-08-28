@@ -19,7 +19,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          REPO="LeanBitLab/HeliboardL"
+          REPO="LeanBitLab/LeanType"
           
           # Latest version
           VERSION=$(gh api repos/$REPO/releases/latest --jq '.tag_name' | sed 's/^v//' 2>/dev/null || echo "N/A")
@@ -65,9 +65,9 @@ jobs:
       - name: Update README badge URLs
         run: |
           # Replace shields.io URLs with local badge paths
-          sed -i 's|https://img.shields.io/github/v/release/LeanBitLab/HeliboardL?label=Download\&style=for-the-badge\&color=7C4DFF|docs/badges/download.svg|g' README.md
-          sed -i 's|https://img.shields.io/github/downloads/LeanBitLab/HeliboardL/total?style=for-the-badge\&color=7C4DFF\&label=Downloads|docs/badges/downloads.svg|g' README.md
-          sed -i 's|https://img.shields.io/github/stars/LeanBitLab/HeliboardL?style=for-the-badge\&color=7C4DFF|docs/badges/stars.svg|g' README.md
+          sed -i 's|https://img.shields.io/github/v/release/LeanBitLab/LeanType?label=Download\&style=for-the-badge\&color=7C4DFF|docs/badges/download.svg|g' README.md
+          sed -i 's|https://img.shields.io/github/downloads/LeanBitLab/LeanType/total?style=for-the-badge\&color=7C4DFF\&label=Downloads|docs/badges/downloads.svg|g' README.md
+          sed -i 's|https://img.shields.io/github/stars/LeanBitLab/LeanType?style=for-the-badge\&color=7C4DFF|docs/badges/stars.svg|g' README.md
 
       - name: Commit changes
         run: |
