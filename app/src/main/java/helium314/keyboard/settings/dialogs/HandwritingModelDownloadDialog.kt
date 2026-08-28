@@ -113,8 +113,8 @@ fun HandwritingModelDownloadDialog(
                 val rawName = loc.getDisplayName(sysLocale).ifBlank { loc.displayName }
                 val displayName = if (rawName.isNotBlank()) "$rawName ($tag)" else tag
                 val isEnabled = enabledSubtypes.any { subLoc ->
-                    subLoc.toLanguageTag().equals(tag, ignoreCase = true) ||
-                        subLoc.language.equals(loc.language, ignoreCase = true)
+                    val subTag = subLoc.toLanguageTag()
+                    subTag.equals(tag, ignoreCase = true) || (tag.equals(subLoc.language, ignoreCase = true))
                 }
                 HandwritingLanguageItem(tag, displayName, isEnabledSubtype = isEnabled)
             }.sortedWith(
