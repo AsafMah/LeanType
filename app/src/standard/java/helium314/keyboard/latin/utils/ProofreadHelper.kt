@@ -383,7 +383,15 @@ object ProofreadHelper {
                 val targetLangCode = getLangCode(targetLang)
                 val sourceLangCode = detectSourceLanguage(text)
 
-                val hasAiConfigured = !service.getApiKey().isNullOrBlank()
+                // Check the token of the *active* provider, not just the Gemini key.
+                // ProofreadService.getApiKey() reads only KEY_API_KEY ("gemini_api_key"),
+                // which made translation short-circuit for OPENAI/GROQ providers
+                // (https://github.com/LeanBitLab/LeanType/issues/459).
+                val hasAiConfigured = when (service.getProvider()) {
+                    ProofreadService.AIProvider.GEMINI -> !service.getApiKey().isNullOrBlank()
+                    ProofreadService.AIProvider.GROQ -> !service.getGroqToken().isNullOrBlank()
+                    ProofreadService.AIProvider.OPENAI -> !service.getHuggingFaceToken().isNullOrBlank()
+                }
 
                 if (pluginProvider != null && pluginProvider.isAvailable()) {
                     val missingModels = mutableListOf<String>()
