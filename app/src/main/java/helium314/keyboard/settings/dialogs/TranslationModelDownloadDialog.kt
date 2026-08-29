@@ -48,6 +48,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
+import helium314.keyboard.latin.utils.SubtypeSettings
+import helium314.keyboard.latin.utils.locale
+import helium314.keyboard.settings.DropDownField
+import helium314.keyboard.settings.WithSmallTitle
+
 data class TranslationLanguageItem(
     val code: String,
     val displayName: String
@@ -67,26 +72,79 @@ fun TranslationModelDownloadDialog(
     val downloadingMap = remember { mutableStateMapOf<String, Boolean>() }
     var allLanguages by remember { mutableStateOf<List<TranslationLanguageItem>>(emptyList()) }
     var isLoadingList by remember { mutableStateOf(true) }
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
-            scope.launch(Dispatchers.IO) {
-                val importedModel = TranslationModelImporter.importFromUri(context, uri)
-                withContext(Dispatchers.Main) {
-                    if (importedModel != null) {
-                        allLanguages.forEach { item ->
-                            val mName = TranslationModelUrls.getModelName(item.code)
-                            if (mName == importedModel || item.code == importedModel || TranslationModelImporter.isModelInstalled(context, item.code)) {
-                                downloadedMap[item.code] = true
+            pendingImportUri = uri
+        }
+    }
+
+    if (pendingImportUri != null) {
+        val uri = pendingImportUri!!
+        val fileName = remember(uri) { TranslationModelImporter.getFilename(context, uri) ?: uri.lastPathSegment ?: "model.zip" }
+        val detectedLangCode = remember(uri) { TranslationModelImporter.detectLanguageCode(context, uri) }
+        val enabledLanguages = remember { SubtypeSettings.getEnabledSubtypes(true).map { it.locale().language } }
+        val sortedLanguages = remember(allLanguages, detectedLangCode) {
+            allLanguages.sortedWith(
+                compareBy<TranslationLanguageItem>(
+                    { it.code != detectedLangCode },
+                    { it.code !in enabledLanguages },
+                    { it.displayName }
+                )
+            )
+        }
+        var selectedLanguage by remember(uri) {
+            mutableStateOf(
+                sortedLanguages.firstOrNull { it.code == detectedLangCode }
+                    ?: sortedLanguages.firstOrNull { it.code in enabledLanguages }
+                    ?: sortedLanguages.firstOrNull()
+            )
+        }
+
+        ThreeButtonAlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            onConfirmed = {
+                val lang = selectedLanguage
+                if (lang != null) {
+                    scope.launch(Dispatchers.IO) {
+                        val importedModel = TranslationModelImporter.importForLanguageFromUri(context, uri, lang.code)
+                        withContext(Dispatchers.Main) {
+                            if (importedModel != null) {
+                                downloadedMap[lang.code] = true
+                                Toast.makeText(context, "Imported translation model for ${lang.displayName}", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to import translation model", Toast.LENGTH_SHORT).show()
                             }
                         }
-                        Toast.makeText(context, "Model $importedModel imported successfully", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "Failed to import translation model .zip", Toast.LENGTH_SHORT).show()
                     }
                 }
-            }
-        }
+                pendingImportUri = null
+            },
+            confirmButtonText = stringResource(R.string.load_gesture_library_button_load),
+            title = { Text("Import Translation Model") },
+            content = {
+                Column {
+                    Text(
+                        text = "File: $fileName",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    if (sortedLanguages.isNotEmpty() && selectedLanguage != null) {
+                        WithSmallTitle(stringResource(R.string.button_select_language)) {
+                            DropDownField(
+                                items = sortedLanguages,
+                                selectedItem = selectedLanguage!!,
+                                onSelected = { selectedLanguage = it }
+                            ) { item ->
+                                Text(item.displayName)
+                            }
+                        }
+                    }
+                }
+            },
+            scrollContent = true
+        )
     }
 
     LaunchedEffect(Unit) {

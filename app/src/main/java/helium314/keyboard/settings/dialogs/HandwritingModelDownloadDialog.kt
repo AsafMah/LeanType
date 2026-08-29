@@ -48,8 +48,13 @@ import java.util.Locale
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import helium314.keyboard.latin.BuildConfig
+import helium314.keyboard.latin.R
+import helium314.keyboard.settings.DropDownField
+import helium314.keyboard.settings.WithSmallTitle
+import helium314.keyboard.settings.dialogs.ThreeButtonAlertDialog
 
 data class HandwritingLanguageItem(
     val code: String,
@@ -72,36 +77,87 @@ fun HandwritingModelDownloadDialog(
     val statusMap = remember { mutableStateMapOf<String, HandwritingModelImporter.ModelComponentsStatus>() }
     var allLanguages by remember { mutableStateOf<List<HandwritingLanguageItem>>(emptyList()) }
     var isLoadingList by remember { mutableStateOf(true) }
-    var targetImportLang by remember { mutableStateOf<String?>(null) }
+    var pendingImportUris by remember { mutableStateOf<List<Uri>?>(null) }
 
     val recognizer = remember { HandwritingLoader.getRecognizer(context) }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri>? ->
         if (!uris.isNullOrEmpty()) {
-            scope.launch(Dispatchers.IO) {
-                val importedTags = HandwritingModelImporter.importAutoDetectedUris(context, uris)
-                if (importedTags.isNotEmpty()) {
-                    val installedMap = HandwritingModelImporter.getInstalledLanguageStatuses(context)
-                    withContext(Dispatchers.Main) {
-                        statusMap.clear()
-                        downloadedMap.clear()
-                        installedMap.forEach { (tag, status) ->
-                            val canonical = HandwritingModelImporter.canonicalTagKey(tag)
-                            statusMap[tag] = status
-                            statusMap[canonical] = status
-                            downloadedMap[tag] = status.isReady
-                            downloadedMap[canonical] = status.isReady
+            pendingImportUris = uris
+        }
+    }
+
+    if (pendingImportUris != null) {
+        val uris = pendingImportUris!!
+        val filesSummary = remember(uris) { HandwritingModelImporter.getUrisSummary(context, uris) }
+        val detectedTag = remember(uris) { HandwritingModelImporter.detectLanguageTagFromUris(context, uris) }
+        val enabledTags = remember { SubtypeSettings.getEnabledSubtypes(true).map { it.locale().toLanguageTag() } }
+        val sortedLanguages = remember(allLanguages, detectedTag) {
+            allLanguages.sortedWith(
+                compareBy<HandwritingLanguageItem>(
+                    { it.code != detectedTag && HandwritingModelImporter.canonicalTagKey(it.code) != detectedTag?.let { t -> HandwritingModelImporter.canonicalTagKey(t) } },
+                    { it.code !in enabledTags },
+                    { it.displayName }
+                )
+            )
+        }
+        var selectedLanguage by remember(uris) {
+            mutableStateOf(
+                sortedLanguages.firstOrNull { it.code == detectedTag || HandwritingModelImporter.canonicalTagKey(it.code) == detectedTag?.let { t -> HandwritingModelImporter.canonicalTagKey(t) } }
+                    ?: sortedLanguages.firstOrNull { it.code in enabledTags }
+                    ?: sortedLanguages.firstOrNull()
+            )
+        }
+
+        ThreeButtonAlertDialog(
+            onDismissRequest = { pendingImportUris = null },
+            onConfirmed = {
+                val lang = selectedLanguage
+                if (lang != null) {
+                    scope.launch(Dispatchers.IO) {
+                        val ok = HandwritingModelImporter.importMultipleUrisForLanguage(context, lang.code, uris)
+                        val newStatus = HandwritingModelImporter.getComponentsStatus(context, lang.code)
+                        withContext(Dispatchers.Main) {
+                            val canonical = HandwritingModelImporter.canonicalTagKey(lang.code)
+                            statusMap[lang.code] = newStatus
+                            statusMap[canonical] = newStatus
+                            downloadedMap[lang.code] = newStatus.isReady
+                            downloadedMap[canonical] = newStatus.isReady
+                            if (ok && (newStatus.isReady || newStatus.hasModel || newStatus.hasFst)) {
+                                Toast.makeText(context, "Imported handwriting model for ${lang.displayName}", Toast.LENGTH_SHORT).show()
+                                onModelChanged?.invoke()
+                            } else {
+                                Toast.makeText(context, "Failed to import model files", Toast.LENGTH_SHORT).show()
+                            }
                         }
-                        Toast.makeText(context, "Imported models for: ${importedTags.joinToString(", ")}", Toast.LENGTH_SHORT).show()
-                        onModelChanged?.invoke()
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Failed to import model files", Toast.LENGTH_SHORT).show()
                     }
                 }
-            }
-        }
+                pendingImportUris = null
+            },
+            confirmButtonText = stringResource(R.string.load_gesture_library_button_load),
+            title = { Text("Import Handwriting Model") },
+            content = {
+                Column {
+                    Text(
+                        text = "Selected files:\n$filesSummary",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    if (sortedLanguages.isNotEmpty() && selectedLanguage != null) {
+                        WithSmallTitle(stringResource(R.string.button_select_language)) {
+                            DropDownField(
+                                items = sortedLanguages,
+                                selectedItem = selectedLanguage!!,
+                                onSelected = { selectedLanguage = it }
+                            ) { item ->
+                                Text(item.displayName)
+                            }
+                        }
+                    }
+                }
+            },
+            scrollContent = true
+        )
     }
 
     LaunchedEffect(Unit) {

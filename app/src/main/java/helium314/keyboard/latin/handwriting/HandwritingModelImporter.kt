@@ -235,7 +235,7 @@ object HandwritingModelImporter {
         return anySuccess
     }
 
-    private fun getFilename(context: Context, uri: Uri): String? {
+    fun getFilename(context: Context, uri: Uri): String? {
         if (uri.scheme == "content") {
             try {
                 context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -247,6 +247,19 @@ object HandwritingModelImporter {
             } catch (_: Exception) {}
         }
         return uri.lastPathSegment
+    }
+
+    fun detectLanguageTagFromUris(context: Context, uris: List<Uri>): String? {
+        for (uri in uris) {
+            val filename = getFilename(context, uri) ?: uri.lastPathSegment ?: ""
+            val detected = detectLanguageTag(filename)
+            if (detected != null && detected != "latin") return detected
+        }
+        return null
+    }
+
+    fun getUrisSummary(context: Context, uris: List<Uri>): String {
+        return uris.mapNotNull { getFilename(context, it) ?: it.lastPathSegment }.joinToString("\n")
     }
 
     fun importForLanguageFromStream(

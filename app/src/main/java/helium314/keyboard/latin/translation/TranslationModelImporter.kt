@@ -103,6 +103,135 @@ object TranslationModelImporter {
         }
     }
 
+    fun getFilename(context: Context, uri: Uri): String? {
+        if (uri.scheme == "content") {
+            try {
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex >= 0 && cursor.moveToFirst()) {
+                        return cursor.getString(nameIndex)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        return uri.lastPathSegment
+    }
+
+    fun detectLanguageCode(context: Context, uri: Uri): String? {
+        val filename = getFilename(context, uri) ?: uri.lastPathSegment ?: ""
+        val fnLower = filename.lowercase()
+        val fnMatch = Regex("""(?:dict\.|merged_dict_)?([a-z]{2,3})[_-]([a-z]{2,3})""").find(fnLower)
+        if (fnMatch != null) {
+            val code1 = fnMatch.groupValues[1]
+            val code2 = fnMatch.groupValues[2]
+            if (code1 == "en") return code2
+            if (code2 == "en") return code1
+            return code1
+        }
+        val singleMatch = Regex("""^([a-z]{2,3})(?:[._-]model)?\.zip$""").find(fnLower)
+        if (singleMatch != null) {
+            return singleMatch.groupValues[1]
+        }
+
+        try {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                ZipInputStream(stream.buffered()).use { zipIn ->
+                    var entry = zipIn.nextEntry
+                    while (entry != null) {
+                        val name = entry.name.lowercase()
+                        val match = Regex("""(?:dict\.|merged_dict_)([a-z]{2,3})_([a-z]{2,3})""").find(name)
+                        if (match != null) {
+                            val code1 = match.groupValues[1]
+                            val code2 = match.groupValues[2]
+                            return if (code1 == "en") code2 else code1
+                        }
+                        zipIn.closeEntry()
+                        entry = zipIn.nextEntry
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+        return null
+    }
+
+    fun importForLanguageFromUri(context: Context, uri: Uri, targetLangCode: String): String? {
+        migrateLegacyModels(context)
+        return try {
+            val filename = getFilename(context, uri) ?: ""
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                importForLanguageFromStream(context, stream, targetLangCode, filename)
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to import translation model for $targetLangCode from URI: $uri", e)
+            null
+        }
+    }
+
+    fun importForLanguageFromStream(
+        context: Context,
+        inputStream: InputStream,
+        targetLangCode: String,
+        filenameHint: String = ""
+    ): String? {
+        val tempZip = File(context.cacheDir, "import_translation_model_${System.currentTimeMillis()}.zip")
+        return try {
+            FileOutputStream(tempZip).use { out ->
+                inputStream.copyTo(out)
+            }
+
+            val modelName = TranslationModelUrls.getModelName(targetLangCode) ?: "${targetLangCode}_en"
+            val baseDir = context.noBackupFilesDir ?: context.filesDir
+            val targetDir = File(baseDir, "com.google.mlkit.translate.models/$modelName")
+            val targetDirZero = File(targetDir, "0")
+            targetDir.mkdirs()
+            targetDirZero.mkdirs()
+
+            var extractedAny = false
+            try {
+                ZipInputStream(tempZip.inputStream().buffered()).use { zipIn ->
+                    var entry = zipIn.nextEntry
+                    while (entry != null) {
+                        val entryName = entry.name
+                        val relPath = if (entryName.contains("/")) entryName.substringAfterLast("/") else entryName
+                        if (relPath.isNotEmpty() && !entry.isDirectory) {
+                            val outFile = File(targetDir, relPath)
+                            val outFileZero = File(targetDirZero, relPath)
+                            outFile.parentFile?.mkdirs()
+                            outFileZero.parentFile?.mkdirs()
+                            FileOutputStream(outFile).use { out ->
+                                zipIn.copyTo(out)
+                            }
+                            outFile.copyTo(outFileZero, overwrite = true)
+                            extractedAny = true
+                        }
+                        zipIn.closeEntry()
+                        entry = zipIn.nextEntry
+                    }
+                }
+            } catch (_: Throwable) {
+                extractedAny = false
+            }
+
+            if (!extractedAny) {
+                val filename = if (filenameHint.isNotBlank()) filenameHint.substringAfterLast("/") else "model"
+                val outFile = File(targetDir, filename)
+                val outFileZero = File(targetDirZero, filename)
+                tempZip.copyTo(outFile, overwrite = true)
+                tempZip.copyTo(outFileZero, overwrite = true)
+            }
+
+            Log.i(TAG, "Successfully imported translation model $modelName into $targetDir and $targetDirZero")
+            migrateLegacyModels(context)
+            TranslationLoader.unloadPlugin()
+            modelName
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error extracting translation model for $targetLangCode", e)
+            null
+        } finally {
+            tempZip.delete()
+        }
+    }
+
     fun importFromUri(context: Context, uri: Uri): String? {
         migrateLegacyModels(context)
         return try {
