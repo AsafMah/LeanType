@@ -122,9 +122,10 @@ fun TranslationModelDownloadDialog(
                 pendingImportUri = null
             },
             confirmButtonText = stringResource(R.string.load_gesture_library_button_load),
+            cancelButtonText = stringResource(android.R.string.cancel),
             title = { Text("Import Translation Model") },
             content = {
-                Column {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp)) {
                     Text(
                         text = "File: $fileName",
                         style = MaterialTheme.typography.bodyMedium,

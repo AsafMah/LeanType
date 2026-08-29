@@ -21,8 +21,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import helium314.keyboard.settings.dialogs.PreferenceDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -281,20 +284,51 @@ fun DictionaryScreen(
         }
     )
     if (showAddDictDialog) {
-        ConfirmationDialog(
+        PreferenceDialog(
             onDismissRequest = { showAddDictDialog = false },
-            onConfirmed = {
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                    .addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("application/octet-stream")
-                dictPicker.launch(intent)
-            },
-            confirmButtonText = stringResource(R.string.load_gesture_library_button_load),
-            title = { Text(stringResource(R.string.add_new_dictionary_title)) },
+            title = stringResource(R.string.add_new_dictionary_title),
             content = {
-                val link = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_URL)
-                val addDictString = stringResource(R.string.add_dictionary, link)
-                Text(addDictString.htmlToAnnotated())
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val link = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_URL)
+                    val addDictString = stringResource(R.string.add_dictionary, link)
+                    Text(addDictString.htmlToAnnotated(), style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            buttons = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            showAddDictDialog = false
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                .addCategory(Intent.CATEGORY_OPENABLE)
+                                .setType("application/octet-stream")
+                            dictPicker.launch(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.load_gesture_library_button_load))
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            showAddDictDialog = false
+                            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(Links.DICTIONARY_URL)).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            try {
+                                ctx.startActivity(intent)
+                            } catch (_: Exception) {}
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Download from GitHub")
+                    }
+                }
             }
         )
     }
