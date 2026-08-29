@@ -177,6 +177,7 @@ public class SettingsValues {
         public final int mKeypressVibrationDuration;
         public final int mKeypressVibrationAmplitude;
         public final float mKeypressSoundVolume;
+        public final String mKeypressSoundStyle;
         public final boolean mAutoCorrectionEnabledPerUserSettings;
         public final String mAutoCorrectTrigger;
         public final boolean mAutoCorrectEnabled;
@@ -375,6 +376,8 @@ public class SettingsValues {
                                 Defaults.PREF_VIBRATION_AMPLITUDE_SETTINGS);
                 mKeypressSoundVolume = prefs.getFloat(Settings.PREF_KEYPRESS_SOUND_VOLUME,
                                 Defaults.PREF_KEYPRESS_SOUND_VOLUME);
+                mKeypressSoundStyle = prefs.getString(Settings.PREF_KEYPRESS_SOUND_STYLE,
+                                Defaults.PREF_KEYPRESS_SOUND_STYLE);
                 mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
                                 Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY);
                 mGestureMethod = prefs.getString(Settings.PREF_GESTURE_METHOD, "fallback");

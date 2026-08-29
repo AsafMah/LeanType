@@ -23,6 +23,15 @@ import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import helium314.keyboard.latin.sound.CustomSoundManager
+import helium314.keyboard.latin.sound.SoundPackImporter
+import helium314.keyboard.latin.sound.SoundPackUrls
+import helium314.keyboard.settings.dialogs.SoundPackDownloadDialog
+import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.preferences.ReorderSwitchPreference
@@ -34,6 +43,7 @@ import helium314.keyboard.settings.Theme
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.SwitchPreferenceWithEmojiDictWarning
 import helium314.keyboard.settings.previewDark
+import java.io.File
 
 @Composable
 fun PreferencesScreen(
@@ -62,6 +72,8 @@ fun PreferencesScreen(
         if (prefs.getBoolean(Settings.PREF_VIBRATE_ON, Defaults.PREF_VIBRATE_ON))
             Settings.PREF_VIBRATE_IN_DND_MODE else null,
         Settings.PREF_SOUND_ON,
+        if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
+            Settings.PREF_KEYPRESS_SOUND_STYLE else null,
         if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
             Settings.PREF_KEYPRESS_SOUND_VOLUME else null,
         Settings.PREF_SAVE_SUBTYPE_PER_APP,
@@ -255,6 +267,31 @@ fun createPreferencesSettings(context: Context) = listOf(
             } }
         )
     },
+    Setting(context, Settings.PREF_KEYPRESS_SOUND_STYLE, R.string.prefs_keypress_sound_style_settings) { setting ->
+        var showDialog by remember { mutableStateOf(false) }
+        val currentStyle = context.prefs().getString(Settings.PREF_KEYPRESS_SOUND_STYLE, Defaults.PREF_KEYPRESS_SOUND_STYLE) ?: Defaults.PREF_KEYPRESS_SOUND_STYLE
+        val styleName = when {
+            currentStyle == SoundPackUrls.SYSTEM_DEFAULT_ID -> stringResource(R.string.prefs_keypress_sound_style_system)
+            SoundPackUrls.isPreset(currentStyle) -> SoundPackUrls.getPreset(currentStyle)?.displayName ?: currentStyle
+            else -> {
+                val packDir = SoundPackImporter.getPackDir(context, currentStyle)
+                val nameFile = File(packDir, "name.txt")
+                if (nameFile.exists()) {
+                    try { nameFile.readText().trim() } catch (_: Throwable) { currentStyle }
+                } else currentStyle
+            }
+        }
+        Preference(
+            name = setting.title,
+            description = styleName,
+            onClick = { showDialog = true }
+        )
+        if (showDialog) {
+            SoundPackDownloadDialog(
+                onDismissRequest = { showDialog = false }
+            )
+        }
+    },
     Setting(context, Settings.PREF_KEYPRESS_SOUND_VOLUME, R.string.prefs_keypress_sound_volume_settings) { setting ->
         val audioManager = LocalContext.current.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         SliderPreference(
@@ -266,7 +303,12 @@ fun createPreferencesSettings(context: Context) = listOf(
                 else (it * 100).toInt().toString()
             },
             range = -0.01f..1f,
-            onValueChanged = { it?.let { audioManager.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, it) } }
+            onValueChanged = { it?.let { vol ->
+                val played = CustomSoundManager.getInstance(context).playSound(0, vol)
+                if (!played) {
+                    audioManager.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, vol)
+                }
+            } }
         )
     },
 )

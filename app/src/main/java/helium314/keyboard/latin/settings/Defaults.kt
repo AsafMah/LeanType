@@ -156,6 +156,7 @@ object Defaults {
     const val PREF_VIBRATION_DURATION_SETTINGS = -1
     const val PREF_VIBRATION_AMPLITUDE_SETTINGS = -1
     const val PREF_KEYPRESS_SOUND_VOLUME = -0.01f
+    const val PREF_KEYPRESS_SOUND_STYLE = "system"
     const val PREF_KEY_LONGPRESS_TIMEOUT = 300
     const val PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = true
     const val PREF_GESTURE_PREVIEW_TRAIL = true

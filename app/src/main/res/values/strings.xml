@@ -964,6 +964,11 @@ language, hence "No language". -->
     <string name="prefs_keypress_vibration_amplitude_settings">Keypress vibration strength</string>
     <!-- Title of the setting for keypress sound volume -->
     <string name="prefs_keypress_sound_volume_settings">Keypress sound volume</string>
+    <!-- Title of the setting for keypress sound style -->
+    <string name="prefs_keypress_sound_style_settings">Keypress sound style</string>
+    <string name="prefs_keypress_sound_style_system">System default</string>
+    <string name="prefs_keypress_sound_style_dialog_title">Keypress Sound Style</string>
+    <string name="sound_pack_import_button">Import Sound Pack</string>
     <!-- Title of the setting for key long press delay -->
     <string name="prefs_key_longpress_timeout_settings">Key long press delay</string>
     <!-- Title of the setting for overriding Android SDK level for showing emojis -->
