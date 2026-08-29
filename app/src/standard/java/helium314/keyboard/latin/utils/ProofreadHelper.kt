@@ -476,13 +476,15 @@ object ProofreadHelper {
                     }
                     Result.failure(Exception("Translation plugin not available"))
                 } else {
-                    mainHandler.post {
-                        KeyboardSwitcher.getInstance().showToast(
-                            context.getString(R.string.translation_plugin_fallback_to_ai),
-                            false
-                        )
+                    if (!isOnlineOnly) {
+                        mainHandler.post {
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(R.string.translation_plugin_fallback_to_ai),
+                                false
+                            )
+                        }
                     }
-                    Log.i("ProofreadHelper", "Plugin unavailable, translating via built-in AI service")
+                    Log.i("ProofreadHelper", if (isOnlineOnly) "Translating via built-in AI service" else "Plugin unavailable, translating via built-in AI service")
                     service.translate(text)
                 }
             },
