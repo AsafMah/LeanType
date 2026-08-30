@@ -26,9 +26,21 @@ object SoundPackUrls {
             isPreset = true
         ),
         SoundPackInfo(
+            id = "mechanical_thock",
+            displayName = "Thocky Mechanical",
+            description = "Deep, warm, lubricated switch thock and heavy spacebar",
+            isPreset = true
+        ),
+        SoundPackInfo(
             id = "vintage_typewriter",
             displayName = "Vintage Typewriter",
             description = "Classic metal hammer strike with carriage return enter chime",
+            isPreset = true
+        ),
+        SoundPackInfo(
+            id = "retro_terminal",
+            displayName = "Retro CRT Terminal",
+            description = "1980s IBM mainframe beamspring solenoid mechanical clack",
             isPreset = true
         ),
         SoundPackInfo(
@@ -38,15 +50,39 @@ object SoundPackUrls {
             isPreset = true
         ),
         SoundPackInfo(
+            id = "soft_pudding",
+            displayName = "Soft Velvet / Pudding",
+            description = "Gentle, muted, pillow-soft quiet tapping for low noise",
+            isPreset = true
+        ),
+        SoundPackInfo(
             id = "wood_minimal",
             displayName = "Woodblock Minimal",
             description = "Natural acoustic wood tap key sound",
             isPreset = true
         ),
         SoundPackInfo(
+            id = "marimba_tone",
+            displayName = "Acoustic Marimba",
+            description = "Warm melodic wooden mallet bar resonance",
+            isPreset = true
+        ),
+        SoundPackInfo(
             id = "modern_tick",
             displayName = "Modern Crisp Tick",
             description = "Ultra-minimal, high-precision electronic micro tick",
+            isPreset = true
+        ),
+        SoundPackInfo(
+            id = "laser_scifi",
+            displayName = "Sci-Fi Cyberpunk",
+            description = "Futuristic digital holographic laser pulse click",
+            isPreset = true
+        ),
+        SoundPackInfo(
+            id = "arcade_8bit",
+            displayName = "8-Bit Chiptune Arcade",
+            description = "Retro pixel gaming square-wave beep and blip sounds",
             isPreset = true
         )
     )
