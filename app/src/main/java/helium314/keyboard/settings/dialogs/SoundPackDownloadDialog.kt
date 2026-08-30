@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.dialogs
 
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -23,18 +21,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,7 +40,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
@@ -66,29 +59,15 @@ fun SoundPackDownloadDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { context.prefs() }
-    val isOffline = BuildConfig.FLAVOR.contains("offline", ignoreCase = true)
 
     var currentSelectedStyle by remember {
         mutableStateOf(prefs.getString(Settings.PREF_KEYPRESS_SOUND_STYLE, Defaults.PREF_KEYPRESS_SOUND_STYLE) ?: Defaults.PREF_KEYPRESS_SOUND_STYLE)
     }
 
-    val installedMap = remember { mutableStateMapOf<String, Boolean>() }
-    val downloadingMap = remember { mutableStateMapOf<String, Boolean>() }
-    var customPacks by remember { mutableStateOf<List<SoundPackInfo>>(emptyList()) }
+    var customPacks by remember { mutableStateOf(SoundPackImporter.getInstalledCustomPacks(context)) }
 
-    fun refreshInstalledStatus() {
-        SoundPackUrls.PRESET_PACKS.forEach { preset ->
-            installedMap[preset.id] = SoundPackImporter.isPackInstalled(context, preset.id)
-        }
+    fun refreshCustomPacks() {
         customPacks = SoundPackImporter.getInstalledCustomPacks(context)
-        customPacks.forEach { pack ->
-            installedMap[pack.id] = true
-        }
-    }
-
-    remember {
-        refreshInstalledStatus()
-        true
     }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -97,7 +76,7 @@ fun SoundPackDownloadDialog(
                 val importedId = SoundPackImporter.importFromUri(context, uri)
                 withContext(Dispatchers.Main) {
                     if (importedId != null) {
-                        refreshInstalledStatus()
+                        refreshCustomPacks()
                         currentSelectedStyle = importedId
                         prefs.edit().putString(Settings.PREF_KEYPRESS_SOUND_STYLE, importedId).apply()
                         CustomSoundManager.getInstance(context).setSoundPack(importedId)
@@ -135,7 +114,7 @@ fun SoundPackDownloadDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (isOffline) "Download presets in browser or import" else "Select or download sound style",
+                        text = "Select sound profile or import custom pack",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f).padding(end = 8.dp)
@@ -203,10 +182,10 @@ fun SoundPackDownloadDialog(
                         }
                     }
 
-                    // Online Presets Header
+                    // Built-in Presets Header
                     item {
                         Text(
-                            text = "Sound Presets",
+                            text = "Built-in Sound Presets",
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 4.dp)
@@ -215,8 +194,6 @@ fun SoundPackDownloadDialog(
 
                     // Presets List
                     items(SoundPackUrls.PRESET_PACKS, key = { it.id }) { preset ->
-                        val isInstalled = installedMap[preset.id] == true
-                        val isDownloading = downloadingMap[preset.id] == true
                         val isSelected = currentSelectedStyle == preset.id
 
                         Surface(
@@ -225,7 +202,7 @@ fun SoundPackDownloadDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
-                                .clickable(enabled = isInstalled) { selectPack(preset.id) }
+                                .clickable { selectPack(preset.id) }
                         ) {
                             Row(
                                 modifier = Modifier
@@ -235,7 +212,6 @@ fun SoundPackDownloadDialog(
                             ) {
                                 RadioButton(
                                     selected = isSelected,
-                                    enabled = isInstalled,
                                     onClick = { selectPack(preset.id) }
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -251,79 +227,16 @@ fun SoundPackDownloadDialog(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-
-                                if (isDownloading) {
-                                    Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                                    }
-                                } else if (isInstalled) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(
-                                            onClick = { CustomSoundManager.getInstance(context).previewSound(preset.id) },
-                                            modifier = Modifier.size(36.dp)
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_play_arrow),
-                                                contentDescription = "Preview",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                        Button(
-                                            onClick = {
-                                                SoundPackImporter.deletePack(context, preset.id)
-                                                installedMap[preset.id] = false
-                                                if (currentSelectedStyle == preset.id) {
-                                                    selectPack(SoundPackUrls.SYSTEM_DEFAULT_ID)
-                                                }
-                                                Toast.makeText(context, "Deleted ${preset.displayName}", Toast.LENGTH_SHORT).show()
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                            modifier = Modifier.height(28.dp)
-                                        ) {
-                                            Text("Delete", style = MaterialTheme.typography.labelSmall)
-                                        }
-                                    }
-                                } else {
-                                    Button(
-                                        onClick = {
-                                            if (isOffline) {
-                                                val url = preset.downloadUrl ?: SoundPackUrls.GITHUB_REPO_URL
-                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                }
-                                                try {
-                                                    context.startActivity(intent)
-                                                    Toast.makeText(context, "Downloading in browser… use 'Import' once finished", Toast.LENGTH_LONG).show()
-                                                } catch (e: Exception) {
-                                                    Toast.makeText(context, "Failed to open browser: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                                                }
-                                            } else {
-                                                downloadingMap[preset.id] = true
-                                                scope.launch(Dispatchers.IO) {
-                                                    val ok = SoundPackImporter.downloadPreset(context, preset.id)
-                                                    withContext(Dispatchers.Main) {
-                                                        downloadingMap[preset.id] = false
-                                                        if (ok) {
-                                                            installedMap[preset.id] = true
-                                                            selectPack(preset.id)
-                                                            Toast.makeText(context, "Downloaded and set ${preset.displayName}", Toast.LENGTH_SHORT).show()
-                                                        } else {
-                                                            Toast.makeText(context, "Failed to download sound pack", Toast.LENGTH_SHORT).show()
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                                        modifier = Modifier.height(28.dp)
-                                    ) {
-                                        Text("Download", style = MaterialTheme.typography.labelSmall)
-                                    }
+                                IconButton(
+                                    onClick = { CustomSoundManager.getInstance(context).previewSound(preset.id) },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_play_arrow),
+                                        contentDescription = "Preview",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
@@ -389,7 +302,7 @@ fun SoundPackDownloadDialog(
                                         Button(
                                             onClick = {
                                                 SoundPackImporter.deletePack(context, pack.id)
-                                                refreshInstalledStatus()
+                                                refreshCustomPacks()
                                                 if (currentSelectedStyle == pack.id) {
                                                     selectPack(SoundPackUrls.SYSTEM_DEFAULT_ID)
                                                 }

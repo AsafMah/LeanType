@@ -2,10 +2,10 @@
 package helium314.keyboard.latin.sound
 
 import android.content.Context
+import android.content.res.AssetFileDescriptor
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.SoundPool
-import android.os.Build
 import android.util.Log
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.common.Constants
@@ -78,32 +78,57 @@ class CustomSoundManager private constructor(private val appContext: Context) {
         }
 
         scope.launch {
-            val audioFiles = SoundPackImporter.getPackAudioFiles(appContext, activePackId)
-            if (!audioFiles.isValid) {
-                return@launch
-            }
+            if (SoundPackUrls.isPreset(activePackId)) {
+                val stdId = loadAssetSample(pool, "sounds/$activePackId/standard.ogg")
+                val spcId = loadAssetSample(pool, "sounds/$activePackId/space.ogg").takeIf { it != 0 } ?: stdId
+                val delId = loadAssetSample(pool, "sounds/$activePackId/delete.ogg").takeIf { it != 0 } ?: stdId
+                val entId = loadAssetSample(pool, "sounds/$activePackId/enter.ogg").takeIf { it != 0 } ?: stdId
 
-            val stdId = audioFiles.standardFile?.let { loadSample(pool, it) } ?: 0
-            val spcId = audioFiles.spaceFile?.let { if (it == audioFiles.standardFile) stdId else loadSample(pool, it) } ?: stdId
-            val delId = audioFiles.deleteFile?.let { if (it == audioFiles.standardFile) stdId else loadSample(pool, it) } ?: stdId
-            val entId = audioFiles.enterFile?.let { if (it == audioFiles.standardFile) stdId else loadSample(pool, it) } ?: stdId
+                synchronized(this@CustomSoundManager) {
+                    standardSampleId = stdId
+                    spaceSampleId = spcId
+                    deleteSampleId = delId
+                    enterSampleId = entId
+                }
+            } else {
+                val audioFiles = SoundPackImporter.getPackAudioFiles(appContext, activePackId)
+                if (!audioFiles.isValid) {
+                    return@launch
+                }
 
-            synchronized(this@CustomSoundManager) {
-                standardSampleId = stdId
-                spaceSampleId = spcId
-                deleteSampleId = delId
-                enterSampleId = entId
+                val stdId = audioFiles.standardFile?.let { loadFileSample(pool, it) } ?: 0
+                val spcId = audioFiles.spaceFile?.let { if (it == audioFiles.standardFile) stdId else loadFileSample(pool, it) } ?: stdId
+                val delId = audioFiles.deleteFile?.let { if (it == audioFiles.standardFile) stdId else loadFileSample(pool, it) } ?: stdId
+                val entId = audioFiles.enterFile?.let { if (it == audioFiles.standardFile) stdId else loadFileSample(pool, it) } ?: stdId
+
+                synchronized(this@CustomSoundManager) {
+                    standardSampleId = stdId
+                    spaceSampleId = spcId
+                    deleteSampleId = delId
+                    enterSampleId = entId
+                }
             }
         }
     }
 
-    private fun loadSample(pool: SoundPool, file: File): Int {
+    private fun loadAssetSample(pool: SoundPool, assetPath: String): Int {
+        return try {
+            appContext.assets.openFd(assetPath).use { afd ->
+                pool.load(afd, 1)
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error loading asset sample from $assetPath", e)
+            0
+        }
+    }
+
+    private fun loadFileSample(pool: SoundPool, file: File): Int {
         return try {
             if (file.exists()) {
                 pool.load(file.absolutePath, 1)
             } else 0
         } catch (e: Throwable) {
-            Log.e(TAG, "Error loading sample from ${file.path}", e)
+            Log.e(TAG, "Error loading file sample from ${file.path}", e)
             0
         }
     }
@@ -137,15 +162,30 @@ class CustomSoundManager private constructor(private val appContext: Context) {
         }
 
         scope.launch {
-            val files = SoundPackImporter.getPackAudioFiles(appContext, packId)
-            val fileToPlay = files.standardFile ?: files.spaceFile ?: files.deleteFile ?: files.enterFile ?: return@launch
-            val path = fileToPlay.absolutePath
-            val sampleId = previewCache.getOrPut(path) {
-                previewSoundPool.load(path, 1)
-            }
-            if (sampleId != 0) {
-                val actualVol = if (volume < 0f) 0.8f else volume.coerceIn(0.1f, 1f)
-                previewSoundPool.play(sampleId, actualVol, actualVol, 1, 0, 1.0f)
+            if (SoundPackUrls.isPreset(packId)) {
+                val assetPath = "sounds/$packId/standard.ogg"
+                val sampleId = previewCache.getOrPut(assetPath) {
+                    try {
+                        appContext.assets.openFd(assetPath).use { afd ->
+                            previewSoundPool.load(afd, 1)
+                        }
+                    } catch (_: Throwable) { 0 }
+                }
+                if (sampleId != 0) {
+                    val actualVol = if (volume < 0f) 0.8f else volume.coerceIn(0.1f, 1f)
+                    previewSoundPool.play(sampleId, actualVol, actualVol, 1, 0, 1.0f)
+                }
+            } else {
+                val files = SoundPackImporter.getPackAudioFiles(appContext, packId)
+                val fileToPlay = files.standardFile ?: files.spaceFile ?: files.deleteFile ?: files.enterFile ?: return@launch
+                val path = fileToPlay.absolutePath
+                val sampleId = previewCache.getOrPut(path) {
+                    loadFileSample(previewSoundPool, fileToPlay)
+                }
+                if (sampleId != 0) {
+                    val actualVol = if (volume < 0f) 0.8f else volume.coerceIn(0.1f, 1f)
+                    previewSoundPool.play(sampleId, actualVol, actualVol, 1, 0, 1.0f)
+                }
             }
         }
     }

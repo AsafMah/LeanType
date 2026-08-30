@@ -104,33 +104,6 @@ object SoundPackImporter {
         return list.sortedBy { it.displayName }
     }
 
-    fun downloadPreset(context: Context, packId: String): Boolean {
-        val preset = SoundPackUrls.getPreset(packId) ?: return false
-        val downloadUrl = preset.downloadUrl ?: return false
-
-        return try {
-            val url = URL(downloadUrl)
-            val conn = url.openConnection() as HttpURLConnection
-            conn.setRequestProperty("User-Agent", "HeliboardL")
-            conn.connectTimeout = 15000
-            conn.readTimeout = 30000
-            conn.instanceFollowRedirects = true
-            conn.connect()
-
-            if (conn.responseCode != HttpURLConnection.HTTP_OK) {
-                Log.e(TAG, "Failed to download preset $packId: HTTP ${conn.responseCode}")
-                return false
-            }
-
-            conn.inputStream.use { stream ->
-                importFromStream(context, stream, packId, preset.displayName)
-            }
-        } catch (e: Throwable) {
-            Log.e(TAG, "Error downloading preset $packId", e)
-            false
-        }
-    }
-
     fun importFromUri(context: Context, uri: Uri, customName: String? = null): String? {
         val filename = getFilename(context, uri) ?: uri.lastPathSegment ?: "custom_sound"
         val ext = filename.substringAfterLast(".", "").lowercase()
