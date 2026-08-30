@@ -72,11 +72,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "• Unified Offline Edition: Merged offline and offlinelite into a unified offline flavor with Android 5.0+ (API 21) support and dynamic OS plugin guards",
-    "• Modernized Handwriting Canvas: Added Bezier curve ink smoothing, writing guidelines, watermark hint, smooth fade-out, and instant model resolution",
-    "• Gesture Typing & Accuracy: Improved swiped gesture word boost, 12.5% high-DPI stroke sampling, and context reranking",
-    "• Auto-Correction & Capitalization: Fixed sentence-starter auto-capitalization session pollution, exact in-dictionary word replacement, and safe suggestion purging",
-    "• Remember Floating Mode: Added setting to automatically reopen the keyboard in floating mode across sessions until explicitly docked"
+    "• Custom Click Sounds: Zero-latency key audio engine with 12 built-in presets (iOS, Mechanical, Thocky, Typewriter, Retro CRT, Bubble Pop, Velvet, Wood, Marimba, Modern Tick, Sci-Fi, 8-Bit Arcade), live preview, and custom .zip sound pack import",
+    "• Harmonized Import Dialogs: Added language selection confirmation dialogs for handwriting, translation, and dictionary model imports",
+    "• AI Translation Hardening: Filtered conversational LLM preamble and code fences in translation outputs, and fixed active AI provider token validation",
+    "• Clean Feedback Guardrails: Suppressed unnecessary fallback toasts when translation engine is set to AI"
 )
 
 @Composable
