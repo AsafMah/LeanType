@@ -528,18 +528,21 @@ class LongPressHintDrawable(private val base: Drawable) : Drawable() {
     }
 
     override fun draw(canvas: Canvas) {
-        base.draw(canvas)
         val bounds = bounds
         val h = bounds.height().toFloat()
         val w = bounds.width().toFloat()
         if (h <= 0f || w <= 0f) return
 
-        val pillWidth = (w * 0.22f).coerceIn(8f, 28f)
-        val pillHeight = (h * 0.045f).coerceIn(2.5f, 6f)
+        val shiftY = (h * 0.08f).coerceAtLeast(2f).toInt()
+        base.setBounds(bounds.left, bounds.top - shiftY, bounds.right, bounds.bottom - shiftY)
+        base.draw(canvas)
+        base.bounds = bounds
+
+        val pillWidth = (w * 0.28f).coerceIn(10f, 32f)
+        val pillHeight = (h * 0.07f).coerceIn(3f, 7f)
         val cornerRadius = pillHeight / 2f
         val cx = bounds.exactCenterX()
-        val bottomMargin = (h * 0.08f).coerceAtLeast(4f)
-        val cy = bounds.bottom.toFloat() - bottomMargin - pillHeight / 2f
+        val cy = bounds.bottom.toFloat() - pillHeight / 2f + 1f
 
         val left = cx - pillWidth / 2f
         val top = cy - pillHeight / 2f
@@ -557,7 +560,7 @@ class LongPressHintDrawable(private val base: Drawable) : Drawable() {
 
     override fun setAlpha(alpha: Int) {
         base.alpha = alpha
-        hintPaint.alpha = (alpha * 0.5f).toInt()
+        hintPaint.alpha = (alpha * 0.9f).toInt()
     }
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
