@@ -776,10 +776,10 @@
     <string name="quick_pin_toolbar_keys">Pin toolbar key on long press</string>
     <!-- Description of the setting to quick-pin toolbar keys -->
     <string name="quick_pin_toolbar_keys_summary">This will disable other long press actions for toolbar keys that are not pinned</string>
-    <!-- Title of the setting to show long-press hint dots on toolbar keys -->
-    <string name="toolbar_long_press_hint">Show long-press hint dots</string>
-    <!-- Description of the setting to show long-press hint dots on toolbar keys -->
-    <string name="toolbar_long_press_hint_summary">Show dots on toolbar keys that have a long-press action</string>
+    <!-- Title of the setting to show long-press hint pills on toolbar keys -->
+    <string name="toolbar_long_press_hint">Show long-press hint pills</string>
+    <!-- Description of the setting to show long-press hint pills on toolbar keys -->
+    <string name="toolbar_long_press_hint_summary">Show pills on toolbar keys that have a long-press action</string>
     <!-- Title of the setting to show "..." as hints for more functionality on long-press -->
     <string name="show_popup_hints">Show functional hints</string>
     <!-- Description of the show_popup_hints setting -->
