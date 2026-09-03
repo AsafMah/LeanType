@@ -21,6 +21,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Side-by-side experimental build** — an `experimental` build type (`com.asafmah.leantypedual.exp`, shown as "LeanTypeDual EXP") that installs alongside the normal build instead of replacing it, so input experiments can be compared against a working daily driver. (#141)
 
 ### Fixed
+- **Fast double-taps on Shift enable Caps Lock again.** The prior duplicate-event workaround rejected legitimate taps less than 100 ms apart; distinct taps are now identified by their press/release boundary instead. (#146)
 - **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order. (#135)
 - **The two-thumb recognition settings no longer appear when they cannot work.** They synthesise touch points for the native gesture decoder; the built-in fallback engine scores a single trail and ignores which thumb drew it, so applying them there corrupted the trail and produced nonsense words. The group is now gated on a loaded gesture library, and explains itself when the spacing mode leaves it inert, instead of showing controls that structurally cannot take effect. (#141)
 
