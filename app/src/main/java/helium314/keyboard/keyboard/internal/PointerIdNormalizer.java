@@ -8,11 +8,11 @@ package helium314.keyboard.keyboard.internal;
  * Maps raw {@link android.view.MotionEvent} pointer ids onto the dense track slots the native
  * gesture decoder actually reads.
  *
- * <p><b>Why this exists.</b> The native decoder keeps exactly {@code MAX_POINTER_COUNT_G == 2}
- * per-pointer tracks ({@code jni/src/defines.h}). {@code DicTraverseSession} seeds track <i>i</i>
- * with pointer id <i>i</i>, and {@code ProximityInfoStateUtils::updateTouchPoints} keeps only the
- * points whose {@code pointerIds[k] == i}. Two consequences follow, both measured in
- * {@code jni/tests/replay/two_pointer_track_test.cpp}:
+ * <p><b>Why this exists.</b> The in-tree native preprocessing keeps exactly
+ * {@code MAX_POINTER_COUNT_G == 2} per-pointer tracks ({@code jni/src/defines.h}).
+ * {@code DicTraverseSession} seeds track <i>i</i> with pointer id <i>i</i>, and
+ * {@code ProximityInfoStateUtils::updateTouchPoints} keeps only points whose
+ * {@code pointerIds[k] == i}. Two consequences follow:
  *
  * <ul>
  *   <li>If <b>no</b> point carries id 0, track 0 is unused and {@code Suggest::initializeSearch}
