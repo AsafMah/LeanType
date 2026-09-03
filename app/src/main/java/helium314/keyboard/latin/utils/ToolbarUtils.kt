@@ -549,7 +549,9 @@ class LongPressHintDrawable(private val base: Drawable) : Drawable() {
         val right = cx + pillWidth / 2f
         val bottom = cy + pillHeight / 2f
 
-        hintPaint.color = Settings.getValues().mColors.get(ColorType.CLIPBOARD_PIN)
+        val baseColor = Settings.getValues().mColors.get(ColorType.CLIPBOARD_PIN)
+        val alpha50 = (Color.alpha(baseColor) * 0.5f).toInt()
+        hintPaint.color = (alpha50 shl 24) or (baseColor and 0x00FFFFFF)
         canvas.drawRoundRect(left, top, right, bottom, cornerRadius, cornerRadius, hintPaint)
     }
 
@@ -560,7 +562,7 @@ class LongPressHintDrawable(private val base: Drawable) : Drawable() {
 
     override fun setAlpha(alpha: Int) {
         base.alpha = alpha
-        hintPaint.alpha = (alpha * 0.9f).toInt()
+        hintPaint.alpha = (alpha * 0.5f).toInt()
     }
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
