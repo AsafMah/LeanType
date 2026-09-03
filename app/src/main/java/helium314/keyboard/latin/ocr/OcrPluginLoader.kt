@@ -39,9 +39,9 @@ object OcrPluginLoader {
     }
 
     @JvmStatic
-    fun getPluginDownloadUrl(flavor: String = "latin", tag: String? = null): String {
+    fun getPluginDownloadUrl(tag: String? = null): String {
         val abi = getTargetAbi()
-        val filename = "ocr_plugin-$flavor-$abi.apk"
+        val filename = "ocr_plugin-$abi.apk"
         return if (tag == null || tag == "latest") {
             "https://github.com/LeanBitLab/LeanType-OCR-Plugin/releases/latest/download/$filename"
         } else {
@@ -50,13 +50,13 @@ object OcrPluginLoader {
     }
 
     @JvmStatic
-    fun downloadPluginApk(context: Context, flavor: String = "latin", tag: String? = null, tempFile: File): Boolean {
+    fun downloadPluginApk(context: Context, tag: String? = null, tempFile: File): Boolean {
         val urlsToTry = listOf(
-            getPluginDownloadUrl(flavor, tag),
+            getPluginDownloadUrl(tag),
             if (tag == null || tag == "latest") {
-                "https://github.com/LeanBitLab/LeanType-OCR-Plugin/releases/latest/download/ocr_plugin-$flavor.apk"
+                "https://github.com/LeanBitLab/LeanType-OCR-Plugin/releases/latest/download/ocr_plugin.apk"
             } else {
-                "https://github.com/LeanBitLab/LeanType-OCR-Plugin/releases/download/$tag/ocr_plugin-$flavor.apk"
+                "https://github.com/LeanBitLab/LeanType-OCR-Plugin/releases/download/$tag/ocr_plugin.apk"
             }
         ).distinct()
 

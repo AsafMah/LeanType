@@ -396,9 +396,6 @@
     <string name="ocr_suggest_screenshot_text_summary">Show OCR text extraction option alongside screenshot suggestions</string>
     <string name="ocr_extract_text_button">Extract Text</string>
     <string name="ocr_paste_image_button">Paste</string>
-    <string name="ocr_flavor_latin">Latin (English, Spanish, etc.)</string>
-    <string name="ocr_flavor_devanagari">Devanagari (Hindi, Marathi, etc.)</string>
-    <string name="ocr_flavor_cjk">CJK (Chinese, Japanese, Korean)</string>
     <string name="handwriting">Handwriting</string>
     <string name="delete_handwriting_model">Delete downloaded model</string>
     <string name="handwriting_model_deleted">Handwriting model deleted</string>

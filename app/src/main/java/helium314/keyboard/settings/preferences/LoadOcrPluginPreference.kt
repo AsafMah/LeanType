@@ -4,14 +4,12 @@ package helium314.keyboard.settings.preferences
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -70,7 +68,6 @@ fun LoadOcrPluginPreference(
 
     val hasPlugin = OcrPluginLoader.hasPlugin(ctx)
     val localVersion = remember(hasPlugin) { OcrPluginLoader.getPluginVersion(ctx) }
-    val activeScript = remember(hasPlugin) { OcrPluginLoader.getActiveScriptName(ctx) }
 
     LaunchedEffect(hasPlugin) {
         if (!hasInternet) return@LaunchedEffect
@@ -107,7 +104,7 @@ fun LoadOcrPluginPreference(
         }
     }
 
-    fun startDownload(flavor: String = "latin") {
+    fun startDownload() {
         if (!hasInternet) {
             showDialog = false
             val url = "https://github.com/LeanBitLab/LeanType-OCR-Plugin/releases"
@@ -123,7 +120,7 @@ fun LoadOcrPluginPreference(
             val tempFile = File(ctx.cacheDir, "temp_ocr_plugin.apk")
             if (tempFile.exists()) tempFile.delete()
 
-            val downloaded = OcrPluginLoader.downloadPluginApk(ctx, flavor, null, tempFile)
+            val downloaded = OcrPluginLoader.downloadPluginApk(ctx, null, tempFile)
 
             withContext(Dispatchers.Main) {
                 isDownloading = false
@@ -145,10 +142,7 @@ fun LoadOcrPluginPreference(
 
     val effectiveSummary = when {
         isDownloading -> "Downloading plugin..."
-        hasPlugin -> {
-            val scriptInfo = if (!activeScript.isNullOrBlank()) " ($activeScript)" else ""
-            if (localVersion != null) "Active v$localVersion$scriptInfo" else "Active$scriptInfo"
-        }
+        hasPlugin -> if (localVersion != null) "Active v$localVersion" else "Active"
         else -> summary
     }
 
@@ -188,24 +182,16 @@ fun LoadOcrPluginPreference(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(
-                            onClick = { startDownload("latin") },
+                            onClick = { startDownload() },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(stringResource(R.string.ocr_flavor_latin))
-                        }
-
-                        Button(
-                            onClick = { startDownload("devanagari") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.ocr_flavor_devanagari))
-                        }
-
-                        Button(
-                            onClick = { startDownload("cjk") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.ocr_flavor_cjk))
+                            val buttonText = when {
+                                remoteVersion != null && localVersion != null && remoteVersion != localVersion ->
+                                    "Update to $remoteVersion"
+                                remoteVersion != null -> "Download plugin ($remoteVersion)"
+                                else -> "Download plugin"
+                            }
+                            Text(buttonText)
                         }
 
                         OutlinedButton(
