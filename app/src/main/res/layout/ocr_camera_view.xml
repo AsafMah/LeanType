@@ -15,6 +15,21 @@
         android:layout_height="match_parent"
         app:scaleType="fillCenter" />
 
+    <!-- Status indicator (e.g. No text detected) -->
+    <TextView
+        android:id="@+id/ocr_status_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/clipboard_suggestion_background"
+        android:textColor="#FFFFFF"
+        android:text="@string/ocr_no_text_detected"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:visibility="gone" />
+
     <!-- Unified Bottom Controls Bar: Flash (left), Shutter (center), Close (right) -->
     <LinearLayout
         android:id="@+id/ocr_controls_bar"
@@ -115,18 +130,5 @@
             android:layout_marginTop="16dp"
             android:text="@string/ocr_plugin_open_settings" />
     </LinearLayout>
-
-    <FrameLayout
-        android:id="@+id/ocr_loading_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone">
-
-        <ProgressBar
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:layout_gravity="center"
-            android:indeterminateDrawable="@drawable/ocr_progress_two_tone" />
-    </FrameLayout>
 
 </helium314.keyboard.latin.ocr.OcrCameraView>

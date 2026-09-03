@@ -1,22 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.ocr
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Colors
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
-import helium314.keyboard.latin.utils.ResourceUtils
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.SettingsDestination
 
@@ -37,12 +41,20 @@ class OcrCameraView @JvmOverloads constructor(
     private var shutterBtn: ImageButton? = null
     private var flashBtn: ImageButton? = null
     private var closeBtn: ImageButton? = null
-    private var loadingOverlay: FrameLayout? = null
+    private var statusIndicator: TextView? = null
 
     private var cameraManager: OcrCameraManager? = null
     private var pipeline: OcrPipeline? = null
     private var listener: OcrViewListener? = null
     private var isCameraStarted = false
+    private var isLoadingAnimationActive = false
+    private var loadingAnimator: ValueAnimator? = null
+    private val loadingBorderDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        cornerRadius = 28f
+        setStroke(4, Color.TRANSPARENT)
+        setColor(Color.TRANSPARENT)
+    }
 
     companion object {
         private const val TAG = "OcrCameraView"
@@ -56,7 +68,7 @@ class OcrCameraView @JvmOverloads constructor(
         shutterBtn = findViewById(R.id.btn_ocr_shutter)
         flashBtn = findViewById(R.id.btn_ocr_flash)
         closeBtn = findViewById(R.id.btn_ocr_close)
-        loadingOverlay = findViewById(R.id.ocr_loading_overlay)
+        statusIndicator = findViewById(R.id.ocr_status_indicator)
 
         previewView?.scaleType = PreviewView.ScaleType.FILL_CENTER
 
@@ -129,6 +141,7 @@ class OcrCameraView @JvmOverloads constructor(
     }
 
     fun stopCamera() {
+        showLoading(false)
         cameraManager?.stopCamera()
         isCameraStarted = false
         flashBtn?.setImageResource(R.drawable.ic_flash_off)
@@ -142,7 +155,7 @@ class OcrCameraView @JvmOverloads constructor(
     }
 
     private fun captureFromCamera() {
-        if (!isCameraStarted) return
+        if (!isCameraStarted || isLoadingAnimationActive) return
         showLoading(true)
 
         cameraManager?.capturePhoto(
@@ -151,7 +164,11 @@ class OcrCameraView @JvmOverloads constructor(
                     bitmap = bitmap,
                     onSuccess = { lines ->
                         showLoading(false)
-                        listener?.onOcrTextExtracted(lines)
+                        if (lines.isEmpty()) {
+                            showNoTextDetected()
+                        } else {
+                            listener?.onOcrTextExtracted(lines)
+                        }
                     },
                     onError = { errorMsg ->
                         showLoading(false)
@@ -167,7 +184,52 @@ class OcrCameraView @JvmOverloads constructor(
     }
 
     private fun showLoading(show: Boolean) {
-        loadingOverlay?.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) {
+            if (isLoadingAnimationActive) return
+            isLoadingAnimationActive = true
+            controlsBar?.foreground = loadingBorderDrawable
+
+            val accentColor = Settings.getValues().mColors.get(ColorType.GESTURE_TRAIL)
+            loadingAnimator = ValueAnimator.ofFloat(0.25f, 1f).apply {
+                duration = 800
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+                addUpdateListener { animator ->
+                    val alpha = (animator.animatedValue as Float * 255).toInt()
+                    val animatedColor = (alpha shl 24) or (accentColor and 0x00FFFFFF)
+                    loadingBorderDrawable.setStroke(4, animatedColor)
+                }
+                start()
+            }
+        } else {
+            if (!isLoadingAnimationActive) return
+            isLoadingAnimationActive = false
+            loadingAnimator?.cancel()
+            loadingAnimator = null
+            loadingBorderDrawable.setStroke(4, Color.TRANSPARENT)
+            controlsBar?.foreground = null
+        }
+    }
+
+    private fun showNoTextDetected() {
+        statusIndicator?.apply {
+            animate().cancel()
+            alpha = 0f
+            visibility = View.VISIBLE
+            animate()
+                .alpha(1f)
+                .setDuration(200)
+                .withEndAction {
+                    postDelayed({
+                        animate()
+                            .alpha(0f)
+                            .setDuration(300)
+                            .withEndAction { visibility = View.GONE }
+                            .start()
+                    }, 1800)
+                }
+                .start()
+        }
     }
 
     private fun openOcrSettings() {
@@ -185,6 +247,9 @@ class OcrCameraView @JvmOverloads constructor(
     }
 
     fun applyColors(colors: Colors) {
-        // Style controls bar if needed
+        statusIndicator?.let {
+            colors.setBackground(it, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
+            it.setTextColor(colors.get(ColorType.KEY_TEXT))
+        }
     }
 }
