@@ -650,8 +650,7 @@ class ClipboardHistoryManager(
 
         if (ocrEnabled) {
             extractButton.visibility = View.VISIBLE
-            val ocrIcon = latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.OCR.name.lowercase())
-            extractButton.setImageDrawable(ocrIcon)
+            extractButton.setImageResource(R.drawable.ic_ocr_extract)
 
             extractButton.setOnClickListener {
                 dontShowCurrentSuggestion = true
@@ -705,7 +704,7 @@ class ClipboardHistoryManager(
         }
 
         val colors = latinIME.mSettings.current.mColors
-        colors.setColor(extractButton, ColorType.KEY_TEXT)
+        colors.setColor(extractButton, ColorType.REMOVE_SUGGESTION_ICON)
         colors.setBackground(extractButton, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
         colors.setBackground(pasteButton, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
         colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)

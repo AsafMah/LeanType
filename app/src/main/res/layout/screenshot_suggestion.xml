@@ -8,9 +8,22 @@
     android:layout_height="match_parent"
     tools:ignore="RtlSymmetry">
 
+    <!-- Extract Text OCR Button (Left of Screenshot) -->
+    <ImageButton
+        android:id="@+id/screenshot_extract_text_button"
+        android:layout_width="40dp"
+        android:layout_height="match_parent"
+        android:background="@drawable/clipboard_suggestion_background"
+        android:layout_marginVertical="3dp"
+        android:layout_marginStart="4dp"
+        android:src="@drawable/ic_ocr_extract"
+        android:scaleType="centerInside"
+        android:contentDescription="@string/ocr_extract_text_button" />
+
+    <!-- Screenshot Image Preview (Larger width, centerCrop) -->
     <FrameLayout
         android:id="@+id/screenshot_paste_button"
-        android:layout_width="wrap_content"
+        android:layout_width="72dp"
         android:layout_height="match_parent"
         android:layout_marginVertical="3dp"
         android:layout_marginStart="4dp"
@@ -19,25 +32,13 @@
 
         <ImageView
             android:id="@+id/screenshot_thumbnail_image"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:adjustViewBounds="true"
-            android:scaleType="fitCenter"
-            android:padding="2dp"
+            android:scaleType="centerCrop"
             android:contentDescription="@string/screenshot" />
     </FrameLayout>
 
-    <ImageButton
-        android:id="@+id/screenshot_extract_text_button"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:background="@drawable/clipboard_suggestion_background"
-        android:layout_marginVertical="3dp"
-        android:layout_marginStart="4dp"
-        android:paddingHorizontal="10dp"
-        android:scaleType="centerInside"
-        android:contentDescription="@string/ocr_extract_text_button" />
-
+    <!-- Dismiss Close Button -->
     <ImageView
         android:id="@+id/screenshot_suggestion_close"
         android:contentDescription="@string/dialog_close"
