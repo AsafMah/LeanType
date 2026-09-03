@@ -20,6 +20,7 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ResourceUtils
 import helium314.keyboard.latin.utils.ToolbarKey
 import helium314.keyboard.latin.utils.createToolbarKey
+import helium314.keyboard.latin.utils.setToolbarButtonActivatedState
 
 class OcrResultView @JvmOverloads constructor(
     context: Context,
@@ -48,7 +49,11 @@ class OcrResultView @JvmOverloads constructor(
 
     fun setupToolbarStrip() {
         val ocrStrip = KeyboardSwitcher.getInstance().ocrStrip ?: return
+        val ocrScrollView = KeyboardSwitcher.getInstance().ocrStripScrollView
         val colors = Settings.getValues().mColors
+        if (ocrScrollView != null) {
+            colors.setBackground(ocrScrollView, ColorType.STRIP_BACKGROUND)
+        }
         colors.setBackground(ocrStrip, ColorType.STRIP_BACKGROUND)
         ocrStrip.removeAllViews()
 
@@ -58,45 +63,55 @@ class OcrResultView @JvmOverloads constructor(
         val ratio = if (defaultStripHeight > 0) defaultEdgeWidth.toFloat() / defaultStripHeight else 0.9f
         val keyDimension = (stripHeight * ratio).toInt().coerceAtLeast(1)
 
-        fun createKey(key: ToolbarKey, onClick: () -> Unit) = createToolbarKey(context, key).apply {
-            layoutParams = LinearLayout.LayoutParams(keyDimension, LinearLayout.LayoutParams.MATCH_PARENT).apply {
-                gravity = Gravity.CENTER_VERTICAL
+        fun addKey(key: ToolbarKey, onClick: () -> Unit) {
+            val button = createToolbarKey(context, key).apply {
+                layoutParams = LayoutParams(keyDimension, keyDimension).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                setOnClickListener {
+                    AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
+                    onClick()
+                }
             }
-            setOnClickListener {
-                AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
-                onClick()
+            setToolbarButtonActivatedState(button)
+            ocrStrip.addView(button)
+        }
+
+        // 1. Close / Return to keyboard
+        addKey(ToolbarKey.CLOSE_HISTORY) {
+            listener?.onClose()
+        }
+
+        // 2. Retake / Camera Viewfinder
+        addKey(ToolbarKey.OCR) {
+            listener?.onRetake()
+        }
+
+        // 3. Select All text
+        addKey(ToolbarKey.SELECT_ALL) {
+            resultEditText?.selectAll()
+        }
+
+        // 4. Copy text to clipboard
+        addKey(ToolbarKey.COPY) {
+            val edit = resultEditText ?: return@addKey
+            val selStart = edit.selectionStart
+            val selEnd = edit.selectionEnd
+            val textToCopy = if (selStart in 0 until selEnd) {
+                edit.text.substring(selStart, selEnd)
+            } else {
+                edit.text?.toString() ?: ""
+            }
+            if (textToCopy.isNotBlank()) {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                clipboard?.setPrimaryClip(ClipData.newPlainText("OCR Text", textToCopy))
+                Toast.makeText(context, R.string.toast_msg_clipboard_copy, Toast.LENGTH_SHORT).show()
             }
         }
 
-        // 1. Close / Back to Keyboard
-        ocrStrip.addView(createKey(ToolbarKey.CLOSE_HISTORY) {
-            listener?.onClose()
-        })
-
-        // 2. Retake / Back to Camera
-        ocrStrip.addView(createKey(ToolbarKey.OCR) {
-            listener?.onRetake()
-        })
-
-        // 3. Select All Text
-        ocrStrip.addView(createKey(ToolbarKey.SELECT_ALL) {
-            resultEditText?.selectAll()
-        })
-
-        // 4. Copy All / Selected Text
-        ocrStrip.addView(createKey(ToolbarKey.COPY) {
-            val text = resultEditText?.text?.toString() ?: ""
-            if (text.isNotBlank()) {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                val clip = ClipData.newPlainText("OCR Text", text)
-                clipboard?.setPrimaryClip(clip)
-                Toast.makeText(context, R.string.toast_msg_clipboard_copy, Toast.LENGTH_SHORT).show()
-            }
-        })
-
-        // 5. Cut Selected Text
-        ocrStrip.addView(createKey(ToolbarKey.CUT) {
-            val edit = resultEditText ?: return@createKey
+        // 5. Cut selected text
+        addKey(ToolbarKey.CUT) {
+            val edit = resultEditText ?: return@addKey
             val selStart = edit.selectionStart
             val selEnd = edit.selectionEnd
             if (selStart in 0 until selEnd) {
@@ -106,18 +121,18 @@ class OcrResultView @JvmOverloads constructor(
                 edit.text.delete(selStart, selEnd)
                 Toast.makeText(context, R.string.toast_msg_clipboard_copy, Toast.LENGTH_SHORT).show()
             }
-        })
+        }
 
-        // 6. Clear All Text
-        ocrStrip.addView(createKey(ToolbarKey.CLEAR_CLIPBOARD) {
+        // 6. Clear all text
+        addKey(ToolbarKey.CLEAR_CLIPBOARD) {
             resultEditText?.setText("")
-        })
+        }
 
-        // 7. Insert / Paste into Target Field
-        ocrStrip.addView(createKey(ToolbarKey.PASTE) {
+        // 7. Insert / Paste text into input field
+        addKey(ToolbarKey.PASTE) {
             val text = resultEditText?.text?.toString() ?: ""
             listener?.onInsertText(text)
-        })
+        }
     }
 
     fun setResultText(lines: List<String>) {
@@ -132,6 +147,10 @@ class OcrResultView @JvmOverloads constructor(
         resultEditText?.let {
             it.setTextColor(colors.get(ColorType.KEY_TEXT))
             it.setHintTextColor(colors.get(ColorType.KEY_HINT_TEXT))
+        }
+        val ocrScrollView = KeyboardSwitcher.getInstance().ocrStripScrollView
+        if (ocrScrollView != null) {
+            colors.setBackground(ocrScrollView, ColorType.STRIP_BACKGROUND)
         }
         val ocrStrip = KeyboardSwitcher.getInstance().ocrStrip
         if (ocrStrip != null) {
