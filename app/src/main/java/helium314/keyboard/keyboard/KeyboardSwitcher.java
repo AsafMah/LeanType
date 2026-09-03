@@ -555,8 +555,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mMainKeyboardFrame.setVisibility(View.VISIBLE);
         mKeyboardView.setVisibility(View.GONE);
         mEmojiTabStripView.setVisibility(View.GONE);
-        mSuggestionStripView.setVisibility(View.VISIBLE);
-        mStripContainer.setVisibility(View.VISIBLE);
+        mSuggestionStripView.setVisibility(View.GONE);
+        mStripContainer.setVisibility(View.GONE);
         mClipboardStripScrollView.setVisibility(View.GONE);
         mEmojiPalettesView.setVisibility(View.GONE);
         mClipboardHistoryView.setVisibility(View.GONE);
@@ -579,6 +579,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (DEBUG_ACTION) {
             Log.d(TAG, "showOcrResult");
         }
+        mSuggestionStripView.setVisibility(View.VISIBLE);
+        mStripContainer.setVisibility(View.VISIBLE);
         if (mOcrCameraView != null) {
             mOcrCameraView.stopCamera();
             mOcrCameraView.setVisibility(View.GONE);
@@ -591,6 +593,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     public void hideOcrPanels() {
+        mSuggestionStripView.setVisibility(View.VISIBLE);
+        mStripContainer.setVisibility(View.VISIBLE);
         if (mOcrCameraView != null) {
             if (mOcrCameraView.isShown()) {
                 mOcrCameraView.stopCamera();
