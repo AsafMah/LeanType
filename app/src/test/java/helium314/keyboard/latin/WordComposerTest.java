@@ -3,6 +3,7 @@ package helium314.keyboard.latin;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
@@ -87,14 +88,14 @@ public class WordComposerTest {
 
         // Prior fragment trail (e.g. the tapped "he" key centers) — 2 points.
         final InputPointers base = new InputPointers(16);
-        base.addPointer(10, 20, 0, 0);
-        base.addPointer(30, 40, 0, 0);
+        base.addPointer(10, 20, 4, 0);
+        base.addPointer(30, 40, 5, 0);
 
         // The new gesture's raw pointers — 3 points with real, increasing times.
         final InputPointers batch = new InputPointers(16);
-        batch.addPointer(100, 200, 0, 1000);
-        batch.addPointer(110, 210, 0, 1025);
-        batch.addPointer(120, 220, 0, 1050);
+        batch.addPointer(100, 200, 7, 1000);
+        batch.addPointer(110, 210, 8, 1025);
+        batch.addPointer(120, 220, 9, 1050);
 
         wordComposer.setExtendBatchInputBase(base);
         assertTrue(wordComposer.isExtendBatchInputBaseSet());
@@ -105,25 +106,19 @@ public class WordComposerTest {
         // base (2) + new gesture (3) = 5, fed to the recognizer as one continuous stroke.
         assertEquals(5, merged.getPointerSize());
 
-        final int[] xs = merged.getXCoordinates();
-        final int[] times = merged.getTimes();
-
-        // Base coordinates come first, in order, untouched.
-        assertEquals(10, xs[0]);
-        assertEquals(30, xs[1]);
-        // New gesture coordinates follow, untouched.
-        assertEquals(100, xs[2]);
-        assertEquals(110, xs[3]);
-        assertEquals(120, xs[4]);
-
-        // The new gesture's ORIGINAL times are preserved verbatim (appendAll).
-        assertEquals(1000, times[2]);
-        assertEquals(1025, times[3]);
-        assertEquals(1050, times[4]);
+        assertArrayEquals(new int[] { 10, 30, 100, 110, 120 },
+                java.util.Arrays.copyOf(merged.getXCoordinates(), 5));
+        assertArrayEquals(new int[] { 20, 40, 200, 210, 220 },
+                java.util.Arrays.copyOf(merged.getYCoordinates(), 5));
+        assertArrayEquals(new int[] { 915, 940, 1000, 1025, 1050 },
+                java.util.Arrays.copyOf(merged.getTimes(), 5));
+        assertArrayEquals(new int[] { 0, 0, 0, 0, 0 },
+                java.util.Arrays.copyOf(merged.getPointerIds(), 5));
 
         // The re-timed base sits strictly BEFORE the new gesture, and the whole stream is
         // monotonically increasing — that's what makes the recognizer treat it as a single
         // stroke rather than two distinct ones.
+        final int[] times = merged.getTimes();
         for (int i = 1; i < merged.getPointerSize(); i++) {
             assertTrue("times must strictly increase at index " + i, times[i] > times[i - 1]);
         }

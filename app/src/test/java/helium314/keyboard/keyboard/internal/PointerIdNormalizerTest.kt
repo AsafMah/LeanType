@@ -9,8 +9,7 @@ import kotlin.test.assertNotEquals
  *
  * The native gesture decoder keeps exactly two per-pointer tracks and seeds track *i* with pointer
  * id *i* (`jni/src/defines.h` MAX_POINTER_COUNT_G, `dic_traverse_session.cpp`). Two failure modes
- * follow, both measured against the real AOSP preprocessing in
- * `jni/tests/replay/two_pointer_track_test.cpp`:
+ * follow from that in-tree preprocessing:
  *
  *  - no point carrying id 0 ⇒ track 0 unused ⇒ `Suggest::initializeSearch` returns early ⇒
  *    **zero suggestions**;

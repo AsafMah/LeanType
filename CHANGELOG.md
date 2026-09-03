@@ -22,17 +22,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 - **Fast double-taps on Shift enable Caps Lock again.** The prior duplicate-event workaround rejected legitimate taps less than 100 ms apart; distinct taps are now identified by their press/release boundary instead. (#146)
-- **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order. (#135)
-- **The two-thumb recognition settings no longer appear when they cannot work.** They synthesise touch points for the native gesture decoder; the built-in fallback engine scores a single trail and ignores which thumb drew it, so applying them there corrupted the trail and produced nonsense words. The group is now gated on a loaded gesture library, and explains itself when the spacing mode leaves it inert, instead of showing controls that structurally cannot take effect. (#141)
+- **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order. (#135, #147)
 
 ### Changed
-- Two experimental recognition modes exist behind settings — feeding the two thumbs as separate decoder tracks, and redrawing earlier word parts through key centres — but they are **off by default and not currently recommended**. On a device with a user-supplied gesture library they produce incorrect words: the decoder that actually runs is a closed third-party library, not the in-repo AOSP engine whose two-pointer-track behaviour the research measured. (#135, #144)
-- Documented the two-thumb decoder research in `docs/TWO_THUMB_TEMPORAL_ALIGNMENT.md`, including the measurement that deliberately overlapping stroke timestamps corrupts the decoder's speed features rather than helping. (#135)
+- **Removed falsified two-thumb recognition experiments from production paths.** The separate decoder-track mode, synthetic ideal-prefix trail, and their timing controls produced incorrect words with the gesture library that actually runs on devices. Multi-part composition now uses the proven pre-experiment connector path directly again. (#147)
+- Reframed the two-thumb decoder research as a historical record that distinguishes in-tree preprocessing facts from claims falsified against the closed runtime recognizer. (#147)
 
 ### Reliability & testing
 - Added source-level and packaged-APK gates that fail upstream merges when LeanTypeDual's identity, privacy flavors, bundled offline dictionaries, fork integrations, or four-flavor release coverage are lost. (#148)
-- Added a native gesture **two-pointer track harness** (`jni/tests/replay/two_pointer_track_test.cpp`) that drives the real AOSP `ProximityInfoState` on the host, with tunable knobs and a printed sweep table. Runs in CI alongside the existing native suite. Note that it exercises the in-repo engine, which is not the decoder used when a gesture library is loaded. (#135, #144)
-- The multi-part trail merge moved behind a pure, unit-tested `StrokeAligner` seam whose defaults reproduce the previous behaviour exactly. (#135)
+- Kept the independently useful pointer-id normalization regression coverage, added production-wiring coverage for the no-id-0 case, and pinned the restored connector's exact coordinates, timestamps, and pointer ids. Removed the native research harness whose results were easy to mistake for runtime recognizer behavior. (#147)
 
 ## [0.3.0] - 2026-08-20
 

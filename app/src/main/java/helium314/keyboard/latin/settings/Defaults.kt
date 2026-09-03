@@ -200,10 +200,6 @@ object Defaults {
     const val PREF_MULTIPART_FULL_WORD_SUGGESTIONS = true
     const val PREF_MULTIPART_TAP_SEED_GESTURE = true
     const val PREF_MULTIPART_RERECOGNIZE_TAPS = false
-    const val PREF_STROKE_ALIGN_MODE = "connector"
-    const val PREF_STROKE_ALIGN_INTERVAL_MS = 25
-    const val PREF_STROKE_ALIGN_GAP_MS = 60
-    const val PREF_STROKE_IDEAL_PREFIX = false
     const val PREF_SHOW_SETUP_WIZARD_ICON = true
     const val PREF_USE_CONTACTS = false
     const val PREF_USE_APPS = false

@@ -59,7 +59,6 @@ fun TwoThumbTypingScreen(
     val backspaceBehavior = currentBackspaceBehavior(prefs)
     val dualThumbHinting = prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING, Defaults.PREF_GESTURE_DUAL_THUMB_HINTING)
     val debugDrawPoints = prefs.getBoolean(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS, Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS)
-    val strokeAlignMode = prefs.getString(Settings.PREF_STROKE_ALIGN_MODE, Defaults.PREF_STROKE_ALIGN_MODE)
 
     val items = buildList {
         add(R.string.settings_category_two_thumb_typing_words)
@@ -83,30 +82,6 @@ fun TwoThumbTypingScreen(
         }
 
         add(R.string.settings_category_two_thumb_typing_recognition)
-        // Everything in this group synthesises or re-labels the points handed to the gesture
-        // decoder, and only the native decoder acts on them: it partitions points by pointer id
-        // and has its own scoring. The Java fallback engine ignores pointer ids and scores a
-        // single trail, so feeding it invented connector points or a synthetic key-centre prefix
-        // does not improve recognition -- it corrupts the trail and produces nonsense words.
-        // So gate the whole group, and say why rather than silently showing nothing.
-        if (JniUtils.sHaveNativeGestureLib) {
-            // These only take effect during multi-part word composition, and that is armed by
-            // the spacing mode above (manual spacing, or a non-zero combining grace). At the
-            // default spacing mode StrokeAligner is never reached at all -- see
-            // WordComposer.setBatchInputPointers -- so the settings would appear to do nothing.
-            // Show them, but say so, rather than letting someone conclude the feature is broken.
-            if (!nonNormalSpacing) {
-                add(SettingsWithoutKey.TWO_THUMB_RECOGNITION_NEEDS_MULTIPART)
-            }
-            add(Settings.PREF_STROKE_ALIGN_MODE)
-            add(Settings.PREF_STROKE_IDEAL_PREFIX)
-            if (strokeAlignMode == "dual_pointer") {
-                add(Settings.PREF_STROKE_ALIGN_INTERVAL_MS)
-                add(Settings.PREF_STROKE_ALIGN_GAP_MS)
-            }
-        } else {
-            add(SettingsWithoutKey.TWO_THUMB_RECOGNITION_NEEDS_NATIVE_LIB)
-        }
         add(Settings.PREF_GESTURE_DUAL_THUMB_HINTING)
         if (dualThumbHinting) {
             add(Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT)
@@ -147,18 +122,6 @@ fun TwoThumbTypingScreen(
 }
 
 fun createTwoThumbTypingSettings(context: Context) = listOf(
-    // Shown instead of the recognition settings when no native gesture library is loaded.
-    // Those settings synthesise points for the native decoder; the Java fallback engine scores
-    // a single trail and ignores pointer ids, so applying them there corrupts the trail and
-    // produces nonsense words. Saying so beats silently rendering an empty category.
-    Setting(context, SettingsWithoutKey.TWO_THUMB_RECOGNITION_NEEDS_NATIVE_LIB,
-        R.string.two_thumb_recognition_needs_lib, R.string.two_thumb_recognition_needs_lib_summary) { def ->
-        Preference(name = def.title, description = def.description, enabled = false, onClick = { })
-    },
-    Setting(context, SettingsWithoutKey.TWO_THUMB_RECOGNITION_NEEDS_MULTIPART,
-        R.string.two_thumb_recognition_needs_multipart, R.string.two_thumb_recognition_needs_multipart_summary) { def ->
-        Preference(name = def.title, description = def.description, enabled = false, onClick = { })
-    },
     Setting(context, SettingsWithoutKey.TWO_THUMB_SPACING_MODE,
         R.string.two_thumb_spacing_mode, R.string.two_thumb_spacing_mode_summary) {
         TwoThumbSpacingModePreference(it)
@@ -237,37 +200,6 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
         R.string.two_thumb_point_hinting, R.string.two_thumb_point_hinting_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_DUAL_THUMB_HINTING)
-    },
-    Setting(context, Settings.PREF_STROKE_ALIGN_MODE,
-        R.string.stroke_align_mode, R.string.stroke_align_mode_summary) { def ->        val items = listOf(
-            stringResource(R.string.stroke_align_mode_connector) to "connector",
-            stringResource(R.string.stroke_align_mode_dual_pointer) to "dual_pointer",
-        )
-        ListPreference(def, items, Defaults.PREF_STROKE_ALIGN_MODE)
-    },
-    Setting(context, Settings.PREF_STROKE_IDEAL_PREFIX,
-        R.string.stroke_ideal_prefix, R.string.stroke_ideal_prefix_summary) {
-        SwitchPreference(it, Defaults.PREF_STROKE_IDEAL_PREFIX)
-    },
-    Setting(context, Settings.PREF_STROKE_ALIGN_INTERVAL_MS,
-        R.string.stroke_align_interval, R.string.stroke_align_interval_summary) { def ->
-        SliderPreference(
-            name = def.title,
-            key = def.key,
-            default = Defaults.PREF_STROKE_ALIGN_INTERVAL_MS,
-            range = 5f..60f,
-            description = { value -> "${value.toInt()} ms" }
-        )
-    },
-    Setting(context, Settings.PREF_STROKE_ALIGN_GAP_MS,
-        R.string.stroke_align_gap, R.string.stroke_align_gap_summary) { def ->
-        SliderPreference(
-            name = def.title,
-            key = def.key,
-            default = Defaults.PREF_STROKE_ALIGN_GAP_MS,
-            range = 5f..200f,
-            description = { value -> "${value.toInt()} ms" }
-        )
     },
     Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT, R.string.gesture_dual_thumb_midline) { def ->
         SliderPreference(

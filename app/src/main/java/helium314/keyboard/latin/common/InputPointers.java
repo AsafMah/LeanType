@@ -107,46 +107,13 @@ public final class InputPointers {
     }
 
     /**
-     * Append all pointers from {@code other} to the end of this, forcing pointer id 0.
-     *
-     * <p>Historically this was the only merge path, which is why the decoder's second pointer
-     * track was never populated by multi-part composition. Prefer
-     * {@link #appendAll(InputPointers, int)} when the caller knows which track the points belong
-     * to — see {@link helium314.keyboard.latin.gesture.StrokeAligner}.
+     * Append all pointers from {@code other} to the end of this. Pointer ids are forced to
+     * 0 since multi-part gesture composition doesn't preserve pointer identity across
+     * separate strokes.
      */
     public void appendAll(@NonNull final InputPointers other) {
-        appendAll(other, 0);
-    }
-
-    /**
-     * Append all pointers from {@code other} to the end of this, stamping them with
-     * {@code pointerId}.
-     *
-     * <p>The native decoder keeps one {@code ProximityInfoState} per pointer id (two of them,
-     * {@code MAX_POINTER_COUNT_G}) and each state ingests <em>only</em> the points carrying its own
-     * id. So this argument decides which decoder track the appended stroke lands in. Ids outside
-     * {@code [0, 1]} reach no track at all.
-     */
-    public void appendAll(@NonNull final InputPointers other, final int pointerId) {
-        append(pointerId, other.mTimes, other.mXCoordinates, other.mYCoordinates, 0,
+        append(0, other.mTimes, other.mXCoordinates, other.mYCoordinates, 0,
                 other.getPointerSize());
-    }
-
-    /**
-     * Append all pointers from {@code other}, keeping each point's own pointer id.
-     *
-     * <p>Used when {@code other} is already a genuine multi-pointer stroke whose track assignment
-     * must survive the merge.
-     */
-    public void appendAllPreservingIds(@NonNull final InputPointers other) {
-        final int length = other.getPointerSize();
-        if (length == 0) {
-            return;
-        }
-        mXCoordinates.append(other.mXCoordinates, 0, length);
-        mYCoordinates.append(other.mYCoordinates, 0, length);
-        mPointerIds.append(other.mPointerIds, 0, length);
-        mTimes.append(other.mTimes, 0, length);
     }
 
     public void reset() {

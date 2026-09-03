@@ -18,8 +18,6 @@ import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.common.StringUtils;
 import helium314.keyboard.latin.define.DebugFlags;
 import helium314.keyboard.latin.define.DecoderSpecificConstants;
-import helium314.keyboard.latin.gesture.StrokeAligner;
-import helium314.keyboard.latin.settings.Settings;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,6 +61,13 @@ public final class WordComposer {
     // huge time discontinuity at the prefix/swipe boundary and confuse the recognizer.
     private final InputPointers mExtendBatchInputBase = new InputPointers(MAX_WORD_LENGTH);
     private boolean mExtendBatchInputBaseSet;
+    // Inter-point interval used when synthesising timestamps for the base. Roughly the
+    // sampling rate of a fast hand-drawn swipe; chosen to look like natural gesture speed.
+    private static final int EXTEND_BASE_POINT_INTERVAL_MS = 25;
+    // Gap inserted between the last synthetic base point and the first real point of the
+    // current gesture. Pretends the user briefly paused at the prefix endpoint before
+    // continuing the stroke — within the recogniser's "single stroke" tolerance.
+    private static final int EXTEND_BASE_GAP_BEFORE_NEW_MS = 60;
 
     // Cache these values for performance
     private CharSequence mTypedWordCache;
@@ -280,10 +285,20 @@ public final class WordComposer {
         if (mExtendBatchInputBaseSet && mExtendBatchInputBase.getPointerSize() > 0
                 && batchPointers.getPointerSize() > 0) {
             // Multi-part composition: feed the lib the merged trail (prior fragments +
-            // current gesture). StrokeAligner owns the re-timing and the pointer-id policy —
-            // see docs/TWO_THUMB_TEMPORAL_ALIGNMENT.md.
-            StrokeAligner.merge(mInputPointers, mExtendBatchInputBase, batchPointers,
-                    Settings.getValues().mStrokeAlignParams);
+            // current gesture) with synthesised timestamps so the base looks like a
+            // natural continuation of the new gesture.
+            final int baseSize = mExtendBatchInputBase.getPointerSize();
+            final int[] baseX = mExtendBatchInputBase.getXCoordinates();
+            final int[] baseY = mExtendBatchInputBase.getYCoordinates();
+            final int firstNewTime = batchPointers.getTimes()[0];
+            final int baseLastTime = firstNewTime - EXTEND_BASE_GAP_BEFORE_NEW_MS;
+            final int baseFirstTime = baseLastTime - (baseSize - 1) * EXTEND_BASE_POINT_INTERVAL_MS;
+            mInputPointers.reset();
+            for (int i = 0; i < baseSize; i++) {
+                mInputPointers.addPointer(baseX[i], baseY[i], 0,
+                        baseFirstTime + i * EXTEND_BASE_POINT_INTERVAL_MS);
+            }
+            mInputPointers.appendAll(batchPointers);
         } else {
             mInputPointers.set(batchPointers);
         }
