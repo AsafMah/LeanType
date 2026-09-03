@@ -15,41 +15,41 @@
         android:layout_height="match_parent"
         app:scaleType="fillCenter" />
 
-    <!-- Top End Action Strap: Flash and Close grouped on top right -->
-    <LinearLayout
+    <!-- Top Action Bar: Flash on Top-Left, Close on Top-Right -->
+    <RelativeLayout
         android:id="@+id/ocr_top_bar"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|end"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginEnd="12dp"
-        android:layout_marginTop="12dp"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
-        android:background="#80000000">
+        android:layout_gravity="top"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
 
         <ImageButton
             android:id="@+id/btn_ocr_flash"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
             android:src="@drawable/ic_flash_off"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/clipboard_suggestion_background"
+            android:padding="8dp"
             android:contentDescription="@string/ocr_flash_button_desc"
             android:tint="#FFFFFFFF" />
 
         <ImageButton
             android:id="@+id/btn_ocr_close"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="8dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
             android:src="@drawable/ic_close"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/clipboard_suggestion_background"
+            android:padding="8dp"
             android:contentDescription="@string/dialog_close"
             android:tint="#FFFFFFFF" />
-    </LinearLayout>
+    </RelativeLayout>
 
     <!-- Bottom Shutter Button: Clean circular shutter centered with safe bottom margin -->
     <LinearLayout
@@ -64,8 +64,8 @@
 
         <ImageButton
             android:id="@+id/btn_ocr_shutter"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:src="@drawable/ic_shutter"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/ocr_shutter_button_desc" />

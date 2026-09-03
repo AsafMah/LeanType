@@ -71,16 +71,6 @@ class OcrResultView @JvmOverloads constructor(
         }
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val settingsValues = Settings.getValues()
-        val keyboardHeight = ResourceUtils.getKeyboardHeight(context.resources, settingsValues)
-        val width = MeasureSpec.getSize(widthMeasureSpec)
-        val exactHeightSpec = MeasureSpec.makeMeasureSpec(keyboardHeight, MeasureSpec.EXACTLY)
-        val exactWidthSpec = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY)
-        super.onMeasure(exactWidthSpec, exactHeightSpec)
-        setMeasuredDimension(width, keyboardHeight)
-    }
-
     fun setListener(listener: OcrResultListener) {
         this.listener = listener
     }
