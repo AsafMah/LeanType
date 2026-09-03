@@ -653,40 +653,28 @@ fun VoiceSettingsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(vertical = 8.dp)
             ) {
-                // Microphone permission card (only show when not granted)
-                if (!isMicPermissionGranted) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
+                // Permissions Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        PreferenceCategory("Permissions")
+
+                        Preference(
+                            name = "Microphone Permission",
+                            description = if (isMicPermissionGranted) "Permission granted" else "Tap to grant microphone permission for voice dictation",
+                            onClick = {
+                                if (!isMicPermissionGranted) {
+                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            },
+                            icon = R.drawable.sym_keyboard_voice_holo
                         )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Microphone Permission",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = "Permission required for voice dictation",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                            Button(onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
-                                Text("Grant")
-                            }
-                        }
                     }
                 }
 
