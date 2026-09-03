@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.util.AttributeSet
 import android.view.Gravity
+import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -63,11 +64,10 @@ class OcrResultView @JvmOverloads constructor(
         val ratio = if (defaultStripHeight > 0) defaultEdgeWidth.toFloat() / defaultStripHeight else 0.9f
         val keyDimension = (stripHeight * ratio).toInt().coerceAtLeast(1)
 
+        val keys = mutableListOf<View>()
+
         fun addKey(key: ToolbarKey, onClick: () -> Unit) {
             val button = createToolbarKey(context, key).apply {
-                layoutParams = LayoutParams(keyDimension, keyDimension).apply {
-                    gravity = Gravity.CENTER_VERTICAL
-                }
                 setOnClickListener {
                     AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
                     onClick()
@@ -75,6 +75,7 @@ class OcrResultView @JvmOverloads constructor(
             }
             setToolbarButtonActivatedState(button)
             ocrStrip.addView(button)
+            keys.add(button)
         }
 
         // 1. Close / Return to keyboard
@@ -133,6 +134,41 @@ class OcrResultView @JvmOverloads constructor(
             val text = resultEditText?.text?.toString() ?: ""
             listener?.onInsertText(text)
         }
+
+        fun applyKeyLayout() {
+            val containerWidth = (ocrScrollView?.width?.takeIf { it > 0 }
+                ?: ocrStrip.width.takeIf { it > 0 }
+                ?: ResourceUtils.getKeyboardWidth(context, Settings.getValues())).coerceAtLeast(0)
+
+            val count = keys.size
+            if (count == 0) return
+
+            val isAutoSpan = Settings.getValues().mAutoSpanToolbarKeys
+            val minSpannedKeyWidth = (keyDimension * 1.25f).toInt()
+            val canSpan = containerWidth > 0 && (containerWidth / count >= minSpannedKeyWidth)
+            val useEqualSpacing = isAutoSpan && canSpan
+
+            val alignmentGravity = when (Settings.getValues().mToolbarKeysAlignment) {
+                "left" -> Gravity.START or Gravity.CENTER_VERTICAL
+                "center" -> Gravity.CENTER
+                else -> Gravity.END or Gravity.CENTER_VERTICAL
+            }
+            ocrStrip.gravity = if (useEqualSpacing) Gravity.NO_GRAVITY else alignmentGravity
+
+            val spannedLayoutParams = LinearLayout.LayoutParams(0, keyDimension, 1f).apply {
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val standardLayoutParams = LinearLayout.LayoutParams(keyDimension, keyDimension).apply {
+                gravity = Gravity.CENTER_VERTICAL
+            }
+
+            for (keyView in keys) {
+                keyView.layoutParams = if (useEqualSpacing) spannedLayoutParams else standardLayoutParams
+            }
+        }
+
+        applyKeyLayout()
+        ocrStrip.post { applyKeyLayout() }
     }
 
     fun setResultText(lines: List<String>) {
