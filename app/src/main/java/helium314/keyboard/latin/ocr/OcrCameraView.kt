@@ -14,7 +14,9 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.Colors
+import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.ResourceUtils
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.SettingsDestination
 
@@ -63,6 +65,16 @@ class OcrCameraView @JvmOverloads constructor(
         }
 
         setupButtons()
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val settingsValues = Settings.getValues()
+        val keyboardHeight = ResourceUtils.getKeyboardHeight(context.resources, settingsValues)
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        val exactHeightSpec = MeasureSpec.makeMeasureSpec(keyboardHeight, MeasureSpec.EXACTLY)
+        val exactWidthSpec = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY)
+        super.onMeasure(exactWidthSpec, exactHeightSpec)
+        setMeasuredDimension(width, keyboardHeight)
     }
 
     fun setListener(listener: OcrViewListener) {
