@@ -15,18 +15,18 @@
         android:layout_height="match_parent"
         app:scaleType="fillCenter" />
 
-    <!-- Top Action Bar: Flash on Top-Left, Close on Top-Right -->
+    <!-- Unified Bottom Controls Bar: Flash (left), Shutter (center), Close (right) -->
     <LinearLayout
-        android:id="@+id/ocr_top_bar"
+        android:id="@+id/ocr_controls_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="top"
+        android:layout_gravity="bottom"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp">
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp"
+        android:paddingBottom="24dp"
+        android:paddingTop="8dp">
 
         <ImageButton
             android:id="@+id/btn_ocr_flash"
@@ -45,6 +45,19 @@
             android:layout_weight="1" />
 
         <ImageButton
+            android:id="@+id/btn_ocr_shutter"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/ic_shutter"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/ocr_shutter_button_desc" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
             android:id="@+id/btn_ocr_close"
             android:layout_width="44dp"
             android:layout_height="44dp"
@@ -54,26 +67,6 @@
             android:padding="10dp"
             android:contentDescription="@string/dialog_close"
             app:tint="#FFFFFFFF" />
-    </LinearLayout>
-
-    <!-- Bottom Shutter Button: Clean circular shutter centered with safe bottom margin -->
-    <LinearLayout
-        android:id="@+id/ocr_controls_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingBottom="24dp"
-        android:paddingTop="8dp">
-
-        <ImageButton
-            android:id="@+id/btn_ocr_shutter"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:src="@drawable/ic_shutter"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/ocr_shutter_button_desc" />
     </LinearLayout>
 
     <LinearLayout
