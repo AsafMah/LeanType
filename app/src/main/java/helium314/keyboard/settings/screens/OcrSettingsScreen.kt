@@ -33,6 +33,7 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.ocr.OcrPluginLoader
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
+import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.LoadOcrPluginPreference
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.PreferenceCategory
@@ -57,10 +58,36 @@ fun OcrSettingsScreen(
         isCameraPermissionGranted = granted
     }
 
+    val casingOptions = remember {
+        listOf(
+            context.getString(R.string.ocr_casing_as_is) to "as_is",
+            context.getString(R.string.ocr_casing_sentence) to "sentence",
+            context.getString(R.string.ocr_casing_lower) to "lower",
+            context.getString(R.string.ocr_casing_upper) to "upper",
+            context.getString(R.string.ocr_casing_title_case) to "title"
+        )
+    }
+
+    val lineJoinOptions = remember {
+        listOf(
+            context.getString(R.string.ocr_line_join_newline) to "newline",
+            context.getString(R.string.ocr_line_join_space) to "space",
+            context.getString(R.string.ocr_line_join_comma) to "comma",
+            context.getString(R.string.ocr_line_join_bullet) to "bullet",
+            context.getString(R.string.ocr_line_join_numbered) to "numbered"
+        )
+    }
+
     val settings = remember {
         listOf(
+            OcrPluginLoader.PREF_OCR_CASING,
+            OcrPluginLoader.PREF_OCR_LINE_JOIN_FORMAT,
             OcrPluginLoader.PREF_OCR_KEEP_LINE_BREAKS,
             OcrPluginLoader.PREF_OCR_TRIM_WHITESPACE,
+            OcrPluginLoader.PREF_OCR_DEHYPHENATE,
+            OcrPluginLoader.PREF_OCR_NORMALIZE_PUNCTUATION,
+            OcrPluginLoader.PREF_OCR_STRIP_BULLETS,
+            OcrPluginLoader.PREF_OCR_REMOVE_NOISE,
             OcrPluginLoader.PREF_OCR_AUTO_COPY,
             OcrPluginLoader.PREF_OCR_AUTO_INSERT,
             OcrPluginLoader.PREF_OCR_SUGGEST_SCREENSHOT_TEXT,
@@ -140,6 +167,18 @@ fun OcrSettingsScreen(
                     Column {
                         PreferenceCategory(stringResource(R.string.ocr_text_options_category))
 
+                        ListPreference(
+                            setting = Setting(context, OcrPluginLoader.PREF_OCR_CASING, R.string.ocr_casing_title) {},
+                            items = casingOptions,
+                            default = "as_is"
+                        )
+
+                        ListPreference(
+                            setting = Setting(context, OcrPluginLoader.PREF_OCR_LINE_JOIN_FORMAT, R.string.ocr_line_join_title) {},
+                            items = lineJoinOptions,
+                            default = "newline"
+                        )
+
                         SwitchPreference(
                             name = stringResource(R.string.ocr_keep_line_breaks),
                             description = stringResource(R.string.ocr_keep_line_breaks_summary),
@@ -151,6 +190,34 @@ fun OcrSettingsScreen(
                             name = stringResource(R.string.ocr_trim_whitespace),
                             description = stringResource(R.string.ocr_trim_whitespace_summary),
                             key = OcrPluginLoader.PREF_OCR_TRIM_WHITESPACE,
+                            default = true
+                        )
+
+                        SwitchPreference(
+                            name = stringResource(R.string.ocr_dehyphenate),
+                            description = stringResource(R.string.ocr_dehyphenate_summary),
+                            key = OcrPluginLoader.PREF_OCR_DEHYPHENATE,
+                            default = true
+                        )
+
+                        SwitchPreference(
+                            name = stringResource(R.string.ocr_normalize_punctuation),
+                            description = stringResource(R.string.ocr_normalize_punctuation_summary),
+                            key = OcrPluginLoader.PREF_OCR_NORMALIZE_PUNCTUATION,
+                            default = false
+                        )
+
+                        SwitchPreference(
+                            name = stringResource(R.string.ocr_strip_bullets),
+                            description = stringResource(R.string.ocr_strip_bullets_summary),
+                            key = OcrPluginLoader.PREF_OCR_STRIP_BULLETS,
+                            default = false
+                        )
+
+                        SwitchPreference(
+                            name = stringResource(R.string.ocr_remove_noise),
+                            description = stringResource(R.string.ocr_remove_noise_summary),
+                            key = OcrPluginLoader.PREF_OCR_REMOVE_NOISE,
                             default = true
                         )
                     }
@@ -216,23 +283,58 @@ fun OcrSettingsScreen(
     }
 }
 
-fun createOcrSettings(context: Context): List<Setting> = listOf(
-    Setting(context, OcrPluginLoader.PREF_OCR_KEEP_LINE_BREAKS, R.string.ocr_keep_line_breaks, R.string.ocr_keep_line_breaks_summary) {
-        SwitchPreference(it, true)
-    },
-    Setting(context, OcrPluginLoader.PREF_OCR_TRIM_WHITESPACE, R.string.ocr_trim_whitespace, R.string.ocr_trim_whitespace_summary) {
-        SwitchPreference(it, true)
-    },
-    Setting(context, OcrPluginLoader.PREF_OCR_AUTO_COPY, R.string.ocr_auto_copy, R.string.ocr_auto_copy_summary) {
-        SwitchPreference(it, false)
-    },
-    Setting(context, OcrPluginLoader.PREF_OCR_AUTO_INSERT, R.string.ocr_auto_insert, R.string.ocr_auto_insert_summary) {
-        SwitchPreference(it, false)
-    },
-    Setting(context, OcrPluginLoader.PREF_OCR_SUGGEST_SCREENSHOT_TEXT, R.string.ocr_suggest_screenshot_text, R.string.ocr_suggest_screenshot_text_summary) {
-        SwitchPreference(it, true)
-    },
-    Setting(context, OcrPluginLoader.PREF_OCR_PERSIST_FLASH, R.string.ocr_persist_flash, R.string.ocr_persist_flash_summary) {
-        SwitchPreference(it, false)
-    },
-)
+fun createOcrSettings(context: Context): List<Setting> {
+    val casingOptions = listOf(
+        context.getString(R.string.ocr_casing_as_is) to "as_is",
+        context.getString(R.string.ocr_casing_sentence) to "sentence",
+        context.getString(R.string.ocr_casing_lower) to "lower",
+        context.getString(R.string.ocr_casing_upper) to "upper",
+        context.getString(R.string.ocr_casing_title_case) to "title"
+    )
+    val lineJoinOptions = listOf(
+        context.getString(R.string.ocr_line_join_newline) to "newline",
+        context.getString(R.string.ocr_line_join_space) to "space",
+        context.getString(R.string.ocr_line_join_comma) to "comma",
+        context.getString(R.string.ocr_line_join_bullet) to "bullet",
+        context.getString(R.string.ocr_line_join_numbered) to "numbered"
+    )
+
+    return listOf(
+        Setting(context, OcrPluginLoader.PREF_OCR_CASING, R.string.ocr_casing_title) {
+            ListPreference(it, casingOptions, "as_is")
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_LINE_JOIN_FORMAT, R.string.ocr_line_join_title) {
+            ListPreference(it, lineJoinOptions, "newline")
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_KEEP_LINE_BREAKS, R.string.ocr_keep_line_breaks, R.string.ocr_keep_line_breaks_summary) {
+            SwitchPreference(it, true)
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_TRIM_WHITESPACE, R.string.ocr_trim_whitespace, R.string.ocr_trim_whitespace_summary) {
+            SwitchPreference(it, true)
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_DEHYPHENATE, R.string.ocr_dehyphenate, R.string.ocr_dehyphenate_summary) {
+            SwitchPreference(it, true)
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_NORMALIZE_PUNCTUATION, R.string.ocr_normalize_punctuation, R.string.ocr_normalize_punctuation_summary) {
+            SwitchPreference(it, false)
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_STRIP_BULLETS, R.string.ocr_strip_bullets, R.string.ocr_strip_bullets_summary) {
+            SwitchPreference(it, false)
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_REMOVE_NOISE, R.string.ocr_remove_noise, R.string.ocr_remove_noise_summary) {
+            SwitchPreference(it, true)
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_AUTO_COPY, R.string.ocr_auto_copy, R.string.ocr_auto_copy_summary) {
+            SwitchPreference(it, false)
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_AUTO_INSERT, R.string.ocr_auto_insert, R.string.ocr_auto_insert_summary) {
+            SwitchPreference(it, false)
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_SUGGEST_SCREENSHOT_TEXT, R.string.ocr_suggest_screenshot_text, R.string.ocr_suggest_screenshot_text_summary) {
+            SwitchPreference(it, true)
+        },
+        Setting(context, OcrPluginLoader.PREF_OCR_PERSIST_FLASH, R.string.ocr_persist_flash, R.string.ocr_persist_flash_summary) {
+            SwitchPreference(it, false)
+        },
+    )
+}
