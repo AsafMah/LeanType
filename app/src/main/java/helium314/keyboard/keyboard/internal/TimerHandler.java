@@ -28,6 +28,7 @@ public final class TimerHandler extends LeakGuardHandlerWrapper<DrawingProxy>
     private static final int MSG_UPDATE_BATCH_INPUT = 5;
     private static final int MSG_DISMISS_KEY_PREVIEW = 6;
     private static final int MSG_DISMISS_GESTURE_FLOATING_PREVIEW_TEXT = 7;
+    static final int DOUBLE_TAP_SHIFT_KEY_TIMEOUT_MILLIS = 300;
 
     private final int mIgnoreAltCodeKeyTimeout;
     private final int mGestureRecognitionUpdateTime;
@@ -163,7 +164,8 @@ public final class TimerHandler extends LeakGuardHandlerWrapper<DrawingProxy>
 
     @Override
     public void startDoubleTapShiftKeyTimer() {
-        sendMessageDelayed(obtainMessage(MSG_DOUBLE_TAP_SHIFT_KEY), 300);
+        sendMessageDelayed(obtainMessage(MSG_DOUBLE_TAP_SHIFT_KEY),
+                DOUBLE_TAP_SHIFT_KEY_TIMEOUT_MILLIS);
     }
 
 
