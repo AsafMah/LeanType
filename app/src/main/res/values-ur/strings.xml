@@ -474,59 +474,6 @@
   <item>کیٹالان</item>
   <item>باسکی</item>
 </string-array>
-    <string-array name="translate_language_codes">
-  <item>انگریزی</item>
-  <item>ہسپانوی</item>
-  <item>فرانسیسی</item>
-  <item>جرمن</item>
-  <item>اطالوی</item>
-  <item>پرتگالی</item>
-  <item>چینی (آسان)</item>
-  <item>چینی (روایتی)</item>
-  <item>جاپانی</item>
-  <item>کوریائی</item>
-  <item>عربی</item>
-  <item>روسی</item>
-  <item>ہندی</item>
-  <item>بنگالی</item>
-  <item>انڈونیشیائی</item>
-  <item>ولندیزی</item>
-  <item>ترکی</item>
-  <item>پولش</item>
-  <item>یوکرائنی</item>
-  <item>سویڈش</item>
-  <item>ڈینش</item>
-  <item>نارویجن</item>
-  <item>فنش</item>
-  <item>یونانی</item>
-  <item>عبرانی</item>
-  <item>تھائی</item>
-  <item>ویتنامی</item>
-  <item>تامل</item>
-  <item>تیلگو</item>
-  <item>مراٹھی</item>
-  <item>گجراتی</item>
-  <item>کنڑ</item>
-  <item>ملیالم</item>
-  <item>اردو</item>
-  <item>فارسی</item>
-  <item>سواحلی</item>
-  <item>رومانیہ</item>
-  <item>چیک</item>
-  <item>ہنگری</item>
-  <item>فلپائنی (ٹیگالوگ)</item>
-  <item>ملائی</item>
-  <item>سربین</item>
-  <item>کروشین</item>
-  <item>بلغاریائی</item>
-  <item>سلوواک</item>
-  <item>سلووین</item>
-  <item>لتھواینین</item>
-  <item>لاطویائی</item>
-  <item>اسٹونین</item>
-  <item>کیٹالان</item>
-  <item>باسکی</item>
-</string-array>
     <string name="clipboard_toolbar_keys">کلپ بورڈ ٹول بار کیز منتخب کریں</string>
     <string name="pinned_toolbar_keys">پن کی گئی ٹول بار کیز منتخب کریں</string>
     <string name="quick_pin_toolbar_keys">دیر تک دبانے پر ٹول بار کلید پن کریں</string>

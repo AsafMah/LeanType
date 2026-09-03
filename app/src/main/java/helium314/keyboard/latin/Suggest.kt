@@ -9,6 +9,7 @@ import android.text.TextUtils
 import android.util.LruCache
 import com.android.inputmethod.latin.utils.BinaryDictionaryUtils
 import helium314.keyboard.keyboard.Keyboard
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
 import helium314.keyboard.latin.common.ComposedData
 import helium314.keyboard.latin.common.Constants
@@ -315,6 +316,22 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             // is determined, see #isAllowedByAutoCorrectionWithSpaceFilter.
             val allowed = isAllowedByAutoCorrectionWithSpaceFilter(firstSuggestion)
             if (allowed && typedWordInfo != null && typedWordInfo.mScore > scoreLimit) {
+                val isExactOrCaseMatch = firstSuggestion.mWord.equals(typedWordString, ignoreCase = true)
+                val isWhitelist = firstSuggestion.isKindOf(SuggestedWordInfo.KIND_WHITELIST)
+                val contextualSuggestion = firstAndTypedEmptyInfos.first
+                val contextualTypedWord = firstAndTypedEmptyInfos.second
+                val hasContextualEvidence = contextualSuggestion?.mWord
+                    ?.equals(firstSuggestion.mWord, ignoreCase = true) == true
+                    && (contextualTypedWord == null
+                        || contextualSuggestion.mScore > contextualTypedWord.mScore)
+
+                // If user typed a completely valid dictionary word, never auto-replace it with a different word or contraction
+                // (e.g. "does" -> "doesn't", "do" -> "don't") unless the suggestion is an explicit
+                // dictionary whitelist replacement or the current ngram context favors it.
+                if (!isWhitelist && !isExactOrCaseMatch && !hasContextualEvidence) {
+                    return true to false
+                }
+
                 // typed word is valid and has good score
                 // do not auto-correct if typed word is better match than first suggestion
                 val dictLocale = mDictionaryFacilitator.currentLocale
@@ -490,11 +507,24 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     private fun getNextWordSuggestions(ngramContext: NgramContext, keyboard: Keyboard, inputStyle: Int,
                                        settingsValuesForSuggestion: SettingsValuesForSuggestion): SuggestionResults {
         val cachedResults = nextWordSuggestionsCache.get(ngramContext)
-        if (cachedResults != null) return cachedResults.copy()
+        if (cachedResults != null) {
+            if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT) {
+                Log.i("ScoreAudit", "nextWord: cacheHit=true prevCount=${ngramContext.prevWordCount} isBOS=${ngramContext.isBeginningOfSentenceContext} count=${cachedResults.size}")
+            }
+            return cachedResults.copy()
+        }
         val newResults = mDictionaryFacilitator.getSuggestionResults(ComposedData(InputPointers(1),
             false, ""), ngramContext, keyboard, settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyle)
         filterMultiWordSuggestions(newResults, Settings.getValues().mDisableMultiWordSuggestions)
-        nextWordSuggestionsCache.put(ngramContext, newResults.copy())
+        if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT) {
+            Log.i("ScoreAudit", "nextWord: cacheHit=false prevCount=${ngramContext.prevWordCount} isBOS=${ngramContext.isBeginningOfSentenceContext} count=${newResults.size}")
+        }
+        val mainReady = mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary()
+        val mainLoadPending = mDictionaryFacilitator.isMainDictionaryLoadPending()
+        val shouldCache = newResults.isNotEmpty() || mainReady || !mainLoadPending
+        if (shouldCache) {
+            nextWordSuggestionsCache.put(ngramContext, newResults.copy())
+        }
         return newResults
     }
 
@@ -700,18 +730,22 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             suggestionsContainer: ArrayList<SuggestedWordInfo>,
             nextWordSuggestions: SuggestionResults, rejected: SuggestedWordInfo?
         ): SuggestedWordInfo? {
-            if (pseudoTypedWordInfo == null || !Settings.getValues().mUsePersonalizedDicts
-                || pseudoTypedWordInfo.mSourceDict.mDictType != Dictionary.TYPE_MAIN || suggestionsContainer.size < 2
-            ) return pseudoTypedWordInfo
-            nextWordSuggestions.removeAll { info: SuggestedWordInfo -> info.mScore < 170 } // we only want reasonably often typed words, value may require tuning
+            if (pseudoTypedWordInfo == null || !Settings.getValues().mUsePersonalizedDicts || suggestionsContainer.size < 2) {
+                return pseudoTypedWordInfo
+            }
+            val dictType = pseudoTypedWordInfo.mSourceDict.mDictType
+            if (dictType != Dictionary.TYPE_MAIN && dictType != Dictionary.TYPE_USER_HISTORY && dictType != Dictionary.TYPE_USER) {
+                return pseudoTypedWordInfo
+            }
+            nextWordSuggestions.removeAll { info: SuggestedWordInfo -> info.mScore < 160 } // we only want reasonably often typed words
             if (nextWordSuggestions.isEmpty()) return pseudoTypedWordInfo
 
             // for each suggestion, check whether the word was already typed in this ngram context (i.e. is nextWordSuggestion)
             for (suggestion in suggestionsContainer) {
-                if (suggestion.mScore < pseudoTypedWordInfo.mScore * 0.93) break // we only want reasonably good suggestions, value may require tuning
+                if (suggestion.mScore < pseudoTypedWordInfo.mScore * 0.90) break // we only want reasonably good suggestions
                 if (suggestion === rejected) continue  // ignore rejected suggestions
                 for (nextWordSuggestion in nextWordSuggestions) {
-                    if (nextWordSuggestion.mWord != suggestion.mWord) continue
+                    if (!nextWordSuggestion.mWord.equals(suggestion.mWord, ignoreCase = true)) continue
                     // if we have a high scoring suggestion in next word suggestions, take it (because it's expected that user might want to type it again)
                     suggestionsContainer.remove(suggestion)
                     suggestionsContainer.add(0, suggestion)

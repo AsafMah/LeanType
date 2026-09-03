@@ -63,7 +63,10 @@ private val toolbarPrefScope = CoroutineScope(SupervisorJob() + Dispatchers.Defa
 fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     val button = ImageButton(context, null, R.attr.suggestionWordStyle)
     button.scaleType = ImageView.ScaleType.CENTER_INSIDE
-    val padding = 9.dpToPx(context.resources)
+    val defaultStripHeight = context.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height).toFloat()
+    val stripHeight = ResourceUtils.getSuggestionsStripHeight(context.resources).toFloat()
+    val effectiveScale = if (defaultStripHeight > 0f) stripHeight / defaultStripHeight else 1.0f
+    val padding = (9 * effectiveScale).toInt().dpToPx(context.resources).coerceAtLeast(2)
     button.setPadding(padding, padding, padding, padding)
     button.tag = key
     button.contentDescription = key.name.lowercase().getStringResourceOrName("", context)
@@ -371,18 +374,24 @@ enum class ToolbarMode {
 
 val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
 
-// ponytail: Split excluded keys into flavor-specific exclusions and main-toolbar-only exclusions to allow clipboard toolbar to render clipboard search and close history.
 private val flavorExcludedKeys by lazy {
     val customAiKeys = if (BuildConfig.FLAVOR != "standard" && BuildConfig.FLAVOR != "standardfull" && BuildConfig.FLAVOR != "offline")
         ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") }
     else emptyList()
-    val otherKeys = if (BuildConfig.FLAVOR == "offlinelite")
-        listOf(PROOFREAD, TRANSLATE, CLIPBOARD_SEARCH, HANDWRITING)
-    else if (BuildConfig.FLAVOR == "offline" || BuildConfig.FLAVOR == "standard")
-        listOf(HANDWRITING)
-    else
-        emptyList()
-    customAiKeys + otherKeys
+    val otherKeys = mutableListOf<ToolbarKey>()
+    if (BuildConfig.FLAVOR == "offlinelite") {
+        otherKeys.addAll(listOf(PROOFREAD, TRANSLATE, CLIPBOARD_SEARCH, HANDWRITING))
+    } else if (BuildConfig.FLAVOR == "offline" && android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
+        otherKeys.add(PROOFREAD)
+        otherKeys.addAll(ToolbarKey.entries.filter { it.name.startsWith("CUSTOM_AI_") })
+    }
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
+        otherKeys.add(HANDWRITING)
+    }
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) {
+        otherKeys.add(TRANSLATE)
+    }
+    (customAiKeys + otherKeys).distinct()
 }
 
 private val mainToolbarExcludedKeys = listOf(CLOSE_HISTORY, CLIPBOARD_SEARCH)
@@ -393,7 +402,7 @@ private val excludedKeys by lazy {
 
 val defaultToolbarPref by lazy {
     val default = when (helium314.keyboard.latin.BuildConfig.FLAVOR) {
-        "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE, TEXT_EDIT)
+        "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE, TEXT_EDIT)
         "offlinelite" -> listOf(SETTINGS, VOICE, CLIPBOARD, UNDO, INCOGNITO, COPY, PASTE)
         else -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, TEXT_EDIT, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL, SELECT_MODE)
     }

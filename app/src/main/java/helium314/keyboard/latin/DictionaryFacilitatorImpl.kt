@@ -12,6 +12,7 @@ import android.provider.UserDictionary
 import android.util.LruCache
 import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.DictionaryFacilitator.DictionaryInitializationListener
 import helium314.keyboard.latin.NgramContext.WordInfo
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
@@ -21,6 +22,7 @@ import helium314.keyboard.latin.common.StringUtils
 import helium314.keyboard.latin.common.decapitalize
 import helium314.keyboard.latin.common.mightBeEmoji
 import helium314.keyboard.latin.common.splitOnWhitespace
+import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.dictionary.AppsBinaryDictionary
 import helium314.keyboard.latin.dictionary.ContactsBinaryDictionary
 import helium314.keyboard.latin.dictionary.Dictionary
@@ -68,8 +70,18 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private var mLoadedDownloadPrefs: Map<String, Any?> = emptyMap()
     private var dictionaryGroups = listOf(DictionaryGroup())
 
+    private val initializedMainDictionary = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val pendingMainDictionaryLoad = java.util.concurrent.atomic.AtomicBoolean(false)
+
     @Volatile
     private var mLatchForWaitingLoadingMainDictionaries = CountDownLatch(0)
+
+    private fun refreshMainDictionaryReadinessState() {
+        val ready = dictionaryGroups.any { group ->
+            group.getDict(Dictionary.TYPE_MAIN)?.isInitialized == true
+        }
+        initializedMainDictionary.set(ready)
+    }
 
     // The library does not deal well with ngram history for auto-capitalized words, so we adjust
     // the ngram context to store next word suggestions for such cases.
@@ -208,6 +220,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         synchronized(this) {
             oldDictionaryGroups = dictionaryGroups
             dictionaryGroups = newDictionaryGroups
+            refreshMainDictionaryReadinessState()
             if (hasAtLeastOneUninitializedMainDictionary()) {
                 asyncReloadUninitializedMainDictionaries(context, locales, listener)
             }
@@ -294,6 +307,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     ) {
         val latchForWaitingLoadingMainDictionary = CountDownLatch(1)
         mLatchForWaitingLoadingMainDictionaries = latchForWaitingLoadingMainDictionary
+        pendingMainDictionaryLoad.set(true)
         scope.launch {
             try {
                 val useEmojiDict = Settings.getValues().mSuggestEmojis
@@ -308,16 +322,19 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     if (dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.isInitialized == true) null
                     else dictionaryGroup to DictionaryFactory.createMainDictionaryCollection(context, it, useEmojiDict)
                 }
-                synchronized(this) {
+                synchronized(this@DictionaryFacilitatorImpl) {
                     dictGroupsWithNewMainDict.forEach { (dictGroup, mainDict) ->
                         dictGroup.setMainDict(mainDict)
                     }
+                    refreshMainDictionaryReadinessState()
                 }
 
                 listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
             } catch (e: Throwable) {
                 Log.e(TAG, "could not initialize main dictionaries for $locales", e)
             } finally {
+                pendingMainDictionaryLoad.set(false)
+                refreshMainDictionaryReadinessState()
                 latchForWaitingLoadingMainDictionary.countDown()
             }
         }
@@ -329,6 +346,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         synchronized(this) {
             dictionaryGroupsToClose = dictionaryGroups
             dictionaryGroups = listOf(DictionaryGroup())
+            pendingMainDictionaryLoad.set(false)
+            refreshMainDictionaryReadinessState()
         }
         for (dictionaryGroup in dictionaryGroupsToClose) {
             for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
@@ -337,9 +356,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         }
     }
 
-    // The main dictionaries are loaded asynchronously. Don't cache the return value of these methods.
     override fun hasAtLeastOneInitializedMainDictionary(): Boolean =
-        dictionaryGroups.any { it.getDict(Dictionary.TYPE_MAIN)?.isInitialized == true }
+        initializedMainDictionary.get()
+
+    override fun isMainDictionaryLoadPending(): Boolean =
+        pendingMainDictionaryLoad.get()
 
     override fun hasAtLeastOneUninitializedMainDictionary(): Boolean =
         dictionaryGroups.any { it.getDict(Dictionary.TYPE_MAIN)?.isInitialized != true }
@@ -359,8 +380,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // and appear in no other language model are not considered valid.
         putWordIntoValidSpellingWordCache("addToUserHistory", suggestion)
 
+        val preferredGroup = currentlyPreferredDictionaryGroup
+        val lowerCasedSuggestion = suggestion.lowercase(preferredGroup.locale)
+        val isMainDictWord = preferredGroup.getDict(Dictionary.TYPE_MAIN)?.isValidWord(lowerCasedSuggestion) == true
+        val recordAsAutoCap = wasAutoCapitalized || (suggestion != lowerCasedSuggestion && isMainDictWord)
+
         // Record in session boost for personalized ranking across restarts
-        sessionWordBoost?.recordWord(suggestion)
+        sessionWordBoost?.recordWord(suggestion, recordAsAutoCap)
 
         val words = suggestion.splitOnWhitespace().dropLastWhile { it.isEmpty() }
 
@@ -369,7 +395,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             adjustConfidences(suggestion, wasAutoCapitalized)
 
         var ngramContextForCurrentWord = ngramContext
-        val preferredGroup = currentlyPreferredDictionaryGroup
         for (i in words.indices) {
             val currentWord = words[i]
             val wasCurrentWordAutoCapitalized = (i == 0) && wasAutoCapitalized
@@ -387,7 +412,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // Add word to user dictionary if it is in no other dictionary except user history dictionary (i.e. typed again).
         val sv = Settings.getValues()
         if (sv.mAddToPersonalDictionary // require the opt-in
-            && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER_HISTORY) // require personalized suggestions
+            && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER)
             && words.size == 1 // only single words
         ) {
             addToPersonalDictionaryIfInvalidButInHistory(suggestion, wasAutoCapitalized)
@@ -456,6 +481,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         UserHistoryDictionary.addToDictionary(userHistoryDictionary, ngramContext, wordToUse, isValid, timeStampInSeconds)
     }
 
+    private val DICTIONARY_TYPES_EXCLUDING_HISTORY = arrayOf(
+        Dictionary.TYPE_MAIN,
+        Dictionary.TYPE_CONTACTS,
+        Dictionary.TYPE_APPS,
+        Dictionary.TYPE_USER
+    )
+
     private fun addToPersonalDictionaryIfInvalidButInHistory(word: String, wasAutoCapitalized: Boolean) {
         if (word.length <= 1) return
         val dictionaryGroup = currentlyPreferredDictionaryGroup
@@ -466,8 +498,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         val wordToUse = if (wasAutoCapitalized) {
             val decapitalized = word.decapitalize(dictionaryGroup.locale)
-            if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
-                && !isValidWord(decapitalized, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
+            if (isValidWord(word, DICTIONARY_TYPES_EXCLUDING_HISTORY, dictionaryGroup)
+                && !isValidWord(decapitalized, DICTIONARY_TYPES_EXCLUDING_HISTORY, dictionaryGroup)
             ) {
                 word
             } else {
@@ -477,31 +509,22 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             word
         }
 
-        if (isValidWord(wordToUse, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup))
+        if (isValidWord(wordToUse, DICTIONARY_TYPES_EXCLUDING_HISTORY, dictionaryGroup))
             return // valid word, no reason to auto-add it to personal dict
         if (userDict.isInDictionary(wordToUse))
-            return // should never happen, but better be safe
+            return // already in personal dict
 
         val threshold = Settings.getValues().mAddToPersonalDictThreshold
-        val minRequiredFreq = when (threshold) {
-            1 -> 0
-            2 -> 110 // standard 2nd-use frequency in binary trie
-            3 -> 120 // 3rd-use
-            4 -> 130 // 4th-use
-            else -> 140
-        }
-
-        val canAdd = if (threshold <= 1) {
-            userHistoryDict.isInDictionary(wordToUse) || userHistoryDict.getFrequency(wordToUse) >= 0
-        } else {
-            userHistoryDict.getFrequency(wordToUse) >= minRequiredFreq
-        }
+        val count = sessionWordBoost?.getCount(wordToUse) ?: 1
+        val canAdd = count >= threshold
 
         if (canAdd) {
             scope.launch {
                 runCatching {
-                    UserDictionary.Words.addWord(userDict.mContext, wordToUse, 250, null, dictionaryGroup.locale)
-                    Log.i(TAG, "Added word '$wordToUse' to personal dictionary for locale ${dictionaryGroup.locale}")
+                    val localeToUse = if (dictionaryGroup.locale.language.isNullOrEmpty()) null else dictionaryGroup.locale
+                    UserDictionary.Words.addWord(userDict.mContext, wordToUse, 250, null, localeToUse)
+                    userDict.addUnigramEntry(wordToUse, 250, null, 0, false, false, (System.currentTimeMillis() / 1000).toInt())
+                    Log.i(TAG, "Added word '$wordToUse' to personal dictionary for locale $localeToUse (typed $count times, threshold $threshold)")
                 }.onFailure {
                     Log.w(TAG, "Failed to add word '$wordToUse' to personal dictionary", it)
                 }
@@ -646,20 +669,44 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             suggestionResults.mRawSuggestions?.addAll(it)
         }
 
-        // Apply session word boost to suggestion scores
+        // Apply session word boost to suggestion scores (for both typing and gesture modes)
         val boost = sessionWordBoost
-        if (boost != null && composedData.mTypedWord.isNotEmpty()) {
+        if (boost != null && (composedData.mTypedWord.isNotEmpty() || composedData.mIsBatchMode)) {
             applySessionBoost(suggestionResults, boost)
         }
 
         includeAtLeastTwoWordSuggestions(suggestionResults, suggestionsArray, composedData.mTypedWord)
+
+        if (composedData.mTypedWord.isEmpty() && !composedData.mIsBatchMode) {
+            pruneNextWordCandidates(suggestionResults)
+        }
 
         // Graduated trust (#39): runs LAST (after session boost) so it can't be undone, and caps
         // rather than scales so the guarantee holds regardless of native score magnitudes.
         if (Settings.getValues().mGraduatedTrust)
             applyGraduatedTrust(suggestionResults)
 
+        if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
+            val topScores = suggestionResults.take(3).map { "${it.mSourceDict?.mDictType ?: "unknown"}:${it.mScore}" }
+            Log.i("ScoreAudit", "next-word results: count=${suggestionResults.size} isBOS=${ngramContext.isBeginningOfSentenceContext} top3=$topScores")
+        }
+
         return suggestionResults
+    }
+
+    private fun pruneNextWordCandidates(results: SuggestionResults) {
+        if (results.size <= 3) return
+        val bestScore = results.first().mScore
+        val beamThreshold = bestScore - BEAM_DELTA
+        val toRemove = mutableListOf<SuggestedWordInfo>()
+        results.forEachIndexed { index, info ->
+            if (index >= 3 && info.mScore < beamThreshold) {
+                toRemove.add(info)
+            }
+        }
+        for (item in toRemove) {
+            results.remove(item)
+        }
     }
 
     private fun getSuggestions(
@@ -669,6 +716,14 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         allDictionaryGroups: List<DictionaryGroup>
     ): List<SuggestedWordInfo> {
         val suggestions = ArrayList<SuggestedWordInfo>()
+        if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
+            val prevWords = (0 until ngramContext.prevWordCount).map { i ->
+                val w = ngramContext.getNthPrevWord(i + 1)
+                val bos = ngramContext.isNthPrevWordBeginningOfSentence(i + 1)
+                if (bos) "<BOS>" else (w?.toString() ?: "<null>")
+            }
+            Log.i("ScoreAudit", "NgramContext words: $prevWords")
+        }
         val weightForLocale = dictGroup.getWeightForLocale(allDictionaryGroups, composedData.mIsBatchMode)
         for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
             val dictionary = dictGroup.getDict(dictType) ?: continue
@@ -686,36 +741,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     dictionarySuggestions = backoffSuggestions
                 }
             }
-            if (composedData.mTypedWord.isEmpty() && (dictionarySuggestions == null || dictionarySuggestions.isEmpty())
-                && dictType == Dictionary.TYPE_USER
-            ) {
-                if (!Settings.getValues().mNextWordStrictNgram && Settings.getValues().mPrioritizePersonalSuggestions) {
-                    val allWords = try {
-                        dictionary.allWordsWithFrequency
-                    } catch (e: Exception) {
-                        null
-                    }
-                    if (allWords != null && allWords.isNotEmpty()) {
-                        val topWords = allWords.entries
-                            .sortedByDescending { it.value }
-                            .take(15)
-                        val unigramSuggestions = ArrayList<SuggestedWordInfo>()
-                        for (entry in topWords) {
-                            unigramSuggestions.add(
-                                SuggestedWordInfo(
-                                    entry.key,
-                                    "",
-                                    entry.value,
-                                    SuggestedWordInfo.KIND_PREDICTION,
-                                    dictionary,
-                                    SuggestedWordInfo.NOT_AN_INDEX,
-                                    SuggestedWordInfo.NOT_A_CONFIDENCE
-                                )
-                            )
-                        }
-                        dictionarySuggestions = unigramSuggestions
-                    }
-                }
+            if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
+                Log.i("ScoreAudit", "source=$dictType count=${dictionarySuggestions?.size ?: 0} isBOS=${ngramContext.isBeginningOfSentenceContext}")
             }
             if (dictionarySuggestions == null) continue
 
@@ -745,12 +772,39 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 if (word.length == 1 && info.mSourceDict.mDictType == Dictionary.TYPE_EMOJI && !StringUtils.mightBeEmoji(word[0].code))
                     continue
 
+                val settingsValues = Settings.getValues()
+                val balance = settingsValues.mSuggestionBalance
+                val (mainWeight, historyWeight, userWeight) = when (balance) {
+                    Settings.SUGGESTION_BALANCE_DICTIONARY_FOCUSED -> Triple(1.10f, 0.75f, 1.00f)
+                    Settings.SUGGESTION_BALANCE_CONSERVATIVE -> Triple(1.05f, 0.85f, 1.00f)
+                    Settings.SUGGESTION_BALANCE_PERSONALIZED -> Triple(0.95f, 1.15f, 1.20f)
+                    Settings.SUGGESTION_BALANCE_HIGHLY_PERSONALIZED -> Triple(0.90f, 1.30f, 1.40f)
+                    else -> Triple(1.00f, 1.00f, 1.00f)
+                }
+                val dictWeight = when (dictType) {
+                    Dictionary.TYPE_MAIN -> mainWeight
+                    Dictionary.TYPE_USER_HISTORY -> historyWeight
+                    Dictionary.TYPE_USER -> userWeight
+                    else -> 1.00f
+                }
+
                 if (composedData.mTypedWord.isEmpty() && (dictType == Dictionary.TYPE_USER_HISTORY || dictType == Dictionary.TYPE_USER)) {
-                    val settingsValues = Settings.getValues()
-                    val boostedScore = if (settingsValues.mPrioritizePersonalSuggestions) {
-                        info.mScore + settingsValues.mNextWordBoostLevel
+                    val baseBoost = when (balance) {
+                        Settings.SUGGESTION_BALANCE_DICTIONARY_FOCUSED -> 0
+                        Settings.SUGGESTION_BALANCE_CONSERVATIVE -> 16
+                        Settings.SUGGESTION_BALANCE_PERSONALIZED -> 48
+                        Settings.SUGGESTION_BALANCE_HIGHLY_PERSONALIZED -> 64
+                        else -> 32
+                    }
+                    val boost = if (settingsValues.mPrioritizePersonalSuggestions) {
+                        maxOf(baseBoost, minOf(MAX_PERSONALIZATION_BOOST, settingsValues.mNextWordBoostLevel))
                     } else {
-                        info.mScore
+                        baseBoost
+                    }
+                    val rawScore = (info.mScore * dictWeight).toInt()
+                    val boostedScore = rawScore + boost
+                    if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT) {
+                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} weighted=$rawScore boost=$boost boosted=$boostedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
                     }
                     val boostedInfo = SuggestedWordInfo(
                         info.mWord, info.mPrevWordsContext, boostedScore, info.mKindAndFlags,
@@ -758,11 +812,93 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     )
                     suggestions.add(boostedInfo)
                 } else {
-                    suggestions.add(info)
+                    val weightedScore = (info.mScore * dictWeight).toInt()
+                    if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT && composedData.mTypedWord.isEmpty()) {
+                        Log.i("ScoreAudit", "source=$dictType raw=${info.mScore} weighted=$weightedScore isBOS=${ngramContext.isBeginningOfSentenceContext}")
+                    }
+                    if (dictWeight == 1.00f) {
+                        suggestions.add(info)
+                    } else {
+                        suggestions.add(
+                            SuggestedWordInfo(
+                                info.mWord, info.mPrevWordsContext, weightedScore, info.mKindAndFlags,
+                                info.mSourceDict, info.mIndexOfTouchPointOfSecondWord, info.mAutoCommitFirstWordConfidence
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        if (composedData.mTypedWord.isEmpty() && suggestions.isEmpty() && !ngramContext.isBeginningOfSentenceContext) {
+            // Level 1: Primary grammatical language continuation connectors
+            val fallbackUnigrams = getLanguageFallbackUnigrams(dictGroup.locale)
+            val mainDict = dictGroup.getDict(Dictionary.TYPE_MAIN)
+            var fallbackScore = 95
+            for (word in fallbackUnigrams) {
+                if (suggestions.size >= 4) break
+                if (isBlacklisted(word)) continue
+                suggestions.add(
+                    SuggestedWordInfo(
+                        word,
+                        "",
+                        fallbackScore,
+                        SuggestedWordInfo.KIND_PREDICTION,
+                        mainDict,
+                        SuggestedWordInfo.NOT_AN_INDEX,
+                        SuggestedWordInfo.NOT_A_CONFIDENCE
+                    )
+                )
+                fallbackScore -= 2
+            }
+
+            // Level 2: Fill remaining slots with user history/personal frequent words
+            if (suggestions.size < 5) {
+                val historyDict = dictGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)
+                val topHistoryWords = try {
+                    historyDict?.allWordsWithFrequency
+                } catch (e: Exception) {
+                    null
+                }
+                if (!topHistoryWords.isNullOrEmpty()) {
+                    val existingWords = suggestions.map { it.mWord }.toSet()
+                    val sortedHistory = topHistoryWords.entries
+                        .filter { !isBlacklisted(it.key) && it.key.length > 1 && !existingWords.contains(it.key) }
+                        .sortedByDescending { it.value }
+                        .take(5)
+                    var historyFallbackScore = 85
+                    for (entry in sortedHistory) {
+                        if (suggestions.size >= 5) break
+                        suggestions.add(
+                            SuggestedWordInfo(
+                                entry.key,
+                                "",
+                                historyFallbackScore,
+                                SuggestedWordInfo.KIND_PREDICTION,
+                                historyDict,
+                                SuggestedWordInfo.NOT_AN_INDEX,
+                                SuggestedWordInfo.NOT_A_CONFIDENCE
+                            )
+                        )
+                        historyFallbackScore -= 2
+                    }
                 }
             }
         }
         return suggestions
+    }
+
+    private fun getLanguageFallbackUnigrams(locale: Locale): List<String> {
+        val lang = locale.language.lowercase()
+        return when (lang) {
+            "en" -> listOf("is", "are", "the", "to", "you", "and", "can", "will", "in", "it", "that", "have")
+            "es" -> listOf("de", "la", "que", "el", "en", "y", "a", "los", "es", "un", "por", "con")
+            "de" -> listOf("ist", "die", "der", "das", "und", "in", "nicht", "zu", "den", "ich", "ein", "mit")
+            "fr" -> listOf("est", "de", "la", "le", "et", "en", "que", "un", "pour", "dans", "une", "qui")
+            "it" -> listOf("è", "di", "la", "il", "che", "in", "e", "un", "per", "non", "una", "sono")
+            "pt" -> listOf("de", "a", "o", "que", "e", "do", "da", "em", "um", "para", "com", "não")
+            "ru" -> listOf("и", "в", "не", "на", "я", "что", "быть", "с", "он", "как", "это", "по")
+            else -> listOf("the", "is", "to", "and", "you", "are", "in", "it", "that", "have")
+        }
     }
 
     /**
@@ -772,15 +908,23 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
      * remove and re-add entries with adjusted scores.
      */
     private fun applySessionBoost(results: SuggestionResults, boost: SessionWordBoost) {
+        val sessionMultiplier = when (Settings.getValues().mSuggestionBalance) {
+            Settings.SUGGESTION_BALANCE_DICTIONARY_FOCUSED -> 0.25f
+            Settings.SUGGESTION_BALANCE_CONSERVATIVE -> 0.50f
+            Settings.SUGGESTION_BALANCE_PERSONALIZED -> 1.50f
+            Settings.SUGGESTION_BALANCE_HIGHLY_PERSONALIZED -> 2.00f
+            else -> 1.00f
+        }
         val boosted = mutableListOf<SuggestedWordInfo>()
         val toRemove = mutableListOf<SuggestedWordInfo>()
         for (info in results) {
-            val boostAmount = boost.getBoost(info.mWord)
+            val rawBoost = boost.getBoost(info.mWord) * sessionMultiplier * BOOST_SCORE_MULTIPLIER
+            val boostAmount = rawBoost.coerceAtMost(MAX_PERSONALIZATION_BOOST.toFloat())
             if (boostAmount > 0f) {
                 toRemove.add(info)
                 boosted.add(SuggestedWordInfo(
                     info.mWord, info.mPrevWordsContext,
-                    info.mScore + (boostAmount * BOOST_SCORE_MULTIPLIER).toInt(),
+                    info.mScore + boostAmount.toInt(),
                     info.mKindAndFlags, info.mSourceDict,
                     info.mIndexOfTouchPointOfSecondWord,
                     info.mAutoCommitFirstWordConfidence
@@ -856,6 +1000,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     override fun isBlacklisted(word: String): Boolean = dictionaryGroups.any { it.isBlacklisted(word) }
 
     override fun removeWord(word: String) {
+        sessionWordBoost?.removeWord(word)
         for (dictionaryGroup in dictionaryGroups) {
             dictionaryGroup.removeWord(word)
         }
@@ -888,6 +1033,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     }
 
     override fun clearUserHistoryDictionary(context: Context) {
+        sessionWordBoost?.clear()
         for (dictionaryGroup in dictionaryGroups) {
             dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)?.clear()
         }
@@ -920,8 +1066,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // HACK: This threshold is being used when adding a capitalized entry in the User History dictionary.
         private const val CAPITALIZED_FORM_MAX_PROBABILITY_FOR_INSERT = 140
 
-        // Multiplier to convert session boost values into score-space (native scores are ~1_000_000)
-        private const val BOOST_SCORE_MULTIPLIER = 1000f
+        // Multiplier to convert session boost values into native score-space (native scores are ~0-255)
+        private const val BOOST_SCORE_MULTIPLIER = 1.0f
 
         // Graduated trust (#39): a non-dictionary learned word (one not in main/contacts/apps/the
         // user's personal dict) that has not yet been confirmed by enough repetitions must not
@@ -934,6 +1080,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         /** Graduated-trust decision (#39): penalize an uncurated learned word until it is confirmed. */
         fun shouldPenalizeUnconfirmedWord(isUncurated: Boolean, historyFrequency: Int): Boolean =
             isUncurated && historyFrequency < GRAD_TRUST_CONFIRM_FREQUENCY
+
+        // Native binary dictionary scores cap around 255. A boost of 500 destroys native bigram confidence.
+        // We cap personalization boost to ~20% of the native ceiling so it supports, rather than overrides,
+        // high-confidence dictionary bigrams.
+        private const val MAX_PERSONALIZATION_BOOST = 32
+        // Threshold delta for beam pruning next-word candidates below top candidate score.
+        private const val BEAM_DELTA = 60
 
         private fun createSubDict(
             dictType: String, context: Context, locale: Locale, dictFile: File?, dictNamePrefix: String
@@ -1030,35 +1183,33 @@ private class DictionaryGroup(
 
     /** Removes a word from all dictionaries in this group. If the word is in a read-only dictionary, it is blacklisted. */
     fun removeWord(word: String) {
-        addToBlacklist(word)
         val lowercase = word.lowercase(locale)
+        addToBlacklist(word)
         if (word != lowercase) {
             addToBlacklist(lowercase)
         }
 
-        // remove from user history
+        // Remove from user history
         getSubDict(Dictionary.TYPE_USER_HISTORY)?.removeUnigramEntryDynamically(word)
+        if (word != lowercase) {
+            getSubDict(Dictionary.TYPE_USER_HISTORY)?.removeUnigramEntryDynamically(lowercase)
+        }
 
-        // and from personal dictionary
+        // Remove from personal dictionary
         getSubDict(Dictionary.TYPE_USER)?.removeUnigramEntryDynamically(word)
+        if (word != lowercase) {
+            getSubDict(Dictionary.TYPE_USER)?.removeUnigramEntryDynamically(lowercase)
+        }
 
         val contactsDict = getSubDict(Dictionary.TYPE_CONTACTS)
         if (contactsDict != null && contactsDict.isInDictionary(word)) {
-            contactsDict.removeUnigramEntryDynamically(word) // will be gone until next reload of dict
+            contactsDict.removeUnigramEntryDynamically(word)
         }
 
         val appsDict = getSubDict(Dictionary.TYPE_APPS)
         if (appsDict != null && appsDict.isInDictionary(word)) {
-            appsDict.removeUnigramEntryDynamically(word) // will be gone until next reload of dict
-
+            appsDict.removeUnigramEntryDynamically(word)
         }
-
-        // The word was in no read-only dictionary (main/contacts/apps) — it only lived in the mutable
-        // user-history / personal dict (e.g. an auto-learned gesture misfire). Removing it from those
-        // is not enough: it gets re-learned on the next commit and resurrects. Blacklist it so the
-        // user's explicit removal actually sticks (the suggestion filter at getSuggestions then hides
-        // it, including in the glide-typing path).
-        addToBlacklist(word)
     }
 
     /**

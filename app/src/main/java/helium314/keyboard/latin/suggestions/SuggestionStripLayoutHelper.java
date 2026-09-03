@@ -117,8 +117,7 @@ final class SuggestionStripLayoutHelper {
         mDividerWidth = dividerView.getMeasuredWidth();
 
         final Resources res = wordView.getResources();
-        mSuggestionsStripHeight = res.getDimensionPixelSize(
-                R.dimen.config_suggestions_strip_height);
+        mSuggestionsStripHeight = ResourceUtils.getSuggestionsStripHeight(res);
 
         final TypedArray a = context.obtainStyledAttributes(attrs,
                 R.styleable.SuggestionStripView, defStyle, R.style.SuggestionStripView);

@@ -17,13 +17,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +38,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,15 +53,23 @@ import com.leanbitlab.leantype.voice.VoiceEngineInfo
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.Links
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.Scaffold
+import helium314.keyboard.settings.preferences.PreferenceCategory
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
+import helium314.keyboard.settings.dialogs.PreferenceDialog
 import helium314.keyboard.settings.dialogs.VoiceModelDownloadDialog
 import helium314.keyboard.settings.filePicker
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.SwitchPreference
+import helium314.keyboard.settings.preferences.TextInputPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -89,6 +104,13 @@ fun VoiceSettingsScreen(
     var engineInfo by remember { mutableStateOf<VoiceEngineInfo?>(pluginManager.getInfo()) }
     var isPluginConnected by remember { mutableStateOf(pluginManager.isPluginConnected()) }
     var isPluginInstalled by remember { mutableStateOf(pluginManager.isPluginInstalled()) }
+    val pluginVersion = remember(isPluginInstalled) {
+        try {
+            context.packageManager.getPackageInfo(VoiceConstants.VOICE_PLUGIN_PACKAGE, 0).versionName
+        } catch (_: Exception) {
+            null
+        }
+    }
     var isInitialConnectionPending by remember { mutableStateOf(!isPluginConnected && isPluginInstalled) }
     val installedWhisperPref = remember(prefs) { prefs.getString("installed_model_${VoiceConstants.ENGINE_WHISPER}", null) }
     var whisperState by remember {
@@ -98,6 +120,43 @@ fun VoiceSettingsScreen(
         )
     }
     var showModelDownloadDialog by remember { mutableStateOf(false) }
+    var showVoicePluginDialog by rememberSaveable { mutableStateOf(false) }
+
+    var remoteVersion by remember { mutableStateOf<String?>(null) }
+    val hasInternet = remember { VoiceDownloadDispatcher.hasInternetPermission(context) }
+    var updateAvailable by remember { mutableStateOf(false) }
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isPluginInstalled) {
+        if (!hasInternet) return@LaunchedEffect
+        isCheckingUpdate = true
+        scope.launch(Dispatchers.IO) {
+            try {
+                val url = URL(Links.VOICE_PLUGIN_RELEASES_API)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.setRequestProperty("User-Agent", "HeliboardL")
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                conn.connect()
+                if (conn.responseCode == 200) {
+                    val response = conn.inputStream.bufferedReader().use { it.readText() }
+                    val regex = "\"tag_name\"\\s*:\\s*\"([^\"]+)\"".toRegex()
+                    val match = regex.find(response)
+                    if (match != null) {
+                        val tag = match.groupValues[1]
+                        remoteVersion = tag
+                        if (isPluginInstalled && pluginVersion != null) {
+                            updateAvailable = isUpdateAvailable(pluginVersion, tag)
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // ignore network errors
+            } finally {
+                isCheckingUpdate = false
+            }
+        }
+    }
 
     var isDownloadingPlugin by remember { mutableStateOf(false) }
     var pluginDownloadProgress by remember { mutableFloatStateOf(0f) }
@@ -206,6 +265,7 @@ fun VoiceSettingsScreen(
 
                 withContext(Dispatchers.Main) {
                     isDownloadingPlugin = false
+                    showVoicePluginDialog = false
                     installDownloadedPlugin(targetFile)
                 }
             } catch (e: Exception) {
@@ -319,7 +379,8 @@ fun VoiceSettingsScreen(
         ) {
             SwitchPreference(
                 setting = it,
-                default = false
+                default = false,
+                icon = R.drawable.sym_keyboard_voice_holo
             )
         }
     }
@@ -338,7 +399,8 @@ fun VoiceSettingsScreen(
                     "Keep in memory for 1 minute" to "60",
                     "Unload immediately after session" to "0"
                 ),
-                default = "300"
+                default = "300",
+                icon = R.drawable.ic_settings_advanced
             )
         }
     }
@@ -366,6 +428,7 @@ fun VoiceSettingsScreen(
             ListPreference(
                 setting = it,
                 items = listOf(
+                    "2 seconds (Fastest)" to "2",
                     "3 seconds" to "3",
                     "5 seconds (Recommended)" to "5",
                     "7 seconds" to "7",
@@ -373,7 +436,92 @@ fun VoiceSettingsScreen(
                     "15 seconds" to "15",
                     "Never (Listen until mic tapped)" to "0"
                 ),
-                default = "5"
+                default = "5",
+                icon = R.drawable.ic_settings_preferences
+            )
+        }
+    }
+
+    val micSensitivitySetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_MIC_SENSITIVITY,
+            title = "Microphone Sensitivity"
+        ) {
+            ListPreference(
+                setting = it,
+                items = listOf(
+                    "High (Quiet rooms / Whisper)" to "high",
+                    "Standard (Recommended)" to "normal",
+                    "Low (Noisy environments / In-car)" to "low"
+                ),
+                default = "normal",
+                icon = R.drawable.sym_keyboard_voice_holo
+            )
+        }
+    }
+
+    val maxDurationSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_MAX_DURATION_SECONDS,
+            title = "Max Recording Duration"
+        ) {
+            ListPreference(
+                setting = it,
+                items = listOf(
+                    "15 seconds" to "15",
+                    "30 seconds (Default)" to "30",
+                    "60 seconds" to "60",
+                    "Unlimited" to "0"
+                ),
+                default = "30",
+                icon = R.drawable.ic_settings_preferences
+            )
+        }
+    }
+
+    val smartPunctuationSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_SMART_PUNCTUATION,
+            title = "Smart Punctuation",
+            description = "Automatically add punctuation and sentence capitalization"
+        ) {
+            SwitchPreference(
+                setting = it,
+                default = true,
+                icon = R.drawable.ic_settings_correction
+            )
+        }
+    }
+
+    val cpuThreadsSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_CPU_THREADS,
+            title = "CPU Inference Threads"
+        ) {
+            ListPreference(
+                setting = it,
+                items = listOf(
+                    "2 threads (Battery saver)" to "2",
+                    "4 threads (Recommended)" to "4",
+                    "6 threads (High performance)" to "6",
+                    "8 threads (Maximum speed)" to "8"
+                ),
+                default = "4",
+                icon = R.drawable.ic_settings_advanced
+            )
+        }
+    }
+
+    val customPromptSetting = remember {
+        Setting(
+            key = VoiceConstants.PREF_VOICE_CUSTOM_PROMPT,
+            title = "Vocabulary & Context Prompt",
+            description = "Guide Whisper with technical terms, names, slang, or jargon"
+        ) {
+            TextInputPreference(
+                setting = it,
+                default = "",
+                icon = R.drawable.ic_edit
             )
         }
     }
@@ -394,219 +542,275 @@ fun VoiceSettingsScreen(
         )
     }
 
+    if (showVoicePluginDialog) {
+        PreferenceDialog(
+            onDismissRequest = { if (!isDownloadingPlugin) showVoicePluginDialog = false },
+            title = "Voice Plugin",
+            showCloseButton = !isDownloadingPlugin,
+            buttons = {
+                if (isDownloadingPlugin) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Downloading... ${(pluginDownloadProgress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (!isPluginInstalled || updateAvailable) {
+                            if (hasInternet) {
+                                Button(
+                                    onClick = { downloadAndInstallPlugin() },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (updateAvailable) "Update Plugin" else "Download & Install Plugin")
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        showVoicePluginDialog = false
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(Links.VOICE_PLUGIN_REPO)).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(intent)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (updateAvailable) "Update Plugin" else "Download Plugin")
+                                }
+                            }
+                        }
+                        if (isPluginInstalled) {
+                            if (!isPluginConnected && !isInitialConnectionPending && !updateAvailable) {
+                                Button(
+                                    onClick = {
+                                        pluginManager.bindIfNeeded()
+                                        updatePluginStatus()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Connect")
+                                }
+                            }
+                            Button(
+                                onClick = {
+                                    showVoicePluginDialog = false
+                                    val appInfoIntent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.parse("package:${VoiceConstants.VOICE_PLUGIN_PACKAGE}")
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(appInfoIntent)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Uninstall")
+                            }
+                        }
+                    }
+                }
+            }
+        ) {
+            val message = when {
+                isPluginInstalled && updateAvailable -> "An update is available for the voice plugin!\nInstalled version: $pluginVersion\nLatest version: $remoteVersion\n\nDo you want to download and update?"
+                isPluginConnected -> "Voice plugin is active (version ${pluginVersion ?: "v1.0.0"}).\n\nLeanType Voice Plugin handles high-performance on-device Whisper speech-to-text inference."
+                isPluginInstalled -> "Voice plugin is installed on this device, but currently disconnected.\n\nTap Connect to establish connection."
+                remoteVersion != null -> "Download the latest voice plugin (version $remoteVersion) to enable private, fast offline voice typing."
+                else -> "Offline voice input requires the LeanType Voice Plugin (com.leanbitlab.leantype.voice.offline).\n\nDownload and install the voice plugin to enable private, fast offline voice typing."
+            }
+            Text(message)
+        }
+    }
+
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = context.getString(R.string.offline_voice_title),
         settings = emptyList()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            offlineEnabledSetting.Preference()
-
-            // Microphone permission card (only show when not granted)
-            if (!isMicPermissionGranted) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Row(
+        Scaffold(
+            contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 8.dp)
+            ) {
+                // Microphone permission card (only show when not granted)
+                if (!isMicPermissionGranted) {
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Microphone Permission",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "Permission required for voice dictation",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        Button(onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
-                            Text("Grant")
-                        }
-                    }
-                }
-            }
-
-            // Plugin status card
-            if (isPluginInstalled) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Voice Plugin",
+                                    text = "Microphone Permission",
                                     style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
                                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = if (isPluginConnected) "Installed & Connected"
-                                    else if (isInitialConnectionPending) "Connecting…"
-                                    else "Installed (Disconnected)",
+                                    text = "Permission required for voice dictation",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (isPluginConnected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                             }
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (!isPluginConnected && !isInitialConnectionPending) {
-                                    Button(
-                                        onClick = {
-                                            pluginManager.bindIfNeeded()
-                                            updatePluginStatus()
-                                        },
-                                        modifier = Modifier.height(36.dp)
-                                    ) {
-                                        Text("Connect")
-                                    }
-                                }
-                                OutlinedButton(
-                                    onClick = {
-                                        val appInfoIntent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                            data = Uri.parse("package:${VoiceConstants.VOICE_PLUGIN_PACKAGE}")
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        }
-                                        context.startActivity(appInfoIntent)
-                                    },
-                                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.error
-                                    ),
-                                    modifier = Modifier.height(36.dp)
-                                ) {
-                                    Text("Uninstall")
-                                }
+                            Button(onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
+                                Text("Grant")
                             }
                         }
                     }
                 }
-            } else {
+
+                // Card 1: Plugin Management
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Voice Plugin Not Installed",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Offline voice input requires the LeanType Voice Plugin (com.leanbitlab.leantype.voice.offline).",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                    Column {
+                        PreferenceCategory("Plugin Management")
 
-                        if (BuildConfig.FLAVOR == "standardfull") {
-                            if (isDownloadingPlugin) {
-                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    LinearProgressIndicator(
-                                        progress = { pluginDownloadProgress },
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                    Text(
-                                        text = "Downloading plugin... ${(pluginDownloadProgress * 100).toInt()}%",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                            } else {
-                                Button(
-                                    onClick = { downloadAndInstallPlugin() }
-                                ) {
-                                    Text("Download & Install Plugin")
-                                }
-                            }
-                        } else {
-                            Button(
-                                onClick = {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(Links.VOICE_PLUGIN_REPO)).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    context.startActivity(intent)
-                                }
-                            ) {
-                                Text("Download Plugin")
+                        offlineEnabledSetting.Preference()
+
+                        val voicePluginSummary = remember(isPluginInstalled, isPluginConnected, pluginVersion, updateAvailable, remoteVersion) {
+                            when {
+                                updateAvailable -> "Update available ($pluginVersion → $remoteVersion)"
+                                isPluginConnected -> "Active (${pluginVersion ?: "v1.0.0"})"
+                                isPluginInstalled -> "Installed (Disconnected)"
+                                else -> "Not installed"
                             }
                         }
-                    }
-                }
-            }
 
-            voiceLanguageSetting.Preference()
-            silenceTimeoutSetting.Preference()
-
-            // Models section
-            Text(
-                text = "Speech Models",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
-            val (badgeText, badgeContainerColor, badgeContentColor) = when (whisperState?.state) {
-                ModelState.STATE_READY -> Triple("Ready", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
-                ModelState.STATE_LOADING -> Triple("Loading…", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
-                ModelState.STATE_ERROR -> Triple("Error", MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
-                else -> if (isPluginConnected) {
-                    Triple("No model", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-                } else if (isInitialConnectionPending) {
-                    Triple("Connecting…", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    Triple("Disconnected", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            Preference(
-                name = "Manage & Download Models",
-                description = null,
-                onClick = {
-                    showModelDownloadDialog = true
-                },
-                value = {
-                    androidx.compose.material3.Surface(
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                        color = badgeContainerColor
-                    ) {
-                        Text(
-                            text = badgeText,
-                            color = badgeContentColor,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        Preference(
+                            name = "Voice Plugin",
+                            description = voicePluginSummary,
+                            icon = R.drawable.sym_keyboard_voice_holo,
+                            onClick = { showVoicePluginDialog = true }
                         )
                     }
                 }
-            )
 
-            whisperKeepLoadedSetting.Preference()
+                // Card 2: Engine & Models
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        PreferenceCategory("Engine & Models")
+
+                        val (badgeText, badgeContainerColor, badgeContentColor) = when (whisperState?.state) {
+                            ModelState.STATE_READY -> Triple("Ready", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+                            ModelState.STATE_LOADING -> Triple("Loading…", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
+                            ModelState.STATE_ERROR -> Triple("Error", MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+                            else -> if (isPluginConnected) {
+                                Triple("No model", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else if (isInitialConnectionPending) {
+                                Triple("Connecting…", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                Triple("Disconnected", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        Preference(
+                            name = "Manage & Download Models",
+                            description = null,
+                            icon = R.drawable.sym_keyboard_voice_holo,
+                            onClick = {
+                                showModelDownloadDialog = true
+                            },
+                            value = {
+                                androidx.compose.material3.Surface(
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                                    color = badgeContainerColor
+                                ) {
+                                    Text(
+                                        text = badgeText,
+                                        color = badgeContentColor,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        )
+
+                        voiceLanguageSetting.Preference()
+                    }
+                }
+
+                // Card 3: Dictation & Behavior
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        PreferenceCategory("Dictation & Behavior")
+
+                        smartPunctuationSetting.Preference()
+                        silenceTimeoutSetting.Preference()
+                        micSensitivitySetting.Preference()
+                        maxDurationSetting.Preference()
+                    }
+                }
+
+                // Card 4: Performance & Advanced
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        PreferenceCategory("Performance & Advanced")
+
+                        cpuThreadsSetting.Preference()
+                        customPromptSetting.Preference()
+                        whisperKeepLoadedSetting.Preference()
+                    }
+                }
+            }
         }
     }
 }
@@ -635,4 +839,22 @@ private fun buildVoiceLanguageEntries(context: android.content.Context): List<Pa
 
     list.addAll(langItems)
     return list
+}
+
+private fun isUpdateAvailable(local: String, remote: String): Boolean {
+    val cleanLocal = local.removePrefix("v").trim()
+    val cleanRemote = remote.removePrefix("v").trim()
+    if (cleanLocal == cleanRemote) return false
+
+    val localParts = cleanLocal.split(".").mapNotNull { it.toIntOrNull() }
+    val remoteParts = cleanRemote.split(".").mapNotNull { it.toIntOrNull() }
+
+    val maxLength = maxOf(localParts.size, remoteParts.size)
+    for (i in 0 until maxLength) {
+        val localPart = localParts.getOrElse(i) { 0 }
+        val remotePart = remoteParts.getOrElse(i) { 0 }
+        if (remotePart > localPart) return true
+        if (localPart > remotePart) return false
+    }
+    return false
 }

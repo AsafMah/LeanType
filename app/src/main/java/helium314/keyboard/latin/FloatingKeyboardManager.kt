@@ -42,6 +42,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
         private const val PREF_Y = "floating_y"
         private const val PREF_WIDTH = "floating_width"
         private const val PREF_SCALE = "floating_scale"
+        private const val PREF_IS_ACTIVE = "floating_is_active"
         private const val FLOATING_WIDTH_FRACTION = 0.75f
         private const val HEADER_HEIGHT_DP = 28
         private const val CORNER_RADIUS_DP = 16f
@@ -50,6 +51,8 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
     private val prefs: SharedPreferences by lazy {
         DeviceProtectedUtils.getSharedPreferences(context, PREFS_NAME)
     }
+
+    fun wasFloatingLastTime(): Boolean = prefs.getBoolean(PREF_IS_ACTIVE, false)
 
     var overlayRoot: FrameLayout? = null
         private set
@@ -180,6 +183,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
         }
 
         isFloating = true
+        prefs.edit().putBoolean(PREF_IS_ACTIVE, true).apply()
         
         // Manually trigger reparenting of the current input view into the overlay.
         // reloadKeyboard() alone won't trigger setInputView() if the theme hasn't changed.
@@ -201,6 +205,10 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
 
     fun hide(showDockedKeyboard: Boolean = true) {
         if (!isFloating) return
+
+        if (showDockedKeyboard) {
+            prefs.edit().putBoolean(PREF_IS_ACTIVE, false).apply()
+        }
 
         // Clear the floating overrides FIRST
         ResourceUtils.setFloatingKeyboardWidth(0)
@@ -414,6 +422,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
 
         var initialWindowX = 0
         var initialWindowY = 0
+        var baseKeyboardHeight = 0
 
         resizeBtn.setOnTouchListener { _, event ->
             when (event.action) {
@@ -425,10 +434,16 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                     initialResizeWidth = windowParams?.width ?: ResourceUtils.getFloatingKeyboardWidth()
                     initialResizeHeight = overlayRoot?.height ?: 0
                     initialResizeScale = ResourceUtils.getFloatingKeyboardScale().let { if (it > 0f) it else 1.0f }
+                    val content = overlayRoot?.getChildAt(0) as? LinearLayout
+                    val keyboardFrame = if (content != null && content.childCount > 1) content.getChildAt(1) else null
+                    baseKeyboardHeight = keyboardFrame?.height?.takeIf { it > 0 }
+                        ?: (if (initialResizeHeight > 0) (initialResizeHeight - height).coerceAtLeast(1) else (220 * density).toInt())
                     paint.color = (textColor and 0x00FFFFFF) or activeAlpha
                     paint.strokeWidth = 4.5f * density
                     resizeBg.setColor(activeBgColor)
                     resizeBtn.invalidate()
+                    content?.let { setClipChildrenRecursively(it, false) }
+                    overlayRoot?.clipChildren = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -437,7 +452,7 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
 
                     // Dragging top-left corner: dx < 0 expands left, dy < 0 expands top
                     val targetWidth = initialResizeWidth - dx
-                    val baseHeight = if (initialResizeHeight > 0) initialResizeHeight else (250 * density).toInt()
+                    val baseHeight = if (initialResizeHeight > 0) initialResizeHeight else (baseKeyboardHeight + height)
                     val targetHeight = baseHeight - dy
 
                     val newWidth = targetWidth.coerceIn(minWidth, maxWidth)
@@ -452,7 +467,6 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                         lp.width = newWidth
                         lp.height = newHeight
                         try {
-                            windowManager?.updateViewLayout(overlayRoot, lp)
                             val content = overlayRoot?.getChildAt(0) as? LinearLayout
                             if (content != null) {
                                 content.layoutParams = FrameLayout.LayoutParams(
@@ -462,12 +476,19 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                                 if (content.childCount > 1) {
                                     val keyboardFrame = content.getChildAt(1)
                                     keyboardFrame.layoutParams = LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        0,
-                                        1.0f
+                                        initialResizeWidth,
+                                        baseKeyboardHeight
                                     )
+                                    val targetKeyboardHeight = (newHeight - height).coerceAtLeast(1)
+                                    val scaleX = newWidth.toFloat() / initialResizeWidth.coerceAtLeast(1)
+                                    val scaleY = targetKeyboardHeight.toFloat() / baseKeyboardHeight.coerceAtLeast(1)
+                                    keyboardFrame.pivotX = 0f
+                                    keyboardFrame.pivotY = 0f
+                                    keyboardFrame.scaleX = scaleX
+                                    keyboardFrame.scaleY = scaleY
                                 }
                             }
+                            windowManager?.updateViewLayout(overlayRoot, lp)
                         } catch (e: Exception) {
                             Log.w(TAG, "Failed to update overlay layout on resize", e)
                         }
@@ -483,9 +504,31 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                     windowParams?.let { lp ->
                         val finalWidth = lp.width
                         val finalHeight = lp.height
-                        val baseHeight = if (initialResizeHeight > 0) initialResizeHeight else (250 * density).toInt()
-                        val heightRatio = if (baseHeight > 0) finalHeight.toFloat() / baseHeight else 1.0f
+                        val targetKeyboardHeight = (finalHeight - height).coerceAtLeast(1)
+                        val heightRatio = targetKeyboardHeight.toFloat() / baseKeyboardHeight.coerceAtLeast(1)
                         val finalScale = (initialResizeScale * heightRatio).coerceIn(0.5f, 1.8f)
+
+                        // Reset visual scale transformations
+                        val content = overlayRoot?.getChildAt(0) as? LinearLayout
+                        if (content != null) {
+                            setClipChildrenRecursively(content, true)
+                            content.layoutParams = FrameLayout.LayoutParams(
+                                FrameLayout.LayoutParams.MATCH_PARENT,
+                                FrameLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            if (content.childCount > 1) {
+                                val keyboardFrame = content.getChildAt(1)
+                                keyboardFrame.scaleX = 1.0f
+                                keyboardFrame.scaleY = 1.0f
+                                keyboardFrame.pivotX = 0f
+                                keyboardFrame.pivotY = 0f
+                                keyboardFrame.layoutParams = LinearLayout.LayoutParams(
+                                    finalWidth,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                )
+                            }
+                        }
+                        overlayRoot?.clipChildren = true
 
                         // Reset window height back to WRAP_CONTENT so it wraps newly-measured keys tightly
                         lp.height = WindowManager.LayoutParams.WRAP_CONTENT
@@ -555,6 +598,16 @@ class FloatingKeyboardManager(private val context: Context, private val latinIME
                 .putInt(PREF_X, lp.x)
                 .putInt(PREF_Y, lp.y)
                 .apply()
+        }
+    }
+
+    private fun setClipChildrenRecursively(view: View, clip: Boolean) {
+        if (view is ViewGroup) {
+            view.clipChildren = clip
+            view.clipToPadding = clip
+            for (i in 0 until view.childCount) {
+                setClipChildrenRecursively(view.getChildAt(i), clip)
+            }
         }
     }
 }

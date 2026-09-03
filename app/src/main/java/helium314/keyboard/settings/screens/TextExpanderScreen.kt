@@ -296,12 +296,16 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                                             }
                                             Column(modifier = Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                                 PlaceholderChip(tag = "%clipboard%", desc = "Clipboard content")
+                                                PlaceholderChip(tag = "%clipboard:clean%", desc = "Clipboard (citations stripped)")
+                                                PlaceholderChip(tag = "%clipboard:singleline%", desc = "Clipboard (single-line)")
+                                                PlaceholderChip(tag = "%clipboard:title%", desc = "Clipboard (Title Case)")
+                                                PlaceholderChip(tag = "%clipboard:slug%", desc = "Clipboard (URL kebab-slug)")
                                                 PlaceholderChip(tag = "%day%", desc = "Day name (e.g. Monday)")
                                                 PlaceholderChip(tag = "%month%", desc = "Month (e.g. June)")
                                                 PlaceholderChip(tag = "%language%", desc = "Keyboard language (e.g. English)")
                                                 PlaceholderChip(tag = "%cursor%", desc = "Cursor position after expansion")
-                                                PlaceholderChip(tag = "%bullets%", desc = "Bullet list (supports e.g. %bullets_5%)")
-                                                PlaceholderChip(tag = "%list%", desc = "Numbered list (supports e.g. %list_5%)")
+                                                PlaceholderChip(tag = "%bullets%", desc = "Bullet list (e.g. %bullets_5%)")
+                                                PlaceholderChip(tag = "%list%", desc = "Numbered list (e.g. %list_5%)")
                                             }
                                         }
                                     }
@@ -567,7 +571,9 @@ fun TextExpanderScreen(onClickBack: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val tags = listOf(
-                            "%date%", "%time%", "%time12%", "%clipboard%",
+                            "%clipboard%", "%clipboard:clean%", "%clipboard:singleline%",
+                            "%clipboard:title%", "%clipboard:slug%", "%clipboard:upper%",
+                            "%date%", "%time%", "%time12%",
                             "%day%", "%month%", "%year%", "%week%",
                             "%battery%", "%language%", "%cursor%", "%greeting%",
                             "%tomorrow%", "%bullets%", "%list%"

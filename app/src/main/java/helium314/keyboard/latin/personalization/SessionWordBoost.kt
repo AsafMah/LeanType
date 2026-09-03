@@ -48,19 +48,54 @@ class SessionWordBoost private constructor(
     /**
      * Record that a word was committed. Increments count and updates timestamp.
      */
-    fun recordWord(word: String) {
-        val normalized = WordTokenizer.normalizeForLookup(word)
-        if (normalized.length <= 1) return // skip single chars
+    fun recordWord(word: String, wasAutoCapitalized: Boolean = false) {
+        val rawNormalized = WordTokenizer.normalizeForLookup(word)
+        if (rawNormalized.length <= 1) return // skip single chars
+        val normalized = if (wasAutoCapitalized) rawNormalized.lowercase() else rawNormalized
         val now = System.currentTimeMillis()
         val existing = entries[normalized]
+            ?: entries[normalized.lowercase()]
+            ?: entries.entries.firstOrNull { it.key.equals(normalized, ignoreCase = true) }?.value
+
         if (existing != null) {
             existing.count++
             existing.lastSeenMs = now
+            if (wasAutoCapitalized && existing.word != normalized) {
+                entries.remove(existing.word)
+                entries[normalized] = existing
+            }
         } else {
             entries[normalized] = WordEntry(normalized, 1, now, now)
             evictIfNeeded()
         }
         dirty = true
+    }
+
+    /**
+     * Remove a word from session boost (memory and disk).
+     */
+    fun removeWord(word: String) {
+        val normalized = WordTokenizer.normalizeForLookup(word)
+        val lower = normalized.lowercase()
+        val toRemove = entries.keys.filter { it.equals(normalized, ignoreCase = true) || it.equals(lower, ignoreCase = true) }
+        for (key in toRemove) {
+            entries.remove(key)
+        }
+        if (toRemove.isNotEmpty()) {
+            dirty = true
+            flushIfDirty()
+        }
+    }
+
+    /**
+     * Get the committed use count for a word.
+     */
+    fun getCount(word: String): Int {
+        val normalized = WordTokenizer.normalizeForLookup(word)
+        return entries[normalized]?.count
+            ?: entries[normalized.lowercase()]?.count
+            ?: entries.entries.firstOrNull { it.key.equals(normalized, ignoreCase = true) }?.value?.count
+            ?: 0
     }
 
     /**
@@ -73,7 +108,8 @@ class SessionWordBoost private constructor(
     fun getBoost(word: String): Float {
         val normalized = WordTokenizer.normalizeForLookup(word)
         val entry = entries[normalized]
-            ?: entries[normalized.lowercase()] // fallback to lowercase match
+            ?: entries[normalized.lowercase()]
+            ?: entries.entries.firstOrNull { it.key.equals(normalized, ignoreCase = true) }?.value
             ?: return 0f
         val daysSinceLastUse = (System.currentTimeMillis() - entry.lastSeenMs) /
             MILLIS_PER_DAY.toFloat()

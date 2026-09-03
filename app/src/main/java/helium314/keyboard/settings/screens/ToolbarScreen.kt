@@ -101,9 +101,13 @@ fun createToolbarSettings(context: Context): List<Setting> {
     val filter = { name: String ->
         val lowerName = name.lowercase()
         when {
-            lowerName.startsWith("custom_ai_") ->  BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull" || BuildConfig.FLAVOR == "offline"
-            lowerName == "handwriting" -> BuildConfig.FLAVOR == "standardfull"
-            lowerName in listOf("proofread", "translate", "clipboard_search") -> BuildConfig.FLAVOR != "offlinelite"
+             lowerName.startsWith("custom_ai_") || lowerName == "proofread" -> {
+                if (BuildConfig.FLAVOR == "offline") {
+                    android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+                } else {
+                    BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull"
+                }
+            }
             else -> true
         }
     }
@@ -247,18 +251,16 @@ fun createToolbarSettings(context: Context): List<Setting> {
         {
             SwitchPreference(it, Defaults.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE)
         },
-        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
-            Setting(
-                context,
-                Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR,
-                R.string.show_download_button_in_toolbar,
-                R.string.show_download_button_in_toolbar_summary
-            ) {
-                SwitchPreference(it, Defaults.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR) {
-                    KeyboardSwitcher.getInstance().setThemeNeedsReload()
-                }
+        Setting(
+            context,
+            Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR,
+            R.string.show_download_button_in_toolbar,
+            R.string.show_download_button_in_toolbar_summary
+        ) {
+            SwitchPreference(it, Defaults.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR) {
+                KeyboardSwitcher.getInstance().setThemeNeedsReload()
             }
-        } else null
+        }
     )
 }
 

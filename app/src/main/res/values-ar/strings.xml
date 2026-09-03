@@ -728,59 +728,6 @@
   <item>الكتالانية</item>
   <item>الباسكية</item>
 </string-array>
-    <string-array name="translate_language_codes">
-  <item>الإنجليزية</item>
-  <item>الإسبانية</item>
-  <item>الفرنسية</item>
-  <item>الألمانية</item>
-  <item>الإيطالية</item>
-  <item>البرتغالية</item>
-  <item>الصينية (المبسطة)</item>
-  <item>الصينية (التقليدية)</item>
-  <item>اليابانية</item>
-  <item>الكورية</item>
-  <item>العربية</item>
-  <item>الروسية</item>
-  <item>الهندية</item>
-  <item>البنغالية</item>
-  <item>الإندونيسية</item>
-  <item>الهولندية</item>
-  <item>التركية</item>
-  <item>البولندية</item>
-  <item>الأوكرانية</item>
-  <item>السويدية</item>
-  <item>الدنماركية</item>
-  <item>النرويجية</item>
-  <item>الفنلندية</item>
-  <item>اليونانية</item>
-  <item>العبرية</item>
-  <item>التايلاندية</item>
-  <item>الفيتنامية</item>
-  <item>التاميلية</item>
-  <item>التيلوغوية</item>
-  <item>الماراثية</item>
-  <item>الغوجاراتية</item>
-  <item>الكانادية</item>
-  <item>المالايالامية</item>
-  <item>الأردية</item>
-  <item>الفارسية</item>
-  <item>السواحيلية</item>
-  <item>الرومانية</item>
-  <item>التشيكية</item>
-  <item>المجرية</item>
-  <item>الفلبينية (التاغالوغية)</item>
-  <item>الملايوية</item>
-  <item>الصربية</item>
-  <item>الكرواتية</item>
-  <item>البلغارية</item>
-  <item>السلوفاكية</item>
-  <item>السلوفينية</item>
-  <item>الليتوانية</item>
-  <item>اللاتفية</item>
-  <item>الإستونية</item>
-  <item>الكتالانية</item>
-  <item>الباسكية</item>
-</string-array>
     <string name="toolbar_long_press_hint">إظهار نقاط تلميح الضغط المطول</string>
     <string name="toolbar_long_press_hint_summary">إظهار نقاط على مفاتيح شريط الأدوات التي تحتوي على إجراء ضغط مطول</string>
     <string name="prefs_narrow_key_gaps_level">مستوى التباعد الضيق</string>

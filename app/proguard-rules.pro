@@ -38,27 +38,58 @@
 -dontwarn com.google.api.client.**
 -dontwarn java.lang.management.**
 -dontwarn org.joda.time.**
+-dontwarn com.google.ai.client.generativeai.**
+-dontwarn de.kherud.llama.**
+-dontwarn org.nehuatl.llamacpp.**
 
-# Keep offline voice plugin AIDL interface and parcelable classes
+# Keep offline voice plugin AIDL interface, parcelables, and host managers
 -keep class com.leanbitlab.leantype.voice.** { *; }
 -keep interface com.leanbitlab.leantype.voice.** { *; }
+-keep class helium314.keyboard.latin.voice.** { *; }
 
+# Keep handwriting plugin interface and classes to prevent signature optimization or inlining
 -keep interface helium314.keyboard.latin.handwriting.HandwritingRecognizer {
     <methods>;
 }
 -keep interface helium314.keyboard.latin.handwriting.ModelDownloadListener {
     <methods>;
 }
+-keep class helium314.keyboard.latin.handwriting.** { *; }
+-keep interface helium314.keyboard.latin.handwriting.** { *; }
 
 # Keep translation plugin interface to prevent parameter removal/signature optimization
 -keep interface helium314.keyboard.latin.translation.ITranslationProvider {
     <methods>;
 }
+-keep interface helium314.keyboard.latin.translation.TranslationModelDownloadListener {
+    <methods>;
+}
+-keep class helium314.keyboard.latin.translation.** { *; }
+-keep interface helium314.keyboard.latin.translation.** { *; }
 
-# Keep ML Kit, GMS Tasks, and Firebase components for handwriting plugin dynamic linkage
+# Keep offline AI plugin interface to prevent parameter removal/signature optimization
+-keep interface helium314.keyboard.latin.ai.IOfflineAiProvider {
+    <methods>;
+}
+-keep class helium314.keyboard.latin.ai.** { *; }
+-keep interface helium314.keyboard.latin.ai.** { *; }
+
+# Keep WorkManager plugin factory & runtime for dynamically loaded plugins
+-keep class helium314.keyboard.latin.work.** { *; }
+-keep interface helium314.keyboard.latin.work.** { *; }
+-keep class androidx.work.** { *; }
+-keep interface androidx.work.** { *; }
+-keep class * extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keepnames class com.google.mlkit.** extends androidx.work.ListenableWorker
+-dontwarn androidx.work.**
+
+# Keep ML Kit, DataTransport, GMS Tasks, and Firebase components for plugin dynamic linkage
 -keep class com.google.mlkit.** { *; }
--keep class com.google.android.gms.tasks.** { *; }
--keep class com.google.firebase.components.** { *; }
+-keep class com.google.android.datatransport.** { *; }
+-keep class com.google.android.gms.** { *; }
+-keep class com.google.firebase.** { *; }
 
 # Keep Kotlin standard library for dynamically loaded plugins
 # ponytail: keep kotlin stdlib classes to prevent NoSuchMethodError in plugin loading

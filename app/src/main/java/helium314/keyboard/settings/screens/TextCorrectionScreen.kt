@@ -42,6 +42,7 @@ import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.Preference
+import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.preferences.SwitchPreferenceWithEmojiDictWarning
 import helium314.keyboard.settings.previewDark
@@ -87,10 +88,9 @@ fun TextCorrectionScreen(
         Settings.PREF_KEY_USE_PERSONALIZED_DICTS,
         Settings.PREF_BIGRAM_PREDICTIONS,
         if (prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS))
+            Settings.PREF_SUGGESTION_BALANCE else null,
+        if (prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS))
             Settings.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS else null,
-        if (prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS) &&
-            prefs.getBoolean(Settings.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS, Defaults.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS))
-            Settings.PREF_NEXT_WORD_BOOST_LEVEL else null,
         if (prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS))
             Settings.PREF_NEXT_WORD_STRICT_NGRAM else null,
         if (prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS))
@@ -238,15 +238,25 @@ fun createCorrectionSettings(context: Context) = listOf(
     ) {
         SwitchPreference(it, Defaults.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS)
     },
-    Setting(context, Settings.PREF_NEXT_WORD_BOOST_LEVEL,
-        R.string.next_word_boost_level, R.string.next_word_boost_level_summary
+    Setting(context, Settings.PREF_SUGGESTION_BALANCE,
+        R.string.suggestion_balance_title, R.string.suggestion_balance_summary
     ) {
-        val items = listOf(
-            "Low (+200)" to "200",
-            "Medium (+500)" to "500",
-            "High (+1000)" to "1000"
+        SliderPreference(
+            name = it.title,
+            key = it.key,
+            default = Defaults.PREF_SUGGESTION_BALANCE,
+            range = 1f..5f,
+            stepSize = 1,
+            description = { value ->
+                when (value) {
+                    Settings.SUGGESTION_BALANCE_DICTIONARY_FOCUSED -> stringResource(R.string.suggestion_balance_desc_1)
+                    Settings.SUGGESTION_BALANCE_CONSERVATIVE -> stringResource(R.string.suggestion_balance_desc_2)
+                    Settings.SUGGESTION_BALANCE_PERSONALIZED -> stringResource(R.string.suggestion_balance_desc_4)
+                    Settings.SUGGESTION_BALANCE_HIGHLY_PERSONALIZED -> stringResource(R.string.suggestion_balance_desc_5)
+                    else -> stringResource(R.string.suggestion_balance_desc_3)
+                }
+            }
         )
-        ListPreference(it, items, Defaults.PREF_NEXT_WORD_BOOST_LEVEL)
     },
     Setting(context, Settings.PREF_NEXT_WORD_STRICT_NGRAM,
         R.string.next_word_strict_ngram, R.string.next_word_strict_ngram_summary

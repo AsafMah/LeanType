@@ -481,59 +481,6 @@
   <item>കറ്റാലൻ</item>
   <item>ബാസ്ക്</item>
 </string-array>
-    <string-array name="translate_language_codes">
-  <item>ഇംഗ്ലീഷ്</item>
-  <item>സ്പാനിഷ്</item>
-  <item>ഫ്രഞ്ച്</item>
-  <item>ജർമ്മൻ</item>
-  <item>ഇറ്റാലിയൻ</item>
-  <item>പോർച്ചുഗീസ്</item>
-  <item>ചൈനീസ് (ലളിതം)</item>
-  <item>ചൈനീസ് (പാരമ്പര്യം)</item>
-  <item>ജാപ്പനീസ്</item>
-  <item>കൊറിയൻ</item>
-  <item>അറബിക്</item>
-  <item>റഷ്യൻ</item>
-  <item>ഹിന്ദി</item>
-  <item>ബംഗാളി</item>
-  <item>ഇന്തോനേഷ്യൻ</item>
-  <item>ഡച്ച്</item>
-  <item>ടർക്കിഷ്</item>
-  <item>പോളിഷ്</item>
-  <item>ഉക്രേനിയൻ</item>
-  <item>സ്വീഡിഷ്</item>
-  <item>ഡാനിഷ്</item>
-  <item>നോർവീജിയൻ</item>
-  <item>ഫിന്നിഷ്</item>
-  <item>ഗ്രീക്ക്</item>
-  <item>ഹീബ്രു</item>
-  <item>തായ്</item>
-  <item>വിയറ്റ്നാമീസ്</item>
-  <item>തമിഴ്</item>
-  <item>തെലുങ്ക്</item>
-  <item>മറാത്തി</item>
-  <item>ഗുജറാത്തി</item>
-  <item>കന്നഡ</item>
-  <item>മലയാളം</item>
-  <item>ഉർദു</item>
-  <item>പേർഷ്യൻ (ഫാർസി)</item>
-  <item>സ്വാഹിലി</item>
-  <item>റൊമാനിയൻ</item>
-  <item>ചെക്ക്</item>
-  <item>ഹംഗേറിയൻ</item>
-  <item>ഫിലിപ്പിനോ (ടാഗലോഗ്)</item>
-  <item>മലായ്</item>
-  <item>സെർബിയൻ</item>
-  <item>ക്രൊയേഷ്യൻ</item>
-  <item>ബൾഗേറിയൻ</item>
-  <item>സ്ലോവാക്</item>
-  <item>സ്ലൊവേനിയൻ</item>
-  <item>ലിത്വാനിയൻ</item>
-  <item>ലാത്വിയൻ</item>
-  <item>എസ്റ്റോണിയൻ</item>
-  <item>കറ്റാലൻ</item>
-  <item>ബാസ്ക്</item>
-</string-array>
     <string name="clipboard_toolbar_keys">ക്ലിപ്പ്ബോർഡ് ടൂൾബാർ കീകൾ തിരഞ്ഞെടുക്കുക</string>
     <string name="pinned_toolbar_keys">പിൻ ചെയ്ത ടൂൾബാർ കീകൾ തിരഞ്ഞെടുക്കുക</string>
     <string name="quick_pin_toolbar_keys">ദീർഘമർത്തുമ്പോൾ ടൂൾബാർ കീ പിൻ ചെയ്യുക</string>

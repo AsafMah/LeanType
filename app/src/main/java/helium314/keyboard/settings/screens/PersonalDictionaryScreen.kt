@@ -78,20 +78,29 @@ fun PersonalDictionaryScreen(
                 words.filter { it.word.startsWith(term, true) || it.shortcut?.startsWith(term, true) == true }
             },
             itemContent = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                androidx.compose.material3.Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { selectedWord = it }
-                        .padding(vertical = 6.dp, horizontal = 16.dp)
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
                 ) {
-                    Column {
-                        Text(it.word, style = MaterialTheme.typography.bodyLarge)
-                        val details = if (it.shortcut == null) it.weight.toString() else "${it.weight}  |  ${it.shortcut}"
-                        Text(details, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedWord = it }
+                            .padding(vertical = 10.dp, horizontal = 16.dp)
+                    ) {
+                        Column {
+                            Text(it.word, style = MaterialTheme.typography.bodyLarge)
+                            val details = if (it.shortcut == null) it.weight.toString() else "${it.weight}  |  ${it.shortcut}"
+                            Text(details, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.user_dict_settings_edit_dialog_title))
                     }
-                    Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.user_dict_settings_edit_dialog_title))
                 }
             }
         )

@@ -72,13 +72,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "🎙️ Migrated offline voice typing to Whisper AI with compact Q5_1 models and in-toolbar waveform visualizer",
-    "🌐 Added Voice Recognition Language selector with Auto-Detect, Follow Keyboard Language, and 99+ Whisper languages",
-    "🚀 Added in-app streaming self-updater (standardfull), collapsible changelog, and official community links",
-    "🧠 Added Personal Dictionary auto-learn frequency threshold slider in Settings -> Text Correction",
-    "🎨 Added Toolbar & Clipboard key alignment setting (Start, Center, End, Auto-Span)",
-    "⚡ Added N-gram backoff and cache safeguards for continuous next-word predictions",
-    "🎨 Isolated key border theme setting strictly to keyboard letter keys"
+    "• Custom Click Sounds: Zero-latency key audio engine with 12 built-in presets (iOS, Mechanical, Thocky, Typewriter, Retro CRT, Bubble Pop, Velvet, Wood, Marimba, Modern Tick, Sci-Fi, 8-Bit Arcade), live preview, and custom .zip sound pack import",
+    "• Harmonized Import Dialogs: Added language selection confirmation dialogs for handwriting, translation, and dictionary model imports",
+    "• AI Translation Hardening: Filtered conversational LLM preamble and code fences in translation outputs, and fixed active AI provider token validation",
+    "• Clean Feedback Guardrails: Suppressed unnecessary fallback toasts when translation engine is set to AI"
 )
 
 @Composable
@@ -311,7 +308,7 @@ fun UpdatesScreen(
                     .padding(innerPadding)
                     .padding(vertical = 8.dp)
             ) {
-                // Section 1: App Updates (OMITTED entirely on offline / offlinelite flavors)
+                // Section 1: App Updates (OMITTED entirely on offline flavor)
                 if (isOnlineFlavor) {
                     // Minimal Update Indicator Banner if update is available
                     if (isUpdateAvailable && latestVersionTag != null) {

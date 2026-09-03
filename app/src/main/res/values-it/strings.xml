@@ -728,59 +728,6 @@
   <item>Catalano</item>
   <item>Basco</item>
 </string-array>
-    <string-array name="translate_language_codes">
-  <item>Inglese</item>
-  <item>Spagnolo</item>
-  <item>Francese</item>
-  <item>Tedesco</item>
-  <item>Italiano</item>
-  <item>Portoghese</item>
-  <item>Cinese (Semplificato)</item>
-  <item>Cinese (Tradizionale)</item>
-  <item>Giapponese</item>
-  <item>Coreano</item>
-  <item>Arabo</item>
-  <item>Russo</item>
-  <item>Hindi</item>
-  <item>Bengalese</item>
-  <item>Indonesiano</item>
-  <item>Olandese</item>
-  <item>Turco</item>
-  <item>Polacco</item>
-  <item>Ucraino</item>
-  <item>Svedese</item>
-  <item>Danese</item>
-  <item>Norvegese</item>
-  <item>Finlandese</item>
-  <item>Greco</item>
-  <item>Ebraico</item>
-  <item>Tailandese</item>
-  <item>Vietnamita</item>
-  <item>Tamil</item>
-  <item>Telugu</item>
-  <item>Marathi</item>
-  <item>Gujarati</item>
-  <item>Kannada</item>
-  <item>Malayalam</item>
-  <item>Urdu</item>
-  <item>Persiano (Farsi)</item>
-  <item>Swahili</item>
-  <item>Rumeno</item>
-  <item>Ceco</item>
-  <item>Ungherese</item>
-  <item>Filippino (Tagalog)</item>
-  <item>Malese</item>
-  <item>Serbo</item>
-  <item>Croato</item>
-  <item>Bulgaro</item>
-  <item>Slovacco</item>
-  <item>Sloveno</item>
-  <item>Lituano</item>
-  <item>Lettone</item>
-  <item>Estone</item>
-  <item>Catalano</item>
-  <item>Basco</item>
-</string-array>
     <string name="toolbar_long_press_hint">Mostra puntini di suggerimento per pressione prolungata</string>
     <string name="toolbar_long_press_hint_summary">Mostra puntini sui tasti della barra degli strumenti che hanno un\'azione di pressione prolungata</string>
     <string name="prefs_narrow_key_gaps_level">Livello di riduzione spazi</string>

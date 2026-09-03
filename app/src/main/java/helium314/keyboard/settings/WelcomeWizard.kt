@@ -69,6 +69,7 @@ import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.LoadEmojiLibPreference
 import helium314.keyboard.settings.preferences.LoadGestureLibPreference
 import helium314.keyboard.settings.preferences.MultiSliderPreference
+import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 import kotlinx.coroutines.delay
@@ -432,10 +433,19 @@ fun WelcomeWizard(
                         }
                     }
                 } else if (step == 5) {
+                    val stepTitle = when (BuildConfig.FLAVOR) {
+                        "offline" -> "Offline AI Integration"
+                        else -> "AI Integration"
+                    }
+                    val stepInstruction = when (BuildConfig.FLAVOR) {
+                        "offline" -> "Configure on-device GGUF AI models for local proofreading and translation without internet."
+                        else -> "Configure cloud AI services (Groq, Gemini, or OpenAI compatible) for smart proofreading and rewriting."
+                    }
+
                     Step(
                         5,
-                        "AI Integration",
-                        "Select an AI service and provide your API key for advanced proofreading features.",
+                        stepTitle,
+                        stepInstruction,
                         "Next",
                         painterResource(R.drawable.sym_keyboard_language_switch),
                         { step++ },
@@ -496,8 +506,87 @@ fun WelcomeWizard(
                                     Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.align(Alignment.CenterEnd).padding(end = 16.dp), tint = MaterialTheme.colorScheme.primary)
                                 }
                             }
+                        } else if (BuildConfig.FLAVOR == "offline") {
+                            val service = remember { helium314.keyboard.latin.utils.ProofreadService(ctx) }
+                            var modelPath by remember { mutableStateOf(service.getModelPath()) }
+                            val hasPlugin = helium314.keyboard.latin.ai.OfflineAiLoader.hasPlugin(ctx)
+                            val pluginVersion = helium314.keyboard.latin.ai.OfflineAiLoader.getPluginVersion(ctx)
+
+                            val modelLauncher = rememberLauncherForActivityResult(
+                                contract = ActivityResultContracts.OpenDocument()
+                            ) { uri ->
+                                uri?.let {
+                                    try {
+                                        ctx.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("WelcomeWizard", "Failed to take persistable permission", e)
+                                    }
+                                    service.setModelPath(it.toString())
+                                    modelPath = it.toString()
+                                    refreshTrigger++
+                                }
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)) {
+                                    helium314.keyboard.settings.preferences.LoadOfflineAiPluginPreference(
+                                        title = "Offline AI Plugin",
+                                        summary = if (hasPlugin) "Plugin active (version ${pluginVersion ?: "1.0"})" else "Required for on-device GGUF inference — tap to download or load",
+                                        icon = R.drawable.ic_proofread,
+                                        onSuccess = { refreshTrigger++ }
+                                    )
+                                    if (hasPlugin) {
+                                        Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.align(Alignment.CenterEnd).padding(end = 16.dp), tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+
+                                Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)) {
+                                    Column {
+                                        Preference(
+                                            name = "GGUF Model (.gguf)",
+                                            description = if (modelPath != null) service.getModelName() else "Optional — select local GGUF model file",
+                                            onClick = { modelLauncher.launch(arrayOf("application/octet-stream", "*/*")) },
+                                            icon = R.drawable.ic_settings_advanced
+                                        )
+                                        if (modelPath != null) {
+                                            Preference(
+                                                name = "Remove Model",
+                                                description = "Unload model and clear selection",
+                                                onClick = {
+                                                    service.unloadModel()
+                                                    service.setModelPath(null)
+                                                    modelPath = null
+                                                    refreshTrigger++
+                                                }
+                                            )
+                                        }
+                                    }
+                                    if (modelPath != null) {
+                                        Icon(painterResource(R.drawable.ic_setup_check), null, Modifier.align(Alignment.CenterEnd).padding(end = 16.dp), tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
                         } else {
-                            Text("AI features are not available in this build flavor.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
+                                    .padding(16.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_setup_check),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(end = 12.dp)
+                                    )
+                                    Text(
+                                        "Offline Lite edition active.\nZero background AI or network footprint.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
                     }
                 } else if (step == 6) {

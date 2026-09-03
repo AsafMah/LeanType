@@ -111,6 +111,7 @@ object Defaults {
     const val PREF_ENABLE_SPLIT_KEYBOARD = false
     const val PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE = false
     const val PREF_PERSIST_FLOATING_KEYBOARD = false
+    const val PREF_REMEMBER_FLOATING_KEYBOARD = false
     // ponytail: persist text edit mode default
     const val PREF_PERSIST_TEXT_EDIT_MODE = false
     // ponytail: default value to disable multi-word suggestions is false
@@ -144,6 +145,7 @@ object Defaults {
     const val PREF_ALWAYS_INCOGNITO_MODE = false
     const val PREF_BIGRAM_PREDICTIONS = true
     const val PREF_PRIORITIZE_PERSONAL_SUGGESTIONS = false
+    const val PREF_SUGGESTION_BALANCE = 3
     const val PREF_NEXT_WORD_BOOST_LEVEL = "500"
     const val PREF_NEXT_WORD_STRICT_NGRAM = false
     const val PREF_IMMEDIATE_AUTO_SPACE = false
@@ -160,6 +162,7 @@ object Defaults {
     const val PREF_VIBRATION_DURATION_SETTINGS = -1
     const val PREF_VIBRATION_AMPLITUDE_SETTINGS = -1
     const val PREF_KEYPRESS_SOUND_VOLUME = -0.01f
+    const val PREF_KEYPRESS_SOUND_STYLE = "system"
     const val PREF_KEY_LONGPRESS_TIMEOUT = 300
     const val PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = true
     const val PREF_GESTURE_PREVIEW_TRAIL = true

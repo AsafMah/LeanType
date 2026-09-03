@@ -2,12 +2,8 @@
 package helium314.keyboard.settings.screens
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.text.method.LinkMovementMethod
-import android.view.View
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -31,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.FileProvider
@@ -42,8 +40,8 @@ import helium314.keyboard.latin.common.Links
 import helium314.keyboard.latin.settings.DebugSettings
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.utils.Log
-import helium314.keyboard.latin.utils.SpannableStringUtils
 import helium314.keyboard.latin.utils.getActivity
+import helium314.keyboard.latin.utils.htmlToAnnotated
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.SettingsContainer
 import helium314.keyboard.settings.SettingsWithoutKey
@@ -52,6 +50,7 @@ import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.Theme
+import helium314.keyboard.settings.dialogs.ThreeButtonAlertDialog
 import helium314.keyboard.settings.previewDark
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -151,27 +150,28 @@ fun createAboutSettings(context: Context) = listOf(
     },
     Setting(context, SettingsWithoutKey.HIDDEN_FEATURES, R.string.hidden_features_title, R.string.hidden_features_summary) {
         val ctx = LocalContext.current
+        var showDialog by rememberSaveable { mutableStateOf(false) }
         Preference(
             name = it.title,
             description = it.description,
-            onClick = {
-                // Compose dialogs are in a rather sad state. They don't understand HTML, and don't scroll without customization.
-                // this should be re-done in compose, but... bah
-                val link = ("<a href=\"https://developer.android.com/reference/android/content/Context#createDeviceProtectedStorageContext()\">"
-                        + ctx.getString(R.string.hidden_features_text) + "</a>")
-                val message = ctx.getString(R.string.hidden_features_message, link)
-                val dialogMessage = SpannableStringUtils.fromHtml(message)
-                val builder = AlertDialog.Builder(ctx)
-                    .setIcon(R.drawable.ic_settings_about_hidden_features)
-                    .setTitle(R.string.hidden_features_title)
-                    .setMessage(dialogMessage)
-                    .setPositiveButton(R.string.dialog_close, null)
-                    .create()
-                builder.show()
-                (builder.findViewById<View>(android.R.id.message) as TextView).movementMethod = LinkMovementMethod.getInstance()
-            },
+            onClick = { showDialog = true },
             icon = R.drawable.ic_settings_about_hidden_features
         )
+        if (showDialog) {
+            val link = ("<a href=\"https://developer.android.com/reference/android/content/Context#createDeviceProtectedStorageContext()\">"
+                    + ctx.getString(R.string.hidden_features_text) + "</a>")
+            val message = ctx.getString(R.string.hidden_features_message, link)
+            ThreeButtonAlertDialog(
+                onDismissRequest = { showDialog = false },
+                onConfirmed = { showDialog = false },
+                title = { Text(stringResource(R.string.hidden_features_title)) },
+                icon = { Icon(painterResource(R.drawable.ic_settings_about_hidden_features), null) },
+                content = { Text(message.htmlToAnnotated()) },
+                scrollContent = true,
+                confirmButtonText = stringResource(R.string.dialog_close),
+                cancelButtonText = null
+            )
+        }
     },
     Setting(context, SettingsWithoutKey.GITHUB_FEATURES, R.string.about_features_link, R.string.about_features_link_description) {
         val ctx = LocalContext.current

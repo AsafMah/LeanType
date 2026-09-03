@@ -535,9 +535,14 @@ private constructor(val themeId: Int, @JvmField val mStyleId: Int) {
                 }
                 COLOR_KEYS ->
                     return brightenOrDarken(determineUserColor(colors, context, COLOR_BACKGROUND, isNight), isNight)
-                COLOR_FUNCTIONAL_KEYS ->
-                    return brightenOrDarken(determineUserColor(colors, context, COLOR_KEYS, isNight), true)
-                COLOR_SPACEBAR -> return determineUserColor(colors, context, COLOR_KEYS, isNight)
+                COLOR_SPACEBAR -> {
+                    val keyColor = determineUserColor(colors, context, COLOR_KEYS, isNight)
+                    if (!context.prefs().getBoolean(Settings.PREF_THEME_KEY_BORDERS, Defaults.PREF_THEME_KEY_BORDERS)) {
+                        val background = determineUserColor(colors, context, COLOR_BACKGROUND, isNight)
+                        return androidx.core.graphics.ColorUtils.blendARGB(background, keyColor, 0.45f)
+                    }
+                    return keyColor
+                }
                 COLOR_SPACEBAR_TEXT -> {
                     val spacebar = determineUserColor(colors, context, COLOR_SPACEBAR, isNight)
                     val hintText = determineUserColor(colors, context, COLOR_HINT_TEXT, isNight)

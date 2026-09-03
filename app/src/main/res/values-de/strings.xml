@@ -674,59 +674,6 @@
   <item>Katalanisch</item>
   <item>Baskisch</item>
 </string-array>
-    <string-array name="translate_language_codes">
-  <item>Englisch</item>
-  <item>Spanisch</item>
-  <item>Französisch</item>
-  <item>Deutsch</item>
-  <item>Italienisch</item>
-  <item>Portugiesisch</item>
-  <item>Chinesisch (Vereinfacht)</item>
-  <item>Chinesisch (Traditionell)</item>
-  <item>Japanisch</item>
-  <item>Koreanisch</item>
-  <item>Arabisch</item>
-  <item>Russisch</item>
-  <item>Hindi</item>
-  <item>Bengali</item>
-  <item>Indonesisch</item>
-  <item>Niederländisch</item>
-  <item>Türkisch</item>
-  <item>Polnisch</item>
-  <item>Ukrainisch</item>
-  <item>Schwedisch</item>
-  <item>Dänisch</item>
-  <item>Norwegisch</item>
-  <item>Finnisch</item>
-  <item>Griechisch</item>
-  <item>Hebräisch</item>
-  <item>Thailändisch</item>
-  <item>Vietnamesisch</item>
-  <item>Tamil</item>
-  <item>Telugu</item>
-  <item>Marathi</item>
-  <item>Gujarati</item>
-  <item>Kannada</item>
-  <item>Malayalam</item>
-  <item>Urdu</item>
-  <item>Persisch (Farsi)</item>
-  <item>Suaheli</item>
-  <item>Rumänisch</item>
-  <item>Tschechisch</item>
-  <item>Ungarisch</item>
-  <item>Filipino (Tagalog)</item>
-  <item>Malaiisch</item>
-  <item>Serbisch</item>
-  <item>Kroatisch</item>
-  <item>Bulgarisch</item>
-  <item>Slowakisch</item>
-  <item>Slowenisch</item>
-  <item>Litauisch</item>
-  <item>Lettisch</item>
-  <item>Estnisch</item>
-  <item>Katalanisch</item>
-  <item>Baskisch</item>
-</string-array>
     <string name="toolbar_long_press_hint">Punkte für Langdruck-Hinweis anzeigen</string>
     <string name="toolbar_long_press_hint_summary">Punkte auf Werkzeugleisten-Schaltflächen mit Langdruck-Aktion anzeigen</string>
     <string name="prefs_narrow_key_gaps_level">Stärke der Tastenabstände</string>

@@ -71,7 +71,7 @@ class HandwritingView @JvmOverloads constructor(
 
         canvas.onRecognitionTriggered = { strokes ->
             performRecognition(strokes)
-            canvas.clear()
+            canvas.fadeOutAndClear()
         }
     }
 
@@ -93,7 +93,8 @@ class HandwritingView @JvmOverloads constructor(
 
         languageLabel.setTextColor(colors.get(ColorType.KEY_TEXT))
         colors.setColor(clearButton, ColorType.KEY_ICON)
-        canvas.setStrokeColor(colors.get(ColorType.KEY_TEXT))
+        canvas.setColors(colors.get(ColorType.KEY_TEXT), colors.get(ColorType.KEY_HINT_TEXT))
+        canvas.hintText = context.getString(R.string.handwriting_hint_write_here)
 
         languageLabel.text = language
         downloadProgress.visibility = View.GONE
@@ -143,8 +144,8 @@ class HandwritingView @JvmOverloads constructor(
                 button.background = btnBackground
                 button.setTextColor(colors.get(ColorType.KEY_TEXT))
 
-                // ponytail: download plugin directly on standard flavor, otherwise go to Settings
-                if ("standardfull" == helium314.keyboard.latin.BuildConfig.FLAVOR) {
+                // ponytail: download plugin directly on standard/standardfull flavor, otherwise go to Settings
+                if ("standard" == helium314.keyboard.latin.BuildConfig.FLAVOR || "standardfull" == helium314.keyboard.latin.BuildConfig.FLAVOR) {
                     button.text = "Download Plugin"
                     button.setOnClickListener {
                         downloadPlugin(button)
@@ -177,36 +178,66 @@ class HandwritingView @JvmOverloads constructor(
                 val isReady = recognizer.isLanguageReady(language)
                 mainHandler.post {
                     if (!isReady) {
-                        toolbar?.visibility = View.VISIBLE // ponytail: show for download progress
-                        languageLabel.text = "$displayName (Downloading...)"
-                        downloadProgress.visibility = View.VISIBLE
-                        downloadProgress.progress = 0
-                        recognizer.downloadModel(language, object : ModelDownloadListener {
-                            override fun onProgress(progress: Float) {
-                                mainHandler.post {
-                                    val percent = (progress * 100).toInt()
-                                    languageLabel.text = "$displayName (Downloading $percent%)"
-                                    downloadProgress.progress = percent
+                        toolbar?.visibility = View.VISIBLE
+                        val isOnlineFlavor = "standard" == helium314.keyboard.latin.BuildConfig.FLAVOR || "standardfull" == helium314.keyboard.latin.BuildConfig.FLAVOR
+                        downloadProgress.visibility = View.GONE
+                        if (isOnlineFlavor) {
+                            languageLabel.text = "$displayName (Tap to download model)"
+                            fun setupDownloadClickListener() {
+                                languageLabel.setOnClickListener {
+                                    languageLabel.setOnClickListener(null)
+                                    languageLabel.text = "$displayName (Downloading...)"
+                                    downloadProgress.visibility = View.VISIBLE
+                                    downloadProgress.progress = 0
+                                    recognizer.downloadModel(language, object : ModelDownloadListener {
+                                        override fun onProgress(progress: Float) {
+                                            mainHandler.post {
+                                                val percent = (progress * 100).toInt()
+                                                languageLabel.text = "$displayName (Downloading $percent%)"
+                                                downloadProgress.progress = percent
+                                            }
+                                        }
+                                        override fun onComplete(success: Boolean) {
+                                            mainHandler.post {
+                                                downloadProgress.visibility = View.GONE
+                                                if (success) {
+                                                    toolbar?.visibility = View.GONE
+                                                    languageLabel.text = displayName
+                                                    android.widget.Toast.makeText(context, "Handwriting model downloaded", android.widget.Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    toolbar?.visibility = View.VISIBLE
+                                                    languageLabel.text = "$displayName (Download failed - tap to retry)"
+                                                    android.widget.Toast.makeText(context, "Failed to download handwriting model", android.widget.Toast.LENGTH_LONG).show()
+                                                    setupDownloadClickListener()
+                                                }
+                                            }
+                                        }
+                                    })
                                 }
                             }
-                            override fun onComplete(success: Boolean) {
-                                mainHandler.post {
-                                    downloadProgress.visibility = View.GONE
-                                    if (success) {
-                                        toolbar?.visibility = View.GONE // ponytail: hide when done
-                                        languageLabel.text = displayName
-                                        android.widget.Toast.makeText(context, "Handwriting model downloaded", android.widget.Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        toolbar?.visibility = View.VISIBLE
-                                        languageLabel.text = "$displayName (Download failed)"
-                                        android.widget.Toast.makeText(context, "Failed to download handwriting model", android.widget.Toast.LENGTH_LONG).show()
-                                    }
+                            setupDownloadClickListener()
+                        } else {
+                            // Offline flavor has no internet access; redirect directly to handwriting settings for model management
+                            languageLabel.text = "$displayName (No model - tap for settings)"
+                            languageLabel.setOnClickListener {
+                                val intent = android.content.Intent().apply {
+                                    setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
+                                    putExtra("screen", helium314.keyboard.settings.SettingsDestination.Handwriting)
+                                    putExtra("from_ime", true)
+                                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
                                 }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Log.e("HandwritingView", "Failed to start handwriting settings activity", e)
+                                }
+                                KeyboardSwitcher.getInstance().latinIME?.requestHideSelf(0)
                             }
-                        })
+                        }
                     } else {
-                        toolbar?.visibility = View.GONE // ponytail: hide when already downloaded
+                        toolbar?.visibility = View.GONE
                         languageLabel.text = displayName
+                        languageLabel.setOnClickListener(null)
                         downloadProgress.visibility = View.GONE
                     }
                 }
@@ -405,38 +436,11 @@ class HandwritingView @JvmOverloads constructor(
 
         recognitionExecutor.execute {
             try {
-                val urlStr = "https://github.com/LeanBitLab/Leantype-Handwriting-Plugin/releases/latest/download/handwriting_plugin.apk"
-                var url = java.net.URL(urlStr)
-                var conn = url.openConnection() as java.net.HttpURLConnection
-                conn.instanceFollowRedirects = true
-                conn.setRequestProperty("User-Agent", "HeliboardL")
-                conn.connect()
-
-                var redirectConn = conn
-                var status = redirectConn.responseCode
-                var redirectCount = 0
-                while ((status == java.net.HttpURLConnection.HTTP_MOVED_TEMP || status == java.net.HttpURLConnection.HTTP_MOVED_PERM || status == java.net.HttpURLConnection.HTTP_SEE_OTHER) && redirectCount < 5) {
-                    val newUrl = redirectConn.getHeaderField("Location")
-                    redirectConn.disconnect()
-                    val nextUrl = java.net.URL(newUrl)
-                    redirectConn = nextUrl.openConnection() as java.net.HttpURLConnection
-                    redirectConn.setRequestProperty("User-Agent", "HeliboardL")
-                    redirectConn.connect()
-                    status = redirectConn.responseCode
-                    redirectCount++
-                }
-
-                if (status != java.net.HttpURLConnection.HTTP_OK) {
-                    throw java.io.IOException("Server returned HTTP $status")
-                }
-
                 val tempFile = java.io.File(context.cacheDir, "temp_handwriting_plugin.apk")
-                redirectConn.inputStream.use { input ->
-                    java.io.FileOutputStream(tempFile).use { output ->
-                        input.copyTo(output)
-                    }
+                val downloaded = HandwritingLoader.downloadPluginApk(context, null, tempFile)
+                if (!downloaded) {
+                    throw java.io.IOException("Failed to download handwriting plugin APK")
                 }
-                redirectConn.disconnect()
 
                 val success = HandwritingLoader.importPlugin(context, android.net.Uri.fromFile(tempFile))
                 tempFile.delete()

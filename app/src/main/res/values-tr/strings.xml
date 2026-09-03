@@ -679,19 +679,6 @@ Uyarı: Harici kod yüklemek güvenlik riski oluşturabilir. Yalnızca güvendi�
         <item>Slovence</item><item>Litvanca</item><item>Letonca</item><item>Estonca</item><item>Katalanca</item>
         <item>Baskça</item>
     </string-array>
-    <string-array name="translate_language_codes">
-        <item>İngilizce</item><item>İspanyolca</item><item>Fransızca</item><item>Almanca</item><item>İtalyanca</item>
-        <item>Portekizce</item><item>Çince (Basitleştirilmiş)</item><item>Çince (Geleneksel)</item><item>Japonca</item><item>Korece</item>
-        <item>Arapça</item><item>Rusça</item><item>Hintçe</item><item>Bengalce</item><item>Endonezce</item>
-        <item>Felemenkçe</item><item>Türkçe</item><item>Lehçe</item><item>Ukraynaca</item><item>İsveççe</item>
-        <item>Danca</item><item>Norveççe</item><item>Fince</item><item>Yunanca</item><item>İbranice</item>
-        <item>Tayca</item><item>Vietnamca</item><item>Tamilce</item><item>Teluguca</item><item>Marathice</item>
-        <item>Guceratça</item><item>Kannadaca</item><item>Malayalamca</item><item>Urduca</item><item>Farsça</item>
-        <item>Svahilice</item><item>Romence</item><item>Çekçe</item><item>Macarca</item><item>Filipince (Tagalog)</item>
-        <item>Malayca</item><item>Sırpça</item><item>Hırvatça</item><item>Bulgarca</item><item>Slovakça</item>
-        <item>Slovence</item><item>Litvanca</item><item>Letonca</item><item>Estonca</item><item>Katalanca</item>
-        <item>Baskça</item>
-    </string-array>
     <string name="toolbar_long_press_hint">Uzun basma ipucu noktalarını göster</string>
     <string name="toolbar_long_press_hint_summary">Uzun basma eylemi olan araç çubuğu tuşlarında noktalar göster</string>
     <string name="prefs_narrow_key_gaps_level">Darlık seviyesi</string>

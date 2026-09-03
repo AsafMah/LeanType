@@ -139,33 +139,42 @@ fun BlockedWordsScreen(
                 }
             },
             itemContent = { item ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                androidx.compose.material3.Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { selectedWord = item }
-                        .padding(vertical = 6.dp, horizontal = 16.dp)
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(item.word, style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            item.locale.getLocaleDisplayNameForUserDictSettings(ctx),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    androidx.compose.material3.IconButton(
-                        onClick = {
-                            removeBlockedWord(ctx, item.word, item.locale)
-                            notifyKeyboardToReload()
-                            refreshTrigger++
-                        }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedWord = item }
+                            .padding(vertical = 8.dp, horizontal = 16.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_bin),
-                            contentDescription = stringResource(R.string.delete)
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(item.word, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                item.locale.getLocaleDisplayNameForUserDictSettings(ctx),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.IconButton(
+                            onClick = {
+                                removeBlockedWord(ctx, item.word, item.locale)
+                                notifyKeyboardToReload()
+                                refreshTrigger++
+                            }
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_bin),
+                                contentDescription = stringResource(R.string.delete)
+                            )
+                        }
                     }
                 }
             }
