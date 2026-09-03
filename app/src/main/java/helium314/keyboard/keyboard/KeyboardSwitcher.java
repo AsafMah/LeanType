@@ -73,6 +73,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private View mEmojiTabStripView;
     private LinearLayout mClipboardStripView;
     private HorizontalScrollView mClipboardStripScrollView;
+    private LinearLayout mOcrStripView;
     private SuggestionStripView mSuggestionStripView;
     private LinearLayout mStripContainer;
     private ClipboardHistoryView mClipboardHistoryView;
@@ -403,6 +404,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mEmojiPalettesView.stopEmojiPalettes();
         mEmojiTabStripView.setVisibility(View.GONE);
         mClipboardStripScrollView.setVisibility(View.GONE);
+        if (mOcrStripView != null) mOcrStripView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(stripVisibility);
         mClipboardHistoryView.setVisibility(View.GONE);
         mClipboardHistoryView.stopClipboardHistory();
@@ -585,7 +587,28 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (DEBUG_ACTION) {
             Log.d(TAG, "showOcrResult");
         }
-        mSuggestionStripView.setVisibility(View.VISIBLE);
+        PointerTracker.sPersistentTouchpadModeActive = false;
+        if (mTouchpadView != null) {
+            mTouchpadView.setVisibility(View.GONE);
+        }
+        KeyboardActionListenerImpl.sPersistentTextEditModeActive = false;
+        mMainKeyboardFrame.setVisibility(View.VISIBLE);
+        mKeyboardView.setVisibility(View.GONE);
+        mEmojiTabStripView.setVisibility(View.GONE);
+        mSuggestionStripView.setVisibility(View.GONE);
+        mClipboardStripScrollView.setVisibility(View.GONE);
+        mEmojiPalettesView.setVisibility(View.GONE);
+        mClipboardHistoryView.setVisibility(View.GONE);
+        if (mHandwritingView != null) {
+            if (mHandwritingView.isShown()) {
+                mHandwritingView.stopHandwriting();
+            }
+            mHandwritingView.setVisibility(View.GONE);
+        }
+        if (mOcrStripView != null) {
+            Settings.getValues().mColors.setBackground(mOcrStripView, ColorType.STRIP_BACKGROUND);
+            mOcrStripView.setVisibility(View.VISIBLE);
+        }
         mStripContainer.setVisibility(View.VISIBLE);
         if (mOcrCameraView != null) {
             mOcrCameraView.stopCamera();
@@ -605,6 +628,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     public void hideOcrPanels() {
+        if (mOcrStripView != null) {
+            mOcrStripView.setVisibility(View.GONE);
+        }
         mSuggestionStripView.setVisibility(View.VISIBLE);
         mStripContainer.setVisibility(View.VISIBLE);
         if (mOcrCameraView != null) {
@@ -1002,6 +1028,10 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         return mClipboardStripScrollView;
     }
 
+    public LinearLayout getOcrStrip() {
+        return mOcrStripView;
+    }
+
     public MainKeyboardView getMainKeyboardView() {
         return mKeyboardView;
     }
@@ -1119,6 +1149,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mEmojiTabStripView = mCurrentInputView.findViewById(R.id.emoji_tab_strip);
         mClipboardStripView = mCurrentInputView.findViewById(R.id.clipboard_strip);
         mClipboardStripScrollView = mCurrentInputView.findViewById(R.id.clipboard_strip_scroll_view);
+        mOcrStripView = mCurrentInputView.findViewById(R.id.ocr_strip);
         mSuggestionStripView = mCurrentInputView.findViewById(R.id.suggestion_strip_view);
         mStripContainer = mCurrentInputView.findViewById(R.id.strip_container);
 
