@@ -14,6 +14,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Upstream
+- Merged **LeanBitLab/LeanType v4.1.8** (pinned at `3717aa80`, covering v4.1.3–v4.1.8, 178 commits) — adds sound packs, plugin/model management improvements, floating-keyboard fixes, next-word suggestion fixes, and Android compatibility updates. LeanTypeDual retains its distinct `applicationId` and version, four privacy flavors, bundled offline AI and dictionaries, Java fallback gesture engine, and two-thumb typing. (#149)
+
 ### Added
 - **Side-by-side experimental build** — an `experimental` build type (`com.asafmah.leantypedual.exp`, shown as "LeanTypeDual EXP") that installs alongside the normal build instead of replacing it, so input experiments can be compared against a working daily driver. (#141)
 
