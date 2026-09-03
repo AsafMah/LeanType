@@ -726,59 +726,6 @@ Nouveau dictionnaire:
   <item>Catalan</item>
   <item>Basque</item>
 </string-array>
-    <string-array name="translate_language_codes">
-  <item>Anglais</item>
-  <item>Espagnol</item>
-  <item>Français</item>
-  <item>Allemand</item>
-  <item>Italien</item>
-  <item>Portugais</item>
-  <item>Chinois (simplifié)</item>
-  <item>Chinois (traditionnel)</item>
-  <item>Japonais</item>
-  <item>Coréen</item>
-  <item>Arabe</item>
-  <item>Russe</item>
-  <item>Hindi</item>
-  <item>Bengali</item>
-  <item>Indonésien</item>
-  <item>Néerlandais</item>
-  <item>Turc</item>
-  <item>Polonais</item>
-  <item>Ukrainien</item>
-  <item>Suédois</item>
-  <item>Danois</item>
-  <item>Norvégien</item>
-  <item>Finnois</item>
-  <item>Grec</item>
-  <item>Hébreu</item>
-  <item>Thaï</item>
-  <item>Vietnamien</item>
-  <item>Tamoul</item>
-  <item>Télougou</item>
-  <item>Marathi</item>
-  <item>Gujarati</item>
-  <item>Kannada</item>
-  <item>Malayalam</item>
-  <item>Ourdou</item>
-  <item>Persan (Farsi)</item>
-  <item>Swahili</item>
-  <item>Roumain</item>
-  <item>Tchèque</item>
-  <item>Hongrois</item>
-  <item>Philippin (Tagalog)</item>
-  <item>Malais</item>
-  <item>Serbe</item>
-  <item>Croate</item>
-  <item>Bulgare</item>
-  <item>Slovaque</item>
-  <item>Slovène</item>
-  <item>Lituanien</item>
-  <item>Letton</item>
-  <item>Estonien</item>
-  <item>Catalan</item>
-  <item>Basque</item>
-</string-array>
     <string name="toolbar_long_press_hint">Afficher les points d\'indice d\'appui long</string>
     <string name="toolbar_long_press_hint_summary">Afficher des points sur les touches de la barre d\'outils ayant une action d\'appui long</string>
     <string name="prefs_narrow_key_gaps_level">Niveau d\'étroitesse</string>

@@ -83,11 +83,19 @@ public final class ResourceUtils {
         return windowBounds.width() - insets.left - insets.right;
     }
 
+    public static int getSuggestionsStripHeight(final Resources res) {
+        final int defaultHeight = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height);
+        if (sFloatingKeyboardScaleOverride > 0.0f) {
+            return Math.max((int) (defaultHeight * sFloatingKeyboardScaleOverride), (int) (18 * res.getDisplayMetrics().density));
+        }
+        return defaultHeight;
+    }
+
     public static int getSecondaryKeyboardHeight(final Resources res, final SettingsValues settingsValues) {
         final int keyboardHeight = getKeyboardHeight(res, settingsValues);
         if (settingsValues.mToolbarMode == ToolbarMode.HIDDEN && ! settingsValues.mToolbarHidingGlobal) {
             // Small adjustment to match the height of the main keyboard which has a hidden strip container.
-            return keyboardHeight - (int) res.getDimension(R.dimen.config_suggestions_strip_height);
+            return keyboardHeight - getSuggestionsStripHeight(res);
         }
         return keyboardHeight;
     }

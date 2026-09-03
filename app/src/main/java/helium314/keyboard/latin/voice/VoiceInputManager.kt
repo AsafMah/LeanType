@@ -185,6 +185,9 @@ class VoiceInputManager(
             else -> prefLang
         }
 
+        val threads = ims.prefs().getString(VoiceConstants.PREF_VOICE_CPU_THREADS, "4")?.toIntOrNull() ?: 4
+        val customPrompt = ims.prefs().getString(VoiceConstants.PREF_VOICE_CUSTOM_PROMPT, "")?.trim()?.takeIf { it.isNotEmpty() }
+
         val config = VoiceSessionConfig(
             sessionId = sessionId,
             mode = VoiceConstants.MODE_ACCURATE,
@@ -193,7 +196,9 @@ class VoiceInputManager(
             enablePartial = true,
             maxSegmentMs = 5000,
             hybridTimeoutMs = 0,
-            hybridFallbackToVosk = false
+            hybridFallbackToVosk = false,
+            cpuThreads = threads,
+            customPrompt = customPrompt
         )
 
         val callback = object : IVoiceCallback.Stub() {
@@ -293,6 +298,7 @@ class VoiceInputManager(
     }
 
     private fun startAudioRecordingThread(): Boolean {
+        stopAudioLoop() // Prevent zombie thread overlap on rapid re-entry
         if (ContextCompat.checkSelfPermission(ims, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             Log.e(TAG, "startAudioRecordingThread: Missing RECORD_AUDIO permission")
             return false
@@ -359,9 +365,19 @@ class VoiceInputManager(
         isRecording.set(true)
         val writePfd = audioPipeWriteSide ?: return false
 
-        val silenceTimeoutSec = ims.prefs().getString(VoiceConstants.PREF_VOICE_SILENCE_TIMEOUT_SECONDS, "3")?.toIntOrNull() ?: 3
+        val silenceTimeoutSec = ims.prefs().getString(VoiceConstants.PREF_VOICE_SILENCE_TIMEOUT_SECONDS, "5")?.toIntOrNull() ?: 5
         val silenceTimeoutMs = if (silenceTimeoutSec > 0) silenceTimeoutSec * 1000L else 0L
         val initialTimeoutMs = if (silenceTimeoutSec > 0) maxOf(silenceTimeoutSec * 2000L, 6000L) else 0L
+
+        val maxDurationSec = ims.prefs().getString(VoiceConstants.PREF_VOICE_MAX_DURATION_SECONDS, "30")?.toIntOrNull() ?: 30
+        val maxDurationMs = if (maxDurationSec > 0) maxDurationSec * 1000L else 0L
+
+        val sensitivity = ims.prefs().getString(VoiceConstants.PREF_VOICE_MIC_SENSITIVITY, "normal")
+        val speechRmsThreshold = when (sensitivity) {
+            "high" -> 60.0
+            "low" -> 250.0
+            else -> 120.0
+        }
 
         audioThread = Thread({
             val buffer = ByteArray(FRAME_SIZE_BYTES)
@@ -380,6 +396,13 @@ class VoiceInputManager(
                         outputStream.flush()
                         totalBytesWritten += read
 
+                        val now = System.currentTimeMillis()
+                        if (maxDurationMs > 0L && (now - sessionStartTime >= maxDurationMs)) {
+                            Log.i(TAG, "Max recording duration (${maxDurationMs}ms) reached. Stopping voice input.")
+                            mainHandler.post { stopVoice() }
+                            break
+                        }
+
                         if (silenceTimeoutMs > 0L) {
                             var sum = 0.0
                             var sampleCount = 0
@@ -391,8 +414,7 @@ class VoiceInputManager(
                                 i += 2
                             }
                             val rms = if (sampleCount > 0) kotlin.math.sqrt(sum / sampleCount) else 0.0
-                            val now = System.currentTimeMillis()
-                            if (rms > 120.0) {
+                            if (rms > speechRmsThreshold) {
                                 lastSpeechTime = now
                                 hasSpoken = true
                             }
@@ -458,26 +480,40 @@ class VoiceInputManager(
         if (!isRecording.getAndSet(false)) return
         Log.i(TAG, "stopAudioLoop() executing")
 
+        // 1. Unblock the blocking native read() call by stopping AudioRecord
         try {
             audioRecord?.stop()
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping AudioRecord", e)
         }
+
+        // 2. Wait for background VoiceAudioThread to fully exit native read() and terminate
+        audioThread?.let { thread ->
+            try {
+                thread.join(1000)
+                // 3. Edge-case guard: if driver hung, skip release to avoid native SIGABRT proxy crash
+                if (thread.isAlive) {
+                    Log.w(TAG, "VoiceAudioThread hung. Skipping release() to avoid native proxy crash.")
+                    audioThread = null
+                    audioRecord = null
+                    closeQuietly(audioPipeWriteSide)
+                    audioPipeWriteSide = null
+                    return
+                }
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                Log.w(TAG, "Interrupted while joining audioThread", e)
+            }
+        }
+        audioThread = null
+
+        // 4. Safe to destroy native proxy ONLY after thread is confirmed dead
         try {
             audioRecord?.release()
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing AudioRecord", e)
         }
         audioRecord = null
-
-        audioThread?.let { thread ->
-            try {
-                thread.join(500)
-            } catch (e: InterruptedException) {
-                Log.w(TAG, "Interrupted while joining audioThread", e)
-            }
-        }
-        audioThread = null
 
         closeQuietly(audioPipeWriteSide)
         audioPipeWriteSide = null
@@ -491,7 +527,13 @@ class VoiceInputManager(
         }
         if (!isRecording.get() && !isFinal) return
 
-        val trimmed = rawText.trim()
+        val isSmartPunctuationEnabled = ims.prefs().getBoolean(VoiceConstants.PREF_VOICE_SMART_PUNCTUATION, true)
+        val processedRaw = if (!isSmartPunctuationEnabled) {
+            rawText.replace(Regex("[,.?!;:]"), "")
+        } else {
+            rawText
+        }
+        val trimmed = processedRaw.trim()
 
         // If onFinal has empty text (e.g. silence timeout fired after audio stream closed),
         // lock whatever text was already emitted during partials and commit a trailing space.

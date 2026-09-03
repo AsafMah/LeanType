@@ -550,59 +550,6 @@
     <string name="clear_all">Очистить всё</string>
 	<string name="load_gesture_library_downloading">Загрузка библиотеки жестов…</string>
 	<string name="load_gesture_library_download_success">Загрузка завершена! Перезапуск…</string>
-	<string-array name="translate_language_codes">
-        <item>Английский</item>
-        <item>Испанский</item>
-        <item>Французский</item>
-        <item>Немецкий</item>
-        <item>Итальянский</item>
-        <item>Португальский</item>
-        <item>Китайский (упрощенный)</item>
-        <item>Китайский (традиционный)</item>
-        <item>Японский</item>
-        <item>Корейский</item>
-        <item>Арабский</item>
-        <item>Русский</item>
-        <item>Хинди</item>
-        <item>Бенгальский</item>
-        <item>Индонезийский</item>
-        <item>Нидерландский</item>
-        <item>Турецкий</item>
-        <item>Польский</item>
-        <item>Украинский</item>
-        <item>Шведский</item>
-        <item>Датский</item>
-        <item>Норвежский</item>
-        <item>Финский</item>
-        <item>Греческий</item>
-        <item>Иврит</item>
-        <item>Тайский</item>
-        <item>Вьетнамский</item>
-        <item>Тамильский</item>
-        <item>Телугу</item>
-        <item>Маратхи</item>
-        <item>Гуджарати</item>
-        <item>Каннада</item>
-        <item>Малаялам</item>
-        <item>Урду</item>
-        <item>Персидский (фарси)</item>
-        <item>Суахили</item>
-        <item>Румынский</item>
-        <item>Чешский</item>
-        <item>Венгерский</item>
-        <item>Тагальский (филиппинский)</item>
-        <item>Малайский</item>
-        <item>Сербский</item>
-        <item>Хорватский</item>
-        <item>Болгарский</item>
-        <item>Словацкий</item>
-        <item>Словенский</item>
-        <item>Литовский</item>
-        <item>Латвийский</item>
-        <item>Эстонский</item>
-        <item>Каталанский</item>
-        <item>Баскский</item>
-    </string-array>
     <string-array name="translate_language_names">
         <item>Английский</item>
         <item>Испанский</item>

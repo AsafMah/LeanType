@@ -3,6 +3,7 @@ package helium314.keyboard.settings.dialogs
 
 import android.content.Intent
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -94,10 +95,11 @@ fun NewDictionaryDialog(
                 ctx.sendBroadcast(newDictBroadcast)
             },
             confirmButtonText = stringResource(if (dictFile.exists()) R.string.replace_dictionary else R.string.load_gesture_library_button_load),
+            cancelButtonText = stringResource(android.R.string.cancel),
             title = { Text(stringResource(R.string.add_new_dictionary_title)) },
             content = {
-                Column {
-                    Text(info, Modifier.padding(bottom = 10.dp))
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp)) {
+                    Text(info, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 12.dp))
                     WithSmallTitle(stringResource(R.string.button_select_language)) {
                         DropDownField(
                             selectedItem = locale,

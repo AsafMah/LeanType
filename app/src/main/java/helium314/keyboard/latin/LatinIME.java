@@ -154,6 +154,7 @@ public class LatinIME extends InputMethodService implements
     private final DictionaryFacilitator mDictionaryFacilitator = DictionaryFacilitatorProvider
             .getDictionaryFacilitator(false);
     final InputLogic mInputLogic = new InputLogic(this, this, mDictionaryFacilitator);
+    private boolean mLastMainDictionaryAvailable = false;
 
     // TODO: Move these {@link View}s to {@link KeyboardSwitcher}.
     View mInputView;
@@ -715,16 +716,27 @@ public class LatinIME extends InputMethodService implements
         if (mainKeyboardView != null) {
             mainKeyboardView.setMainDictionaryAvailability(isMainDictionaryAvailable);
         }
-        if (isMainDictionaryAvailable) {
-            final Keyboard keyboard = mKeyboardSwitcher.getKeyboard();
-            if (keyboard != null) {
-                mInputLogic.getSuggest().buildGestureIndexAsync(keyboard);
+        mHandler.post(() -> {
+            if (isMainDictionaryAvailable) {
+                final Keyboard keyboard = mKeyboardSwitcher.getKeyboard();
+                if (keyboard != null) {
+                    mInputLogic.getSuggest().buildGestureIndexAsync(keyboard);
+                }
             }
-        }
-        if (mHandler.hasPendingWaitForDictionaryLoad()) {
-            mHandler.cancelWaitForDictionaryLoad();
-            mHandler.postResumeSuggestions(false /* shouldDelay */);
-        }
+            if (mLastMainDictionaryAvailable != isMainDictionaryAvailable) {
+                if (mInputLogic != null) {
+                    mInputLogic.getSuggest().clearNextWordSuggestionsCache();
+                }
+                if (isMainDictionaryAvailable && !mHandler.hasPendingWaitForDictionaryLoad()) {
+                    mHandler.postUpdateSuggestionStrip(SuggestedWords.INPUT_STYLE_TYPING);
+                }
+            }
+            mLastMainDictionaryAvailable = isMainDictionaryAvailable;
+            if (mHandler.hasPendingWaitForDictionaryLoad()) {
+                mHandler.cancelWaitForDictionaryLoad();
+                mHandler.postResumeSuggestions(false /* shouldDelay */);
+            }
+        });
     }
 
     void resetDictionaryFacilitatorIfNecessary() {
@@ -753,6 +765,12 @@ public class LatinIME extends InputMethodService implements
                 mSettings.getCurrent().mUsePersonalizedDicts)) {
             return;
         }
+        mHandler.post(() -> {
+            if (mInputLogic != null) {
+                mInputLogic.getSuggest().clearNextWordSuggestionsCache();
+            }
+            mLastMainDictionaryAvailable = false;
+        });
         resetDictionaryFacilitator(subtypeLocale);
     }
 
@@ -866,6 +884,7 @@ public class LatinIME extends InputMethodService implements
         // KeyboardSwitcher will check by itself if theme update is necessary
         mKeyboardSwitcher.updateKeyboardTheme(KtxKt.getDisplayContext(this));
         mKeyboardSwitcher.onConfigurationChanged(conf);
+        setNavigationBarColor();
     }
 
     @Override
@@ -1095,6 +1114,14 @@ public class LatinIME extends InputMethodService implements
     private void onStartInputInternal(final EditorInfo editorInfo, final boolean restarting) {
         super.onStartInput(editorInfo, restarting);
 
+        if (editorInfo == null || editorInfo.inputType == android.text.InputType.TYPE_NULL) {
+            if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
+                if (!Settings.getInstance().getCurrent().mPersistFloatingKeyboard) {
+                    mFloatingKeyboardManager.hide(false);
+                }
+            }
+        }
+
         final RichInputMethodSubtype subtypeForApp = editorInfo == null
                 ? null
                 : mSettings.getSubtypeForApp(editorInfo.packageName);
@@ -1279,6 +1306,9 @@ public class LatinIME extends InputMethodService implements
             if (hasSuggestionStripView() && currentSettingsValues.mAutoShowToolbar && !tryShowClipboardSuggestion()) {
                 mSuggestionStripView.setToolbarVisibility(true);
             }
+            if (shouldRequestInitialPredictions(currentSettingsValues)) {
+                mHandler.postUpdateSuggestionStrip(SuggestedWords.INPUT_STYLE_RECORRECTION);
+            }
         }
 
         mainKeyboardView.setMainDictionaryAvailability(mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary());
@@ -1294,6 +1324,11 @@ public class LatinIME extends InputMethodService implements
         if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
             mInputView.setVisibility(View.GONE);
             requestHideSelf(0);
+        } else if (currentSettingsValues.mRememberFloatingKeyboard
+                && mFloatingKeyboardManager != null
+                && mFloatingKeyboardManager.wasFloatingLastTime()
+                && mFloatingKeyboardManager.canDrawOverlays()) {
+            mFloatingKeyboardManager.show();
         }
 
         if (isInputViewShown()) {
@@ -1333,6 +1368,12 @@ public class LatinIME extends InputMethodService implements
     void onFinishInputInternal() {
         super.onFinishInput();
         Log.i(TAG, "onFinishInput");
+
+        if (mFloatingKeyboardManager != null && mFloatingKeyboardManager.isFloating()) {
+            if (!Settings.getInstance().getCurrent().mPersistFloatingKeyboard) {
+                mFloatingKeyboardManager.hide(false);
+            }
+        }
 
         mDictionaryFacilitator.onFinishInput();
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
@@ -2125,6 +2166,34 @@ public class LatinIME extends InputMethodService implements
                 mSuggestionStripView.setToolbarVisibility(mSuggestionStripView.isToolbarManuallyOpen());
             }
         }
+    }
+
+    private boolean shouldRequestInitialPredictions(final SettingsValues settingsValues) {
+        if (!mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary()) {
+            return false;
+        }
+        if (!settingsValues.needsToLookupSuggestions()) {
+            return false;
+        }
+        final boolean firstWordEnabled = settingsValues.mFirstWordPredictionEnabled;
+        final boolean bigramEnabled = settingsValues.mBigramPredictionEnabled;
+        if (!firstWordEnabled && !bigramEnabled) {
+            return false;
+        }
+        if (firstWordEnabled && bigramEnabled) {
+            if (DebugFlags.DEBUG_ENABLED) {
+                Log.i(TAG, "Initial prediction check: dictReady=true, firstWordEnabled=true, bigramEnabled=true");
+            }
+            return true;
+        }
+        final NgramContext ngramContext = mInputLogic.getNgramContextFromNthPreviousWordForSuggestion(
+                settingsValues.mSpacingAndPunctuations, 1);
+        final boolean firstWordContext = ngramContext == null || ngramContext.isBeginningOfSentenceContext();
+        if (DebugFlags.DEBUG_ENABLED) {
+            Log.i(TAG, "Initial prediction check: dictReady=true, firstWordEnabled=" + firstWordEnabled
+                    + ", bigramEnabled=" + bigramEnabled + ", firstWordContext=" + firstWordContext);
+        }
+        return firstWordContext ? firstWordEnabled : bigramEnabled;
     }
 
     public void showTranslateLanguageSelector() {

@@ -156,6 +156,7 @@ object SettingsWithoutKey {
     const val SAVE_LOG = "save_log"
     const val BACKUP_RESTORE = "backup_restore"
     const val PERSIST_FLOATING_KEYBOARD = "persist_floating_keyboard"
+    const val REMEMBER_FLOATING_KEYBOARD = "remember_floating_keyboard"
     const val DEBUG_SETTINGS = "screen_debug"
     const val LOAD_GESTURE_LIB = "load_gesture_library"
     const val TWO_THUMB_SPACING_MODE = "two_thumb_spacing_mode"
@@ -183,6 +184,7 @@ object SettingsWithoutKey {
     const val OFFLINE_KEEP_MODEL_LOADED = "offline_keep_model_loaded"
     const val AI_ALLOW_INSECURE_CONNECTIONS = "ai_allow_insecure_connections"
     const val TRANSLATION_ENGINE = "pref_translation_method"
+    const val LOAD_OFFLINE_AI_PLUGIN = "load_offline_ai_plugin"
     const val BACKGROUND_SERVICES = "background_services"
 
     // Screen Navigation Keys for Settings Search:

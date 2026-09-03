@@ -137,6 +137,12 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_ALWAYS_INCOGNITO_MODE = "always_incognito_mode";
     public static final String PREF_BIGRAM_PREDICTIONS = "next_word_prediction";
     public static final String PREF_PRIORITIZE_PERSONAL_SUGGESTIONS = "prioritize_personal_suggestions";
+    public static final String PREF_SUGGESTION_BALANCE = "suggestion_balance";
+    public static final int SUGGESTION_BALANCE_DICTIONARY_FOCUSED = 1;
+    public static final int SUGGESTION_BALANCE_CONSERVATIVE = 2;
+    public static final int SUGGESTION_BALANCE_BALANCED = 3;
+    public static final int SUGGESTION_BALANCE_PERSONALIZED = 4;
+    public static final int SUGGESTION_BALANCE_HIGHLY_PERSONALIZED = 5;
     public static final String PREF_NEXT_WORD_BOOST_LEVEL = "next_word_boost_level";
     public static final String PREF_NEXT_WORD_STRICT_NGRAM = "next_word_strict_ngram";
     public static final String PREF_IMMEDIATE_AUTO_SPACE = "immediate_auto_space";
@@ -149,6 +155,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_VIBRATION_DURATION_SETTINGS = "vibration_duration_settings";
     public static final String PREF_VIBRATION_AMPLITUDE_SETTINGS = "vibration_amplitude_settings";
     public static final String PREF_KEYPRESS_SOUND_VOLUME = "keypress_sound_volume";
+    public static final String PREF_KEYPRESS_SOUND_STYLE = "keypress_sound_style";
     public static final String PREF_KEY_LONGPRESS_TIMEOUT = "key_longpress_timeout";
     public static final String PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = "enable_emoji_alt_physical_key";
     public static final String PREF_GESTURE_PREVIEW_TRAIL = "gesture_preview_trail";
@@ -248,6 +255,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_TOUCHPAD_EDGE_SCROLL = "touchpad_edge_scroll";
     public static final String PREF_TOUCHPAD_FULLSCREEN = "touchpad_fullscreen";
     public static final String PREF_PERSIST_FLOATING_KEYBOARD = "persist_floating_keyboard";
+    public static final String PREF_REMEMBER_FLOATING_KEYBOARD = "remember_floating_keyboard";
+    // ponytail: persist text edit mode preference key
     public static final String PREF_PERSIST_TEXT_EDIT_MODE = "persist_text_edit_mode";
     public static final String PREF_FORCE_AUTO_CAPS = "force_auto_caps";
     public static final String PREF_OFFLINE_TEMP = "offline_temp";

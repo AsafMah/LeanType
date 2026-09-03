@@ -674,59 +674,6 @@
   <item>Catalão</item>
   <item>Basco</item>
 </string-array>
-    <string-array name="translate_language_codes">
-  <item>Inglês</item>
-  <item>Espanhol</item>
-  <item>Francês</item>
-  <item>Alemão</item>
-  <item>Italiano</item>
-  <item>Português</item>
-  <item>Chinês (Simplificado)</item>
-  <item>Chinês (Tradicional)</item>
-  <item>Japonês</item>
-  <item>Coreano</item>
-  <item>Árabe</item>
-  <item>Russo</item>
-  <item>Hindi</item>
-  <item>Bengali</item>
-  <item>Indonésio</item>
-  <item>Holandês</item>
-  <item>Turco</item>
-  <item>Polaco</item>
-  <item>Ucraniano</item>
-  <item>Sueco</item>
-  <item>Dinamarquês</item>
-  <item>Norueguês</item>
-  <item>Finlandês</item>
-  <item>Grego</item>
-  <item>Hebraico</item>
-  <item>Tailandês</item>
-  <item>Vietnamita</item>
-  <item>Tamil</item>
-  <item>Telugu</item>
-  <item>Marata</item>
-  <item>Guzerate</item>
-  <item>Canarim</item>
-  <item>Malaiala</item>
-  <item>Urdu</item>
-  <item>Persa (Farsi)</item>
-  <item>Suaíli</item>
-  <item>Romeno</item>
-  <item>Checo</item>
-  <item>Húngaro</item>
-  <item>Filipino (Tagalo)</item>
-  <item>Malaio</item>
-  <item>Sérvio</item>
-  <item>Croata</item>
-  <item>Búlgaro</item>
-  <item>Eslovaco</item>
-  <item>Esloveno</item>
-  <item>Lituano</item>
-  <item>Letão</item>
-  <item>Estónio</item>
-  <item>Catalão</item>
-  <item>Basco</item>
-</string-array>
     <string name="toolbar_long_press_hint">Mostrar pontos de sugestão de toque longo</string>
     <string name="toolbar_long_press_hint_summary">Mostrar pontos nas teclas da barra de ferramentas que têm ação de toque longo</string>
     <string name="prefs_narrow_key_gaps_level">Nível de estreiteza</string>

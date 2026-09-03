@@ -1,25 +1,32 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.voice
 
-import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import android.widget.Toast
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import com.leanbitlab.leantype.voice.ModelImportRequest
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 object VoiceDownloadDispatcher {
     private const val TAG = "VoiceDownloadDispatcher"
-    private const val PREFS_NAME = "voice_download_tracker"
+
+    // Observable download state for Compose UI
+    val downloadingModelId = mutableStateOf<String?>(null)
+    val downloadProgress = mutableFloatStateOf(0f)
 
     fun hasInternetPermission(context: Context): Boolean {
         return context.packageManager.checkPermission(
@@ -28,132 +35,135 @@ object VoiceDownloadDispatcher {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    fun download(context: Context, model: VoiceModelItem) {
+    suspend fun downloadAndInstall(
+        context: Context,
+        model: VoiceModelItem,
+        pluginManager: VoicePluginManager,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) = withContext(Dispatchers.IO) {
         if (!hasInternetPermission(context)) {
-            Log.i(TAG, "Offline build: delegating download to browser for ${model.id}")
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(model.browserUrl)).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(intent)
-                Toast.makeText(context, "Opening browser for ${model.displayName}", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to open browser", e)
-                Toast.makeText(context, "Failed to open browser: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            withContext(Dispatchers.Main) {
+                fallbackToBrowser(context, model)
             }
-            return
+            return@withContext
         }
 
+        withContext(Dispatchers.Main) {
+            downloadingModelId.value = model.id
+            downloadProgress.floatValue = 0f
+        }
+
+        val cacheDir = File(context.cacheDir, "models")
+        if (!cacheDir.exists()) cacheDir.mkdirs()
+        val tempFile = File(cacheDir, "download_${model.id}.bin")
+        if (tempFile.exists()) tempFile.delete()
+
         try {
-            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
-            if (dm == null) {
-                fallbackToBrowser(context, model)
-                return
+            Log.i(TAG, "Starting in-app download for ${model.displayName} from ${model.downloadUrl}")
+            var currentUrl = URL(model.downloadUrl)
+            var conn = currentUrl.openConnection() as HttpURLConnection
+            conn.instanceFollowRedirects = true
+            conn.setRequestProperty("User-Agent", "LeanType-Android")
+            conn.connectTimeout = 15000
+            conn.readTimeout = 60000
+            conn.connect()
+
+            var redirectCount = 0
+            while ((conn.responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                        conn.responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                        conn.responseCode == 307 || conn.responseCode == 308) && redirectCount < 8) {
+                val location = conn.getHeaderField("Location") ?: break
+                currentUrl = URL(location)
+                conn = currentUrl.openConnection() as HttpURLConnection
+                conn.instanceFollowRedirects = true
+                conn.setRequestProperty("User-Agent", "LeanType-Android")
+                conn.connectTimeout = 15000
+                conn.readTimeout = 60000
+                conn.connect()
+                redirectCount++
             }
 
-            val request = DownloadManager.Request(Uri.parse(model.downloadUrl)).apply {
-                setTitle(model.displayName)
-                setDescription("Downloading ${model.sizeMb} speech model")
-                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                setAllowedOverMetered(true)
+            if (conn.responseCode != HttpURLConnection.HTTP_OK) {
+                throw Exception("Server returned HTTP ${conn.responseCode}")
             }
 
-            val downloadId = dm.enqueue(request)
-            Log.i(TAG, "Enqueued downloadId=$downloadId for model=${model.id}")
+            val totalBytes = conn.contentLengthLong
+            var downloadedBytes = 0L
 
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            prefs.edit()
-                .putString("download_$downloadId", model.id)
-                .apply()
+            conn.inputStream.use { input ->
+                FileOutputStream(tempFile).use { output ->
+                    val buffer = ByteArray(32768)
+                    var bytesRead: Int
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        downloadedBytes += bytesRead
+                        if (totalBytes > 0L) {
+                            val prog = (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                            withContext(Dispatchers.Main) {
+                                downloadProgress.floatValue = prog
+                            }
+                        }
+                    }
+                }
+            }
 
-            Toast.makeText(context, "Downloading ${model.displayName} (${model.sizeMb})...", Toast.LENGTH_SHORT).show()
+            Log.i(TAG, "Download complete (${tempFile.length()} bytes). Dispatching import to voice plugin...")
+
+            val pfd = ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY)
+            val request = ModelImportRequest(
+                engineType = model.engineType,
+                language = model.language,
+                sha256 = null,
+                sizeBytes = tempFile.length(),
+                file = pfd
+            )
+
+            val imported = withTimeoutOrNull(15000L) {
+                pluginManager.bindAndImport(request)
+            } ?: false
+
+            try { tempFile.delete() } catch (_: Exception) {}
+
+            withContext(Dispatchers.Main) {
+                downloadingModelId.value = null
+                downloadProgress.floatValue = 0f
+                if (imported) {
+                    context.prefs().edit().putString("installed_model_${model.engineType}", model.id).apply()
+                    Toast.makeText(context, "${model.displayName} model installed successfully!", Toast.LENGTH_SHORT).show()
+                    onSuccess()
+                } else {
+                    onError("Failed to import model into voice plugin")
+                }
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "DownloadManager error, falling back to browser", e)
-            fallbackToBrowser(context, model)
+            Log.e(TAG, "Model download failed", e)
+            try { tempFile.delete() } catch (_: Exception) {}
+            withContext(Dispatchers.Main) {
+                downloadingModelId.value = null
+                downloadProgress.floatValue = 0f
+                onError(e.localizedMessage ?: "Download failed")
+            }
         }
     }
 
-    private fun fallbackToBrowser(context: Context, model: VoiceModelItem) {
+    fun fallbackToBrowser(context: Context, model: VoiceModelItem) {
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(model.browserUrl)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
-            Toast.makeText(context, "DownloadManager unavailable, opening browser", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Opening browser for ${model.displayName}", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to launch browser", e)
         }
     }
 }
 
+// Retained for backward-compatibility if any pending system downloads exist
 class DownloadCompleteReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) return
-
-        val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
-        if (downloadId == -1L) return
-
-        val appContext = context.applicationContext
-        val prefs = appContext.getSharedPreferences("voice_download_tracker", Context.MODE_PRIVATE)
-        val modelId = prefs.getString("download_$downloadId", null) ?: return
-        prefs.edit().remove("download_$downloadId").apply()
-
-        val model = VoiceModelRegistry.findById(modelId) ?: return
-
-        android.util.Log.i("DownloadCompleteReceiver", "Download complete for model: ${model.displayName} (id=$downloadId)")
-
-        val pendingResult = goAsync()
-
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            try {
-                val dm = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager ?: return@launch
-                val query = DownloadManager.Query().setFilterById(downloadId)
-
-                dm.query(query)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                        val status = if (statusIndex != -1) cursor.getInt(statusIndex) else -1
-
-                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            val uri = dm.getUriForDownloadedFile(downloadId)
-                            if (uri != null) {
-                                val pfd = appContext.contentResolver.openFileDescriptor(uri, "r")
-                                if (pfd != null) {
-                                    val pluginManager = VoicePluginManager(appContext)
-                                    val request = ModelImportRequest(
-                                        engineType = model.engineType,
-                                        language = model.language,
-                                        sha256 = null,
-                                        sizeBytes = pfd.statSize,
-                                        file = pfd
-                                    )
-
-                                    val success = kotlinx.coroutines.withTimeoutOrNull(9000L) {
-                                        pluginManager.bindAndImport(request)
-                                    } ?: false
-
-                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                        if (success) {
-                                            appContext.prefs().edit().putString("installed_model_${model.engineType}", model.id).apply()
-                                            Toast.makeText(appContext, "${model.displayName} installed successfully!", Toast.LENGTH_LONG).show()
-                                        } else {
-                                            Toast.makeText(appContext, "Failed to install ${model.displayName}", Toast.LENGTH_LONG).show()
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            val reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON)
-                            val reason = if (reasonIndex != -1) cursor.getInt(reasonIndex) else -1
-                            android.util.Log.e("DownloadCompleteReceiver", "Download failed with status=$status, reason=$reason")
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("DownloadCompleteReceiver", "Error processing downloaded model", e)
-            } finally {
-                pendingResult.finish()
-            }
-        }
+        // No-op in modern in-app download architecture
     }
 }
+

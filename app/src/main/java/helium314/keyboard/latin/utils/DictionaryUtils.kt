@@ -3,14 +3,23 @@
 package helium314.keyboard.latin.utils
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -123,9 +132,7 @@ fun MissingDictionaryDialog(onDismissRequest: () -> Unit, locale: Locale, inline
     var annotatedString = message.htmlToAnnotated()
     // ponytail: in standard flavor, if there are known dicts we show them as downloadable rows instead of bullet links
     val knownDicts = remember {
-        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
-            getKnownDictionariesForLocale(locale, context)
-        } else emptyList()
+        getKnownDictionariesForLocale(locale, context)
     }
     if (availableDicts.isNotEmpty() && knownDicts.isEmpty())
         annotatedString += AnnotatedString("\n") + availableDicts
@@ -304,6 +311,8 @@ fun downloadDictionary(context: Context, locale: Locale, type: String, linkUrl: 
 @Composable
 fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refreshTrigger: Int = 0, onRefresh: () -> Unit) {
     val ctx = LocalContext.current
+    val isOffline = helium314.keyboard.latin.BuildConfig.FLAVOR == "offline"
+        || helium314.keyboard.latin.BuildConfig.FLAVOR == "offlinelite"
     val type = remember(link) { link.substringAfterLast("/").substringBefore("_") }
     // ponytail: extract the specific dictionary locale from the download link to avoid directory collision
     val dictLocale = remember(link) {
@@ -319,7 +328,7 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
     }
     var onlineLastModified by remember(link) { mutableStateOf(0L) }
     LaunchedEffect(link, isInstalled) {
-        if (isInstalled) {
+        if (isInstalled && !isOffline) {
             withContext(Dispatchers.IO) {
                 try {
                     val url = java.net.URL(link)
@@ -364,28 +373,109 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp, horizontal = 4.dp)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(desc, style = MaterialTheme.typography.bodyMedium)
-            if (hasUpgrade && !downloading) {
-                Text(
-                    text = stringResource(R.string.dictionary_update_available),
-                    color = MaterialTheme.colorScheme.secondary,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-        if (downloading) {
+        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
             Text(
-                stringResource(R.string.downloading),
+                text = desc,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(end = 8.dp)
+                fontWeight = FontWeight.Medium
+            )
+            val statusText = when {
+                downloading -> stringResource(R.string.downloading)
+                hasUpgrade -> stringResource(R.string.dictionary_update_available)
+                isInstalled -> stringResource(R.string.installed)
+                else -> "Available in dictionary repository"
+            }
+            val statusColor = when {
+                hasUpgrade -> MaterialTheme.colorScheme.secondary
+                isInstalled -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.bodySmall,
+                color = statusColor
+            )
+        }
+
+        if (downloading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp).padding(end = 4.dp),
+                strokeWidth = 2.5.dp
             )
         } else if (hasUpgrade) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.TextButton(
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
                     onClick = {
+                        if (isOffline) {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            ctx.startActivity(intent)
+                            android.widget.Toast.makeText(ctx, "Downloading in browser… import dictionary once finished", android.widget.Toast.LENGTH_LONG).show()
+                        } else {
+                            downloading = true
+                            downloadDictionary(ctx, dictLocale, type, link) { success ->
+                                downloading = false
+                                if (success) {
+                                    ctx.prefs().edit().putString("pref_dict_download_link_${type}_${dictLocale}", link).apply()
+                                    onRefresh()
+                                } else {
+                                    android.widget.Toast.makeText(ctx, ctx.getString(R.string.download_failed), android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text(stringResource(R.string.upgrade), style = MaterialTheme.typography.labelMedium)
+                }
+                Button(
+                    onClick = {
+                        file?.delete()
+                        ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
+                        onRefresh()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text("Delete", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        } else if (isInstalled) {
+            Button(
+                onClick = {
+                    file?.delete()
+                    ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
+                    onRefresh()
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text("Delete", style = MaterialTheme.typography.labelMedium)
+            }
+        } else {
+            OutlinedButton(
+                onClick = {
+                    if (isOffline) {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        ctx.startActivity(intent)
+                        android.widget.Toast.makeText(ctx, "Downloading in browser… import dictionary once finished", android.widget.Toast.LENGTH_LONG).show()
+                    } else {
                         downloading = true
                         downloadDictionary(ctx, dictLocale, type, link) { success ->
                             downloading = false
@@ -396,51 +486,11 @@ fun DownloadableDictionaryRow(locale: Locale, desc: String, link: String, refres
                                 android.widget.Toast.makeText(ctx, ctx.getString(R.string.download_failed), android.widget.Toast.LENGTH_SHORT).show()
                             }
                         }
-                    },
-                    modifier = Modifier.padding(end = 4.dp)
-                ) {
-                    Text(stringResource(R.string.upgrade))
-                }
-                helium314.keyboard.settings.DeleteButton(
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                ) {
-                    file?.delete()
-                    ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
-                    onRefresh()
-                }
-            }
-        } else if (isInstalled) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "✓ " + stringResource(R.string.installed),
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                helium314.keyboard.settings.DeleteButton(
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                ) {
-                    file?.delete()
-                    ctx.prefs().edit().remove("pref_dict_download_link_${type}_${dictLocale}").apply()
-                    onRefresh()
-                }
-            }
-        } else {
-            androidx.compose.material3.TextButton(onClick = {
-                downloading = true
-                downloadDictionary(ctx, dictLocale, type, link) { success ->
-                    downloading = false
-                    if (success) {
-                        ctx.prefs().edit().putString("pref_dict_download_link_${type}_${dictLocale}", link).apply()
-                        onRefresh()
-                    } else {
-                        android.widget.Toast.makeText(ctx, ctx.getString(R.string.download_failed), android.widget.Toast.LENGTH_SHORT).show()
                     }
-                }
-            }) {
-                Text(stringResource(R.string.download))
+                },
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text(stringResource(R.string.download), style = MaterialTheme.typography.labelMedium)
             }
         }
     }

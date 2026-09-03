@@ -139,7 +139,7 @@ fun MainSettingsScreen(
                     )
                 ) {
                     Column {
-                        if (BuildConfig.FLAVOR != "offlinelite") {
+                        if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
                             Preference(
                                 name = stringResource(R.string.settings_screen_ai_integration),
                                 onClick = onClickAIIntegration,
@@ -147,7 +147,7 @@ fun MainSettingsScreen(
                             ) { NextScreenIcon() }
                         }
                         Preference(
-                            name = stringResource(R.string.libraries_hub_title),
+                            name = stringResource(R.string.plugins_title),
                             onClick = onClickLibraries,
                             icon = R.drawable.ic_emoji_objects
                         ) { NextScreenIcon() }

@@ -12,12 +12,14 @@ import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.dialogs.TextInputDialog
+import androidx.annotation.DrawableRes
 import androidx.core.content.edit
 
 @Composable
 fun TextInputPreference(
     setting: Setting,
     default: String,
+    @DrawableRes icon: Int = 0,
     checkTextValid: (String) -> Boolean = { true },
     onConfirmed: (String) -> Unit = { }
 ) {
@@ -25,6 +27,7 @@ fun TextInputPreference(
     val prefs = LocalContext.current.prefs()
     Preference(
         name = setting.title,
+        icon = icon.takeIf { it != 0 },
         onClick = { showDialog = true },
         description = prefs.getString(setting.key, default)?.takeIf { it.isNotEmpty() }
     )

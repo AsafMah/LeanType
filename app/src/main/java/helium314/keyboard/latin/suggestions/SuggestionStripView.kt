@@ -166,10 +166,13 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private var isLoadingAnimationActive = false
 
     private val keyDimension: Int
-        get() = kotlin.math.min(
-            resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
-            resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
-        )
+        get() {
+            val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
+            val defaultEdgeWidth = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
+            val defaultStripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+            val ratio = if (defaultStripHeight > 0) defaultEdgeWidth.toFloat() / defaultStripHeight else 0.9f
+            return (stripHeight * ratio).toInt()
+        }
 
     private val toolbarKeyLayoutParams: LinearLayout.LayoutParams
         get() = LinearLayout.LayoutParams(keyDimension, keyDimension).apply {
@@ -189,11 +192,14 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // expand key
         // weird way of setting size (default is config_suggestions_strip_edge_key_width)
         // but better not change it or people will complain
-        val toolbarHeight = min(toolbarExpandKey.layoutParams.height, resources.getDimension(R.dimen.config_suggestions_strip_height).toInt())
+        val toolbarHeight = keyDimension
         toolbarExpandKey.layoutParams.height = toolbarHeight
         toolbarExpandKey.layoutParams.width = toolbarHeight // we want it square
         toolbarExpandKey.setBackgroundResource(R.drawable.toolbar_key_background)
-        val expandPadding = 9.dpToPx(resources)
+        val defaultStripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height).toFloat()
+        val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources).toFloat()
+        val effectiveScale = if (defaultStripHeight > 0f) stripHeight / defaultStripHeight else 1.0f
+        val expandPadding = (9 * effectiveScale).toInt().dpToPx(resources).coerceAtLeast(2)
         toolbarExpandKey.setPadding(expandPadding, expandPadding, expandPadding, expandPadding)
         colors.setColor(toolbarExpandKey, ColorType.TOOL_BAR_EXPAND_KEY)
         colors.setColor(toolbarExpandKey.background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
@@ -202,7 +208,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val color = colors.get(ColorType.TOOL_BAR_KEY_ENABLED_BACKGROUND) or -0x1000000 // ignore alpha (in Java this is more readable 0xFF000000)
         enabledToolKeyBackground.colors = intArrayOf(color, Color.TRANSPARENT)
         enabledToolKeyBackground.gradientType = GradientDrawable.RADIAL_GRADIENT
-        enabledToolKeyBackground.gradientRadius = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height) / 2.1f
+        enabledToolKeyBackground.gradientRadius = ResourceUtils.getSuggestionsStripHeight(resources) / 2.1f
 
         val mToolbarMode = Settings.getValues().mToolbarMode
         if (mToolbarMode == ToolbarMode.TOOLBAR_KEYS) {
@@ -217,7 +223,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         rebuildToolbarKeys()
 
         if (Settings.getValues().mSplitToolbar) {
-            val stripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+            val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
 
             val wrapper = findViewById<LinearLayout>(R.id.suggestions_strip_wrapper)
 
@@ -284,7 +290,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val stripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
         val split = Settings.getValues().mSplitToolbar
         val isEmojiView = split && (isShowingEmojiSuggestions || helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().isShowingEmojiPalettes)
 
@@ -769,7 +775,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // In split mode, don't intercept touches on the top row (toolbar row)
         // to prevent accidentally cancelling long presses on toolbar buttons.
         if (Settings.getValues().mSplitToolbar) {
-            val stripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+            val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
             if (motionEvent.y < stripHeight) {
                 return false
             }
@@ -1050,7 +1056,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val prefs = context.prefs()
 
         val defaultList = languageNames.zip(languageCodes).toMutableList()
-        val currentLanguageCode = prefs.getString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, "English") ?: "English"
+        val rawCode = prefs.getString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, "en") ?: "en"
+        val currentLanguageCode = if (rawCode.equals("English", ignoreCase = true)) "en" else rawCode
         val currentLanguageName = prefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, currentLanguageCode) ?: currentLanguageCode
         
         val history = getLanguageHistory(prefs).toMutableList()
@@ -1187,49 +1194,45 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
 
         // ponytail: show/hide dictionary download button if dictionary is missing
-        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard" || helium314.keyboard.latin.BuildConfig.FLAVOR == "standardfull") {
-            val currentLocale = SubtypeSettings.getSelectedSubtype(context.prefs()).locale()
-            val showDownloadButton = Settings.getValues().mShowDownloadButtonInToolbar
-            if (showDownloadButton && isMainDictionaryMissing(context, currentLocale) && !hideToolbarKeys) {
-                if (dictDownloadButton == null) {
-                    dictDownloadButton = ImageButton(context, null, R.attr.suggestionWordStyle).apply {
-                        scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-                        val padding = 6.dpToPx(resources)
-                        setPadding(padding, padding, padding, padding)
-                        setImageResource(R.drawable.ic_dictionary)
-                        contentDescription = context.getString(R.string.download)
-                        setOnClickListener {
-                            val intent = android.content.Intent().apply {
-                                setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
-                                putExtra("screen", "dictionaries")
-                                putExtra("from_ime", true)
-                                setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                        or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                                        or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                            }
-                            context.startActivity(intent)
+        val currentLocale = SubtypeSettings.getSelectedSubtype(context.prefs()).locale()
+        val showDownloadButton = Settings.getValues().mShowDownloadButtonInToolbar
+        if (showDownloadButton && isMainDictionaryMissing(context, currentLocale) && !hideToolbarKeys) {
+            if (dictDownloadButton == null) {
+                dictDownloadButton = ImageButton(context, null, R.attr.suggestionWordStyle).apply {
+                    scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                    val padding = 6.dpToPx(resources)
+                    setPadding(padding, padding, padding, padding)
+                    setImageResource(R.drawable.ic_dictionary)
+                    contentDescription = context.getString(R.string.download)
+                    setOnClickListener {
+                        val intent = android.content.Intent().apply {
+                            setClass(context, helium314.keyboard.settings.SettingsActivity2::class.java)
+                            putExtra("screen", "dictionaries")
+                            putExtra("from_ime", true)
+                            setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                    or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                                    or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
                         }
+                        context.startActivity(intent)
                     }
-                    val configHeight = resources.getDimension(R.dimen.config_suggestions_strip_height).toInt()
-                    val rawHeight = toolbarExpandKey.layoutParams.height
-                    val toolbarHeight = if (rawHeight > 0) min(rawHeight, configHeight) else configHeight
-                    dictDownloadButton?.layoutParams = LinearLayout.LayoutParams(toolbarHeight, toolbarHeight).apply {
-                        gravity = android.view.Gravity.CENTER_VERTICAL
-                    }
-
-                    val wrapper = findViewById<LinearLayout>(R.id.suggestions_strip_wrapper)
-                    val expandIndex = wrapper.indexOfChild(toolbarExpandKey)
-                    wrapper.addView(dictDownloadButton, expandIndex + 1)
                 }
-                val colors = Settings.getValues().mColors
-                dictDownloadButton?.let { btn ->
-                    colors.setColor(btn, ColorType.TOOL_BAR_KEY)
-                    btn.setBackgroundResource(R.drawable.toolbar_key_background)
-                    btn.background?.let { bg -> colors.setColor(bg, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND) }
-                    btn.isVisible = true
+                val configHeight = resources.getDimension(R.dimen.config_suggestions_strip_height).toInt()
+                val rawHeight = toolbarExpandKey.layoutParams.height
+                val toolbarHeight = if (rawHeight > 0) min(rawHeight, configHeight) else configHeight
+                dictDownloadButton?.layoutParams = LinearLayout.LayoutParams(toolbarHeight, toolbarHeight).apply {
+                    gravity = android.view.Gravity.CENTER_VERTICAL
                 }
-            } else {
-                dictDownloadButton?.isVisible = false
+                
+                val wrapper = findViewById<LinearLayout>(R.id.suggestions_strip_wrapper)
+                val expandIndex = wrapper.indexOfChild(toolbarExpandKey)
+                wrapper.addView(dictDownloadButton, expandIndex + 1)
+            }
+            val colors = Settings.getValues().mColors
+            dictDownloadButton?.let { btn ->
+                colors.setColor(btn, ColorType.TOOL_BAR_KEY)
+                btn.setBackgroundResource(R.drawable.toolbar_key_background)
+                btn.background?.let { bg -> colors.setColor(bg, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND) }
+                btn.isVisible = true
             }
         } else {
             dictDownloadButton?.isVisible = false
@@ -1359,6 +1362,21 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
     }
 
+    fun onFloatingKeyboardScaleChanged() {
+        val toolbarHeight = keyDimension
+        toolbarExpandKey.layoutParams.height = toolbarHeight
+        toolbarExpandKey.layoutParams.width = toolbarHeight
+        val defaultStripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height).toFloat()
+        val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources).toFloat()
+        val effectiveScale = if (defaultStripHeight > 0f) stripHeight / defaultStripHeight else 1.0f
+        val expandPadding = (9 * effectiveScale).toInt().dpToPx(resources).coerceAtLeast(2)
+        toolbarExpandKey.setPadding(expandPadding, expandPadding, expandPadding, expandPadding)
+
+        rebuildToolbarKeys()
+        requestLayout()
+        invalidate()
+    }
+
     fun updateSplitToolbarState() {
         if (!Settings.getValues().mSplitToolbar) return
         val isEmojiView = isShowingEmojiSuggestions || helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().isShowingEmojiPalettes
@@ -1401,7 +1419,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
         val colors = Settings.getValues().mColors
         val customTypeface = Settings.getInstance().customEmojiTypeface
-        val stripHeight = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        val stripHeight = ResourceUtils.getSuggestionsStripHeight(resources)
 
         // Create a horizontal scroll container for emojis
         val scrollView = android.widget.HorizontalScrollView(context)

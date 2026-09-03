@@ -18,6 +18,7 @@ import helium314.keyboard.event.HapticEvent;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.settings.SettingsValues;
+import helium314.keyboard.latin.sound.CustomSoundManager;
 
 /**
  * This class gathers audio feedback and haptic feedback functions.
@@ -26,6 +27,7 @@ import helium314.keyboard.latin.settings.SettingsValues;
  * complexity of settings and the like.
  */
 public final class AudioAndHapticFeedbackManager {
+    private Context mContext;
     private AudioManager mAudioManager;
     private Vibrator mVibrator;
 
@@ -49,8 +51,10 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     private void initInternal(final Context context) {
+        mContext = context.getApplicationContext();
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        CustomSoundManager.Companion.getInstance(mContext);
     }
 
     public void performHapticAndAudioFeedback(
@@ -103,14 +107,21 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     public void performAudioFeedback(final int code, final HapticEvent hapticEvent) {
-        // if mAudioManager is null, we can't play a sound anyway, so return
-        if (mAudioManager == null) {
-            return;
-        }
         if (!mSoundOn) {
             return;
         }
         if (hapticEvent != HapticEvent.KEY_PRESS) {
+            return;
+        }
+        final float volume = mSettingsValues != null ? mSettingsValues.mKeypressSoundVolume : -0.01f;
+        if (mContext != null) {
+            final boolean played = CustomSoundManager.Companion.getInstance(mContext).playSound(code, volume);
+            if (played) {
+                return;
+            }
+        }
+        // Fallback to system AudioManager
+        if (mAudioManager == null) {
             return;
         }
         final int sound = switch (code) {
@@ -119,7 +130,7 @@ public final class AudioAndHapticFeedbackManager {
             case Constants.CODE_SPACE -> AudioManager.FX_KEYPRESS_SPACEBAR;
             default -> AudioManager.FX_KEYPRESS_STANDARD;
         };
-        mAudioManager.playSoundEffect(sound, mSettingsValues.mKeypressSoundVolume);
+        mAudioManager.playSoundEffect(sound, volume);
     }
 
     public void performHapticFeedback(final View viewToPerformHapticFeedbackOn, final HapticEvent hapticEvent) {
@@ -146,6 +157,9 @@ public final class AudioAndHapticFeedbackManager {
     public void onSettingsChanged(final SettingsValues settingsValues) {
         mSettingsValues = settingsValues;
         mSoundOn = reevaluateIfSoundIsOn();
+        if (mContext != null && settingsValues != null && settingsValues.mKeypressSoundStyle != null) {
+            CustomSoundManager.Companion.getInstance(mContext).setSoundPack(settingsValues.mKeypressSoundStyle);
+        }
     }
 
     public void onRingerModeChanged(boolean doNotDisturb) {

@@ -47,7 +47,9 @@ data class VoiceSessionConfig(
     val enablePartial: Boolean,
     val maxSegmentMs: Int,
     val hybridTimeoutMs: Int,
-    val hybridFallbackToVosk: Boolean
+    val hybridFallbackToVosk: Boolean,
+    val cpuThreads: Int = 4,
+    val customPrompt: String? = null
 ) : Parcelable
 
 object VoiceConstants {
@@ -81,6 +83,10 @@ object VoiceConstants {
     const val PREF_VOICE_LANGUAGE = "voice_language"
     const val VOICE_LANG_FOLLOW_KEYBOARD = "follow_keyboard"
     const val VOICE_LANG_AUTO = "auto"
+    const val PREF_VOICE_CPU_THREADS = "voice_cpu_threads"
+    const val PREF_VOICE_CUSTOM_PROMPT = "voice_custom_prompt"
+    const val PREF_VOICE_MIC_SENSITIVITY = "voice_mic_sensitivity"
+    const val PREF_VOICE_MAX_DURATION_SECONDS = "voice_max_duration_seconds"
     const val PREF_USE_DEBUG_VOICE_STUB = "use_debug_voice_stub"
     const val VOICE_PLUGIN_PACKAGE = "com.leanbitlab.leantype.voice.offline"
 }

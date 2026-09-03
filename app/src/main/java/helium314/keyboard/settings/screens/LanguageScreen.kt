@@ -109,6 +109,12 @@ fun LanguageScreen(
                             onClick = { SettingsDestination.navigateTo(SettingsDestination.Layouts) },
                             icon = R.drawable.ic_ime_switcher
                         ) { NextScreenIcon() }
+                        Preference(
+                            name = stringResource(R.string.dictionary_settings_category),
+                            description = "Manage main, personal, and downloadable dictionaries",
+                            onClick = { SettingsDestination.navigateTo(SettingsDestination.Dictionaries) },
+                            icon = R.drawable.ic_dictionary
+                        ) { NextScreenIcon() }
                         SettingsActivity.settingsContainer[Settings.PREF_APP_LANGUAGE]?.Preference()
                     }
                 }

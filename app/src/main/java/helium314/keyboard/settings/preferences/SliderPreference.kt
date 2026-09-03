@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.preferences
 
+import androidx.annotation.DrawableRes
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,6 +28,7 @@ fun <T: Number> SliderPreference(
     description: @Composable (T) -> String,
     default: T,
     range: ClosedFloatingPointRange<Float>,
+    @DrawableRes icon: Int? = null,
     stepSize: Int? = null,
     onValueChanged: (Float?) -> Unit = { },
     onConfirmed: (T) -> Unit = { },
@@ -44,11 +47,13 @@ fun <T: Number> SliderPreference(
         name = name,
         onClick = { showDialog = true },
         modifier = modifier,
+        icon = icon,
         description = description(initialValue)
     )
     if (showDialog)
         SliderDialog(
             onDismissRequest = { showDialog = false },
+            title = { Text(name) },
             onDone = {
                 if (default is Int) {
                     prefs.edit { putInt(key, it.toInt()) }

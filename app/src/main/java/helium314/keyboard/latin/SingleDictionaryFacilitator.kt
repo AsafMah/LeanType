@@ -110,6 +110,8 @@ class SingleDictionaryFacilitator(private val dict: Dictionary) : DictionaryFaci
 
     override fun hasAtLeastOneInitializedMainDictionary(): Boolean = dict.isInitialized
 
+    override fun isMainDictionaryLoadPending(): Boolean = false
+
     override fun hasAtLeastOneUninitializedMainDictionary(): Boolean = !dict.isInitialized
 
     override fun waitForLoadingMainDictionaries(timeout: Long, unit: TimeUnit) {

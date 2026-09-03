@@ -221,17 +221,20 @@ public class SettingsValues {
         public final int mKeypressVibrationDuration;
         public final int mKeypressVibrationAmplitude;
         public final float mKeypressSoundVolume;
+        public final String mKeypressSoundStyle;
         public final boolean mAutoCorrectionEnabledPerUserSettings;
         public final String mAutoCorrectTrigger;
         public final boolean mAutoCorrectEnabled;
         public final float mAutoCorrectionThreshold;
         public final boolean mAutoCorrectShortcuts;
         public final boolean mPersistFloatingKeyboard;
+        public final boolean mRememberFloatingKeyboard;
         // ponytail: persist text edit mode field
         public final boolean mPersistTextEditMode;
         public final boolean mBackspaceRevertsAutocorrect;
         public final boolean mDisableMultiWordSuggestions;
         public final boolean mPrioritizePersonalSuggestions;
+        public final int mSuggestionBalance;
         public final int mNextWordBoostLevel;
         public final boolean mNextWordStrictNgram;
         public final int mScoreLimitForAutocorrect;
@@ -357,6 +360,8 @@ public class SettingsValues {
                                 Defaults.PREF_AUTOCORRECT_SHORTCUTS);
                 mPersistFloatingKeyboard = prefs.getBoolean(Settings.PREF_PERSIST_FLOATING_KEYBOARD,
                                 Defaults.PREF_PERSIST_FLOATING_KEYBOARD);
+                mRememberFloatingKeyboard = prefs.getBoolean(Settings.PREF_REMEMBER_FLOATING_KEYBOARD,
+                                Defaults.PREF_REMEMBER_FLOATING_KEYBOARD);
                 // ponytail: load persist text edit mode value
                 mPersistTextEditMode = prefs.getBoolean(Settings.PREF_PERSIST_TEXT_EDIT_MODE,
                                 Defaults.PREF_PERSIST_TEXT_EDIT_MODE);
@@ -368,6 +373,8 @@ public class SettingsValues {
                                 Defaults.PREF_BIGRAM_PREDICTIONS);
                 mPrioritizePersonalSuggestions = prefs.getBoolean(Settings.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS,
                                 Defaults.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS);
+                mSuggestionBalance = prefs.getInt(Settings.PREF_SUGGESTION_BALANCE,
+                                Defaults.PREF_SUGGESTION_BALANCE);
                 int boostLevel = 500;
                 try {
                         boostLevel = Integer.parseInt(prefs.getString(Settings.PREF_NEXT_WORD_BOOST_LEVEL, Defaults.PREF_NEXT_WORD_BOOST_LEVEL));
@@ -415,6 +422,8 @@ public class SettingsValues {
                                 Defaults.PREF_VIBRATION_AMPLITUDE_SETTINGS);
                 mKeypressSoundVolume = prefs.getFloat(Settings.PREF_KEYPRESS_SOUND_VOLUME,
                                 Defaults.PREF_KEYPRESS_SOUND_VOLUME);
+                mKeypressSoundStyle = prefs.getString(Settings.PREF_KEYPRESS_SOUND_STYLE,
+                                Defaults.PREF_KEYPRESS_SOUND_STYLE);
                 mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
                                 Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY);
                 mGestureMethod = prefs.getString(Settings.PREF_GESTURE_METHOD, "fallback");

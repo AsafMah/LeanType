@@ -40,6 +40,7 @@ import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.suggestions.MoreSuggestions;
 import helium314.keyboard.latin.suggestions.MoreSuggestionsView;
+import helium314.keyboard.latin.utils.ResourceUtils;
 import helium314.keyboard.latin.utils.TypefaceUtils;
 
 import java.util.HashSet;
@@ -324,7 +325,17 @@ public class KeyboardView extends View {
         final SettingsValues sv = Settings.getValues();
         mShowsHints = sv.mShowsHints;
         final float scale = sv.mKeyboardHeightScale;
-        mIconScaleFactor = scale < 0.8f ? scale + 0.2f : 1f;
+        final float floatingScale = ResourceUtils.getFloatingKeyboardScale();
+        final int floatingWidth = ResourceUtils.getFloatingKeyboardWidth();
+        final int defaultWidth = ResourceUtils.getDefaultKeyboardWidth(getContext());
+        if (floatingScale > 0.0f || floatingWidth > 0) {
+            final float heightScale = scale * (floatingScale > 0.0f ? floatingScale : 1.0f);
+            final float widthScale = (floatingWidth > 0 && defaultWidth > 0) ? ((float) floatingWidth / defaultWidth) : 1.0f;
+            final float effectiveKeyScale = Math.min(heightScale, widthScale);
+            mIconScaleFactor = Math.max(0.4f, Math.min(effectiveKeyScale, 1.5f));
+        } else {
+            mIconScaleFactor = scale < 0.8f ? scale + 0.2f : 1f;
+        }
         final Paint paint = mPaint;
         final Drawable background = getBackground();
         // Calculate clip region and set.
@@ -392,11 +403,14 @@ public class KeyboardView extends View {
     protected void onDrawKeyBackground(@NonNull final Key key, @NonNull final Canvas canvas,
             @NonNull final Drawable background) {
         int customColor = 0;
-        if (KeyboardActionListenerImpl.sPersistentTextEditModeActive) {
+        final boolean isTextEditMode = KeyboardActionListenerImpl.sPersistentTextEditModeActive
+                || (getKeyboard() != null && getKeyboard().mId.mElementId == KeyboardId.ELEMENT_TEXT_EDIT);
+        if (isTextEditMode) {
             switch (key.getCode()) {
                 case KeyCode.UNDO:
                 case KeyCode.REDO:
                 case KeyCode.DELETE:
+                case KeyCode.FORWARD_DELETE:
                     customColor = mColors.get(ColorType.EDIT_MODE_DELETE_BACKGROUND);
                     break;
                 case KeyCode.CLIPBOARD_SELECT_ALL:
@@ -425,6 +439,11 @@ public class KeyboardView extends View {
                 case KeyCode.WORD_RIGHT:
                     customColor = mColors.get(ColorType.EDIT_MODE_JUMP_BACKGROUND);
                     break;
+                default:
+                    if (key.hasActionKeyBackground()) {
+                        customColor = mColors.get(ColorType.ACTION_KEY_BACKGROUND);
+                    }
+                    break;
             }
         }
 
@@ -437,12 +456,19 @@ public class KeyboardView extends View {
         final int keyHeight = key.getHeight();
         final int bgWidth, bgHeight, bgX, bgY;
         if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags)
+                && !isTextEditMode
                 // HACK: To disable expanding normal/functional key background.
                 && !key.hasCustomActionLabel()) {
             bgWidth = (int) (drawBackground.getIntrinsicWidth() * mIconScaleFactor);
             bgHeight = (int) (drawBackground.getIntrinsicHeight() * mIconScaleFactor);
             bgX = (keyWidth - bgWidth) / 2;
             bgY = (keyHeight - bgHeight) / 2;
+        } else if (!mColors.getHasKeyBorders() && key.getBackgroundType() == Key.BACKGROUND_TYPE_SPACEBAR) {
+            final int verticalInset = (int) (keyHeight * 0.16f);
+            bgWidth = keyWidth + padding.left + padding.right;
+            bgHeight = Math.max(1, keyHeight + padding.top + padding.bottom - (verticalInset * 2));
+            bgY = -padding.top + verticalInset;
+            bgX = -padding.left;
         } else {
             bgWidth = keyWidth + padding.left + padding.right;
             bgHeight = keyHeight + padding.top + padding.bottom;
@@ -535,7 +561,9 @@ public class KeyboardView extends View {
             }
             if (key.needsAutoXScale() || (StringUtilsKt.isEmoji(label) && Settings.getValues().mEmojiKeyFit)) {
                 final int width;
-                if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags)) {
+                final boolean isTextEditMode = KeyboardActionListenerImpl.sPersistentTextEditModeActive
+                        || (keyboard != null && keyboard.mId.mElementId == KeyboardId.ELEMENT_TEXT_EDIT);
+                if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags) && !isTextEditMode) {
                     // make sure the text stays inside bounds of background drawable
                     Drawable bg = key.selectBackgroundDrawable(mKeyBackground, mFunctionalKeyBackground,
                             mSpacebarBackground, mActionKeyBackground);

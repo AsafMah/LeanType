@@ -305,6 +305,11 @@ public final class BinaryDictionary extends Dictionary {
                     session.mInputOutputWeightOfLangModelVsSpatialModel[0];
         }
         final int count = session.mOutputSuggestionCount[0];
+        if (helium314.keyboard.latin.define.DebugFlags.DEBUG_ENABLED && composedData.mTypedWord.isEmpty()) {
+            Log.i("ScoreAudit", "BinaryDict.getSuggestions type=" + mDictType + " outputCount=" + count
+                    + " prevWordCount=" + ngramContext.getPrevWordCount()
+                    + " isBOS=" + ngramContext.isBeginningOfSentenceContext());
+        }
         final ArrayList<SuggestedWordInfo> suggestions = new ArrayList<>();
         for (int j = 0; j < count; ++j) {
             final int start = j * DICTIONARY_MAX_WORD_LENGTH;

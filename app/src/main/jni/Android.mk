@@ -94,7 +94,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_CLANG := true
 LOCAL_SDK_VERSION := 14
 LOCAL_NDK_STL_VARIANT := c++_static
-LOCAL_LDFLAGS += -ldl -Wl,-z,max-page-size=16384
+LOCAL_LDFLAGS += -ldl -llog -Wl,-z,max-page-size=16384
 
 ifneq ($(FLAG_DBG), true)
     LOCAL_CFLAGS += -flto
