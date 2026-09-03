@@ -118,8 +118,12 @@ fun SettingsNavHost(
                 onClickOfflineVoice = { navController.navigate(SettingsDestination.OfflineVoice) },
                 onClickTranslation = { navController.navigate(SettingsDestination.Translation) },
                 onClickHandwriting = { navController.navigate(SettingsDestination.Handwriting) },
+                onClickOcr = { navController.navigate(SettingsDestination.OCR) },
                 onClickAIIntegration = { navController.navigate(SettingsDestination.AIIntegration) }
             )
+        }
+        composable(SettingsDestination.OCR) {
+            helium314.keyboard.settings.screens.OcrSettingsScreen(onClickBack = ::goBack)
         }
         composable(SettingsDestination.CustomAIKeys) {
             CustomAIKeysScreen(
@@ -226,6 +230,7 @@ object SettingsDestination {
     const val OfflineVoice = "offline_voice"
     const val Translation = "translation"
     const val Handwriting = "handwriting"
+    const val OCR = "ocr"
     val navTarget = MutableStateFlow(Settings)
 
     // Use SupervisorJob so a cancellation in one navigation hop

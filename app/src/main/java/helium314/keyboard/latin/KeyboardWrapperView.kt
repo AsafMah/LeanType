@@ -134,22 +134,15 @@ class KeyboardWrapperView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val keyboardView = findViewById<View>(R.id.keyboard_view)
-        if (keyboardView == null) {
-            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-            return
-        }
-
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-
         val settingsValues = Settings.getValues()
         val keyboardHeight = ResourceUtils.getKeyboardHeight(context.resources, settingsValues)
-        val padding = keyboardView.paddingTop + keyboardView.paddingBottom
+        val keyboardView = findViewById<View>(R.id.keyboard_view)
+        val padding = if (keyboardView != null) keyboardView.paddingTop + keyboardView.paddingBottom else 0
         val maxExpectedHeight = keyboardHeight + padding
 
-        if (measuredHeight > maxExpectedHeight && maxExpectedHeight > 0) {
-            setMeasuredDimension(measuredWidth, maxExpectedHeight)
-            // Re-measure children with the capped height
+        if (maxExpectedHeight > 0) {
+            val width = MeasureSpec.getSize(widthMeasureSpec)
+            setMeasuredDimension(width, maxExpectedHeight)
             val exactHeightSpec = MeasureSpec.makeMeasureSpec(maxExpectedHeight, MeasureSpec.EXACTLY)
             for (i in 0 until childCount) {
                 val child = getChildAt(i)
@@ -157,7 +150,10 @@ class KeyboardWrapperView @JvmOverloads constructor(
                     measureChildWithMargins(child, widthMeasureSpec, 0, exactHeightSpec, 0)
                 }
             }
+            return
         }
+
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
     @SuppressLint("RtlHardcoded")

@@ -44,6 +44,9 @@ import helium314.keyboard.latin.RichInputMethodSubtype;
 import helium314.keyboard.latin.WordComposer;
 import helium314.keyboard.latin.handwriting.HandwritingLoader;
 import helium314.keyboard.latin.handwriting.HandwritingView;
+import helium314.keyboard.latin.ocr.OcrCameraView;
+import helium314.keyboard.latin.ocr.OcrResultView;
+import helium314.keyboard.latin.ocr.OcrPluginLoader;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
@@ -57,6 +60,7 @@ import helium314.keyboard.latin.utils.ResourceUtils;
 import helium314.keyboard.latin.utils.ScriptUtils;
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional;
 import helium314.keyboard.latin.utils.ToolbarMode;
+import java.util.List;
 
 public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private static final String TAG = KeyboardSwitcher.class.getSimpleName();
@@ -73,6 +77,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private LinearLayout mStripContainer;
     private ClipboardHistoryView mClipboardHistoryView;
     private HandwritingView mHandwritingView;
+    private OcrCameraView mOcrCameraView;
+    private OcrResultView mOcrResultView;
     private TouchpadView mTouchpadView;
     private TextView mFakeToastView;
     private LatinIME mLatinIME;
@@ -207,6 +213,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     public void onHideWindow() {
         if (mKeyboardView != null) {
             mKeyboardView.onHideWindow();
+        }
+        if (mOcrCameraView != null && mOcrCameraView.isShown()) {
+            mOcrCameraView.stopCamera();
         }
     }
 
@@ -403,6 +412,15 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             }
             mHandwritingView.setVisibility(View.GONE);
         }
+        if (mOcrCameraView != null) {
+            if (mOcrCameraView.isShown()) {
+                mOcrCameraView.stopCamera();
+            }
+            mOcrCameraView.setVisibility(View.GONE);
+        }
+        if (mOcrResultView != null) {
+            mOcrResultView.setVisibility(View.GONE);
+        }
 
         
         if (PointerTracker.sPersistentTouchpadModeActive) {
@@ -523,6 +541,71 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mHandwritingView != null) {
             mHandwritingView.clearCanvasAndComposition();
         }
+    }
+
+    public void showOcrCamera() {
+        if (DEBUG_ACTION) {
+            Log.d(TAG, "showOcrCamera");
+        }
+        PointerTracker.sPersistentTouchpadModeActive = false;
+        if (mTouchpadView != null) {
+            mTouchpadView.setVisibility(View.GONE);
+        }
+        KeyboardActionListenerImpl.sPersistentTextEditModeActive = false;
+        mMainKeyboardFrame.setVisibility(View.VISIBLE);
+        mKeyboardView.setVisibility(View.GONE);
+        mEmojiTabStripView.setVisibility(View.GONE);
+        mSuggestionStripView.setVisibility(View.VISIBLE);
+        mStripContainer.setVisibility(View.VISIBLE);
+        mClipboardStripScrollView.setVisibility(View.GONE);
+        mEmojiPalettesView.setVisibility(View.GONE);
+        mClipboardHistoryView.setVisibility(View.GONE);
+        if (mHandwritingView != null) {
+            if (mHandwritingView.isShown()) {
+                mHandwritingView.stopHandwriting();
+            }
+            mHandwritingView.setVisibility(View.GONE);
+        }
+        if (mOcrResultView != null) {
+            mOcrResultView.setVisibility(View.GONE);
+        }
+        if (mOcrCameraView != null) {
+            mOcrCameraView.setVisibility(View.VISIBLE);
+            mOcrCameraView.startCamera();
+        }
+    }
+
+    public void showOcrResult(@NonNull final List<String> lines) {
+        if (DEBUG_ACTION) {
+            Log.d(TAG, "showOcrResult");
+        }
+        if (mOcrCameraView != null) {
+            mOcrCameraView.stopCamera();
+            mOcrCameraView.setVisibility(View.GONE);
+        }
+        if (mOcrResultView != null) {
+            mOcrResultView.setResultText(lines);
+            mOcrResultView.applyColors(Settings.getValues().mColors);
+            mOcrResultView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    public void hideOcrPanels() {
+        if (mOcrCameraView != null) {
+            if (mOcrCameraView.isShown()) {
+                mOcrCameraView.stopCamera();
+            }
+            mOcrCameraView.setVisibility(View.GONE);
+        }
+        if (mOcrResultView != null) {
+            mOcrResultView.setVisibility(View.GONE);
+        }
+        setAlphabetKeyboard();
+    }
+
+    public boolean isOcrShowing() {
+        return (mOcrCameraView != null && mOcrCameraView.isShown())
+                || (mOcrResultView != null && mOcrResultView.isShown());
     }
 
     @Override
@@ -926,6 +1009,10 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mClipboardHistoryView != null) {
             mClipboardHistoryView.stopClipboardHistory();
         }
+        if (mOcrCameraView != null) {
+            mOcrCameraView.release();
+        }
+        OcrPluginLoader.release();
     }
 
     public void trimMemory() {
@@ -964,7 +1051,42 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mEmojiPalettesView = mCurrentInputView.findViewById(R.id.emoji_palettes_view);
         mClipboardHistoryView = mCurrentInputView.findViewById(R.id.clipboard_history_view);
         mHandwritingView = mCurrentInputView.findViewById(R.id.handwriting_view);
+        mOcrCameraView = mCurrentInputView.findViewById(R.id.ocr_camera_view);
+        mOcrResultView = mCurrentInputView.findViewById(R.id.ocr_result_view);
         mFakeToastView = mCurrentInputView.findViewById(R.id.fakeToast);
+
+        if (mOcrCameraView != null) {
+            mOcrCameraView.setListener(new OcrCameraView.OcrViewListener() {
+                @Override
+                public void onOcrTextExtracted(@NonNull List<String> lines) {
+                    showOcrResult(lines);
+                }
+
+                @Override
+                public void onCloseOcr() {
+                    hideOcrPanels();
+                }
+            });
+        }
+        if (mOcrResultView != null) {
+            mOcrResultView.setListener(new OcrResultView.OcrResultListener() {
+                @Override
+                public void onInsertText(@NonNull String text) {
+                    mLatinIME.onTextInput(text);
+                    hideOcrPanels();
+                }
+
+                @Override
+                public void onRetake() {
+                    showOcrCamera();
+                }
+
+                @Override
+                public void onClose() {
+                    hideOcrPanels();
+                }
+            });
+        }
 
         mKeyboardViewWrapper = mCurrentInputView.findViewById(R.id.keyboard_view_wrapper);
         mKeyboardViewWrapper.setKeyboardActionListener(mLatinIME.mKeyboardActionListener);

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<helium314.keyboard.latin.ocr.OcrCameraView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/ocr_camera_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:visibility="gone"
+    android:background="#000000">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/ocr_preview_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:scaleType="fillCenter" />
+
+    <LinearLayout
+        android:id="@+id/ocr_plugin_required_panel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="24dp"
+        android:visibility="gone"
+        android:background="#DD000000">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_ocr"
+            android:contentDescription="" />
+
+        <TextView
+            android:id="@+id/ocr_plugin_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/ocr_plugin_required_title"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/ocr_plugin_summary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/ocr_plugin_required_summary"
+            android:textColor="#CCCCCC"
+            android:gravity="center"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/ocr_btn_load_plugin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/ocr_plugin_open_settings" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ocr_controls_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="12dp"
+        android:background="#99000000">
+
+        <ImageButton
+            android:id="@+id/btn_ocr_flash"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_flash_off"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/ocr_flash_button_desc"
+            android:tint="#FFFFFFFF" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btn_ocr_shutter"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_shutter"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/ocr_shutter_button_desc" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btn_ocr_close"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_close"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/dialog_close"
+            android:tint="#FFFFFFFF" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/ocr_loading_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#99000000"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center" />
+    </FrameLayout>
+
+</helium314.keyboard.latin.ocr.OcrCameraView>

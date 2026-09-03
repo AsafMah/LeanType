@@ -19,12 +19,17 @@ import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.isValidNumber
 import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.databinding.ClipboardSuggestionBinding
+import helium314.keyboard.latin.databinding.ScreenshotSuggestionBinding
+import helium314.keyboard.latin.ocr.OcrPluginLoader
+import helium314.keyboard.latin.ocr.OcrPipeline
+import helium314.keyboard.latin.ocr.ScreenshotHelper
 import helium314.keyboard.latin.utils.InputTypeUtils
 import helium314.keyboard.latin.utils.ToolbarKey
 import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.widget.Toast
 import kotlin.concurrent.thread
 import helium314.keyboard.latin.utils.ExecutorUtils
 import helium314.keyboard.latin.utils.prefs
@@ -626,28 +631,68 @@ class ClipboardHistoryManager(
             lastSuggestedScreenshotUri = contentUri.toString()
         }
 
-        val binding = ClipboardSuggestionBinding.inflate(LayoutInflater.from(latinIME), parent, false)
-        val textView = binding.clipboardSuggestionText
-        textView.text = "Screenshot"
+        val ocrEnabled = OcrPluginLoader.hasPlugin(latinIME) && latinIME.prefs().getBoolean(OcrPluginLoader.PREF_OCR_SUGGEST_SCREENSHOT_TEXT, true)
+        val binding = ScreenshotSuggestionBinding.inflate(LayoutInflater.from(latinIME), parent, false)
+        val pasteButton = binding.screenshotPasteButton
+        val extractButton = binding.screenshotExtractTextButton
+        val divider = binding.screenshotDivider
+        val closeButton = binding.screenshotSuggestionClose
+
+        pasteButton.text = latinIME.getString(R.string.ocr_paste_image_button)
+        extractButton.text = latinIME.getString(R.string.ocr_extract_text_button)
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 val thumb = latinIME.contentResolver.loadThumbnail(contentUri, android.util.Size(120, 120), null)
-                
                 val size = Math.min(thumb.width, thumb.height)
                 val x = (thumb.width - size) / 2
                 val y = (thumb.height - size) / 2
                 val croppedThumb = android.graphics.Bitmap.createBitmap(thumb, x, y, size, size)
-                
                 val drawable = android.graphics.drawable.BitmapDrawable(latinIME.resources, croppedThumb)
-                textView.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
+                pasteButton.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
             } catch (e: Exception) {
                 val clipIcon = latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.PASTE.name.lowercase())
-                textView.setCompoundDrawablesRelativeWithIntrinsicBounds(clipIcon, null, null, null)
+                pasteButton.setCompoundDrawablesRelativeWithIntrinsicBounds(clipIcon, null, null, null)
             }
         }
 
-        textView.setOnClickListener {
+        if (ocrEnabled) {
+            extractButton.visibility = View.VISIBLE
+            divider.visibility = View.VISIBLE
+            val ocrIcon = latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.OCR.name.lowercase())
+            extractButton.setCompoundDrawablesRelativeWithIntrinsicBounds(ocrIcon, null, null, null)
+
+            extractButton.setOnClickListener {
+                dontShowCurrentSuggestion = true
+                lastSuggestedScreenshotUri = contentUri.toString()
+                AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
+                binding.root.isGone = true
+
+                ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
+                    val bitmap = ScreenshotHelper.loadScaledBitmap(latinIME, contentUri)
+                    if (bitmap != null) {
+                        OcrPipeline(latinIME).processImage(
+                            bitmap = bitmap,
+                            onSuccess = { lines ->
+                                latinIME.mKeyboardSwitcher.showOcrResult(lines)
+                            },
+                            onError = { err ->
+                                Toast.makeText(latinIME, err, Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    } else {
+                        mainHandler.post {
+                            Toast.makeText(latinIME, R.string.ocr_screenshot_load_failed, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        } else {
+            extractButton.visibility = View.GONE
+            divider.visibility = View.GONE
+        }
+
+        pasteButton.setOnClickListener {
             dontShowCurrentSuggestion = true
             lastSuggestedScreenshotUri = contentUri.toString()
             latinIME.onImageSelected(contentUri.toString())
@@ -655,7 +700,6 @@ class ClipboardHistoryManager(
             binding.root.isGone = true
         }
         
-        val closeButton = binding.clipboardSuggestionClose
         closeButton.setImageDrawable(latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase()))
         closeButton.setOnClickListener { 
             val prefs = latinIME.prefs()
@@ -671,7 +715,8 @@ class ClipboardHistoryManager(
         }
 
         val colors = latinIME.mSettings.current.mColors
-        textView.setTextColor(colors.get(ColorType.KEY_TEXT))
+        pasteButton.setTextColor(colors.get(ColorType.KEY_TEXT))
+        extractButton.setTextColor(colors.get(ColorType.KEY_TEXT))
         colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)
         colors.setBackground(binding.root, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
         
