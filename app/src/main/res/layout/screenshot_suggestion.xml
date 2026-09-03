@@ -19,7 +19,7 @@
         android:soundEffectsEnabled="false"
         android:singleLine="true"
         android:gravity="center"
-        android:text="@string/ocr_paste_image_button"
+        android:text="@string/screenshot"
         android:textStyle="bold"
         style="?android:attr/textAppearanceSmall" />
 

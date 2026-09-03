@@ -638,7 +638,7 @@ class ClipboardHistoryManager(
         val divider = binding.screenshotDivider
         val closeButton = binding.screenshotSuggestionClose
 
-        pasteButton.text = latinIME.getString(R.string.ocr_paste_image_button)
+        pasteButton.text = latinIME.getString(R.string.screenshot)
         extractButton.text = latinIME.getString(R.string.ocr_extract_text_button)
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
