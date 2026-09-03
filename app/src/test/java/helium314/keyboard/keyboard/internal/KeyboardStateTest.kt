@@ -67,6 +67,44 @@ class KeyboardStateTest {
     }
 
     @Test
+    fun duplicateShiftPressWhilePressingOnShiftedDoesNotLockCaps() = withFakeClock { clock ->
+        val actions = RecordingSwitchActions(clock)
+        val state = loadedKeyboardState(actions)
+
+        tapShift(state)
+        clock.uptimeMillis += TimerHandler.DOUBLE_TAP_SHIFT_KEY_TIMEOUT_MILLIS
+        state.onPressKey(KeyCode.SHIFT, true, 0, null)
+        clock.uptimeMillis += 150
+        state.onPressKey(KeyCode.SHIFT, true, 0, null)
+
+        assertEquals(listOf(KeyboardSelection.MANUAL_SHIFTED), actions.keyboardSelections)
+        assertEquals(emptyList(), actions.shiftLockTransitions)
+    }
+
+    @Test
+    fun shiftTapAfterChordingStartsANewDoubleTapWindow() = withFakeClock { clock ->
+        val actions = RecordingSwitchActions(clock)
+        val state = loadedKeyboardState(actions)
+
+        state.onPressKey(KeyCode.SHIFT, true, 0, null)
+        state.onPressKey('a'.code, false, 0, null)
+        state.onReleaseKey('a'.code, false, 0, null)
+        state.onReleaseKey(KeyCode.SHIFT, false, 0, null)
+        clock.uptimeMillis += 50
+        tapShift(state)
+
+        assertEquals(
+            listOf(
+                KeyboardSelection.MANUAL_SHIFTED,
+                KeyboardSelection.ALPHABET,
+                KeyboardSelection.MANUAL_SHIFTED,
+            ),
+            actions.keyboardSelections,
+        )
+        assertEquals(emptyList(), actions.shiftLockTransitions)
+    }
+
+    @Test
     fun shiftTapAfterDoubleTapWindowUnlocksCaps() = withFakeClock { clock ->
         val actions = RecordingSwitchActions(clock)
         val state = loadedKeyboardState(actions)
@@ -74,7 +112,7 @@ class KeyboardStateTest {
         tapShift(state)
         clock.uptimeMillis += 50
         tapShift(state)
-        clock.uptimeMillis += DOUBLE_TAP_TIMEOUT_MILLIS
+        clock.uptimeMillis += TimerHandler.DOUBLE_TAP_SHIFT_KEY_TIMEOUT_MILLIS
         tapShift(state)
 
         assertEquals(
@@ -182,7 +220,8 @@ class KeyboardStateTest {
         override fun setCustomKeyboard(customIndex: Int) { customLayouts += customIndex }
         override fun requestUpdatingShiftState(autoCapsFlags: Int, recapitalizeMode: RecapitalizeMode?) = Unit
         override fun startDoubleTapShiftKeyTimer() {
-            doubleTapTimerDeadline = clock.uptimeMillis + DOUBLE_TAP_TIMEOUT_MILLIS
+            doubleTapTimerDeadline =
+                clock.uptimeMillis + TimerHandler.DOUBLE_TAP_SHIFT_KEY_TIMEOUT_MILLIS
         }
         override val isInDoubleTapShiftKeyTimeout
             get() = doubleTapTimerDeadline?.let { clock.uptimeMillis < it } == true
@@ -192,9 +231,5 @@ class KeyboardStateTest {
         override fun setOneHandedModeEnabled(enabled: Boolean) = Unit
         override fun switchOneHandedMode() = Unit
         override fun toggleFloatingKeyboard() = Unit
-    }
-
-    private companion object {
-        const val DOUBLE_TAP_TIMEOUT_MILLIS = 300L
     }
 }
