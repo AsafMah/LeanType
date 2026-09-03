@@ -634,33 +634,24 @@ class ClipboardHistoryManager(
         val ocrEnabled = OcrPluginLoader.hasPlugin(latinIME) && latinIME.prefs().getBoolean(OcrPluginLoader.PREF_OCR_SUGGEST_SCREENSHOT_TEXT, true)
         val binding = ScreenshotSuggestionBinding.inflate(LayoutInflater.from(latinIME), parent, false)
         val pasteButton = binding.screenshotPasteButton
+        val thumbnailImage = binding.screenshotThumbnailImage
         val extractButton = binding.screenshotExtractTextButton
-        val divider = binding.screenshotDivider
         val closeButton = binding.screenshotSuggestionClose
 
-        pasteButton.text = latinIME.getString(R.string.screenshot)
-        extractButton.text = latinIME.getString(R.string.ocr_extract_text_button)
-        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                val thumb = latinIME.contentResolver.loadThumbnail(contentUri, android.util.Size(120, 120), null)
-                val size = Math.min(thumb.width, thumb.height)
-                val x = (thumb.width - size) / 2
-                val y = (thumb.height - size) / 2
-                val croppedThumb = android.graphics.Bitmap.createBitmap(thumb, x, y, size, size)
-                val drawable = android.graphics.drawable.BitmapDrawable(latinIME.resources, croppedThumb)
-                pasteButton.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
+                val thumb = latinIME.contentResolver.loadThumbnail(contentUri, android.util.Size(160, 160), null)
+                thumbnailImage.setImageBitmap(thumb)
             } catch (e: Exception) {
                 val clipIcon = latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.PASTE.name.lowercase())
-                pasteButton.setCompoundDrawablesRelativeWithIntrinsicBounds(clipIcon, null, null, null)
+                thumbnailImage.setImageDrawable(clipIcon)
             }
         }
 
         if (ocrEnabled) {
             extractButton.visibility = View.VISIBLE
-            divider.visibility = View.VISIBLE
             val ocrIcon = latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.OCR.name.lowercase())
-            extractButton.setCompoundDrawablesRelativeWithIntrinsicBounds(ocrIcon, null, null, null)
+            extractButton.setImageDrawable(ocrIcon)
 
             extractButton.setOnClickListener {
                 dontShowCurrentSuggestion = true
@@ -689,7 +680,6 @@ class ClipboardHistoryManager(
             }
         } else {
             extractButton.visibility = View.GONE
-            divider.visibility = View.GONE
         }
 
         pasteButton.setOnClickListener {
@@ -699,7 +689,7 @@ class ClipboardHistoryManager(
             AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
             binding.root.isGone = true
         }
-        
+
         closeButton.setImageDrawable(latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase()))
         closeButton.setOnClickListener { 
             val prefs = latinIME.prefs()
@@ -715,11 +705,11 @@ class ClipboardHistoryManager(
         }
 
         val colors = latinIME.mSettings.current.mColors
-        pasteButton.setTextColor(colors.get(ColorType.KEY_TEXT))
-        extractButton.setTextColor(colors.get(ColorType.KEY_TEXT))
+        colors.setColor(extractButton, ColorType.KEY_TEXT)
+        colors.setBackground(extractButton, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
+        colors.setBackground(pasteButton, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
         colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)
-        colors.setBackground(binding.root, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
-        
+
         return binding.root
     }
 

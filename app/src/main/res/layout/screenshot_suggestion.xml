@@ -3,55 +3,48 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="horizontal"
-    android:background="@drawable/clipboard_suggestion_background"
     android:gravity="center_vertical"
     android:layout_width="wrap_content"
     android:layout_height="match_parent"
     tools:ignore="RtlSymmetry">
 
-    <TextView
+    <FrameLayout
         android:id="@+id/screenshot_paste_button"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:drawablePadding="4dp"
-        android:paddingHorizontal="10dp"
-        android:hapticFeedbackEnabled="false"
-        android:soundEffectsEnabled="false"
-        android:singleLine="true"
-        android:gravity="center"
-        android:text="@string/screenshot"
-        android:textStyle="bold"
-        style="?android:attr/textAppearanceSmall" />
+        android:layout_marginVertical="3dp"
+        android:layout_marginStart="4dp"
+        android:background="@drawable/clipboard_suggestion_background"
+        android:clipToOutline="true">
 
-    <View
-        android:id="@+id/screenshot_divider"
-        android:layout_width="1dp"
-        android:layout_height="18dp"
-        android:layout_gravity="center_vertical"
-        android:background="?android:attr/dividerVertical" />
+        <ImageView
+            android:id="@+id/screenshot_thumbnail_image"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:padding="2dp"
+            android:contentDescription="@string/screenshot" />
+    </FrameLayout>
 
-    <TextView
+    <ImageButton
         android:id="@+id/screenshot_extract_text_button"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:drawablePadding="4dp"
+        android:background="@drawable/clipboard_suggestion_background"
+        android:layout_marginVertical="3dp"
+        android:layout_marginStart="4dp"
         android:paddingHorizontal="10dp"
-        android:hapticFeedbackEnabled="false"
-        android:soundEffectsEnabled="false"
-        android:singleLine="true"
-        android:gravity="center"
-        android:text="@string/ocr_extract_text_button"
-        android:textStyle="bold"
-        style="?android:attr/textAppearanceSmall" />
+        android:scaleType="centerInside"
+        android:contentDescription="@string/ocr_extract_text_button" />
 
     <ImageView
         android:id="@+id/screenshot_suggestion_close"
         android:contentDescription="@string/dialog_close"
         android:src="@drawable/ic_close"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingEnd="10dp"
-        android:paddingStart="4dp"
+        android:layout_height="match_parent"
+        android:paddingHorizontal="8dp"
         android:gravity="center" />
 
 </LinearLayout>
