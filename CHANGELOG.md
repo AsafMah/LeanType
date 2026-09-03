@@ -26,6 +26,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Documented the two-thumb decoder research in `docs/TWO_THUMB_TEMPORAL_ALIGNMENT.md`, including the measurement that deliberately overlapping stroke timestamps corrupts the decoder's speed features rather than helping. (#135)
 
 ### Reliability & testing
+- Added source-level and packaged-APK gates that fail upstream merges when LeanTypeDual's identity, privacy flavors, bundled offline dictionaries, fork integrations, or four-flavor release coverage are lost. (#148)
 - Added a native gesture **two-pointer track harness** (`jni/tests/replay/two_pointer_track_test.cpp`) that drives the real AOSP `ProximityInfoState` on the host, with tunable knobs and a printed sweep table. Runs in CI alongside the existing native suite. Note that it exercises the in-repo engine, which is not the decoder used when a gesture library is loaded. (#135, #144)
 - The multi-part trail merge moved behind a pure, unit-tested `StrokeAligner` seam whose defaults reproduce the previous behaviour exactly. (#135)
 

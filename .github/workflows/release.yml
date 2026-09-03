@@ -62,6 +62,12 @@ jobs:
       - name: Build signed release APKs (all flavors)
         run: ./gradlew :app:assembleStandardRelease :app:assembleStandardfullRelease :app:assembleOfflineRelease :app:assembleOfflineliteRelease
 
+      - name: Verify packaged LeanTypeDual invariants
+        run: |
+          APKANALYZER="$(find "$ANDROID_SDK_ROOT/cmdline-tools" -path '*/bin/apkanalyzer' -type f | sort -V | tail -1)"
+          test -x "$APKANALYZER"
+          python3 tools/check_apk_invariants.py --apk-dir app/build/outputs/apk --apkanalyzer "$APKANALYZER"
+
       - name: Verify release APK signatures
         run: |
           APKSIGNER="$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner -type f | sort -V | tail -1)"
