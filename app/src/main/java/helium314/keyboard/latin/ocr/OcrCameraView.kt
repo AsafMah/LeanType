@@ -73,7 +73,16 @@ class OcrCameraView @JvmOverloads constructor(
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val exactHeightSpec = MeasureSpec.makeMeasureSpec(keyboardHeight, MeasureSpec.EXACTLY)
         val exactWidthSpec = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY)
-        super.onMeasure(exactWidthSpec, exactHeightSpec)
+
+        previewView?.measure(exactWidthSpec, exactHeightSpec)
+
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            if (child !== previewView && child.visibility != GONE) {
+                measureChildWithMargins(child, exactWidthSpec, 0, exactHeightSpec, 0)
+            }
+        }
+
         setMeasuredDimension(width, keyboardHeight)
     }
 

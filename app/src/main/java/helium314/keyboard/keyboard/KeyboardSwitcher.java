@@ -570,6 +570,12 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             mOcrResultView.setVisibility(View.GONE);
         }
         if (mOcrCameraView != null) {
+            final int keyboardHeight = ResourceUtils.getKeyboardHeight(mThemeContext.getResources(), Settings.getValues());
+            final android.view.ViewGroup.LayoutParams lp = mOcrCameraView.getLayoutParams();
+            if (lp != null) {
+                lp.height = keyboardHeight;
+                mOcrCameraView.setLayoutParams(lp);
+            }
             mOcrCameraView.setVisibility(View.VISIBLE);
             mOcrCameraView.startCamera();
         }
@@ -586,6 +592,12 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             mOcrCameraView.setVisibility(View.GONE);
         }
         if (mOcrResultView != null) {
+            final int keyboardHeight = ResourceUtils.getKeyboardHeight(mThemeContext.getResources(), Settings.getValues());
+            final android.view.ViewGroup.LayoutParams lp = mOcrResultView.getLayoutParams();
+            if (lp != null) {
+                lp.height = keyboardHeight;
+                mOcrResultView.setLayoutParams(lp);
+            }
             mOcrResultView.setResultText(lines);
             mOcrResultView.applyColors(Settings.getValues().mColors);
             mOcrResultView.setVisibility(View.VISIBLE);
