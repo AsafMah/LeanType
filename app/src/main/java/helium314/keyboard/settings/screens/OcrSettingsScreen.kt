@@ -2,6 +2,7 @@
 package helium314.keyboard.settings.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,6 +32,7 @@ import androidx.core.content.ContextCompat
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.ocr.OcrPluginLoader
 import helium314.keyboard.settings.SearchSettingsScreen
+import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.preferences.LoadOcrPluginPreference
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.PreferenceCategory
@@ -55,10 +57,21 @@ fun OcrSettingsScreen(
         isCameraPermissionGranted = granted
     }
 
+    val settings = remember {
+        listOf(
+            OcrPluginLoader.PREF_OCR_KEEP_LINE_BREAKS,
+            OcrPluginLoader.PREF_OCR_TRIM_WHITESPACE,
+            OcrPluginLoader.PREF_OCR_AUTO_COPY,
+            OcrPluginLoader.PREF_OCR_AUTO_INSERT,
+            OcrPluginLoader.PREF_OCR_SUGGEST_SCREENSHOT_TEXT,
+            OcrPluginLoader.PREF_OCR_PERSIST_FLASH,
+        )
+    }
+
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = stringResource(R.string.ocr_settings_title),
-        settings = emptyList()
+        settings = settings
     ) {
         Scaffold(
             contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
@@ -79,7 +92,7 @@ fun OcrSettingsScreen(
                     )
                 ) {
                     Column {
-                        PreferenceCategory("Plugin Management")
+                        PreferenceCategory(stringResource(R.string.ocr_plugin_category))
 
                         LoadOcrPluginPreference(
                             title = "OCR Plugin APK",
@@ -100,11 +113,11 @@ fun OcrSettingsScreen(
                     )
                 ) {
                     Column {
-                        PreferenceCategory("Permissions")
+                        PreferenceCategory(stringResource(R.string.ocr_permissions_category))
 
                         Preference(
-                            name = "Camera Permission",
-                            description = if (isCameraPermissionGranted) "Permission granted" else "Tap to grant camera permission for in-keyboard viewfinder",
+                            name = stringResource(R.string.ocr_camera_permission),
+                            description = if (isCameraPermissionGranted) stringResource(R.string.ocr_camera_permission_granted) else stringResource(R.string.ocr_camera_permission_desc),
                             onClick = {
                                 if (!isCameraPermissionGranted) {
                                     permissionLauncher.launch(Manifest.permission.CAMERA)
@@ -115,7 +128,7 @@ fun OcrSettingsScreen(
                     }
                 }
 
-                // Configuration Card
+                // Text Extraction & Formatting Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -125,13 +138,48 @@ fun OcrSettingsScreen(
                     )
                 ) {
                     Column {
-                        PreferenceCategory("Text Extraction Options")
+                        PreferenceCategory(stringResource(R.string.ocr_text_options_category))
 
                         SwitchPreference(
                             name = stringResource(R.string.ocr_keep_line_breaks),
                             description = stringResource(R.string.ocr_keep_line_breaks_summary),
                             key = OcrPluginLoader.PREF_OCR_KEEP_LINE_BREAKS,
                             default = true
+                        )
+
+                        SwitchPreference(
+                            name = stringResource(R.string.ocr_trim_whitespace),
+                            description = stringResource(R.string.ocr_trim_whitespace_summary),
+                            key = OcrPluginLoader.PREF_OCR_TRIM_WHITESPACE,
+                            default = true
+                        )
+                    }
+                }
+
+                // Workflow & Automation Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        PreferenceCategory(stringResource(R.string.ocr_workflow_category))
+
+                        SwitchPreference(
+                            name = stringResource(R.string.ocr_auto_copy),
+                            description = stringResource(R.string.ocr_auto_copy_summary),
+                            key = OcrPluginLoader.PREF_OCR_AUTO_COPY,
+                            default = false
+                        )
+
+                        SwitchPreference(
+                            name = stringResource(R.string.ocr_auto_insert),
+                            description = stringResource(R.string.ocr_auto_insert_summary),
+                            key = OcrPluginLoader.PREF_OCR_AUTO_INSERT,
+                            default = false
                         )
 
                         SwitchPreference(
@@ -142,7 +190,49 @@ fun OcrSettingsScreen(
                         )
                     }
                 }
+
+                // Camera & Viewfinder Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        PreferenceCategory(stringResource(R.string.ocr_camera_category))
+
+                        SwitchPreference(
+                            name = stringResource(R.string.ocr_persist_flash),
+                            description = stringResource(R.string.ocr_persist_flash_summary),
+                            key = OcrPluginLoader.PREF_OCR_PERSIST_FLASH,
+                            default = false
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+fun createOcrSettings(context: Context): List<Setting> = listOf(
+    Setting(context, OcrPluginLoader.PREF_OCR_KEEP_LINE_BREAKS, R.string.ocr_keep_line_breaks, R.string.ocr_keep_line_breaks_summary) {
+        SwitchPreference(it, true)
+    },
+    Setting(context, OcrPluginLoader.PREF_OCR_TRIM_WHITESPACE, R.string.ocr_trim_whitespace, R.string.ocr_trim_whitespace_summary) {
+        SwitchPreference(it, true)
+    },
+    Setting(context, OcrPluginLoader.PREF_OCR_AUTO_COPY, R.string.ocr_auto_copy, R.string.ocr_auto_copy_summary) {
+        SwitchPreference(it, false)
+    },
+    Setting(context, OcrPluginLoader.PREF_OCR_AUTO_INSERT, R.string.ocr_auto_insert, R.string.ocr_auto_insert_summary) {
+        SwitchPreference(it, false)
+    },
+    Setting(context, OcrPluginLoader.PREF_OCR_SUGGEST_SCREENSHOT_TEXT, R.string.ocr_suggest_screenshot_text, R.string.ocr_suggest_screenshot_text_summary) {
+        SwitchPreference(it, true)
+    },
+    Setting(context, OcrPluginLoader.PREF_OCR_PERSIST_FLASH, R.string.ocr_persist_flash, R.string.ocr_persist_flash_summary) {
+        SwitchPreference(it, false)
+    },
+)

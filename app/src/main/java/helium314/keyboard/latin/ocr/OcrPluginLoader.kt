@@ -14,7 +14,11 @@ object OcrPluginLoader {
     private const val PLUGIN_CLASS_NAME = "helium314.keyboard.ocr.plugin.TextRecognizerImpl"
     private const val PREF_HAS_PLUGIN = "pref_ocr_has_plugin"
     const val PREF_OCR_KEEP_LINE_BREAKS = "pref_ocr_keep_line_breaks"
+    const val PREF_OCR_TRIM_WHITESPACE = "pref_ocr_trim_whitespace"
+    const val PREF_OCR_AUTO_COPY = "pref_ocr_auto_copy"
+    const val PREF_OCR_AUTO_INSERT = "pref_ocr_auto_insert"
     const val PREF_OCR_SUGGEST_SCREENSHOT_TEXT = "pref_ocr_suggest_screenshot_text"
+    const val PREF_OCR_PERSIST_FLASH = "pref_ocr_persist_flash"
     private const val TAG = "OcrPluginLoader"
 
     private var activeRecognizer: ITextRecognizer? = null

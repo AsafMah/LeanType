@@ -37,11 +37,21 @@ class OcrPipeline(private val context: Context) {
             }
 
             val keepLineBreaks = context.prefs().getBoolean(OcrPluginLoader.PREF_OCR_KEEP_LINE_BREAKS, true)
+            val trimWhitespace = context.prefs().getBoolean(OcrPluginLoader.PREF_OCR_TRIM_WHITESPACE, true)
+            val autoCopy = context.prefs().getBoolean(OcrPluginLoader.PREF_OCR_AUTO_COPY, false)
 
             try {
-                val lines = recognizer.recognize(bitmap, keepLineBreaks)
+                var lines = recognizer.recognize(bitmap, keepLineBreaks) ?: emptyList()
+                if (trimWhitespace) {
+                    lines = lines.map { it.trim() }.filter { it.isNotEmpty() }
+                }
+                if (autoCopy && lines.isNotEmpty()) {
+                    val fullText = lines.joinToString(if (keepLineBreaks) "\n" else " ")
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("OCR Extracted Text", fullText))
+                }
                 withContext(Dispatchers.Main) {
-                    if (lines.isNullOrEmpty()) {
+                    if (lines.isEmpty()) {
                         onError("No text recognized in image")
                     } else {
                         onSuccess(lines)
