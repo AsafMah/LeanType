@@ -123,9 +123,10 @@
         android:visibility="gone">
 
         <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center" />
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_gravity="center"
+            android:indeterminateDrawable="@drawable/ocr_progress_two_tone" />
     </FrameLayout>
 
 </helium314.keyboard.latin.ocr.OcrCameraView>

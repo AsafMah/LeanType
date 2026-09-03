@@ -52,7 +52,16 @@ class OcrResultView @JvmOverloads constructor(
         colors.setBackground(ocrStrip, ColorType.STRIP_BACKGROUND)
         ocrStrip.removeAllViews()
 
-        // 1. Retake Camera button (Left)
+        // 1. Close button (Leftmost)
+        val closeBtn = createToolbarKey(context, ToolbarKey.CLOSE_HISTORY).apply {
+            setOnClickListener {
+                AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
+                listener?.onClose()
+            }
+        }
+        ocrStrip.addView(closeBtn)
+
+        // 2. Retake Camera button
         val retakeBtn = createToolbarKey(context, ToolbarKey.OCR).apply {
             setOnClickListener {
                 AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
@@ -61,7 +70,7 @@ class OcrResultView @JvmOverloads constructor(
         }
         ocrStrip.addView(retakeBtn)
 
-        // 2. Select All button
+        // 3. Select All button
         val selectAllBtn = createToolbarKey(context, ToolbarKey.SELECT_ALL).apply {
             setOnClickListener {
                 AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
@@ -70,7 +79,7 @@ class OcrResultView @JvmOverloads constructor(
         }
         ocrStrip.addView(selectAllBtn)
 
-        // 3. Copy All button
+        // 4. Copy All button
         val copyBtn = createToolbarKey(context, ToolbarKey.COPY).apply {
             setOnClickListener {
                 AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
@@ -85,12 +94,6 @@ class OcrResultView @JvmOverloads constructor(
         }
         ocrStrip.addView(copyBtn)
 
-        // 4. Spacer
-        val spacer = View(context).apply {
-            layoutParams = LayoutParams(0, 0, 1f)
-        }
-        ocrStrip.addView(spacer)
-
         // 5. Insert Text button
         val insertBtn = createToolbarKey(context, ToolbarKey.PASTE).apply {
             setOnClickListener {
@@ -100,15 +103,6 @@ class OcrResultView @JvmOverloads constructor(
             }
         }
         ocrStrip.addView(insertBtn)
-
-        // 6. Close button
-        val closeBtn = createToolbarKey(context, ToolbarKey.CLOSE_HISTORY).apply {
-            setOnClickListener {
-                AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
-                listener?.onClose()
-            }
-        }
-        ocrStrip.addView(closeBtn)
     }
 
     fun setResultText(lines: List<String>) {

@@ -39,12 +39,19 @@
             android:gravity="end" >
         </LinearLayout>
     </HorizontalScrollView>
-    <LinearLayout
-        android:id="@+id/ocr_strip"
-        android:orientation="horizontal"
+    <HorizontalScrollView
+        android:id="@+id/ocr_strip_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="@dimen/config_suggestions_strip_height"
-        android:gravity="end|center_vertical"
+        android:fillViewport="true"
         android:visibility="gone"
-        style="?attr/suggestionStripViewStyle" />
+        style="?attr/suggestionStripViewStyle"
+        android:scrollbarThumbHorizontal="@color/toolbar_scrollbar">
+        <LinearLayout
+            android:id="@+id/ocr_strip"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="start|center_vertical" />
+    </HorizontalScrollView>
 </LinearLayout>
