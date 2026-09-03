@@ -653,31 +653,6 @@ fun VoiceSettingsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(vertical = 8.dp)
             ) {
-                // Permissions Card
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
-                    Column {
-                        PreferenceCategory("Permissions")
-
-                        Preference(
-                            name = "Microphone Permission",
-                            description = if (isMicPermissionGranted) "Permission granted" else "Tap to grant microphone permission for voice dictation",
-                            onClick = {
-                                if (!isMicPermissionGranted) {
-                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                }
-                            },
-                            icon = R.drawable.sym_keyboard_voice_holo
-                        )
-                    }
-                }
-
                 // Card 1: Plugin Management
                 Card(
                     modifier = Modifier
@@ -706,6 +681,31 @@ fun VoiceSettingsScreen(
                             description = voicePluginSummary,
                             icon = R.drawable.sym_keyboard_voice_holo,
                             onClick = { showVoicePluginDialog = true }
+                        )
+                    }
+                }
+
+                // Card 2: Permissions
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        PreferenceCategory("Permissions")
+
+                        Preference(
+                            name = "Microphone Permission",
+                            description = if (isMicPermissionGranted) "Permission granted" else "Tap to grant microphone permission for voice dictation",
+                            onClick = {
+                                if (!isMicPermissionGranted) {
+                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            },
+                            icon = R.drawable.sym_keyboard_voice_holo
                         )
                     }
                 }
