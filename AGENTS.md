@@ -35,6 +35,10 @@ Requires **JDK 17 or 21** and the Android SDK. On Windows use `gradlew.bat` and 
 ./gradlew :app:assembleStandardDebug        # also assembleOfflineDebug, assembleOfflineliteDebug
 # Fast CI compile check (no APK) — what PR CI runs
 ./gradlew compileOfflineRunTestsKotlin
+# Fast fork-identity/product gate (run before and after upstream merges)
+python tools/check_fork_invariants.py
+# Packaged release gate (after all four release APKs are assembled)
+python tools/check_apk_invariants.py --apk-dir app/build/outputs/apk
 # Unit tests for one flavor
 ./gradlew :app:testOfflineDebugUnitTest
 # A single test class
@@ -43,7 +47,7 @@ Requires **JDK 17 or 21** and the Android SDK. On Windows use `gradlew.bat` and 
 
 PowerShell with a pinned JDK:
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.7-hotspot"
 .\gradlew.bat :app:assembleStandardDebug --no-daemon
 ```
 
@@ -86,6 +90,7 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
 ## Testing & QA
 - **JVM-only** (no `androidTest`/device): JUnit4 + **Robolectric 4.14.1** (simulates `LatinIME`/`Context`/prefs/key events on the JVM) + **Mockito 5.17.0**. Tests live in `app/src/test/java/helium314/keyboard/`. `testOptions.unitTests.isIncludeAndroidResources = true`.
 - **Run:** `./gradlew :app:testOfflineDebugUnitTest` (add `--tests "*ClassName"` for one class).
+- **Upstream-merge gates:** run `python tools/check_fork_invariants.py` before and after resolving an upstream merge. Unit-test CI uses it as a fast source/configuration prefilter and fails with the specific LeanTypeDual invariant that was lost. Release CI also runs `tools/check_apk_invariants.py` after assembling all four APKs to verify the effective package IDs, minSdk values, INTERNET permissions, recursive dictionary contents, and exact artifact set. Their fixture/mutation tests run via `python -m unittest discover -s tools/tests`.
 - **Key tests:** `InputLogicTest.kt` (typing/autocorrect/combining-mode/Hangul), `SuggestTest.kt`, `WordComposerTest.java`, `DictionaryGroupTest.kt` (reflection + Mockito on the package-internal `DictionaryGroup`), `SettingsContainerTest.kt` (settings wiring), `KeyboardParserTest.kt`, `ClipboardDaoTest.kt`.
 - **Conventions:** `@Test`; method names use camelCase or backtick form; obtain `Context` via Robolectric; package-internal classes are exercised via reflection (`Class.forName(...).declaredConstructors`).
 - **Known failures:** the full debug unit suite has ~11 pre-existing failures (in `KeyboardParserTest`, `XLinkTest`, `StringUtilsTest` emoji, and `InputLogicTest` Hangul/autocorrect-revert/autospace-indicator) that are environment/data-dependent and usually unrelated to a change. The `runTests` build type exists to skip these on CI. **Verify a change by diffing failures against an `origin/main` baseline run, not by absolute pass count.**

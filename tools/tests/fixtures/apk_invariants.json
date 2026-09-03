@@ -1,0 +1,26 @@
+{
+  "standard": {
+    "applicationId": "com.asafmah.leantypedual",
+    "minSdk": 23,
+    "permissions": ["android.permission.INTERNET"],
+    "files": []
+  },
+  "standardfull": {
+    "applicationId": "com.asafmah.leantypedual",
+    "minSdk": 23,
+    "permissions": ["android.permission.INTERNET"],
+    "files": []
+  },
+  "offline": {
+    "applicationId": "com.asafmah.leantypedual.offline",
+    "minSdk": 26,
+    "permissions": [],
+    "files": ["assets/dicts/main_en-US.dict"]
+  },
+  "offlinelite": {
+    "applicationId": "com.asafmah.leantypedual.offlinelite",
+    "minSdk": 21,
+    "permissions": [],
+    "files": ["assets/dicts/main_en-US.dict"]
+  }
+}
