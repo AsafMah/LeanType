@@ -1,0 +1,30 @@
+name: Release
+
+jobs:
+  release:
+    steps:
+      - name: Build signed release APKs (all flavors)
+        run: ./gradlew :app:assembleStandardRelease :app:assembleStandardfullRelease :app:assembleOfflineRelease :app:assembleOfflineliteRelease
+
+      - name: Verify packaged LeanTypeDual invariants
+        run: |
+          APKANALYZER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer"
+          python3 tools/check_apk_invariants.py --apk-dir app/build/outputs/apk --apkanalyzer "$APKANALYZER"
+
+      - name: Verify release APK signatures
+        run: |
+          APKSIGNER="$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner -type f | tail -1)"
+          count=0
+          legacy_count=0
+          for apk in app/build/outputs/apk/*/release/*.apk; do
+            "$APKSIGNER" verify --verbose --print-certs "$apk"
+            case "$apk" in
+              *-standard-release.apk|*-standardfull-release.apk|*-offlinelite-release.apk)
+                "$APKSIGNER" verify --verbose --min-sdk-version 21 --max-sdk-version 23 "$apk"
+                legacy_count=$((legacy_count + 1))
+                ;;
+            esac
+            count=$((count + 1))
+          done
+          test "$count" -eq 4
+          test "$legacy_count" -eq 3

@@ -14,12 +14,24 @@ on:
       - '*.gradle*'
       - 'gradle.properties'
       - '.github/workflows/build-test-auto.yml'
+      - '.github/workflows/release.yml'
+      - 'tools/check_fork_invariants.py'
+      - 'tools/check_apk_invariants.py'
+      - 'tools/tests/**'
+      - 'fastlane/metadata/android/en-US/changelogs/**'
   push:
     branches: [ dev ]
     paths:
       - 'app/**'
       - 'gradle/**'
       - '*.gradle*'
+      - 'gradle.properties'
+      - '.github/workflows/build-test-auto.yml'
+      - '.github/workflows/release.yml'
+      - 'tools/check_fork_invariants.py'
+      - 'tools/check_apk_invariants.py'
+      - 'tools/tests/**'
+      - 'fastlane/metadata/android/en-US/changelogs/**'
   workflow_dispatch:
 
 jobs:
@@ -28,6 +40,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify LeanTypeDual fork invariants
+        run: python3 tools/check_fork_invariants.py
 
       - name: Set up JDK
         uses: actions/setup-java@v4
