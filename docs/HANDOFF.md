@@ -1,4 +1,4 @@
-# LeanTypeDual — Session Handoff (2026-08-06)
+# LeanTypeDual — Session Handoff (updated 2026-09-03)
 
 This document lets a new agent/session resume without re-deriving context. It records
 **what shipped, exactly where everything sits, what is still open, and the traps that cost
@@ -7,9 +7,9 @@ the session — no assumptions.
 
 Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 
-> **Amended 2026-08-20:** §5 (v0.2.0 published, release-blocker removed), §11 (worktree paths
-> corrected after the tree moved to `C:/Users/mahle/programming/`, plus the worktree cleanup),
-> and §12 (current open items).
+> **Current-state refresh 2026-09-03:** §1, §5, §6, §11 and §12 now reflect v0.3.0,
+> LeanBitLab v4.1.8, the Shift fix, the fork-invariant gates, and removal of the falsified
+> gesture experiments. Sections 2, 3 and 7 remain historical context.
 
 ---
 
@@ -17,20 +17,20 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 
 | Thing | State |
 |---|---|
-| `main` | `caed9f65a` — "Release LeanTypeDual 0.2.0 (#130)" |
-| `dev` | `6ac372de3` — "docs: session handoff (#132)" |
-| Current version | `0.2.0` / versionCode `4200` on both `main` and `dev` |
+| `main` | `b90d79de1` — released LeanTypeDual 0.3.0 |
+| `dev` | `deaa782dd` — Shift fix (#150), after LeanBitLab v4.1.8 (#149); this cleanup lands next |
+| Current version | `0.3.0` / versionCode `4300` on both `main` and `dev` |
 | Tag `v0.1.0` | Pushed **and published** with 4 signed APKs |
-| Tag `v0.2.0` | **Published and latest** with 4 signed APKs |
-| Upstream integrated | LeanBitLab/LeanType **v4.0.8** (`dec87806`), covering v4.0.3–v4.0.8 |
-| Phone (SM-S936B) | `com.asafmah.leantypedual` = signed **0.1.0/4100**; `…debug` = **0.2.0/4200** |
+| Tag `v0.3.0` | **Published and latest** with 4 signed APKs, all verified after download |
+| Upstream integrated | LeanBitLab/LeanType **v4.1.8** (`cbfaf21a`), covering v4.1.3–v4.1.8 |
+| Phone (SM-S936B) | Last verified with signed **0.3.0/4300**, debug, and EXP packages; wireless ADB is currently unavailable |
 | Tablet | Never verified — still outstanding, low risk |
-| Open PRs | **#106** (`issue37-slide-target-actions`), **#134** (backspace paragraph merge), **#136** (two-thumb native second pointer track), **#137** (upstream v4.1.2) |
+| Open PRs | After this cleanup lands, only **#106** (`issue37-slide-target-actions`, unrelated/pre-existing) |
 
-**No release work is outstanding** — v0.2.0 shipped signed on 2026-08-20. Open items are now
-device verification of #134 and #137. §7's two inherited upstream defects were fixed by v4.1.2
-and their guards removed; the emoji accelerated-delete bug is reported as
-`LeanBitLab/LeanType#423`. See §12.
+**No release work is outstanding.** Open work is device verification of the Shift fix and
+v4.1.8 merge, issue #106, and deliberate triage of the backed-up old branches/worktrees.
+The two-track/ideal-prefix experiment was falsified on device and is removed by this cleanup;
+the proven pointer-id normalization remains. See §12.
 
 ---
 
@@ -61,6 +61,19 @@ fixes, and many emoji/clipboard layout fixes.
 - Signed artifacts were delayed by a runner outage (§5) and **published on 2026-08-20**:
   four signed APKs, release marked latest, all four verified after download.
 
+### 2.4 Released 0.3.0 and stabilized dev
+- Released `0.3.0`/`4300` from `main` (`b90d79de1`) with four verified signed APKs.
+- Merged LeanBitLab v4.1.8 in #149 with real upstream ancestry preserved. The audit kept the
+  fork's four flavors, bundled offline llama/GGUF and dictionaries, offlinelite no-AI behavior,
+  and network-free offline tiers.
+- Added source/config and packaged-APK invariant gates in #148. Release CI now verifies the
+  effective app IDs, minSdk values, INTERNET permissions, dictionary contents, exact four-APK
+  set, and low-API signature coverage.
+- Fixed fast Shift double-tap/Caps Lock in #150. The fix replaces an arbitrary 100 ms minimum
+  with the real invariant: two presses must have an intervening release boundary.
+- Removed the falsified DUAL_POINTER, ideal-prefix and re-timing experiment machinery while
+  retaining the proven pointer-id normalization and side-by-side EXP packaging (#147).
+
 ---
 
 ## 3. Release ordering rationale (do not "fix" this)
@@ -72,8 +85,8 @@ fixes, and many emoji/clipboard layout fixes.
 - Fork `versionName` is independent of upstream's; Android upgrade continuity depends on
   identical `applicationId` + signing key + monotonic `versionCode`, not the name.
 
-An adversarial cross-model review confirmed this ordering as SOUND. Any future release
-containing the upstream layer must keep `versionCode > 4100` (0.2.0 uses `4200`).
+An adversarial cross-model review confirmed this ordering as SOUND. Keep versionCode monotonic;
+the latest release, 0.3.0, uses `4300`, so the next release must be above it.
 
 ---
 
@@ -82,26 +95,30 @@ containing the upstream layer must keep `versionCode > 4100` (0.2.0 uses `4200`)
 | Invariant | Expected |
 |---|---|
 | `applicationId` | `com.asafmah.leantypedual` (+ `.offline`, `.offlinelite`, `.debug`) |
-| Version | Fork's own (`0.2.0`/`4200`) — **never** take upstream's `4.0.x`/`400x` |
+| Version | Fork's own (`0.3.0`/`4300` currently) — **never** take upstream's `4.x`/`410x` |
+| Flavors | Keep `standard`, `standardfull`, bundled-llama `offline` (minSdk 26), and no-AI `offlinelite` (minSdk 21). Upstream v4.1.7 deletes `offlinelite`; reject that product change |
 | `INTERNET` permission | Only `app/src/standard/` and `app/src/standardfull/` manifests. `offline`/`offlinelite` have **no manifest at all** and inherit the network-free main one |
+| Offline assets | `offline`/`offlinelite` bundle dictionaries; standard/full exclude them. Keep `offlineImplementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")` |
+| Floating overlay | `SYSTEM_ALERT_WINDOW` in main is accepted for floating mode, but access remains user-granted via system settings and normal docked operation works without it |
 | Java fallback gesture engine | `SwipeGestureEngine.initialize(this)` in `LatinIME.onCreate`; fallback/native selector in `GestureTypingScreen` + `WelcomeWizard` |
 | Two-thumb typing | Own screen + settings; **must** be registered in the `modules` list in `SettingsContainer.kt` (upstream's new registry drives settings search) |
 | AndroidX Startup | Exactly **one** `InitializationProvider` in the main manifest, containing all initializer removals |
 | Badges | `docs/badges/*.svg` — keep ours, never upstream's generated ones |
 
-Quick check:
+Mechanical checks (these replace hand-written greps):
 
 ```bash
-git grep -n "applicationId\|versionCode\|versionName" -- app/build.gradle.kts
-git grep -n "android.permission.INTERNET" -- app/src
+python tools/check_fork_invariants.py
+# after all four release APKs are assembled:
+python tools/check_apk_invariants.py --apk-dir app/build/outputs/apk
 ```
 
 ---
 
-## 5. Release procedure (v0.2.0 shipped — this is the recipe for the next one)
+## 5. Release procedure (verified through v0.3.0)
 
-**Status: done.** `v0.2.0` was published on **2026-08-20** with all four signed APKs and is
-marked latest: https://github.com/AsafMah/LeanType/releases/tag/v0.2.0
+**Status: done.** `v0.3.0` was published on **2026-08-20** with all four signed APKs and is
+marked latest: https://github.com/AsafMah/LeanType/releases/tag/v0.3.0
 
 The runner outage that blocked it resolved on its own — Release run **31128748928** succeeded
 at 2026-08-06 22:04 UTC and produced the draft. Everything below is the verified procedure,
@@ -127,9 +144,10 @@ gh workflow run release.yml --repo AsafMah/LeanType --ref vX.Y.Z
 gh run list --repo AsafMah/LeanType --workflow release.yml --limit 3
 ```
 
-The workflow builds all four signed flavors, verifies signatures (including explicit
-API 21–23 v1/JAR checks), and — because `github.ref` is a tag — creates a **draft** GitHub
-Release with the APKs attached.
+The workflow builds all four signed flavors, runs `tools/check_apk_invariants.py` against the
+packaged app IDs/minSdk/permissions/dictionary contents, verifies signatures (including explicit
+API 21–23 v1/JAR checks), and — because `github.ref` is a tag — creates a **draft** GitHub Release
+with the APKs attached.
 
 Then verify the artifacts **after download** (do not trust the build alone):
 
@@ -140,10 +158,11 @@ gh release download vX.Y.Z --repo AsafMah/LeanType --pattern "*.apk" --dir build
 #   apksigner verify --print-certs
 ```
 
-Expected for every APK (all four **verified passing** for 0.2.0):
+Expected for every APK (all four **verified passing** through 0.3.0):
 - signer SHA-256 `c032eafcd7ce9197fd9e636f2c86b1590f0a84f8f73016c66d63c1382af81554`
-- matching version name / versionCode (`0.2.0` / `4200` for that release)
+- matching version name / versionCode (`0.3.0` / `4300` for the current release)
 - `INTERNET` only in standard + standardfull
+- bundled dictionaries in offline + offlinelite, and none in standard + standardfull
 - v1/JAR `true` for standard (minSdk 23), standardfull (23), offlinelite (21); offline is
   minSdk 26 and legitimately reports `v1=false` by default
 
@@ -166,12 +185,13 @@ Standard Full APK over the phone's production package (`adb install -r`).
 
 ## 6. Build & test recipes (Windows, verified working)
 
-Gradle needs both env vars; the JDK path in `AGENTS.md` is stale.
+Gradle needs both env vars.
 
 ```bash
 # JAVA_HOME=C:/Program Files/Eclipse Adoptium/jdk-21.0.12.8-hotspot   (21.0.11 does NOT exist)
 # ANDROID_HOME=C:/Android/Sdk
 ./gradlew.bat compileOfflineRunTestsKotlin                 # fast gate, ~1-2 min
+python tools/check_fork_invariants.py                      # fork identity/privacy/product gate
 ./gradlew.bat :app:testOfflineRunTestsUnitTest --continue  # what CI runs, ~50 s
 ./gradlew.bat :app:assembleStandardfullDebug               # phone build, ~2 min
 ```
@@ -182,12 +202,24 @@ Note `./gradlew.bat` — bare `gradlew.bat` is not on PATH in this shell.
 
 `:app:testOfflineRunTestsUnitTest` (the CI variant) on **Windows** → **4 failures**, all
 `ParserTest` (`canLoadKeyboard`, `dvorak has 4 rows`, `de_DE has extra keys`, `popup key
-count …`). These are asset/locale-ordering issues that **pass on Linux CI**. Unchanged by the
-v4.1.2 merge.
+count …`). These are asset/locale-ordering issues that **pass on Linux CI**. The final
+post-v4.1.8/post-Shift/post-cleanup run was **343 tests, 4 failed, 8 skipped**; the authoritative
+checker reported no new failures.
 
-`:app:testOfflineDebugUnitTest` (full debug) — **the baseline moved with the v4.1.2 merge**
-(#137), so compare against the right one. Both measured on the same Windows machine on
-2026-08-20, minutes apart:
+Always run:
+
+```bash
+python tools/check_test_results.py \
+  --results-dir app/build/test-results/testOfflineRunTestsUnitTest \
+  --baseline tools/test_baselines/runTests-windows.txt \
+  --started-after <epoch-seconds-recorded-before-gradle>
+```
+
+It refuses stale or self-inconsistent results before diffing failure **names**. Do not infer
+correctness from Gradle's exit code or hand-count JUnit XML.
+
+The detailed full-debug comparison below is historical evidence from the v4.1.2 merge, not the
+current runTests baseline:
 
 | Baseline | Result |
 |---|---|
@@ -273,9 +305,9 @@ if (BuildConfig.BUILD_TYPE == "runTests") return // reason; see #12
 - **Changelog:** `CHANGELOG.md` records *LeanTypeDual's own* releases. Provenance is coarse:
   one `### Upstream` marker line per release, never per-entry tagging. Every notable entry
   carries a `(#N)` ref.
-- **Versioning:** SemVer `versionName`; `versionCode` = `major*1000 + minor*100 + patch*10`
-  historically, but the 0.x reset broke that formula deliberately — 0.1.0→`4100`,
-  0.2.0→`4200`. **Keep `versionCode` monotonic above `4200`.** Each release also needs
+- **Versioning:** SemVer `versionName`; fork-offset `versionCode` =
+  `4000 + major*1000 + minor*100 + patch*10` — 0.1.0→`4100`, 0.2.0→`4200`,
+  0.3.0→`4300`. **Keep `versionCode` monotonic above `4300`.** Each release also needs
   `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` and
   `docs/releasenote/release_notes_v<version>.md`.
 - **Project #3 board** (`gh project … --owner AsafMah`):
@@ -404,12 +436,11 @@ Kept deliberately:
 | `LeanType-two-thumb-pr` | `pr/upstream-two-thumb-step1` | backs **LeanBitLab PR #240** (open) |
 | `LeanType-check-origin-dev` | detached at `origin/dev` | baseline test runs |
 | `LeanType-check-origin-main` | detached at `origin/main` | baseline for the released tree |
-| `LeanType-check-upstream-main` | detached at upstream `v4.1.2` | "does this fail upstream too?" checks |
+| `LeanType-check-upstream-main` | detached at upstream `v4.1.8` | "does this fail upstream too?" checks |
 
-`check-upstream-main` tracks the upstream tag currently being integrated; it was moved from
-`v4.0.8` to `v4.1.2` for the #137 merge, which is how §7's two inherited defects were confirmed
-fixed. Re-point it whenever the merge target changes, and use it the same way: reproduce any
-new merge failure on the pristine tag before blaming your own merge.
+`check-upstream-main` tracks the upstream tag currently integrated; it is now at `v4.1.8`
+(`cbfaf21a`). Re-point it whenever the merge target changes, and use it the same way: reproduce
+any new merge failure on the pristine tag before blaming your own merge.
 
 Unfinished work — all six branches are now **backed up on `origin`** (pushed 2026-08-20 purely
 as backups: no PRs, delete with `git push origin --delete <branch>` once triaged). The commits
@@ -437,18 +468,17 @@ was kept**, so any of them can be restored with `git worktree add <dir> <branch>
 `LeanType-shortcut-pr`, `LeanType-upstream-399`, `LeanType-upstream-402`,
 `LeanType-upstream-408`, `LeanType-upstream-shift-fix`.
 
-Short-lived `LeanType-upstream-<version>` worktrees come and go with §10's merge recipe and are
-not tracked here individually; retire each one once its `merge/upstream-vX.Y.Z` branch lands in
-`dev`. One was in flight when this list was written (`LeanType-upstream-412` →
-`merge/upstream-v4.1.2`).
+Short-lived upstream/feature worktrees come and go with §10's merge recipe and app-native child
+sessions. Retire each one after its PR lands; do not treat an active session worktree as stale.
 
 ### Device
 
 - Phone: Samsung **SM-S936B**, Android 16, wireless ADB. Device id
   `adb-R5CY13MP25X-jUf01K._adb-tls-connect._tcp` (IP/port changes each toggle; rediscover
   with `adb mdns services`). The user must re-toggle Wireless debugging when it drops.
-- Active IME is the **debug** package, so installing the production package does not change
-  the keyboard in use.
+- Last verified on 2026-08-20 with signed `com.asafmah.leantypedual` 0.3.0 plus separate
+  `.debug` and `.exp` packages. The active IME may have changed since then; query
+  `settings get secure default_input_method` rather than assuming.
 - Tablet: not connected at any point this session.
 
 ### Reproducing the memory-trim crash path on device
@@ -468,21 +498,22 @@ background trim level on a foreground process") and refuses to *raise* a level t
 
 ## 12. Suggested next steps
 
-1. **Device-verify the two open PRs** — **#134** (backspace paragraph merge in block-based
-   editors) and **#137** (upstream v4.1.2 merge). Both need a real-editor smoke, not just a
-   green test run; see the anti-regression note that "tests pass" ≠ "feature works" for input
-   and integration code.
-2. **Emoji accelerated-delete bug is reported** — `LeanBitLab/LeanType#423`, confirmed still
-   present at upstream `f0ff166ae`. Don't file it twice; track that issue instead. §7's two
-   inherited defects need no report — v4.1.2 fixed both.
-3. **Install signed 0.2.0** over the phone's production package and do a real-editor smoke
-   (typing, direct IME switching, custom-layout restoration, unshifted `to`/`no`/`meet`
-   staying lowercase).
+1. **Device-verify the Shift fix (#150)** when SM-S936B wireless debugging is available:
+   single tap gives temporary Shift; fast double-tap locks with the lock icon; several letters
+   stay uppercase; a later Shift tap unlocks; duplicate press without release does not lock.
+2. **Device-smoke the v4.1.8 sync (#149):** normal typing/suggestions, all four flavor identities,
+   floating mode both without and with the user-granted overlay permission, custom sounds,
+   text edit layout, dictionary availability in network-free builds, and no offlinelite AI/network
+   UI leakage.
+3. **The falsified gesture experiment is removed (#147).** `PointerIdNormalizer` remains because
+   it fixes the real no-id-0/zero-suggestions path; DUAL_POINTER, ideal-prefix synthesis,
+   re-timing controls and the misleading host harness are gone. Do not reintroduce them without
+   measuring the actual closed gesture library loaded on device.
 4. **Tablet smoke** — the only never-executed release gate.
 5. **Issue #131 — "Java gesture not working with custom layouts"** is an open bug filed
    against the fork's own fallback gesture engine; likely the highest-value functional work.
 6. Triage the six unfinished worktrees in §11. Their branches are backed up on `origin` now, so
    there's no deadline — but `LeanType-b7a` and `LeanType-swipe` still hold uncommitted changes
    that the backup does not cover.
-7. Optional: refresh `AGENTS.md`'s JDK path
-   (`jdk-21.0.11.10-hotspot` → `jdk-21.0.12.8-hotspot`).
+7. Track upstream Shift report `LeanBitLab/LeanType#475` and accelerated-delete report
+   `LeanBitLab/LeanType#423`; avoid permanent fork-only drift once upstream fixes land.
