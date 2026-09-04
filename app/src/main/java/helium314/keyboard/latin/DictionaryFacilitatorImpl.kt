@@ -657,7 +657,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // Apply session word boost to suggestion scores (for both typing and gesture modes)
         val boost = sessionWordBoost
         if (boost != null && (composedData.mTypedWord.isNotEmpty() || composedData.mIsBatchMode)) {
-            applySessionBoost(suggestionResults, boost)
+            applySessionBoost(suggestionResults, boost, ngramContext.isBeginningOfSentenceContext)
         }
 
         includeAtLeastTwoWordSuggestions(suggestionResults, suggestionsArray, composedData.mTypedWord)
@@ -886,7 +886,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
      * that the user has typed recently. Since mScore is final, we must
      * remove and re-add entries with adjusted scores.
      */
-    private fun applySessionBoost(results: SuggestionResults, boost: SessionWordBoost) {
+    private fun applySessionBoost(results: SuggestionResults, boost: SessionWordBoost, isBeginningOfSentence: Boolean) {
         val sessionMultiplier = when (Settings.getValues().mSuggestionBalance) {
             Settings.SUGGESTION_BALANCE_DICTIONARY_FOCUSED -> 0.25f
             Settings.SUGGESTION_BALANCE_CONSERVATIVE -> 0.50f
@@ -897,7 +897,14 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val boosted = mutableListOf<SuggestedWordInfo>()
         val toRemove = mutableListOf<SuggestedWordInfo>()
         for (info in results) {
-            val rawBoost = boost.getBoost(info.mWord) * sessionMultiplier * BOOST_SCORE_MULTIPLIER
+            val word = info.mWord
+            if (!isBeginningOfSentence && word.isNotEmpty() && Character.isUpperCase(word[0])) {
+                val lower = word.lowercase(currentlyPreferredDictionaryGroup.locale)
+                if (lower != word && (results.any { it.mWord == lower } || isValidSpellingWord(lower))) {
+                    continue
+                }
+            }
+            val rawBoost = boost.getBoost(word) * sessionMultiplier * BOOST_SCORE_MULTIPLIER
             val boostAmount = rawBoost.coerceAtMost(MAX_PERSONALIZATION_BOOST.toFloat())
             if (boostAmount > 0f) {
                 toRemove.add(info)
