@@ -125,6 +125,35 @@ object SoundPackImporter {
         return PackFiles(standard, space, delete, enter)
     }
 
+    val LEGACY_ID_MAP = mapOf(
+        "dev.leantype.sounds.gateron-oil-king-thock" to "dev.leantype.sounds.thock",
+        "dev.leantype.sounds.gateron_oil_king_thock" to "dev.leantype.sounds.thock",
+        "dev.leantype.sounds.kailh-box-jade-clicky" to "dev.leantype.sounds.clicky",
+        "dev.leantype.sounds.kailh_box_jade_clicky" to "dev.leantype.sounds.clicky",
+        "dev.leantype.sounds.holy-panda-tactile" to "dev.leantype.sounds.tactile",
+        "dev.leantype.sounds.holy_panda_tactile" to "dev.leantype.sounds.tactile",
+        "dev.leantype.sounds.ibm-model-m-beamspring" to "dev.leantype.sounds.mechanical",
+        "dev.leantype.sounds.ibm_model_m_beamspring" to "dev.leantype.sounds.mechanical",
+        "dev.leantype.sounds.classic-1930s-royal-typewriter" to "dev.leantype.sounds.typewriter",
+        "dev.leantype.sounds.classic_1930s_royal_typewriter" to "dev.leantype.sounds.typewriter",
+        "dev.leantype.sounds.creamy-linear-jelly" to "dev.leantype.sounds.creamy",
+        "dev.leantype.sounds.creamy_linear_jelly" to "dev.leantype.sounds.creamy",
+        "dev.leantype.sounds.8-bit-chiptune-arcade" to "dev.leantype.sounds.chiptune",
+        "dev.leantype.sounds.arcade_8bit_chiptune" to "dev.leantype.sounds.chiptune",
+        "dev.leantype.sounds.minimalistic-ceramic-glass-marble" to "dev.leantype.sounds.glass",
+        "dev.leantype.sounds.minimalistic_ceramic_glass_marble" to "dev.leantype.sounds.glass",
+        "dev.leantype.sounds.water-bubble-pop" to "dev.leantype.sounds.bubble",
+        "dev.leantype.sounds.water_bubble_pop" to "dev.leantype.sounds.bubble",
+        "dev.leantype.sounds.acoustic-teak-woodblock" to "dev.leantype.sounds.woodblock",
+        "dev.leantype.sounds.acoustic_teak_woodblock" to "dev.leantype.sounds.woodblock",
+        "dev.leantype.sounds.grand-piano" to "dev.leantype.sounds.piano",
+        "dev.leantype.sounds.nylon-guitar" to "dev.leantype.sounds.acoustic-pluck",
+        "dev.leantype.sounds.kerala-chenda" to "dev.leantype.sounds.folk-drum",
+        "dev.leantype.sounds.carnatic-mridangam" to "dev.leantype.sounds.resonant-drum",
+        "dev.leantype.sounds.kalimba-tines" to "dev.leantype.sounds.kalimba",
+        "dev.leantype.sounds.orchestral-pizzicato" to "dev.leantype.sounds.pizzicato"
+    )
+
     fun getInstalledCustomPacks(context: Context): List<SoundPackInfo> {
         val packsDir = getSoundPacksDir(context)
         val dirs = packsDir.listFiles()?.filter { it.isDirectory } ?: return emptyList()
@@ -133,6 +162,14 @@ object SoundPackImporter {
         for (dir in dirs) {
             val id = dir.name
             if (SoundPackUrls.isPreset(id)) continue
+
+            // Auto-clean legacy folder if new canonical pack exists
+            val canonicalId = LEGACY_ID_MAP[id]
+            if (canonicalId != null && File(packsDir, canonicalId).exists()) {
+                dir.deleteRecursively()
+                continue
+            }
+
             val manifest = getManifest(context, id)
             if (manifest != null) {
                 list.add(
