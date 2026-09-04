@@ -571,6 +571,7 @@
     <string name="voice_status_processing">Processing…</string>
     <string name="voice_action_done">Done</string>
     <string name="voice_action_cancel">Cancel</string>
+    <string name="voice_input_not_available">Voice input is not available on this device</string>
 
     <string name="numpad" tools:keep="@string/numpad" translatable="false">@string/layout_numpad</string>
     <string name="settings" tools:keep="@string/settings">Settings</string>
