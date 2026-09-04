@@ -138,25 +138,12 @@ class RichInputMethodManager private constructor() {
     }
 
     fun switchToShortcutIme(inputMethodService: InputMethodService) = scope.launch {
-        try {
-            val shortcut = shortcuts.firstOrNull() ?: run {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    android.widget.Toast.makeText(context, R.string.voice_input_not_available, android.widget.Toast.LENGTH_SHORT).show()
-                }
-                return@launch
-            }
-            val imiId = shortcut.imi.id
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                inputMethodService.switchInputMethod(imiId, shortcut.subtype)
-            } else {
-                val token = inputMethodService.window.window?.attributes?.token ?: return@launch
-                @Suppress("Deprecation") imm.setInputMethodAndSubtype(token, imiId, shortcut.subtype)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to switch to shortcut IME", e)
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                android.widget.Toast.makeText(context, R.string.voice_input_not_available, android.widget.Toast.LENGTH_SHORT).show()
-            }
+        val imiId = shortcuts.firstOrNull()?.imi?.id ?: return@launch
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            inputMethodService.switchInputMethod(imiId, shortcuts.first().subtype)
+        } else {
+            val token = inputMethodService.window.window?.attributes?.token ?: return@launch
+            @Suppress("Deprecation") imm.setInputMethodAndSubtype(token, imiId, shortcuts.first().subtype)
         }
     }
 

@@ -278,14 +278,7 @@ class VoiceInputManager(
         }
 
         // Start hardware audio capture IMMEDIATELY so the green mic privacy dot appears without IPC delay
-        val audioStarted = startAudioRecordingThread()
-        if (!audioStarted) {
-            cancelHandshakeTimeout()
-            notifyError("Failed to initialize microphone")
-            cleanupSession()
-            updateState(VoiceState.ERROR)
-            return
-        }
+        startAudioRecordingThread()
 
         try {
             val pfdForPlugin = audioPipeReadSide
