@@ -1035,7 +1035,7 @@ language, hence "No language". -->
     <string name="prefs_keypress_sound_style_settings">Keypress sound style</string>
     <string name="prefs_keypress_sound_style_system">System default</string>
     <string name="prefs_keypress_sound_style_dialog_title">Keypress Sound Style</string>
-    <string name="sound_packs_title">Keypress Audio &amp; Sound Packs</string>
+    <string name="sound_packs_title">Keypress Audio</string>
     <string name="sound_pack_import_button">Import Sound Pack</string>
     <!-- Title of the setting for key long press delay -->
     <string name="prefs_key_longpress_timeout_settings">Key long press delay</string>
