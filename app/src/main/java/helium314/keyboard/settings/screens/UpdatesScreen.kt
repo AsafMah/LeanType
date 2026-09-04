@@ -72,10 +72,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val currentChangelogItems = listOf(
-    "• Custom Click Sounds: Zero-latency key audio engine with 12 built-in presets (iOS, Mechanical, Thocky, Typewriter, Retro CRT, Bubble Pop, Velvet, Wood, Marimba, Modern Tick, Sci-Fi, 8-Bit Arcade), live preview, and custom .zip sound pack import",
-    "• Harmonized Import Dialogs: Added language selection confirmation dialogs for handwriting, translation, and dictionary model imports",
-    "• AI Translation Hardening: Filtered conversational LLM preamble and code fences in translation outputs, and fixed active AI provider token validation",
-    "• Clean Feedback Guardrails: Suppressed unnecessary fallback toasts when translation engine is set to AI"
+    "• Offline Camera OCR & Screenshot Extraction: Live in-keyboard camera viewfinder and automatic screenshot chip with advanced text formatting options (casing, join styles, punctuation, dehyphenation)",
+    "• Inline Math Suggestions: Real-time math expression evaluation on typing '=' with instant suggestion strip answers and one-tap replacement",
+    "• Sound Packs & Plugins: Dedicated Sound screen under Plugins Hub, remote synthesized pack downloads, and custom .zip imports",
+    "• Typing & Editing Refinements: Restored Shift double-tap for Caps Lock, improved multiline auto-capitalization, suppressed emojis during gesture typing, and added repeat haptics for backspace/navigation",
+    "• UI & Stability: Centered toolbar micro-pill indicators, swipe-down toolbar dismissal, and battery/thermal optimizations"
 )
 
 @Composable
