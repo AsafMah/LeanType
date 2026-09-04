@@ -202,14 +202,6 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
                 }
                 return
             }
-            KeyCode.CALCULATOR -> {
-                if (keyboardSwitcher.isShowingCalculator) {
-                    keyboardSwitcher.hideCalculatorView()
-                } else {
-                    keyboardSwitcher.showCalculatorView()
-                }
-                return
-            }
             KeyCode.FORWARD_DELETE -> {
                 val connection = inputLogic.connection
                 val eventTime = android.os.SystemClock.uptimeMillis()

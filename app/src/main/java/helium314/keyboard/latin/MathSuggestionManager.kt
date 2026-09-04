@@ -37,8 +37,7 @@ class MathSuggestionManager(private val latinIME: LatinIME) {
         val displayText = "= ${match.resultFormatted}"
         textView.text = displayText
 
-        val icon = latinIME.mKeyboardSwitcher.keyboard?.mIconsSet?.getIconDrawable(ToolbarKey.CALCULATOR.name.lowercase())
-            ?: latinIME.mKeyboardSwitcher.keyboard?.mIconsSet?.getIconDrawable(ToolbarKey.NUMPAD.name.lowercase())
+        val icon = latinIME.mKeyboardSwitcher.keyboard?.mIconsSet?.getIconDrawable(ToolbarKey.NUMPAD.name.lowercase())
         textView.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
 
         textView.setOnClickListener {

@@ -258,7 +258,6 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     PROOFREAD -> KeyCode.PROOFREAD
     TRANSLATE -> KeyCode.TRANSLATE
     OCR -> KeyCode.OCR
-    CALCULATOR -> KeyCode.CALCULATOR
     SELECT_MODE -> KeyCode.TOGGLE_SELECTION_MODE
     CUSTOM_AI_1 -> KeyCode.CUSTOM_AI_1
     CUSTOM_AI_2 -> KeyCode.CUSTOM_AI_2
@@ -274,7 +273,6 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
 
 fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getCustomToolbarLongpressCode(key) ?: when (key) {
     CLIPBOARD -> KeyCode.CLIPBOARD_PASTE
-    CALCULATOR -> KeyCode.NUMPAD
     UNDO -> KeyCode.REDO
     REDO -> KeyCode.UNDO
     SELECT_ALL -> KeyCode.CLIPBOARD_SELECT_WORD
@@ -295,7 +293,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 
 // names need to be aligned with resources strings (using lowercase of key.name)
 enum class ToolbarKey {
-    VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, CALCULATOR, HANDWRITING, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
+    VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, HANDWRITING, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
     INCOGNITO, TOUCHPAD, TEXT_EDIT, AUTOCORRECT, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
     PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, PROOFREAD, TRANSLATE, OCR, SELECT_MODE,
     CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, CUSTOM_AI_4, CUSTOM_AI_5,
@@ -335,8 +333,8 @@ private val excludedKeys by lazy {
 
 val defaultToolbarPref by lazy {
     val default = when (helium314.keyboard.latin.BuildConfig.FLAVOR) {
-        "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, CALCULATOR, HANDWRITING, OCR, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE, TEXT_EDIT)
-        else -> listOf(SETTINGS, VOICE, CLIPBOARD, CALCULATOR, HANDWRITING, OCR, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, TEXT_EDIT, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL, SELECT_MODE)
+        "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, OCR, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE, TEXT_EDIT)
+        else -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, OCR, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, TEXT_EDIT, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL, SELECT_MODE)
     }
         
     val others = entries.filterNot { it in default || it in excludedKeys }
@@ -419,11 +417,7 @@ fun removePinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
 }
 
 private fun getEnabledToolbarKeys(prefs: SharedPreferences, pref: String, default: String, exclusions: Collection<ToolbarKey> = excludedKeys): List<ToolbarKey> {
-    var string = prefs.getString(pref, default)!!
-    if (pref == Settings.PREF_TOOLBAR_KEYS && !string.contains("CALCULATOR")) {
-        upgradeToolbarPref(prefs, pref, default)
-        string = prefs.getString(pref, default)!!
-    }
+    val string = prefs.getString(pref, default)!!
     return string.split(Separators.ENTRY).mapNotNull {
         val split = it.split(Separators.KV)
         if (split.last() == "true") {

@@ -42,7 +42,6 @@ import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.RichInputMethodSubtype;
 import helium314.keyboard.latin.WordComposer;
-import helium314.keyboard.latin.calculator.CalculatorView;
 import helium314.keyboard.latin.handwriting.HandwritingLoader;
 import helium314.keyboard.latin.handwriting.HandwritingView;
 import helium314.keyboard.latin.ocr.OcrCameraView;
@@ -82,7 +81,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private HandwritingView mHandwritingView;
     private OcrCameraView mOcrCameraView;
     private OcrResultView mOcrResultView;
-    private CalculatorView mCalculatorView;
     private TouchpadView mTouchpadView;
     private TextView mFakeToastView;
     private LatinIME mLatinIME;
@@ -426,9 +424,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mOcrResultView != null) {
             mOcrResultView.setVisibility(View.GONE);
         }
-        if (mCalculatorView != null) {
-            mCalculatorView.setVisibility(View.GONE);
-        }
 
         
         if (PointerTracker.sPersistentTouchpadModeActive) {
@@ -654,73 +649,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     public boolean isOcrShowing() {
         return (mOcrCameraView != null && mOcrCameraView.isShown())
                 || (mOcrResultView != null && mOcrResultView.isShown());
-    }
-
-    public void showCalculatorView() {
-        if (DEBUG_ACTION) {
-            Log.d(TAG, "showCalculatorView");
-        }
-        PointerTracker.sPersistentTouchpadModeActive = false;
-        if (mTouchpadView != null) {
-            mTouchpadView.setVisibility(View.GONE);
-        }
-        KeyboardActionListenerImpl.sPersistentTextEditModeActive = false;
-        mMainKeyboardFrame.setVisibility(View.VISIBLE);
-        mKeyboardView.setVisibility(View.GONE);
-        mEmojiTabStripView.setVisibility(View.GONE);
-        mSuggestionStripView.setVisibility(View.VISIBLE);
-        mStripContainer.setVisibility(View.VISIBLE);
-        mClipboardStripScrollView.setVisibility(View.GONE);
-        if (mOcrStripScrollView != null) mOcrStripScrollView.setVisibility(View.GONE);
-        mEmojiPalettesView.setVisibility(View.GONE);
-        mClipboardHistoryView.setVisibility(View.GONE);
-        if (mHandwritingView != null) {
-            if (mHandwritingView.isShown()) {
-                mHandwritingView.stopHandwriting();
-            }
-            mHandwritingView.setVisibility(View.GONE);
-        }
-        if (mOcrCameraView != null) {
-            if (mOcrCameraView.isShown()) {
-                mOcrCameraView.stopCamera();
-            }
-            mOcrCameraView.setVisibility(View.GONE);
-        }
-        if (mOcrResultView != null) {
-            mOcrResultView.setVisibility(View.GONE);
-        }
-        if (mCalculatorView != null) {
-            final int keyboardHeight = ResourceUtils.getKeyboardHeight(mThemeContext.getResources(), Settings.getValues());
-            final android.view.ViewGroup.LayoutParams lp = mCalculatorView.getLayoutParams();
-            if (lp != null) {
-                lp.height = keyboardHeight;
-                mCalculatorView.setLayoutParams(lp);
-            }
-            mCalculatorView.setListener(new CalculatorView.CalculatorListener() {
-                @Override
-                public void onInsertText(@NonNull String text) {
-                    mLatinIME.onTextInput(text);
-                }
-
-                @Override
-                public void onClose() {
-                    hideCalculatorView();
-                }
-            });
-            mCalculatorView.applyColors(Settings.getValues().mColors);
-            mCalculatorView.setVisibility(View.VISIBLE);
-        }
-    }
-
-    public void hideCalculatorView() {
-        if (mCalculatorView != null) {
-            mCalculatorView.setVisibility(View.GONE);
-        }
-        setAlphabetKeyboard();
-    }
-
-    public boolean isShowingCalculator() {
-        return mCalculatorView != null && mCalculatorView.isShown();
     }
 
     @Override
@@ -1081,8 +1009,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             return mClipboardHistoryView;
         } else if (isHandwritingShowing()) {
             return mHandwritingView;
-        } else if (isShowingCalculator()) {
-            return mCalculatorView;
         }
         return mKeyboardView;
     }
@@ -1177,7 +1103,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mHandwritingView = mCurrentInputView.findViewById(R.id.handwriting_view);
         mOcrCameraView = mCurrentInputView.findViewById(R.id.ocr_camera_view);
         mOcrResultView = mCurrentInputView.findViewById(R.id.ocr_result_view);
-        mCalculatorView = mCurrentInputView.findViewById(R.id.calculator_view);
         mFakeToastView = mCurrentInputView.findViewById(R.id.fakeToast);
 
         if (mOcrCameraView != null) {
