@@ -20,63 +20,99 @@ object SoundPackUrls {
     private const val TAG = "SoundPackUrls"
     const val SYSTEM_DEFAULT_ID = "system"
 
-    const val DEFAULT_INDEX_URL = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/index.json"
+    const val DEFAULT_INDEX_URL = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/index.json"
 
     // Default fallback remote catalog if offline or index cannot be reached
     val FALLBACK_CATALOG = listOf(
         RemoteSoundPack(
-            id = "dev.leantype.sounds.mechanical_thock",
-            name = "Mechanical Thock",
-            summary = "Deep, lubricated switch thock with heavy spacebar clack.",
+            id = "dev.leantype.sounds.gateron-oil-king-thock",
+            name = "Gateron Oil King Thock",
+            summary = "Deep, warm, lubricated mechanical switch with heavy spacebar clack.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/mechanical_thock.zip",
-            sizeBytes = 18180
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/gateron-oil-king-thock.zip",
+            sizeBytes = 27976
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.box_jade_clicky",
+            id = "dev.leantype.sounds.kailh-box-jade-clicky",
             name = "Kailh Box Jade Clicky",
-            summary = "Ultra-crisp high-pitched tactile click bar switches.",
+            summary = "High-pitch crisp tactile click-bar mechanism.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/box_jade_clicky.zip",
-            sizeBytes = 18675
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/kailh-box-jade-clicky.zip",
+            sizeBytes = 29836
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.vintage_typewriter",
-            name = "Vintage Royal Typewriter",
-            summary = "Classic cast-iron hammer strike with newline carriage chime on Enter.",
+            id = "dev.leantype.sounds.holy-panda-tactile",
+            name = "Holy Panda Tactile",
+            summary = "Snappy tactile bump with distinct bottom-out pop.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/vintage_typewriter.zip",
-            sizeBytes = 19910
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/holy-panda-tactile.zip",
+            sizeBytes = 29764
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.arcade_8bit",
-            name = "8-Bit Retro Arcade",
-            summary = "Nostalgic chiptune square-wave gaming blips and chirps.",
+            id = "dev.leantype.sounds.ibm-model-m-beamspring",
+            name = "IBM Model M Beamspring",
+            summary = "Heavy vintage solenoid click with subtle metallic resonance.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/arcade_8bit.zip",
-            sizeBytes = 19746
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/ibm-model-m-beamspring.zip",
+            sizeBytes = 33085
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.bubble_pop",
-            name = "Water Bubble / Pop",
-            summary = "Satisfying soft liquid bubble pop feedback.",
+            id = "dev.leantype.sounds.classic-1930s-royal-typewriter",
+            name = "Classic 1930s Royal Typewriter",
+            summary = "Metal hammer striker, ratchet spacebar, and carriage-return chime.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/bubble_pop.zip",
-            sizeBytes = 16920
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/classic-1930s-royal-typewriter.zip",
+            sizeBytes = 30974
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.woodblock_teak",
-            name = "Teak Woodblock Minimal",
-            summary = "Natural acoustic wooden mallet resonance.",
+            id = "dev.leantype.sounds.creamy-linear-jelly",
+            name = "Creamy Linear Jelly",
+            summary = "Muted, ultra-smooth dampened linear switch sound.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/woodblock_teak.zip",
-            sizeBytes = 18335
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/creamy-linear-jelly.zip",
+            sizeBytes = 27048
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.8-bit-chiptune-arcade",
+            name = "8-Bit Chiptune Arcade",
+            summary = "Retro square-wave arcade blips and chirps.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/8-bit-chiptune-arcade.zip",
+            sizeBytes = 31556
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.minimalistic-ceramic-glass-marble",
+            name = "Minimalistic Ceramic / Glass Marble",
+            summary = "Smooth polished mineral tap with glassy overtones.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/minimalistic-ceramic-glass-marble.zip",
+            sizeBytes = 30012
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.water-bubble-pop",
+            name = "Water Bubble Pop",
+            summary = "Resonant liquid droplet burst with soft pop.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/water-bubble-pop.zip",
+            sizeBytes = 28455
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.acoustic-teak-woodblock",
+            name = "Acoustic Teak Woodblock",
+            summary = "Natural acoustic percussion mallet tap.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/acoustic-teak-woodblock.zip",
+            sizeBytes = 29276
         )
     )
 
