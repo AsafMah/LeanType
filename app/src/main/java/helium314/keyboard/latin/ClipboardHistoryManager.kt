@@ -86,6 +86,7 @@ class ClipboardHistoryManager(
             screenshotObserver = object : ContentObserver(mainHandler) {
                 override fun onChange(selfChange: Boolean, uri: Uri?) {
                     super.onChange(selfChange, uri)
+                    if (!latinIME.isInputViewShown) return
                     if (latinIME.mSettings.current.mSuggestScreenshots) {
                         updateLatestScreenshotCache {
                             latinIME.tryShowClipboardSuggestion()

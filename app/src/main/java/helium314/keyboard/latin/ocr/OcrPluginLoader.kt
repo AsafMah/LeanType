@@ -28,11 +28,19 @@ object OcrPluginLoader {
     private const val TAG = "OcrPluginLoader"
 
     private var activeRecognizer: ITextRecognizer? = null
+    private var cachedClassLoader: PluginClassLoader? = null
+    private var cachedApkModified: Long = 0L
 
     @JvmStatic
     fun resetRecognizer() {
         activeRecognizer?.release()
         activeRecognizer = null
+    }
+
+    private fun invalidateClassLoader() {
+        resetRecognizer()
+        cachedClassLoader = null
+        cachedApkModified = 0L
     }
 
     @JvmStatic
@@ -193,15 +201,23 @@ object OcrPluginLoader {
     private fun loadRecognizerInternal(context: Context, apkFile: File): ITextRecognizer? {
         return try {
             ensureWorkManagerInitialized(context)
+            val apkLastModified = apkFile.lastModified()
             val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
 
-            val classLoader = PluginClassLoader(
-                apkFile.absolutePath,
-                context.codeCacheDir.absolutePath,
-                nativeLibDir.absolutePath,
-                context.classLoader
-            )
+            val classLoader = if (cachedClassLoader != null && cachedApkModified == apkLastModified) {
+                cachedClassLoader!!
+            } else {
+                val cl = PluginClassLoader(
+                    apkFile.absolutePath,
+                    context.codeCacheDir.absolutePath,
+                    nativeLibDir.absolutePath,
+                    context.classLoader
+                )
+                cachedClassLoader = cl
+                cachedApkModified = apkLastModified
+                cl
+            }
 
             val clazz = classLoader.loadClass(PLUGIN_CLASS_NAME)
             val recognizer = clazz.getDeclaredConstructor().newInstance() as ITextRecognizer
@@ -267,7 +283,7 @@ object OcrPluginLoader {
             } ?: return false
 
             targetFile.setReadOnly()
-            resetRecognizer()
+            invalidateClassLoader()
 
             val recognizer = loadRecognizerInternal(context, targetFile)
             val success = recognizer != null
@@ -299,7 +315,7 @@ object OcrPluginLoader {
             tempFile.delete()
             targetFile.setReadOnly()
 
-            resetRecognizer()
+            invalidateClassLoader()
 
             val recognizer = loadRecognizerInternal(context, targetFile)
             val success = recognizer != null
@@ -320,7 +336,7 @@ object OcrPluginLoader {
 
     fun removePlugin(context: Context) {
         try {
-            resetRecognizer()
+            invalidateClassLoader()
             val apkFile = File(context.filesDir, PLUGIN_FILENAME)
             if (apkFile.exists()) apkFile.delete()
             val baseDir = File(context.filesDir, "plugin_libs")
