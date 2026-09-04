@@ -109,9 +109,14 @@ fun LoadOcrPluginPreference(
             showDialog = false
             val url = "https://github.com/LeanBitLab/LeanType-OCR-Plugin/releases"
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
-            ctx.startActivity(intent)
+            try {
+                ctx.startActivity(intent)
+                android.widget.Toast.makeText(ctx, "Opening GitHub releases in browser… download the APK and use 'Load APK from storage'", android.widget.Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(ctx, "Failed to open browser: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+            }
             return
         }
 
