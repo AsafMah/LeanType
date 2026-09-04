@@ -327,28 +327,28 @@ class VoiceInputManager(
         var record: AudioRecord? = null
         try {
             record = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                MediaRecorder.AudioSource.MIC,
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to create AudioRecord with VOICE_RECOGNITION, trying MIC", e)
+            Log.w(TAG, "Failed to create AudioRecord with MIC, trying DEFAULT", e)
         }
 
         if (record == null || record.state != AudioRecord.STATE_INITIALIZED) {
             try {
                 record?.release()
                 record = AudioRecord(
-                    MediaRecorder.AudioSource.MIC,
+                    MediaRecorder.AudioSource.DEFAULT,
                     SAMPLE_RATE,
                     AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
                     bufferSize
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to create AudioRecord with MIC fallback", e)
+                Log.e(TAG, "Failed to create AudioRecord with DEFAULT fallback", e)
                 return false
             }
         }
