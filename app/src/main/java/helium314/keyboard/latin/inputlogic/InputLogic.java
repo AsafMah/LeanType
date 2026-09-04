@@ -2777,9 +2777,13 @@ public final class InputLogic {
         if (ei == null)
             return Constants.TextUtils.CAP_MODE_OFF;
         int inputType = ei.inputType;
-        if (settingsValues.mForceAutoCaps && !InputTypeUtils.isPasswordInputType(inputType)
-                && !InputTypeUtils.isVisiblePasswordInputType(inputType)) {
-            inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
+        if (!InputTypeUtils.isAnyPasswordInputType(inputType)
+                && !InputTypeUtils.isUriOrEmailType(inputType)
+                && (inputType & InputType.TYPE_MASK_CLASS) == InputType.TYPE_CLASS_TEXT) {
+            if (settingsValues.mForceAutoCaps
+                    || (inputType & (InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | InputType.TYPE_TEXT_FLAG_CAP_WORDS | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)) == 0) {
+                inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
+            }
         }
         // Warning: this depends on mSpaceState, which may not be the most current
         // value. If
