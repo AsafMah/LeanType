@@ -35,11 +35,8 @@ class MathSuggestionManager(private val latinIME: LatinIME) {
         val textView = binding.otpSuggestionText
         latinIME.mSettings.getCustomTypeface()?.let { textView.typeface = it }
         
-        val displayText = "= ${match.resultFormatted}"
-        textView.text = displayText
-
-        val icon = latinIME.mKeyboardSwitcher.keyboard?.mIconsSet?.getIconDrawable(ToolbarKey.NUMPAD.name.lowercase())
-        textView.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
+        textView.text = match.resultFormatted
+        textView.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, null, null)
 
         textView.setOnClickListener {
             AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(
@@ -63,7 +60,6 @@ class MathSuggestionManager(private val latinIME: LatinIME) {
 
         val colors = latinIME.mSettings.current.mColors
         textView.setTextColor(colors.get(ColorType.KEY_TEXT))
-        icon?.let { colors.setColor(it, ColorType.KEY_ICON) }
         colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)
         colors.setBackground(binding.root, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
 
