@@ -31,7 +31,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/thock.zip",
-            sizeBytes = 27916
+            sizeBytes = 29856
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.clicky",
@@ -40,7 +40,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/clicky.zip",
-            sizeBytes = 29851
+            sizeBytes = 30437
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.tactile",
@@ -49,7 +49,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/tactile.zip",
-            sizeBytes = 29665
+            sizeBytes = 30394
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.mechanical",
@@ -58,7 +58,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/mechanical.zip",
-            sizeBytes = 33198
+            sizeBytes = 31909
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.typewriter",
@@ -67,7 +67,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/typewriter.zip",
-            sizeBytes = 30753
+            sizeBytes = 30870
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.creamy",
@@ -76,7 +76,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/creamy.zip",
-            sizeBytes = 27118
+            sizeBytes = 27676
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.chiptune",
@@ -85,7 +85,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/chiptune.zip",
-            sizeBytes = 31547
+            sizeBytes = 31549
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.glass",
@@ -94,7 +94,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/glass.zip",
-            sizeBytes = 29952
+            sizeBytes = 28859
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.bubble",
@@ -103,7 +103,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/bubble.zip",
-            sizeBytes = 28364
+            sizeBytes = 28296
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.woodblock",
@@ -112,7 +112,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/woodblock.zip",
-            sizeBytes = 29294
+            sizeBytes = 30088
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.piano",
@@ -121,7 +121,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/piano.zip",
-            sizeBytes = 30395
+            sizeBytes = 30014
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.acoustic-pluck",
@@ -130,7 +130,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/acoustic-pluck.zip",
-            sizeBytes = 31592
+            sizeBytes = 31686
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.folk-drum",
@@ -139,7 +139,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/folk-drum.zip",
-            sizeBytes = 30264
+            sizeBytes = 29959
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.resonant-drum",
@@ -148,7 +148,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/resonant-drum.zip",
-            sizeBytes = 30343
+            sizeBytes = 29543
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.kalimba",
@@ -157,7 +157,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/kalimba.zip",
-            sizeBytes = 30201
+            sizeBytes = 30265
         ),
         RemoteSoundPack(
             id = "dev.leantype.sounds.pizzicato",
@@ -166,7 +166,7 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/pizzicato.zip",
-            sizeBytes = 31160
+            sizeBytes = 30498
         )
     )
 
