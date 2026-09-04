@@ -312,7 +312,7 @@ class ProofreadService(private val context: Context) {
             val showThinkingVal = showThinking ?: sharedPrefs.getBoolean(Settings.PREF_OFFLINE_SHOW_THINKING, Defaults.PREF_OFFLINE_SHOW_THINKING)
             
             // Build the prompt
-            val systemPrompt = overridePrompt ?: getSystemPrompt()
+            val systemPrompt = overridePrompt ?: getSystemPrompt().ifBlank { Defaults.PREF_OFFLINE_SYSTEM_PROMPT }
             val fullPrompt = if (systemPrompt.contains("{text}")) {
                 systemPrompt.replace("{text}", text)
             } else if (overridePrompt != null) {

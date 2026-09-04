@@ -872,8 +872,17 @@ public final class InputLogic {
                     @Override
                     public void onSuccess(String proofreadText) {
 
-                        if (proofreadText != null && !proofreadText.equals(mTextBeforeProofread)) {
-
+                        if (proofreadText != null && !proofreadText.isEmpty() && !proofreadText.equals(mTextBeforeProofread)) {
+                            // Truncation safeguard: if original input was substantial (> 20 chars) and proofreadText is less than 30% of original text length, abort to prevent accidental data loss
+                            if (mTextBeforeProofread != null && mTextBeforeProofread.length() > 20 && proofreadText.length() < mTextBeforeProofread.length() * 0.3) {
+                                Log.w(TAG, "Proofread result suspiciously short (" + proofreadText.length() + " vs " + mTextBeforeProofread.length() + "), aborting replacement to prevent truncation data loss");
+                                helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().showToast("Proofread output truncated by model; replacement aborted.", false);
+                                if (!hasSelection) {
+                                    int len = mTextBeforeProofread.length();
+                                    mConnection.setSelection(len, len);
+                                }
+                                return;
+                            }
                             // Text should already be selected (either user selection or selectAll before
                             // API call)
                             // Just commit the new text to replace selection
