@@ -6,28 +6,31 @@
     android:gravity="center_vertical"
     android:layout_width="wrap_content"
     android:layout_height="match_parent"
+    android:background="@drawable/clipboard_suggestion_background"
+    android:layout_marginVertical="3dp"
+    android:layout_marginHorizontal="4dp"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp"
     tools:ignore="RtlSymmetry">
 
     <!-- Extract Text OCR Button (Left of Screenshot) -->
     <ImageButton
         android:id="@+id/screenshot_extract_text_button"
-        android:layout_width="40dp"
+        android:layout_width="32dp"
         android:layout_height="match_parent"
-        android:background="@drawable/clipboard_suggestion_background"
-        android:layout_marginVertical="3dp"
-        android:layout_marginStart="4dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_ocr_extract"
         android:scaleType="centerInside"
+        android:padding="4dp"
         android:contentDescription="@string/ocr_extract_text_button" />
 
-    <!-- Screenshot Image Preview (Larger width, centerCrop) -->
+    <!-- Screenshot Image Preview -->
     <FrameLayout
         android:id="@+id/screenshot_paste_button"
-        android:layout_width="72dp"
+        android:layout_width="48dp"
         android:layout_height="match_parent"
-        android:layout_marginVertical="3dp"
-        android:layout_marginStart="4dp"
-        android:background="@drawable/clipboard_suggestion_background"
+        android:layout_marginVertical="2dp"
+        android:layout_marginHorizontal="2dp"
         android:clipToOutline="true">
 
         <ImageView
@@ -43,9 +46,9 @@
         android:id="@+id/screenshot_suggestion_close"
         android:contentDescription="@string/dialog_close"
         android:src="@drawable/ic_close"
-        android:layout_width="wrap_content"
+        android:layout_width="28dp"
         android:layout_height="match_parent"
-        android:paddingHorizontal="8dp"
+        android:padding="6dp"
         android:gravity="center" />
 
 </LinearLayout>

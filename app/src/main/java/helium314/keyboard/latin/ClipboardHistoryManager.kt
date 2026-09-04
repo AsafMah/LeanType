@@ -705,9 +705,8 @@ class ClipboardHistoryManager(
         }
 
         val colors = latinIME.mSettings.current.mColors
+        colors.setBackground(binding.root, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
         colors.setColor(extractButton, ColorType.REMOVE_SUGGESTION_ICON)
-        colors.setBackground(extractButton, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
-        colors.setBackground(pasteButton, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
         colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)
 
         return binding.root
