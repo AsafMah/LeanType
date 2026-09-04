@@ -4,12 +4,33 @@ As an open-source, community-funded project, we operate on a very limited budget
 
 ## 🚀 What's New in v4.1.9
 
-- **Offline Camera OCR & Screenshot Text Extraction**: Integrated an in-keyboard camera viewfinder and automatic screenshot detection pill for instant text extraction. Features rich formatting options (casing, line join, dehyphenation, punctuation normalization, bullet stripping, noise filtering) and customizable auto-copy / auto-insert actions.
-- **Inline Math Calculation Suggestions**: Type any mathematical expression followed by `=` (e.g. `25*4=`, `500-15%=`, `(12+8)/4=`) to instantly see the evaluated result in the suggestion strip and replace the expression in one tap. Configurable via Text Correction settings.
-- **Sound Packs Suite & Plugins Integration**: Dedicated Sound Settings under the Plugins Hub with support for remote sound pack downloads, physical modeling and synthesized instrument packs, unbundled assets for a lighter app size, and custom `.zip` pack import.
-- **Typing & Editing Enhancements**: Restored quick double-tap on Shift to lock Caps Lock, improved auto-capitalization in chat and multiline fields, suppressed emoji suggestions during gesture typing, enabled immediate text expansion when backspacing into shortcuts, and added key repeat haptics for backspace and arrow navigation.
-- **Toolbar & Visual Refinements**: Redesigned long-press indicators into subtle centered micro-pills, fixed swipe-down gesture from the toolbar to dismiss the keyboard, and ensured high-contrast dynamic colors across all light Material You themes.
-- **Performance & Thermal Optimization**: Scoped screenshot observers to active keyboard sessions, retained OCR plugin classloaders to prevent native library reload errors, and hardened AI prompt truncation.
+### ✨ New Features
+- **Offline Camera OCR & Screenshot Text Extraction**: In-keyboard live camera viewfinder with top flash control and gallery picker, plus an automatic screenshot suggestion pill (`[OCR] [Screenshot] [X]`) for 1-tap text extraction. Includes advanced text formatting (casing transformations, single-line/paragraph joins, dehyphenation, punctuation normalization, bullet stripping, whitespace/noise filtering), auto-copy, and auto-insert.
+- **Real-Time Inline Math Suggestions**: Live mathematical evaluation on typing `=` (e.g. `25*4=`, `500-15%=`, `(12+8)/4=`) with immediate suggestion strip answers and 1-tap in-place replacement. Configurable via `Settings -> Text correction -> Inline math calculation`.
+- **Sound Packs Suite & Plugins Hub**: Dedicated Sound Settings screen under the Plugins Hub with 12+ built-in presets (iOS, Mechanical Cherry MX, Thocky, Typewriter, CRT, Bubble Pop, Velvet, Wood, Marimba, Modern Tick, Sci-Fi, 8-Bit Arcade), remote GitHub catalog downloads, physical modeling packs, unbundled assets for a lighter APK footprint, and custom `.zip` pack import.
+
+### 🐛 Bug Fixes & Improvements
+- **Typing & Auto-Capitalization**:
+  - Improved auto-capitalization in chat apps and multiline fields after newlines ([#448](https://github.com/LeanBitLab/HeliboardL/issues/448)).
+  - Restored fast double-tap on Shift to reliably lock Caps Lock.
+  - Suppressed emoji suggestions during gesture/glide typing to avoid cluttering predictions ([#470](https://github.com/LeanBitLab/HeliboardL/issues/470)).
+  - Explicitly finish composing text and commit words on IME editor actions (Enter / Next / Done).
+  - Added case-matching autocorrect safeguards to prevent learned capitalized words from replacing regular words mid-sentence ([#477](https://github.com/LeanBitLab/HeliboardL/issues/477)).
+  - Supported immediate text expansion when backspacing into shortcuts ([#476](https://github.com/LeanBitLab/HeliboardL/issues/476)).
+- **UI & Toolbar Polish**:
+  - Reliable swipe-down gesture anywhere on the toolbar to close the keyboard via `dispatchTouchEvent`.
+  - Upgraded toolbar long-press indicators from asymmetric dots to centered micro-pills with 25% contrast.
+  - Guaranteed high-contrast dynamic colors on Material You light themes ([#479](https://github.com/LeanBitLab/HeliboardL/issues/479)).
+  - Unified screenshot and OCR suggestion chips into a compact pill layout with tight spacing.
+- **Audio, Haptics & Voice**:
+  - Enabled haptic feedback on key repeat for Backspace and navigation arrow keys ([#473](https://github.com/LeanBitLab/HeliboardL/issues/473)).
+  - Prevented crashes and gracefully handled missing microphone permissions / audio initialization failures ([#466](https://github.com/LeanBitLab/HeliboardL/issues/466)).
+  - Auto-cleanup legacy sound pack directories on duplicate re-import.
+- **OCR & Stability**:
+  - Cached and retained `PluginClassLoader` singleton in `OcrPluginLoader` to prevent `UnsatisfiedLinkError` on native `.so` reloads.
+  - Enforced explicit `LayoutParams` height on OCR camera views to eliminate viewport expansion during keyboard resizing.
+  - Scoped screenshot observers strictly to active keyboard sessions to optimize battery and thermal footprint.
+  - Added truncation safeguards to AI prompts to prevent data loss and ensure clean prompt fallback ([#472](https://github.com/LeanBitLab/HeliboardL/issues/472)).
 
 ## 📦 Choose Your Flavor
 
