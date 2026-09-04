@@ -44,6 +44,9 @@
         <include
             android:id="@+id/ocr_result_view"
             layout="@layout/ocr_result_view" />
+        <include
+            android:id="@+id/calculator_view"
+            layout="@layout/calculator_view" />
         <helium314.keyboard.keyboard.TouchpadView
             android:id="@+id/touchpad_view"
             android:layout_width="match_parent"

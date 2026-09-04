@@ -184,6 +184,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.PROOFREAD -> R.drawable.ic_proofread
                     ToolbarKey.TRANSLATE -> R.drawable.ic_translate
                     ToolbarKey.OCR -> R.drawable.ic_ocr
+                    ToolbarKey.CALCULATOR -> R.drawable.ic_calculator
                     ToolbarKey.CUSTOM_AI_1 -> R.drawable.ic_custom_ai_1
                     ToolbarKey.CUSTOM_AI_2 -> R.drawable.ic_custom_ai_2
                     ToolbarKey.CUSTOM_AI_3 -> R.drawable.ic_custom_ai_3
@@ -264,6 +265,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.PROOFREAD -> R.drawable.ic_proofread
                     ToolbarKey.TRANSLATE -> R.drawable.ic_translate
                     ToolbarKey.OCR -> R.drawable.ic_ocr
+                    ToolbarKey.CALCULATOR -> R.drawable.ic_calculator
                     ToolbarKey.CUSTOM_AI_1 -> R.drawable.ic_custom_ai_1
                     ToolbarKey.CUSTOM_AI_2 -> R.drawable.ic_custom_ai_2
                     ToolbarKey.CUSTOM_AI_3 -> R.drawable.ic_custom_ai_3
@@ -344,6 +346,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.PROOFREAD -> R.drawable.ic_proofread_rounded
                     ToolbarKey.TRANSLATE -> R.drawable.ic_translate_rounded
                     ToolbarKey.OCR -> R.drawable.ic_ocr
+                    ToolbarKey.CALCULATOR -> R.drawable.ic_calculator
                     ToolbarKey.CUSTOM_AI_1 -> R.drawable.ic_custom_ai_1
                     ToolbarKey.CUSTOM_AI_2 -> R.drawable.ic_custom_ai_2
                     ToolbarKey.CUSTOM_AI_3 -> R.drawable.ic_custom_ai_3
