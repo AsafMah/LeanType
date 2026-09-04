@@ -112,7 +112,61 @@ object SoundPackUrls {
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
             downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/acoustic-teak-woodblock.zip",
-            sizeBytes = 29276
+            sizeBytes = 29280
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.grand-piano",
+            name = "Acoustic Grand Piano",
+            summary = "Felt hammer strike with warm steel string resonance.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/grand-piano.zip",
+            sizeBytes = 30252
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.nylon-guitar",
+            name = "Nylon Acoustic Guitar",
+            summary = "Warm physical-model plucked string with wooden body resonance.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/nylon-guitar.zip",
+            sizeBytes = 31699
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.kerala-chenda",
+            name = "Kerala Chenda Percussion",
+            summary = "Sharp cane stick strike, rim crack, and deep resonant drum body.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/kerala-chenda.zip",
+            sizeBytes = 30196
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.carnatic-mridangam",
+            name = "Carnatic Mridangam",
+            summary = "Crisp harmonic ring with deep pitch-bending bass resonance.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/carnatic-mridangam.zip",
+            sizeBytes = 30298
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.kalimba-tines",
+            name = "Kalimba Thumb Piano",
+            summary = "Bell-like steel tines with hollow gourd chamber resonance.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/kalimba-tines.zip",
+            sizeBytes = 30026
+        ),
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.orchestral-pizzicato",
+            name = "Orchestral Pizzicato",
+            summary = "Fast finger-plucked string with acoustic chamber decay.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/orchestral-pizzicato.zip",
+            sizeBytes = 31263
         )
     )
 
