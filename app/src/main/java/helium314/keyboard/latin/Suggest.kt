@@ -242,6 +242,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             // certainly intentional (and careful input)
             || (wordComposer.isMostlyCaps && !wordComposer.isAllUpperCase) // We never auto-correct when suggestions are resumed because it would be unexpected
             || wordComposer.isResumed // If we don't have a main dictionary, we never want to auto-correct. The reason
+            || isDeveloperTokenOrSpecialSyntax(consideredWord)
             // for this is, the user may have a contact whose name happens to match a valid
             // word in their language, and it will unexpectedly auto-correct. For example, if
             // the user types in English with no dictionary and has a "Will" in their contact
@@ -257,6 +258,28 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 // mFirstSuggestionExceedsConfidenceThreshold is always set to false, so currently this branch is useless
                 return true to true
             }
+
+            val lowerConsidered = consideredWord.lowercase(Locale.ROOT)
+            val expectedContraction = COMMON_CONTRACTIONS[lowerConsidered]
+            if (expectedContraction != null && typedWordInfo == null) {
+                // If typed word matches a missing-apostrophe contraction (e.g. dont -> don't), promote it
+                val contractionMatch = suggestionResults.firstOrNull { it.mWord.equals(expectedContraction, ignoreCase = true) }
+                if (contractionMatch != null || firstSuggestion.mWord.equals(expectedContraction, ignoreCase = true)) {
+                    return true to true
+                }
+            }
+
+            // For short words (<= 3 chars) not in the dictionary (e.g. Ab, yt, tg, db),
+            // prevent single-letter substitution by common dictionary unigrams unless it's a known user history word or contraction.
+            if (typedWordInfo == null && consideredWord.length <= 3) {
+                val isExactOrCaseMatch = firstSuggestion.mWord.equals(consideredWord, ignoreCase = true)
+                val isUserHistory = firstSuggestion.mSourceDict?.mDictType == Dictionary.TYPE_USER_HISTORY
+                val isWhitelist = firstSuggestion.isKindOf(SuggestedWordInfo.KIND_WHITELIST)
+                if (!isExactOrCaseMatch && !isUserHistory && !isWhitelist && expectedContraction == null) {
+                    return true to false
+                }
+            }
+
             if (!AutoCorrectionUtils.suggestionExceedsThreshold(firstSuggestion, consideredWord, mAutoCorrectionThreshold)) {
                 // Score is too low for autocorrect — but for long words, the normalized score
                 // formula penalizes proportionally (weight = 1 - editDist/len), so a single typo
@@ -513,8 +536,35 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         private const val SUPPRESS_SUGGEST_THRESHOLD = -2000000000
 
         private const val MAXIMUM_AUTO_CORRECT_LENGTH_FOR_GERMAN = 12
-        // TODO: should we add Finnish here?
         private val sLanguageToMaximumAutoCorrectionWithSpaceLength = hashMapOf(Locale.GERMAN.language to MAXIMUM_AUTO_CORRECT_LENGTH_FOR_GERMAN)
+
+        private val COMMON_CONTRACTIONS = mapOf(
+            "dont" to "don't", "cant" to "can't", "wont" to "won't",
+            "im" to "I'm", "ive" to "I've", "id" to "I'd",
+            "theyre" to "they're", "youre" to "you're", "weve" to "we've", "theyve" to "they've",
+            "isnt" to "isn't", "arent" to "aren't", "wasnt" to "wasn't", "werent" to "weren't",
+            "couldnt" to "couldn't", "shouldnt" to "shouldn't", "wouldnt" to "wouldn't",
+            "didnt" to "didn't", "doesnt" to "doesn't", "hadnt" to "hadn't",
+            "havent" to "haven't", "hasnt" to "hasn't", "whats" to "what's", "thats" to "that's",
+            "theres" to "there's", "heres" to "here's", "wheres" to "where's", "whos" to "who's",
+            "lets" to "let's", "itll" to "it'll", "youll" to "you'll", "theyll" to "they'll"
+        )
+
+        private fun isDeveloperTokenOrSpecialSyntax(word: String): Boolean {
+            if (word.isEmpty()) return false
+            if (word.startsWith('#') || word.startsWith('@') || word.startsWith('/') || word.startsWith('.')) return true
+            if (word.contains('/') || word.contains('\\') || word.contains('.') || word.contains('_') || word.contains('-')) return true
+            var hasLower = false
+            for (i in 0 until word.length) {
+                val c = word[i]
+                if (c.isLowerCase()) {
+                    hasLower = true
+                } else if (hasLower && c.isUpperCase()) {
+                    return true
+                }
+            }
+            return false
+        }
 
         private fun getTransformedSuggestedWordInfoList(
             wordComposer: WordComposer, results: SuggestionResults,
