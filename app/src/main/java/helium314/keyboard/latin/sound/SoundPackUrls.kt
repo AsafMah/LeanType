@@ -25,148 +25,148 @@ object SoundPackUrls {
     // Default fallback remote catalog if offline or index cannot be reached
     val FALLBACK_CATALOG = listOf(
         RemoteSoundPack(
-            id = "dev.leantype.sounds.gateron-oil-king-thock",
-            name = "Gateron Oil King Thock",
-            summary = "Deep, warm, lubricated mechanical switch with heavy spacebar clack.",
+            id = "dev.leantype.sounds.thock",
+            name = "Deep Thock",
+            summary = "Deep lubricated switch clack.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/gateron-oil-king-thock.zip",
-            sizeBytes = 27976
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/thock.zip",
+            sizeBytes = 27916
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.kailh-box-jade-clicky",
-            name = "Kailh Box Jade Clicky",
-            summary = "High-pitch crisp tactile click-bar mechanism.",
+            id = "dev.leantype.sounds.clicky",
+            name = "Crisp Click",
+            summary = "High-pitched sharp click.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/kailh-box-jade-clicky.zip",
-            sizeBytes = 29836
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/clicky.zip",
+            sizeBytes = 29851
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.holy-panda-tactile",
-            name = "Holy Panda Tactile",
-            summary = "Snappy tactile bump with distinct bottom-out pop.",
+            id = "dev.leantype.sounds.tactile",
+            name = "Tactile Pop",
+            summary = "Snappy tactile bump and pop.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/holy-panda-tactile.zip",
-            sizeBytes = 29764
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/tactile.zip",
+            sizeBytes = 29665
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.ibm-model-m-beamspring",
-            name = "IBM Model M Beamspring",
-            summary = "Heavy vintage solenoid click with subtle metallic resonance.",
+            id = "dev.leantype.sounds.mechanical",
+            name = "Mechanical Click",
+            summary = "Retro mechanical spring click.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/ibm-model-m-beamspring.zip",
-            sizeBytes = 33085
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/mechanical.zip",
+            sizeBytes = 33198
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.classic-1930s-royal-typewriter",
-            name = "Classic 1930s Royal Typewriter",
-            summary = "Metal hammer striker, ratchet spacebar, and carriage-return chime.",
+            id = "dev.leantype.sounds.typewriter",
+            name = "Typewriter",
+            summary = "Vintage carriage and chime.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/classic-1930s-royal-typewriter.zip",
-            sizeBytes = 30974
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/typewriter.zip",
+            sizeBytes = 30753
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.creamy-linear-jelly",
-            name = "Creamy Linear Jelly",
-            summary = "Muted, ultra-smooth dampened linear switch sound.",
+            id = "dev.leantype.sounds.creamy",
+            name = "Creamy Linear",
+            summary = "Soft dampened linear tap.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/creamy-linear-jelly.zip",
-            sizeBytes = 27048
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/creamy.zip",
+            sizeBytes = 27118
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.8-bit-chiptune-arcade",
-            name = "8-Bit Chiptune Arcade",
-            summary = "Retro square-wave arcade blips and chirps.",
+            id = "dev.leantype.sounds.chiptune",
+            name = "8-Bit Chiptune",
+            summary = "Retro square-wave arcade blips.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/8-bit-chiptune-arcade.zip",
-            sizeBytes = 31556
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/chiptune.zip",
+            sizeBytes = 31547
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.minimalistic-ceramic-glass-marble",
-            name = "Minimalistic Ceramic / Glass Marble",
-            summary = "Smooth polished mineral tap with glassy overtones.",
+            id = "dev.leantype.sounds.glass",
+            name = "Glass Marble",
+            summary = "Polished mineral tap.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/minimalistic-ceramic-glass-marble.zip",
-            sizeBytes = 30012
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/glass.zip",
+            sizeBytes = 29952
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.water-bubble-pop",
-            name = "Water Bubble Pop",
-            summary = "Resonant liquid droplet burst with soft pop.",
+            id = "dev.leantype.sounds.bubble",
+            name = "Bubble Pop",
+            summary = "Soft liquid droplet burst.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/water-bubble-pop.zip",
-            sizeBytes = 28455
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/bubble.zip",
+            sizeBytes = 28364
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.acoustic-teak-woodblock",
-            name = "Acoustic Teak Woodblock",
-            summary = "Natural acoustic percussion mallet tap.",
+            id = "dev.leantype.sounds.woodblock",
+            name = "Woodblock",
+            summary = "Acoustic wooden mallet tap.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/acoustic-teak-woodblock.zip",
-            sizeBytes = 29280
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/woodblock.zip",
+            sizeBytes = 29294
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.grand-piano",
-            name = "Acoustic Grand Piano",
-            summary = "Felt hammer strike with warm steel string resonance.",
+            id = "dev.leantype.sounds.piano",
+            name = "Piano",
+            summary = "Warm harmonic key strike.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/grand-piano.zip",
-            sizeBytes = 30252
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/piano.zip",
+            sizeBytes = 30395
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.nylon-guitar",
-            name = "Nylon Acoustic Guitar",
-            summary = "Warm physical-model plucked string with wooden body resonance.",
+            id = "dev.leantype.sounds.acoustic-pluck",
+            name = "Acoustic Pluck",
+            summary = "Plucked nylon string tone.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/nylon-guitar.zip",
-            sizeBytes = 31699
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/acoustic-pluck.zip",
+            sizeBytes = 31592
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.kerala-chenda",
-            name = "Kerala Chenda Percussion",
-            summary = "Sharp cane stick strike, rim crack, and deep resonant drum body.",
+            id = "dev.leantype.sounds.folk-drum",
+            name = "Folk Drum",
+            summary = "High-tension rim and drum hit.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/kerala-chenda.zip",
-            sizeBytes = 30196
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/folk-drum.zip",
+            sizeBytes = 30264
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.carnatic-mridangam",
-            name = "Carnatic Mridangam",
-            summary = "Crisp harmonic ring with deep pitch-bending bass resonance.",
+            id = "dev.leantype.sounds.resonant-drum",
+            name = "Resonant Drum",
+            summary = "Deep pitch-bending drum tap.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/carnatic-mridangam.zip",
-            sizeBytes = 30298
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/resonant-drum.zip",
+            sizeBytes = 30343
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.kalimba-tines",
-            name = "Kalimba Thumb Piano",
-            summary = "Bell-like steel tines with hollow gourd chamber resonance.",
+            id = "dev.leantype.sounds.kalimba",
+            name = "Kalimba",
+            summary = "Plucked metal tines.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/kalimba-tines.zip",
-            sizeBytes = 30026
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/kalimba.zip",
+            sizeBytes = 30201
         ),
         RemoteSoundPack(
-            id = "dev.leantype.sounds.orchestral-pizzicato",
-            name = "Orchestral Pizzicato",
-            summary = "Fast finger-plucked string with acoustic chamber decay.",
+            id = "dev.leantype.sounds.pizzicato",
+            name = "Pizzicato",
+            summary = "Short finger-plucked string.",
             author = "LeanType Sound Lab",
             versionName = "1.0.0",
-            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/orchestral-pizzicato.zip",
-            sizeBytes = 31263
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/LeanType-SoundPacks/main/dist/pizzicato.zip",
+            sizeBytes = 31160
         )
     )
 
