@@ -2287,9 +2287,20 @@ public class LatinIME extends InputMethodService implements
                 return;
             }
         }
+        float keyXRatio = 0.5f;
+        if (keyboardView != null) {
+            final helium314.keyboard.keyboard.Keyboard keyboard = keyboardView.getKeyboard();
+            if (keyboard != null) {
+                final helium314.keyboard.keyboard.Key key = keyboard.getKey(code);
+                if (key != null && keyboard.mOccupiedWidth > 0) {
+                    keyXRatio = (key.getX() + key.getWidth() / 2f) / (float) keyboard.mOccupiedWidth;
+                    keyXRatio = Math.max(0f, Math.min(1f, keyXRatio));
+                }
+            }
+        }
         final AudioAndHapticFeedbackManager feedbackManager = AudioAndHapticFeedbackManager.getInstance();
         feedbackManager.performHapticFeedback(keyboardView, hapticEvent);
-        feedbackManager.performAudioFeedback(code, hapticEvent);
+        feedbackManager.performAudioFeedback(code, hapticEvent, keyXRatio);
     }
 
     // Hooks for hardware keyboard

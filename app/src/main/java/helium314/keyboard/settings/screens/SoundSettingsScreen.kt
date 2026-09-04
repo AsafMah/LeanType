@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
+import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
@@ -81,7 +83,7 @@ fun SoundSettingsScreen(
                     .padding(innerPadding)
                     .padding(vertical = 8.dp)
             ) {
-                // Section 1: Audio Configuration
+                // Section 1: Master Audio Configuration
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -108,7 +110,7 @@ fun SoundSettingsScreen(
                                 default = Defaults.PREF_KEYPRESS_SOUND_VOLUME,
                                 description = {
                                     if (it < 0) stringResource(R.string.settings_system_default)
-                                    else (it * 100).toInt().toString()
+                                    else "${(it * 100).toInt()}%"
                                 },
                                 range = -0.01f..1f,
                                 onValueChanged = { it?.let { vol ->
@@ -122,37 +124,171 @@ fun SoundSettingsScreen(
                     }
                 }
 
-                // Section 2: Sound Pack Selection & Details
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
-                    Column {
-                        PreferenceCategory("Sound Pack")
+                if (soundEnabled) {
+                    // Section 2: Sound Pack Selection & Details
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Column {
+                            PreferenceCategory("Sound Pack")
 
-                        Preference(
-                            name = stringResource(R.string.prefs_keypress_sound_style_settings),
-                            description = soundStyleName,
-                            onClick = { showSoundPackDialog = true },
-                            icon = R.drawable.ic_play_arrow
-                        ) { NextScreenIcon() }
+                            Preference(
+                                name = stringResource(R.string.prefs_keypress_sound_style_settings),
+                                description = soundStyleName,
+                                onClick = { showSoundPackDialog = true },
+                                icon = R.drawable.ic_play_arrow
+                            ) { NextScreenIcon() }
 
-                        if (soundManifest != null) {
-                            val authorText = if (!soundManifest.author.isNullOrBlank()) "by ${soundManifest.author}" else null
-                            val versionText = if (soundManifest.versionName.isNotBlank()) "v${soundManifest.versionName}" else null
-                            val metaLine = listOfNotNull(versionText, authorText).joinToString(" • ")
-                            val descText = listOfNotNull(soundManifest.summary, metaLine.takeIf { it.isNotBlank() }).joinToString("\n")
-                            if (descText.isNotBlank()) {
-                                Preference(
-                                    name = "Active Pack Info",
-                                    description = descText,
-                                    onClick = { showSoundPackDialog = true }
-                                )
+                            if (soundManifest != null) {
+                                val authorText = if (!soundManifest.author.isNullOrBlank()) "by ${soundManifest.author}" else null
+                                val versionText = if (soundManifest.versionName.isNotBlank()) "v${soundManifest.versionName}" else null
+                                val metaLine = listOfNotNull(versionText, authorText).joinToString(" • ")
+                                val descText = listOfNotNull(soundManifest.summary, metaLine.takeIf { it.isNotBlank() }).joinToString("\n")
+                                if (descText.isNotBlank()) {
+                                    Preference(
+                                        name = "Active Pack Info",
+                                        description = descText,
+                                        onClick = { showSoundPackDialog = true }
+                                    )
+                                }
                             }
+                        }
+                    }
+
+                    // Section 3: Acoustics & Playback Modulation
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Column {
+                            PreferenceCategory(stringResource(R.string.prefs_sound_acoustics_category))
+
+                            SliderPreference(
+                                name = stringResource(R.string.prefs_sound_pitch_scale),
+                                key = Settings.PREF_SOUND_PITCH_SCALE,
+                                default = Defaults.PREF_SOUND_PITCH_SCALE,
+                                description = { "${String.format(java.util.Locale.US, "%.2f", it)}x (${(it * 100).toInt()}%)" },
+                                range = 0.5f..1.5f,
+                                onValueChanged = { it?.let { pitch ->
+                                    CustomSoundManager.getInstance(context).previewSound(currentSoundStyle, pitch = pitch)
+                                } }
+                            )
+
+                            SwitchPreference(
+                                name = stringResource(R.string.prefs_sound_random_pitch),
+                                description = stringResource(R.string.prefs_sound_random_pitch_summary),
+                                key = Settings.PREF_SOUND_RANDOM_PITCH,
+                                default = Defaults.PREF_SOUND_RANDOM_PITCH
+                            )
+
+                            SwitchPreference(
+                                name = stringResource(R.string.prefs_sound_stereo_pan),
+                                description = stringResource(R.string.prefs_sound_stereo_pan_summary),
+                                key = Settings.PREF_SOUND_STEREO_PAN,
+                                default = Defaults.PREF_SOUND_STEREO_PAN
+                            )
+
+                            SwitchPreference(
+                                name = stringResource(R.string.prefs_sound_dynamic_velocity),
+                                description = stringResource(R.string.prefs_sound_dynamic_velocity_summary),
+                                key = Settings.PREF_SOUND_DYNAMIC_VELOCITY,
+                                default = Defaults.PREF_SOUND_DYNAMIC_VELOCITY
+                            )
+                        }
+                    }
+
+                    // Section 4: Per-Key Sound & Volume Balance
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Column {
+                            PreferenceCategory(stringResource(R.string.prefs_sound_balance_category))
+
+                            SliderPreference(
+                                name = stringResource(R.string.prefs_sound_vol_space),
+                                key = Settings.PREF_SOUND_VOL_SPACE,
+                                default = Defaults.PREF_SOUND_VOL_SPACE,
+                                description = { "${(it * 100).toInt()}%" },
+                                range = 0.0f..1.5f,
+                                onValueChanged = {
+                                    CustomSoundManager.getInstance(context).playSound(Constants.CODE_SPACE, 0.8f)
+                                }
+                            )
+
+                            SliderPreference(
+                                name = stringResource(R.string.prefs_sound_vol_delete),
+                                key = Settings.PREF_SOUND_VOL_DELETE,
+                                default = Defaults.PREF_SOUND_VOL_DELETE,
+                                description = { "${(it * 100).toInt()}%" },
+                                range = 0.0f..1.5f,
+                                onValueChanged = {
+                                    CustomSoundManager.getInstance(context).playSound(KeyCode.DELETE, 0.8f)
+                                }
+                            )
+
+                            SliderPreference(
+                                name = stringResource(R.string.prefs_sound_vol_enter),
+                                key = Settings.PREF_SOUND_VOL_ENTER,
+                                default = Defaults.PREF_SOUND_VOL_ENTER,
+                                description = { "${(it * 100).toInt()}%" },
+                                range = 0.0f..1.5f,
+                                onValueChanged = {
+                                    CustomSoundManager.getInstance(context).playSound(Constants.CODE_ENTER, 0.8f)
+                                }
+                            )
+
+                            SliderPreference(
+                                name = stringResource(R.string.prefs_sound_vol_modifiers),
+                                key = Settings.PREF_SOUND_VOL_MODIFIERS,
+                                default = Defaults.PREF_SOUND_VOL_MODIFIERS,
+                                description = { "${(it * 100).toInt()}%" },
+                                range = 0.0f..1.5f,
+                                onValueChanged = {
+                                    CustomSoundManager.getInstance(context).playSound(KeyCode.SHIFT, 0.8f)
+                                }
+                            )
+                        }
+                    }
+
+                    // Section 5: System & Profiles
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Column {
+                            PreferenceCategory(stringResource(R.string.prefs_sound_system_category))
+
+                            SwitchPreference(
+                                name = stringResource(R.string.prefs_sound_mute_in_silent),
+                                description = stringResource(R.string.prefs_sound_mute_in_silent_summary),
+                                key = Settings.PREF_SOUND_MUTE_IN_SILENT,
+                                default = Defaults.PREF_SOUND_MUTE_IN_SILENT
+                            )
+
+                            SwitchPreference(
+                                name = stringResource(R.string.prefs_sound_mute_in_dnd),
+                                description = stringResource(R.string.prefs_sound_mute_in_dnd_summary),
+                                key = Settings.PREF_SOUND_MUTE_IN_DND,
+                                default = Defaults.PREF_SOUND_MUTE_IN_DND
+                            )
                         }
                     }
                 }

@@ -9,6 +9,9 @@ import android.os.SystemClock
 import android.util.Log
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.common.Constants
+import helium314.keyboard.latin.settings.Defaults
+import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.prefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -161,14 +164,15 @@ class CustomSoundManager private constructor(private val appContext: Context) {
         }
     }
 
-    fun playSound(code: Int, volume: Float): Boolean {
+    fun playSound(code: Int, volume: Float, keyXRatio: Float = 0.5f): Boolean {
         if (activePackId == SoundPackUrls.SYSTEM_DEFAULT_ID) {
             return false
         }
 
         val now = SystemClock.elapsedRealtime()
         val last = lastPlayedTime["playback"] ?: 0L
-        if (now - last < 10L) {
+        val delta = now - last
+        if (delta < 8L) {
             return true
         }
         lastPlayedTime["playback"] = now
@@ -181,13 +185,39 @@ class CustomSoundManager private constructor(private val appContext: Context) {
             }
         }
 
-        val eventName = when (code) {
-            KeyCode.DELETE, KeyCode.DELETE_WORD, KeyCode.FORWARD_DELETE, KeyCode.FORWARD_DELETE_WORD -> "keypress.delete"
-            Constants.CODE_SPACE -> "keypress.space"
-            Constants.CODE_ENTER -> "keypress.return"
-            KeyCode.SHIFT, KeyCode.CAPS_LOCK -> "keypress.shift"
-            KeyCode.SYMBOL, KeyCode.SYMBOL_ALPHA -> "keypress.symbol"
-            else -> "keypress.default"
+        val prefs = appContext.prefs()
+
+        val eventName: String
+        val keyVolMultiplier: Float
+        when (code) {
+            KeyCode.DELETE, KeyCode.DELETE_WORD, KeyCode.FORWARD_DELETE, KeyCode.FORWARD_DELETE_WORD -> {
+                eventName = "keypress.delete"
+                keyVolMultiplier = prefs.getFloat(Settings.PREF_SOUND_VOL_DELETE, Defaults.PREF_SOUND_VOL_DELETE)
+            }
+            Constants.CODE_SPACE -> {
+                eventName = "keypress.space"
+                keyVolMultiplier = prefs.getFloat(Settings.PREF_SOUND_VOL_SPACE, Defaults.PREF_SOUND_VOL_SPACE)
+            }
+            Constants.CODE_ENTER -> {
+                eventName = "keypress.return"
+                keyVolMultiplier = prefs.getFloat(Settings.PREF_SOUND_VOL_ENTER, Defaults.PREF_SOUND_VOL_ENTER)
+            }
+            KeyCode.SHIFT, KeyCode.CAPS_LOCK -> {
+                eventName = "keypress.shift"
+                keyVolMultiplier = prefs.getFloat(Settings.PREF_SOUND_VOL_MODIFIERS, Defaults.PREF_SOUND_VOL_MODIFIERS)
+            }
+            KeyCode.SYMBOL, KeyCode.SYMBOL_ALPHA -> {
+                eventName = "keypress.symbol"
+                keyVolMultiplier = prefs.getFloat(Settings.PREF_SOUND_VOL_MODIFIERS, Defaults.PREF_SOUND_VOL_MODIFIERS)
+            }
+            else -> {
+                eventName = "keypress.default"
+                keyVolMultiplier = 1.0f
+            }
+        }
+
+        if (keyVolMultiplier <= 0f) {
+            return true
         }
 
         val event = loadedEvents[eventName]
@@ -213,20 +243,49 @@ class CustomSoundManager private constructor(private val appContext: Context) {
             }
         }
 
-        val userVol = if (volume < 0f) 0.5f else volume.coerceIn(0f, 1f)
-        val finalVol = (userVol * packMasterVolume * event.volume).coerceIn(0f, 1f)
+        // Dynamic typing velocity: subtle volume boost on typing bursts (<140ms between strokes)
+        val dynamicVelocityEnabled = prefs.getBoolean(Settings.PREF_SOUND_DYNAMIC_VELOCITY, Defaults.PREF_SOUND_DYNAMIC_VELOCITY)
+        val velocityFactor = if (dynamicVelocityEnabled && delta < 140L) {
+            1.0f + ((140L - delta).toFloat() / 140f) * 0.18f
+        } else {
+            1.0f
+        }
 
-        if (finalVol <= 0f) {
+        val userVol = if (volume < 0f) 0.5f else volume.coerceIn(0f, 1f)
+        val baseVol = (userVol * packMasterVolume * event.volume * keyVolMultiplier * velocityFactor).coerceIn(0f, 1f)
+
+        if (baseVol <= 0f) {
             return true
         }
 
+        // Spatial stereo panning based on keyboard X ratio
+        val stereoPanEnabled = prefs.getBoolean(Settings.PREF_SOUND_STEREO_PAN, Defaults.PREF_SOUND_STEREO_PAN)
+        val (leftVol, rightVol) = if (stereoPanEnabled) {
+            val pan = ((keyXRatio.coerceIn(0f, 1f) - 0.5f) * 2f) // -1.0 (left) to +1.0 (right)
+            val leftScale = (1.0f - pan.coerceAtLeast(0f) * 0.35f).coerceIn(0.1f, 1.0f)
+            val rightScale = (1.0f + pan.coerceAtMost(0f) * 0.35f).coerceIn(0.1f, 1.0f)
+            Pair((baseVol * leftScale).coerceIn(0f, 1f), (baseVol * rightScale).coerceIn(0f, 1f))
+        } else {
+            Pair(baseVol, baseVol)
+        }
+
+        // Base pitch shift + random micro-pitch jitter
+        val basePitch = prefs.getFloat(Settings.PREF_SOUND_PITCH_SCALE, Defaults.PREF_SOUND_PITCH_SCALE).coerceIn(0.5f, 2.0f)
+        val randomPitchEnabled = prefs.getBoolean(Settings.PREF_SOUND_RANDOM_PITCH, Defaults.PREF_SOUND_RANDOM_PITCH)
+        val finalRate = if (randomPitchEnabled) {
+            val jitter = (random.nextFloat() - 0.5f) * 0.08f // ±4% jitter
+            (basePitch + jitter).coerceIn(0.5f, 2.0f)
+        } else {
+            basePitch
+        }
+
         try {
-            pool.play(sampleId, finalVol, finalVol, 1, 0, 1.0f)
+            pool.play(sampleId, leftVol, rightVol, 1, 0, finalRate)
         } catch (_: Throwable) {}
         return true
     }
 
-    fun previewSound(packId: String, volume: Float = 0.8f) {
+    fun previewSound(packId: String, volume: Float = 0.8f, pitch: Float = 1.0f) {
         if (packId == SoundPackUrls.SYSTEM_DEFAULT_ID) {
             val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
             audioManager?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, volume)
@@ -261,7 +320,8 @@ class CustomSoundManager private constructor(private val appContext: Context) {
                 }
                 if (sampleId != 0) {
                     val actualVol = if (volume < 0f) 0.8f else volume.coerceIn(0.1f, 1f)
-                    pPool.play(sampleId, actualVol, actualVol, 1, 0, 1.0f)
+                    val rate = pitch.coerceIn(0.5f, 2.0f)
+                    pPool.play(sampleId, actualVol, actualVol, 1, 0, rate)
                 }
             }
         }

@@ -1037,6 +1037,24 @@ language, hence "No language". -->
     <string name="prefs_keypress_sound_style_dialog_title">Keypress Sound Style</string>
     <string name="sound_packs_title">Keypress Audio</string>
     <string name="sound_pack_import_button">Import Sound Pack</string>
+    <string name="prefs_sound_acoustics_category">Acoustics &amp; Playback</string>
+    <string name="prefs_sound_pitch_scale">Pitch Shift</string>
+    <string name="prefs_sound_random_pitch">Random pitch variation</string>
+    <string name="prefs_sound_random_pitch_summary">Subtle micro-pitch variations per keystroke to prevent repetitive audio fatigue</string>
+    <string name="prefs_sound_stereo_pan">Spatial stereo panning</string>
+    <string name="prefs_sound_stereo_pan_summary">Pans audio left or right based on key position across the keyboard</string>
+    <string name="prefs_sound_dynamic_velocity">Dynamic typing velocity</string>
+    <string name="prefs_sound_dynamic_velocity_summary">Subtly accentuates volume during fast typing bursts</string>
+    <string name="prefs_sound_system_category">System &amp; Profiles</string>
+    <string name="prefs_sound_mute_in_silent">Mute in silent/vibrate mode</string>
+    <string name="prefs_sound_mute_in_silent_summary">Suppress keypress sound when device ringer is set to silent or vibrate</string>
+    <string name="prefs_sound_mute_in_dnd">Mute in Do Not Disturb</string>
+    <string name="prefs_sound_mute_in_dnd_summary">Suppress keypress sound when Do Not Disturb is active</string>
+    <string name="prefs_sound_balance_category">Key Sound Balance</string>
+    <string name="prefs_sound_vol_space">Spacebar volume</string>
+    <string name="prefs_sound_vol_delete">Backspace volume</string>
+    <string name="prefs_sound_vol_enter">Enter key volume</string>
+    <string name="prefs_sound_vol_modifiers">Modifiers volume (Shift &amp; Symbols)</string>
     <!-- Title of the setting for key long press delay -->
     <string name="prefs_key_longpress_timeout_settings">Key long press delay</string>
     <!-- Title of the setting for overriding Android SDK level for showing emojis -->

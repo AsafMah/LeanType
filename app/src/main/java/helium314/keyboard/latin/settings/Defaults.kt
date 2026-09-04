@@ -157,6 +157,16 @@ object Defaults {
     const val PREF_VIBRATION_AMPLITUDE_SETTINGS = -1
     const val PREF_KEYPRESS_SOUND_VOLUME = -0.01f
     const val PREF_KEYPRESS_SOUND_STYLE = "system"
+    const val PREF_SOUND_PITCH_SCALE = 1.0f
+    const val PREF_SOUND_RANDOM_PITCH = true
+    const val PREF_SOUND_STEREO_PAN = true
+    const val PREF_SOUND_DYNAMIC_VELOCITY = false
+    const val PREF_SOUND_MUTE_IN_SILENT = true
+    const val PREF_SOUND_MUTE_IN_DND = true
+    const val PREF_SOUND_VOL_SPACE = 1.0f
+    const val PREF_SOUND_VOL_DELETE = 1.0f
+    const val PREF_SOUND_VOL_ENTER = 1.0f
+    const val PREF_SOUND_VOL_MODIFIERS = 1.0f
     const val PREF_KEY_LONGPRESS_TIMEOUT = 300
     const val PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = true
     const val PREF_GESTURE_PREVIEW_TRAIL = true

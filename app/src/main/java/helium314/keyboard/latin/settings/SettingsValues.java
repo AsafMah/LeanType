@@ -178,6 +178,16 @@ public class SettingsValues {
         public final int mKeypressVibrationAmplitude;
         public final float mKeypressSoundVolume;
         public final String mKeypressSoundStyle;
+        public final float mSoundPitchScale;
+        public final boolean mSoundRandomPitch;
+        public final boolean mSoundStereoPan;
+        public final boolean mSoundDynamicVelocity;
+        public final boolean mSoundMuteInSilent;
+        public final boolean mSoundMuteInDnd;
+        public final float mSoundVolSpace;
+        public final float mSoundVolDelete;
+        public final float mSoundVolEnter;
+        public final float mSoundVolModifiers;
         public final boolean mAutoCorrectionEnabledPerUserSettings;
         public final String mAutoCorrectTrigger;
         public final boolean mAutoCorrectEnabled;
@@ -378,6 +388,26 @@ public class SettingsValues {
                                 Defaults.PREF_KEYPRESS_SOUND_VOLUME);
                 mKeypressSoundStyle = prefs.getString(Settings.PREF_KEYPRESS_SOUND_STYLE,
                                 Defaults.PREF_KEYPRESS_SOUND_STYLE);
+                mSoundPitchScale = prefs.getFloat(Settings.PREF_SOUND_PITCH_SCALE,
+                                Defaults.PREF_SOUND_PITCH_SCALE);
+                mSoundRandomPitch = prefs.getBoolean(Settings.PREF_SOUND_RANDOM_PITCH,
+                                Defaults.PREF_SOUND_RANDOM_PITCH);
+                mSoundStereoPan = prefs.getBoolean(Settings.PREF_SOUND_STEREO_PAN,
+                                Defaults.PREF_SOUND_STEREO_PAN);
+                mSoundDynamicVelocity = prefs.getBoolean(Settings.PREF_SOUND_DYNAMIC_VELOCITY,
+                                Defaults.PREF_SOUND_DYNAMIC_VELOCITY);
+                mSoundMuteInSilent = prefs.getBoolean(Settings.PREF_SOUND_MUTE_IN_SILENT,
+                                Defaults.PREF_SOUND_MUTE_IN_SILENT);
+                mSoundMuteInDnd = prefs.getBoolean(Settings.PREF_SOUND_MUTE_IN_DND,
+                                Defaults.PREF_SOUND_MUTE_IN_DND);
+                mSoundVolSpace = prefs.getFloat(Settings.PREF_SOUND_VOL_SPACE,
+                                Defaults.PREF_SOUND_VOL_SPACE);
+                mSoundVolDelete = prefs.getFloat(Settings.PREF_SOUND_VOL_DELETE,
+                                Defaults.PREF_SOUND_VOL_DELETE);
+                mSoundVolEnter = prefs.getFloat(Settings.PREF_SOUND_VOL_ENTER,
+                                Defaults.PREF_SOUND_VOL_ENTER);
+                mSoundVolModifiers = prefs.getFloat(Settings.PREF_SOUND_VOL_MODIFIERS,
+                                Defaults.PREF_SOUND_VOL_MODIFIERS);
                 mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
                                 Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY);
                 mGestureMethod = prefs.getString(Settings.PREF_GESTURE_METHOD, "fallback");
