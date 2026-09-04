@@ -213,6 +213,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_OFFLINE_MAX_TOKENS = "offline_max_tokens";
     public static final String PREF_OFFLINE_KEEP_MODEL_LOADED = "offline_keep_model_loaded";
     public static final String PREF_AI_ALLOW_INSECURE_CONNECTIONS = "ai_allow_insecure_connections";
+    public static final String PREF_CLOUD_AI_MAX_TOKENS = "cloud_ai_max_tokens";
 
     public static final String PREF_ENABLE_CLIPBOARD_HISTORY = "enable_clipboard_history";
     public static final String PREF_SUGGEST_SCREENSHOTS = "suggest_screenshots";

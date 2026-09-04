@@ -336,7 +336,9 @@ class ProofreadService(private val context: Context) {
                 } catch (_: Exception) { "" }
                 val localExamples = getProofreadFewShot(currentLocale)
                 val builder = StringBuilder("Instruction: ${instruction.trim()}\n\n")
-                builder.append("Input: heko hw r u\nOutput: Hello, how are you?\n\n")
+                if (localExamples.isEmpty() || currentLocale.lowercase().startsWith("en")) {
+                    builder.append("Input: heko hw r u\nOutput: Hello, how are you?\n\n")
+                }
                 for (ex in localExamples) {
                     builder.append("Input: ${ex.first}\nOutput: ${ex.second}\n\n")
                 }

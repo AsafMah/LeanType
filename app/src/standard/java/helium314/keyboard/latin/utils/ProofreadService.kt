@@ -249,6 +249,16 @@ class ProofreadService(private val context: Context) {
             helium314.keyboard.latin.settings.Defaults.PREF_AI_ALLOW_INSECURE_CONNECTIONS
         )
 
+    fun getCloudMaxTokens(): Int =
+        context.prefs().getInt(
+            helium314.keyboard.latin.settings.Settings.PREF_CLOUD_AI_MAX_TOKENS,
+            helium314.keyboard.latin.settings.Defaults.PREF_CLOUD_AI_MAX_TOKENS
+        )
+
+    fun setCloudMaxTokens(tokens: Int) {
+        context.prefs().edit().putInt(helium314.keyboard.latin.settings.Settings.PREF_CLOUD_AI_MAX_TOKENS, tokens).apply()
+    }
+
 
     /**
      * Tests the API key by making a simple request.
@@ -511,11 +521,12 @@ class ProofreadService(private val context: Context) {
                 })
             }
             
+            val maxTokens = getCloudMaxTokens()
             val requestBody = JSONObject().apply {
                 put("model", modelName)
                 put("messages", messagesArray)
                 put("temperature", 0.1)
-                put("max_tokens", 512)
+                put("max_tokens", maxTokens)
             }
 
             OutputStreamWriter(connection.outputStream).use { writer ->
@@ -561,6 +572,10 @@ class ProofreadService(private val context: Context) {
             val choices = jsonObject.optJSONArray("choices")
             if (choices != null && choices.length() > 0) {
                 val firstChoice = choices.getJSONObject(0)
+                val finishReason = firstChoice.optString("finish_reason", "")
+                if (finishReason.equals("length", ignoreCase = true)) {
+                    Log.w("ProofreadService", "Cloud AI response was truncated due to max_tokens limit")
+                }
                 val message = firstChoice.optJSONObject("message")
                 var content = message?.optString("content", "") ?: ""
 

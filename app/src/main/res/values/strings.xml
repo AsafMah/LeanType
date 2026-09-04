@@ -1543,6 +1543,22 @@ New dictionary:
         <item>64</item>
         <item>128</item>
     </string-array>
+    <string name="cloud_ai_max_tokens_title">Cloud AI Max Tokens</string>
+    <string name="cloud_ai_max_tokens_summary">Maximum length of AI generated responses</string>
+    <string name="cloud_ai_max_tokens_custom_option">Custom…</string>
+    <string name="cloud_ai_max_tokens_custom_desc">Custom (%1$d tokens)</string>
+    <string-array name="cloud_ai_max_tokens_entries">
+        <item>Compact (1024 tokens)</item>
+        <item>Standard (2048 tokens)</item>
+        <item>Large (4096 tokens)</item>
+        <item>Extra Large (8192 tokens)</item>
+    </string-array>
+    <string-array name="cloud_ai_max_tokens_values" translatable="false">
+        <item>1024</item>
+        <item>2048</item>
+        <item>4096</item>
+        <item>8192</item>
+    </string-array>
     <!-- Toast message shown when image pasting is not supported by the app -->
     <string name="image_pasting_not_supported">This app does not support image pasting</string>
     <string name="clear_emoji_history_title">Clear emoji history</string>
