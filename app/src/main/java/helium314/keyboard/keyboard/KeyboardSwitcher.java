@@ -1137,7 +1137,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mOcrCameraView != null) {
             mOcrCameraView.release();
         }
-        OcrPluginLoader.release();
     }
 
     public void trimMemory() {

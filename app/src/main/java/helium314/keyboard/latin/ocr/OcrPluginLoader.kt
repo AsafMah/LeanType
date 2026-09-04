@@ -39,8 +39,6 @@ object OcrPluginLoader {
 
     private fun invalidateClassLoader() {
         resetRecognizer()
-        cachedClassLoader = null
-        cachedApkModified = 0L
     }
 
     @JvmStatic
@@ -205,18 +203,14 @@ object OcrPluginLoader {
             val nativeLibDir = getNativeLibDir(context, apkFile)
             extractNativeLibs(apkFile, nativeLibDir)
 
-            val classLoader = if (cachedClassLoader != null && cachedApkModified == apkLastModified) {
-                cachedClassLoader!!
-            } else {
-                val cl = PluginClassLoader(
-                    apkFile.absolutePath,
-                    context.codeCacheDir.absolutePath,
-                    nativeLibDir.absolutePath,
-                    context.classLoader
-                )
-                cachedClassLoader = cl
+            val classLoader = cachedClassLoader ?: PluginClassLoader(
+                apkFile.absolutePath,
+                context.codeCacheDir.absolutePath,
+                nativeLibDir.absolutePath,
+                context.classLoader
+            ).also {
+                cachedClassLoader = it
                 cachedApkModified = apkLastModified
-                cl
             }
 
             val clazz = classLoader.loadClass(PLUGIN_CLASS_NAME)
