@@ -71,11 +71,6 @@ fun PreferencesScreen(
             Settings.PREF_VIBRATION_AMPLITUDE_SETTINGS else null,
         if (prefs.getBoolean(Settings.PREF_VIBRATE_ON, Defaults.PREF_VIBRATE_ON))
             Settings.PREF_VIBRATE_IN_DND_MODE else null,
-        Settings.PREF_SOUND_ON,
-        if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
-            Settings.PREF_KEYPRESS_SOUND_STYLE else null,
-        if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
-            Settings.PREF_KEYPRESS_SOUND_VOLUME else null,
         Settings.PREF_SAVE_SUBTYPE_PER_APP,
         Settings.PREF_SHOW_EMOJI_DESCRIPTIONS,
         R.string.settings_category_additional_keys,
@@ -266,53 +261,7 @@ fun createPreferencesSettings(context: Context) = listOf(
                 AudioAndHapticFeedbackManager.getInstance().vibrate(safeDuration.toLong(), it.toInt())
             } }
         )
-    },
-    Setting(context, Settings.PREF_KEYPRESS_SOUND_STYLE, R.string.prefs_keypress_sound_style_settings) { setting ->
-        var showDialog by remember { mutableStateOf(false) }
-        val currentStyle = context.prefs().getString(Settings.PREF_KEYPRESS_SOUND_STYLE, Defaults.PREF_KEYPRESS_SOUND_STYLE) ?: Defaults.PREF_KEYPRESS_SOUND_STYLE
-        val styleName = when {
-            currentStyle == SoundPackUrls.SYSTEM_DEFAULT_ID -> stringResource(R.string.prefs_keypress_sound_style_system)
-            SoundPackUrls.isPreset(currentStyle) -> SoundPackUrls.getPreset(currentStyle)?.displayName ?: currentStyle
-            else -> {
-                SoundPackImporter.getManifest(context, currentStyle)?.name ?: run {
-                    val packDir = SoundPackImporter.getPackDir(context, currentStyle)
-                    val nameFile = File(packDir, "name.txt")
-                    if (nameFile.exists()) {
-                        try { nameFile.readText().trim() } catch (_: Throwable) { currentStyle }
-                    } else currentStyle
-                }
-            }
-        }
-        Preference(
-            name = setting.title,
-            description = styleName,
-            onClick = { showDialog = true }
-        )
-        if (showDialog) {
-            SoundPackDownloadDialog(
-                onDismissRequest = { showDialog = false }
-            )
-        }
-    },
-    Setting(context, Settings.PREF_KEYPRESS_SOUND_VOLUME, R.string.prefs_keypress_sound_volume_settings) { setting ->
-        val audioManager = LocalContext.current.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        SliderPreference(
-            name = setting.title,
-            key = setting.key,
-            default = Defaults.PREF_KEYPRESS_SOUND_VOLUME,
-            description = {
-                if (it < 0) stringResource(R.string.settings_system_default)
-                else (it * 100).toInt().toString()
-            },
-            range = -0.01f..1f,
-            onValueChanged = { it?.let { vol ->
-                val played = CustomSoundManager.getInstance(context).playSound(0, vol)
-                if (!played) {
-                    audioManager.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, vol)
-                }
-            } }
-        )
-    },
+    }
 )
 
 // todo (later): not good to have it hardcoded, but reading a bunch of files may be noticeably slow

@@ -51,7 +51,7 @@ object SoundPackImporter {
     }
 
     fun isPackInstalled(context: Context, packId: String): Boolean {
-        if (packId == SoundPackUrls.SYSTEM_DEFAULT_ID || SoundPackUrls.isPreset(packId)) return true
+        if (packId == SoundPackUrls.SYSTEM_DEFAULT_ID) return true
         val packDir = getPackDir(context, packId)
         if (!packDir.exists() || !packDir.isDirectory) return false
         val manifestFile = File(packDir, "pack.json")
@@ -62,24 +62,6 @@ object SoundPackImporter {
 
     fun getManifest(context: Context, packId: String): SoundPackManifest? {
         if (packId == SoundPackUrls.SYSTEM_DEFAULT_ID) return null
-        val preset = SoundPackUrls.getPreset(packId)
-        if (preset != null) {
-            return SoundPackManifest(
-                schemaVersion = 1,
-                id = preset.id,
-                name = preset.displayName,
-                summary = preset.description,
-                versionCode = 1,
-                versionName = "1.0",
-                sounds = mapOf(
-                    "keypress.default" to SoundEvent(files = listOf("sounds/${preset.id}/standard.ogg")),
-                    "keypress.space" to SoundEvent(files = listOf("sounds/${preset.id}/space.ogg")),
-                    "keypress.delete" to SoundEvent(files = listOf("sounds/${preset.id}/delete.ogg")),
-                    "keypress.return" to SoundEvent(files = listOf("sounds/${preset.id}/enter.ogg"))
-                )
-            )
-        }
-
         val packDir = getPackDir(context, packId)
         if (!packDir.exists() || !packDir.isDirectory) return null
         val manifestFile = File(packDir, "pack.json")

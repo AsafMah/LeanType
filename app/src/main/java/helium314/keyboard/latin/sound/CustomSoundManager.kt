@@ -2,7 +2,6 @@
 package helium314.keyboard.latin.sound
 
 import android.content.Context
-import android.content.res.AssetFileDescriptor
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.SoundPool
@@ -41,7 +40,7 @@ class CustomSoundManager private constructor(private val appContext: Context) {
     private var isInputViewActive: Boolean = false
 
     init {
-        // SoundPool will be initialized lazily or on onStartInputView
+        // SoundPool is loaded lazily or when keyboard opens
     }
 
     private fun createSoundPool(): SoundPool {
@@ -109,69 +108,45 @@ class CustomSoundManager private constructor(private val appContext: Context) {
         val pool = ensureSoundPool()
 
         scope.launch {
-            if (SoundPackUrls.isPreset(activePackId)) {
+            val manifest = SoundPackImporter.getManifest(appContext, activePackId)
+            val packDir = SoundPackImporter.getPackDir(appContext, activePackId)
+
+            if (manifest != null && manifest.sounds.isNotEmpty()) {
+                packMasterVolume = manifest.defaultMasterVolume.coerceIn(0f, 1f)
+                manifest.sounds.forEach { (eventName, soundEvent) ->
+                    val sampleIds = mutableListOf<Int>()
+                    val filesToLoad = soundEvent.files.take(SoundPackRules.MAX_VARIANTS_PER_EVENT)
+                    filesToLoad.forEach { relativePath ->
+                        val audioFile = File(packDir, relativePath)
+                        val sampleId = loadFileSample(pool, audioFile)
+                        if (sampleId != 0) {
+                            sampleIds.add(sampleId)
+                        }
+                    }
+                    if (sampleIds.isNotEmpty()) {
+                        loadedEvents[eventName] = LoadedSoundEvent(
+                            sampleIds = sampleIds,
+                            mode = soundEvent.mode,
+                            volume = soundEvent.volume.coerceIn(0f, 1f)
+                        )
+                    }
+                }
+            } else {
+                // Fallback to heuristic audio files
+                val audioFiles = SoundPackImporter.getPackAudioFiles(appContext, activePackId)
+                if (!audioFiles.isValid) return@launch
                 packMasterVolume = 1.0f
-                val stdId = loadAssetSample(pool, "sounds/$activePackId/standard.ogg")
-                val spcId = loadAssetSample(pool, "sounds/$activePackId/space.ogg").takeIf { it != 0 } ?: stdId
-                val delId = loadAssetSample(pool, "sounds/$activePackId/delete.ogg").takeIf { it != 0 } ?: stdId
-                val entId = loadAssetSample(pool, "sounds/$activePackId/enter.ogg").takeIf { it != 0 } ?: stdId
+
+                val stdId = audioFiles.standardFile?.let { loadFileSample(pool, it) } ?: 0
+                val spcId = audioFiles.spaceFile?.let { if (it == audioFiles.standardFile) stdId else loadFileSample(pool, it) } ?: stdId
+                val delId = audioFiles.deleteFile?.let { if (it == audioFiles.standardFile) stdId else loadFileSample(pool, it) } ?: stdId
+                val entId = audioFiles.enterFile?.let { if (it == audioFiles.standardFile) stdId else loadFileSample(pool, it) } ?: stdId
 
                 if (stdId != 0) loadedEvents["keypress.default"] = LoadedSoundEvent(listOf(stdId), SoundMode.SINGLE, 1f)
                 if (spcId != 0) loadedEvents["keypress.space"] = LoadedSoundEvent(listOf(spcId), SoundMode.SINGLE, 1f)
                 if (delId != 0) loadedEvents["keypress.delete"] = LoadedSoundEvent(listOf(delId), SoundMode.SINGLE, 1f)
                 if (entId != 0) loadedEvents["keypress.return"] = LoadedSoundEvent(listOf(entId), SoundMode.SINGLE, 1f)
-            } else {
-                val manifest = SoundPackImporter.getManifest(appContext, activePackId)
-                val packDir = SoundPackImporter.getPackDir(appContext, activePackId)
-
-                if (manifest != null && manifest.sounds.isNotEmpty()) {
-                    packMasterVolume = manifest.defaultMasterVolume.coerceIn(0f, 1f)
-                    manifest.sounds.forEach { (eventName, soundEvent) ->
-                        val sampleIds = mutableListOf<Int>()
-                        val filesToLoad = soundEvent.files.take(SoundPackRules.MAX_VARIANTS_PER_EVENT)
-                        filesToLoad.forEach { relativePath ->
-                            val audioFile = File(packDir, relativePath)
-                            val sampleId = loadFileSample(pool, audioFile)
-                            if (sampleId != 0) {
-                                sampleIds.add(sampleId)
-                            }
-                        }
-                        if (sampleIds.isNotEmpty()) {
-                            loadedEvents[eventName] = LoadedSoundEvent(
-                                sampleIds = sampleIds,
-                                mode = soundEvent.mode,
-                                volume = soundEvent.volume.coerceIn(0f, 1f)
-                            )
-                        }
-                    }
-                } else {
-                    // Fallback to audio files
-                    val audioFiles = SoundPackImporter.getPackAudioFiles(appContext, activePackId)
-                    if (!audioFiles.isValid) return@launch
-                    packMasterVolume = 1.0f
-
-                    val stdId = audioFiles.standardFile?.let { loadFileSample(pool, it) } ?: 0
-                    val spcId = audioFiles.spaceFile?.let { if (it == audioFiles.standardFile) stdId else loadFileSample(pool, it) } ?: stdId
-                    val delId = audioFiles.deleteFile?.let { if (it == audioFiles.standardFile) stdId else loadFileSample(pool, it) } ?: stdId
-                    val entId = audioFiles.enterFile?.let { if (it == audioFiles.standardFile) stdId else loadFileSample(pool, it) } ?: stdId
-
-                    if (stdId != 0) loadedEvents["keypress.default"] = LoadedSoundEvent(listOf(stdId), SoundMode.SINGLE, 1f)
-                    if (spcId != 0) loadedEvents["keypress.space"] = LoadedSoundEvent(listOf(spcId), SoundMode.SINGLE, 1f)
-                    if (delId != 0) loadedEvents["keypress.delete"] = LoadedSoundEvent(listOf(delId), SoundMode.SINGLE, 1f)
-                    if (entId != 0) loadedEvents["keypress.return"] = LoadedSoundEvent(listOf(entId), SoundMode.SINGLE, 1f)
-                }
             }
-        }
-    }
-
-    private fun loadAssetSample(pool: SoundPool, assetPath: String): Int {
-        return try {
-            appContext.assets.openFd(assetPath).use { afd ->
-                pool.load(afd, 1)
-            }
-        } catch (e: Throwable) {
-            Log.e(TAG, "Error loading asset sample from $assetPath", e)
-            0
         }
     }
 
@@ -207,7 +182,7 @@ class CustomSoundManager private constructor(private val appContext: Context) {
         }
 
         val eventName = when (code) {
-            KeyCode.DELETE -> "keypress.delete"
+            KeyCode.DELETE, KeyCode.DELETE_WORD, KeyCode.FORWARD_DELETE, KeyCode.FORWARD_DELETE_WORD -> "keypress.delete"
             Constants.CODE_SPACE -> "keypress.space"
             Constants.CODE_ENTER -> "keypress.return"
             KeyCode.SHIFT, KeyCode.CAPS_LOCK -> "keypress.shift"
@@ -261,47 +236,32 @@ class CustomSoundManager private constructor(private val appContext: Context) {
         val pPool = previewSoundPool ?: createSoundPool().also { previewSoundPool = it }
 
         scope.launch {
-            if (SoundPackUrls.isPreset(packId)) {
-                val assetPath = "sounds/$packId/standard.ogg"
-                val sampleId = previewCache.getOrPut(assetPath) {
-                    try {
-                        appContext.assets.openFd(assetPath).use { afd ->
-                            pPool.load(afd, 1)
-                        }
-                    } catch (_: Throwable) { 0 }
+            val manifest = SoundPackImporter.getManifest(appContext, packId)
+            val packDir = SoundPackImporter.getPackDir(appContext, packId)
+
+            var fileToPlay: File? = null
+            if (manifest?.preview != null) {
+                fileToPlay = File(packDir, manifest.preview)
+            }
+            if (fileToPlay == null || !fileToPlay.exists()) {
+                val defaultFiles = manifest?.sounds?.get("keypress.default")?.files
+                if (!defaultFiles.isNullOrEmpty()) {
+                    fileToPlay = File(packDir, defaultFiles.first())
+                }
+            }
+            if (fileToPlay == null || !fileToPlay.exists()) {
+                val files = SoundPackImporter.getPackAudioFiles(appContext, packId)
+                fileToPlay = files.standardFile ?: files.spaceFile ?: files.deleteFile ?: files.enterFile
+            }
+
+            if (fileToPlay != null && fileToPlay.exists()) {
+                val path = fileToPlay.absolutePath
+                val sampleId = previewCache.getOrPut(path) {
+                    loadFileSample(pPool, fileToPlay)
                 }
                 if (sampleId != 0) {
                     val actualVol = if (volume < 0f) 0.8f else volume.coerceIn(0.1f, 1f)
                     pPool.play(sampleId, actualVol, actualVol, 1, 0, 1.0f)
-                }
-            } else {
-                val manifest = SoundPackImporter.getManifest(appContext, packId)
-                val packDir = SoundPackImporter.getPackDir(appContext, packId)
-
-                var fileToPlay: File? = null
-                if (manifest?.preview != null) {
-                    fileToPlay = File(packDir, manifest.preview)
-                }
-                if (fileToPlay == null || !fileToPlay.exists()) {
-                    val defaultFiles = manifest?.sounds?.get("keypress.default")?.files
-                    if (!defaultFiles.isNullOrEmpty()) {
-                        fileToPlay = File(packDir, defaultFiles.first())
-                    }
-                }
-                if (fileToPlay == null || !fileToPlay.exists()) {
-                    val files = SoundPackImporter.getPackAudioFiles(appContext, packId)
-                    fileToPlay = files.standardFile ?: files.spaceFile ?: files.deleteFile ?: files.enterFile
-                }
-
-                if (fileToPlay != null && fileToPlay.exists()) {
-                    val path = fileToPlay.absolutePath
-                    val sampleId = previewCache.getOrPut(path) {
-                        loadFileSample(pPool, fileToPlay)
-                    }
-                    if (sampleId != 0) {
-                        val actualVol = if (volume < 0f) 0.8f else volume.coerceIn(0.1f, 1f)
-                        pPool.play(sampleId, actualVol, actualVol, 1, 0, 1.0f)
-                    }
                 }
             }
         }

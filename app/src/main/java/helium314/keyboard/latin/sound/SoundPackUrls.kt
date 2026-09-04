@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.sound
 
-import android.content.Context
 import android.util.Log
 import kotlinx.serialization.json.Json
 import java.net.HttpURLConnection
@@ -23,78 +22,61 @@ object SoundPackUrls {
 
     const val DEFAULT_INDEX_URL = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/index.json"
 
-    val PRESET_PACKS = listOf(
-        SoundPackInfo(
-            id = "ios",
-            displayName = "iOS / Modern Tap",
-            description = "Crisp, subtle tactile key click sound",
-            isPreset = true
+    // Default fallback remote catalog if offline or index cannot be reached
+    val FALLBACK_CATALOG = listOf(
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.mechanical_thock",
+            name = "Mechanical Thock",
+            summary = "Deep, lubricated switch thock with heavy spacebar clack.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/mechanical_thock.zip",
+            sizeBytes = 18180
         ),
-        SoundPackInfo(
-            id = "mechanical_cherry",
-            displayName = "Mechanical (Cherry MX)",
-            description = "Tactile mechanical switch click and deep spacebar clack",
-            isPreset = true
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.box_jade_clicky",
+            name = "Kailh Box Jade Clicky",
+            summary = "Ultra-crisp high-pitched tactile click bar switches.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/box_jade_clicky.zip",
+            sizeBytes = 18675
         ),
-        SoundPackInfo(
-            id = "mechanical_thock",
-            displayName = "Thocky Mechanical",
-            description = "Deep, warm, lubricated switch thock and heavy spacebar",
-            isPreset = true
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.vintage_typewriter",
+            name = "Vintage Royal Typewriter",
+            summary = "Classic cast-iron hammer strike with newline carriage chime on Enter.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/vintage_typewriter.zip",
+            sizeBytes = 19910
         ),
-        SoundPackInfo(
-            id = "vintage_typewriter",
-            displayName = "Vintage Typewriter",
-            description = "Classic metal hammer strike with carriage return enter chime",
-            isPreset = true
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.arcade_8bit",
+            name = "8-Bit Retro Arcade",
+            summary = "Nostalgic chiptune square-wave gaming blips and chirps.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/arcade_8bit.zip",
+            sizeBytes = 19746
         ),
-        SoundPackInfo(
-            id = "retro_terminal",
-            displayName = "Retro CRT Terminal",
-            description = "1980s IBM mainframe beamspring solenoid mechanical clack",
-            isPreset = true
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.bubble_pop",
+            name = "Water Bubble / Pop",
+            summary = "Satisfying soft liquid bubble pop feedback.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/bubble_pop.zip",
+            sizeBytes = 16920
         ),
-        SoundPackInfo(
-            id = "pop_bubble",
-            displayName = "Bubble / Pop",
-            description = "Satisfying soft bubbly pop and drop feedback",
-            isPreset = true
-        ),
-        SoundPackInfo(
-            id = "soft_pudding",
-            displayName = "Soft Velvet / Pudding",
-            description = "Gentle, muted, pillow-soft quiet tapping for low noise",
-            isPreset = true
-        ),
-        SoundPackInfo(
-            id = "wood_minimal",
-            displayName = "Woodblock Minimal",
-            description = "Natural acoustic wood tap key sound",
-            isPreset = true
-        ),
-        SoundPackInfo(
-            id = "marimba_tone",
-            displayName = "Acoustic Marimba",
-            description = "Warm melodic wooden mallet bar resonance",
-            isPreset = true
-        ),
-        SoundPackInfo(
-            id = "modern_tick",
-            displayName = "Modern Crisp Tick",
-            description = "Ultra-minimal, high-precision electronic micro tick",
-            isPreset = true
-        ),
-        SoundPackInfo(
-            id = "laser_scifi",
-            displayName = "Sci-Fi Cyberpunk",
-            description = "Futuristic digital holographic laser pulse click",
-            isPreset = true
-        ),
-        SoundPackInfo(
-            id = "arcade_8bit",
-            displayName = "8-Bit Chiptune Arcade",
-            description = "Retro pixel gaming square-wave beep and blip sounds",
-            isPreset = true
+        RemoteSoundPack(
+            id = "dev.leantype.sounds.woodblock_teak",
+            name = "Teak Woodblock Minimal",
+            summary = "Natural acoustic wooden mallet resonance.",
+            author = "LeanType Sound Lab",
+            versionName = "1.0.0",
+            downloadUrl = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/dist/woodblock_teak.zip",
+            sizeBytes = 18335
         )
     )
 
@@ -103,13 +85,9 @@ object SoundPackUrls {
         isLenient = true
     }
 
-    fun getPreset(id: String): SoundPackInfo? {
-        return PRESET_PACKS.firstOrNull { it.id == id }
-    }
+    fun isPreset(id: String): Boolean = false
 
-    fun isPreset(id: String): Boolean {
-        return PRESET_PACKS.any { it.id == id }
-    }
+    fun getPreset(id: String): SoundPackInfo? = null
 
     fun fetchRemoteIndex(indexUrl: String = DEFAULT_INDEX_URL): List<RemoteSoundPack> {
         return try {
@@ -124,13 +102,13 @@ object SoundPackUrls {
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 val body = connection.inputStream.bufferedReader().use { it.readText() }
                 val parsed = json.decodeFromString<RemoteSoundPackIndex>(body)
-                parsed.packs
+                if (parsed.packs.isNotEmpty()) parsed.packs else FALLBACK_CATALOG
             } else {
-                emptyList()
+                FALLBACK_CATALOG
             }
         } catch (e: Throwable) {
             Log.w(TAG, "Failed to fetch remote sound pack index from $indexUrl: ${e.message}")
-            emptyList()
+            FALLBACK_CATALOG
         }
     }
 }

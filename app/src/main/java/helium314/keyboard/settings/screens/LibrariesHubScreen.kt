@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.screens
 
+import android.content.Context
+import android.media.AudioManager
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -15,10 +17,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -29,11 +31,22 @@ import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.handwriting.HandwritingLoader
 import helium314.keyboard.latin.ocr.OcrPluginLoader
+import helium314.keyboard.latin.settings.Defaults
+import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.sound.CustomSoundManager
+import helium314.keyboard.latin.sound.SoundPackImporter
+import helium314.keyboard.latin.sound.SoundPackUrls
 import helium314.keyboard.latin.translation.TranslationLoader
+import helium314.keyboard.latin.utils.getActivity
+import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.NextScreenIcon
 import helium314.keyboard.settings.SearchSettingsScreen
+import helium314.keyboard.settings.SettingsActivity
+import helium314.keyboard.settings.dialogs.SoundPackDownloadDialog
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.PreferenceCategory
+import helium314.keyboard.settings.preferences.SliderPreference
+import helium314.keyboard.settings.preferences.SwitchPreference
 
 @Composable
 fun LibrariesHubScreen(
@@ -45,7 +58,21 @@ fun LibrariesHubScreen(
     onClickAIIntegration: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val prefs = remember { context.prefs() }
     val uriHandler = LocalUriHandler.current
+
+    val b = (context.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
+    if ((b?.value ?: 0) < 0) {
+        // Trigger recomposition on preference changes
+    }
+
+    val soundEnabled = prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON)
+    var showSoundPackDialog by remember { mutableStateOf(false) }
+    val currentSoundStyle = prefs.getString(Settings.PREF_KEYPRESS_SOUND_STYLE, Defaults.PREF_KEYPRESS_SOUND_STYLE) ?: Defaults.PREF_KEYPRESS_SOUND_STYLE
+    val soundStyleName = when {
+        currentSoundStyle == SoundPackUrls.SYSTEM_DEFAULT_ID -> stringResource(R.string.prefs_keypress_sound_style_system)
+        else -> SoundPackImporter.getManifest(context, currentSoundStyle)?.name ?: currentSoundStyle
+    }
 
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -158,7 +185,61 @@ fun LibrariesHubScreen(
                     }
                 }
 
-                // Section 2: Documentation
+                // Section 2: Keypress Audio & Sound Packs
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        PreferenceCategory(stringResource(R.string.sound_packs_title))
+
+                        SwitchPreference(
+                            name = stringResource(R.string.sound_on_keypress),
+                            key = Settings.PREF_SOUND_ON,
+                            default = Defaults.PREF_SOUND_ON,
+                            icon = R.drawable.ic_play_arrow
+                        )
+
+                        if (soundEnabled) {
+                            Preference(
+                                name = stringResource(R.string.prefs_keypress_sound_style_settings),
+                                description = soundStyleName,
+                                onClick = { showSoundPackDialog = true },
+                                icon = R.drawable.ic_play_arrow
+                            ) { NextScreenIcon() }
+
+                            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                            SliderPreference(
+                                name = stringResource(R.string.prefs_keypress_sound_volume_settings),
+                                key = Settings.PREF_KEYPRESS_SOUND_VOLUME,
+                                default = Defaults.PREF_KEYPRESS_SOUND_VOLUME,
+                                description = {
+                                    if (it < 0) stringResource(R.string.settings_system_default)
+                                    else (it * 100).toInt().toString()
+                                },
+                                range = -0.01f..1f,
+                                onValueChanged = { it?.let { vol ->
+                                    val played = CustomSoundManager.getInstance(context).playSound(0, vol)
+                                    if (!played) {
+                                        audioManager?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, vol)
+                                    }
+                                } }
+                            )
+                        }
+                    }
+                }
+
+                if (showSoundPackDialog) {
+                    SoundPackDownloadDialog(
+                        onDismissRequest = { showSoundPackDialog = false }
+                    )
+                }
+
+                // Section 3: Documentation
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()

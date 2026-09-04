@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.dialogs
 
+import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -26,6 +27,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,7 +53,6 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.sound.CustomSoundManager
 import helium314.keyboard.latin.sound.RemoteSoundPack
 import helium314.keyboard.latin.sound.SoundPackImporter
-import helium314.keyboard.latin.sound.SoundPackInfo
 import helium314.keyboard.latin.sound.SoundPackUrls
 import helium314.keyboard.latin.utils.prefs
 import kotlinx.coroutines.Dispatchers
@@ -71,9 +72,10 @@ fun SoundPackDownloadDialog(
         mutableStateOf(prefs.getString(Settings.PREF_KEYPRESS_SOUND_STYLE, Defaults.PREF_KEYPRESS_SOUND_STYLE) ?: Defaults.PREF_KEYPRESS_SOUND_STYLE)
     }
 
+    var searchQuery by remember { mutableStateOf("") }
     var customPacks by remember { mutableStateOf(SoundPackImporter.getInstalledCustomPacks(context)) }
-    var remotePacks by remember { mutableStateOf<List<RemoteSoundPack>>(emptyList()) }
-    var isLoadingRemote by remember { mutableStateOf(!isOffline) }
+    var remotePacks by remember { mutableStateOf<List<RemoteSoundPack>>(SoundPackUrls.FALLBACK_CATALOG) }
+    var isLoadingRemote by remember { mutableStateOf(false) }
     val downloadingMap = remember { mutableStateMapOf<String, Boolean>() }
 
     fun refreshCustomPacks() {
@@ -82,6 +84,7 @@ fun SoundPackDownloadDialog(
 
     LaunchedEffect(Unit) {
         if (!isOffline) {
+            isLoadingRemote = true
             withContext(Dispatchers.IO) {
                 val fetched = SoundPackUrls.fetchRemoteIndex()
                 withContext(Dispatchers.Main) {
@@ -136,7 +139,7 @@ fun SoundPackDownloadDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Select sound profile or import pack",
+                        text = if (isOffline) "Download in browser, then import .zip" else "Download in app or import .zip",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f).padding(end = 8.dp)
@@ -146,117 +149,67 @@ fun SoundPackDownloadDialog(
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
-                        Text(stringResource(R.string.sound_pack_import_button), style = MaterialTheme.typography.labelMedium)
+                        Text("Import .zip", style = MaterialTheme.typography.labelMedium)
                     }
                 }
 
-                LazyColumn(
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search sound pack…") },
+                    singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    // System Default Item
-                    item(key = SoundPackUrls.SYSTEM_DEFAULT_ID) {
-                        val isSelected = currentSelectedStyle == SoundPackUrls.SYSTEM_DEFAULT_ID
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable { selectPack(SoundPackUrls.SYSTEM_DEFAULT_ID) }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = { selectPack(SoundPackUrls.SYSTEM_DEFAULT_ID) }
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.prefs_keypress_sound_style_system),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                    Text(
-                                        text = "Default system keypress click sound",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { CustomSoundManager.getInstance(context).previewSound(SoundPackUrls.SYSTEM_DEFAULT_ID) },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_play_arrow),
-                                        contentDescription = "Preview",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
+                        .padding(bottom = 8.dp)
+                )
+
+                if (isLoadingRemote && remotePacks.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
                     }
-
-                    // Custom Installed Packs Section (if any)
-                    if (customPacks.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Installed Sound Packs",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 4.dp)
-                            )
-                        }
-
-                        items(customPacks, key = { it.id }) { pack ->
-                            val isSelected = currentSelectedStyle == pack.id
-
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .clickable { selectPack(pack.id) }
-                            ) {
-                                Row(
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        // System Default Item
+                        if (searchQuery.isBlank() || "System default".contains(searchQuery, ignoreCase = true)) {
+                            item(key = SoundPackUrls.SYSTEM_DEFAULT_ID) {
+                                val isSelected = currentSelectedStyle == SoundPackUrls.SYSTEM_DEFAULT_ID
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(vertical = 4.dp)
+                                        .clickable { selectPack(SoundPackUrls.SYSTEM_DEFAULT_ID) }
                                 ) {
-                                    RadioButton(
-                                        selected = isSelected,
-                                        onClick = { selectPack(pack.id) }
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                                        Text(
-                                            text = pack.displayName,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = isSelected,
+                                            onClick = { selectPack(SoundPackUrls.SYSTEM_DEFAULT_ID) }
                                         )
-                                        val subtitle = buildString {
-                                            pack.author?.let { append("$it • ") }
-                                            pack.versionName?.let { append("v$it • ") }
-                                            append(pack.description)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.prefs_keypress_sound_style_system),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                            Text(
+                                                text = "Default system keypress click sound",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
-                                        Text(
-                                            text = subtitle,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         IconButton(
-                                            onClick = { CustomSoundManager.getInstance(context).previewSound(pack.id) },
+                                            onClick = { CustomSoundManager.getInstance(context).previewSound(SoundPackUrls.SYSTEM_DEFAULT_ID) },
                                             modifier = Modifier.size(36.dp)
                                         ) {
                                             Icon(
@@ -266,93 +219,107 @@ fun SoundPackDownloadDialog(
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
-                                        Button(
-                                            onClick = {
-                                                SoundPackImporter.deletePack(context, pack.id)
-                                                refreshCustomPacks()
-                                                if (currentSelectedStyle == pack.id) {
-                                                    selectPack(SoundPackUrls.SYSTEM_DEFAULT_ID)
-                                                }
-                                                Toast.makeText(context, "Deleted ${pack.displayName}", Toast.LENGTH_SHORT).show()
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                            modifier = Modifier.height(28.dp)
-                                        ) {
-                                            Text("Delete", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Installed Custom Packs Section
+                        val filteredCustom = customPacks.filter {
+                            searchQuery.isBlank() || it.displayName.contains(searchQuery, ignoreCase = true) || it.description.contains(searchQuery, ignoreCase = true)
+                        }
+
+                        if (filteredCustom.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Installed Sound Packs",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 4.dp)
+                                )
+                            }
+
+                            items(filteredCustom, key = { it.id }) { pack ->
+                                val isSelected = currentSelectedStyle == pack.id
+
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .clickable { selectPack(pack.id) }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = isSelected,
+                                            onClick = { selectPack(pack.id) }
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                            Text(
+                                                text = pack.displayName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                            val subtitle = buildString {
+                                                pack.author?.let { append("$it • ") }
+                                                pack.versionName?.let { append("v$it • ") }
+                                                append(pack.description)
+                                            }
+                                            Text(
+                                                text = subtitle,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            IconButton(
+                                                onClick = { CustomSoundManager.getInstance(context).previewSound(pack.id) },
+                                                modifier = Modifier.size(36.dp)
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_play_arrow),
+                                                    contentDescription = "Preview",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                            Button(
+                                                onClick = {
+                                                    SoundPackImporter.deletePack(context, pack.id)
+                                                    refreshCustomPacks()
+                                                    if (currentSelectedStyle == pack.id) {
+                                                        selectPack(SoundPackUrls.SYSTEM_DEFAULT_ID)
+                                                    }
+                                                    Toast.makeText(context, "Deleted ${pack.displayName}", Toast.LENGTH_SHORT).show()
+                                                },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                                ),
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                                modifier = Modifier.height(28.dp)
+                                            ) {
+                                                Text("Delete", style = MaterialTheme.typography.labelSmall)
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // Built-in Presets Header
-                    item {
-                        Text(
-                            text = "Built-in Sound Presets",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 4.dp)
-                        )
-                    }
-
-                    // Presets List
-                    items(SoundPackUrls.PRESET_PACKS, key = { it.id }) { preset ->
-                        val isSelected = currentSelectedStyle == preset.id
-
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable { selectPack(preset.id) }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = { selectPack(preset.id) }
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                                    Text(
-                                        text = preset.displayName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                    Text(
-                                        text = preset.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { CustomSoundManager.getInstance(context).previewSound(preset.id) },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_play_arrow),
-                                        contentDescription = "Preview",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
+                        // Available Online Sound Packs Section
+                        val availableRemote = remotePacks.filter { rp ->
+                            customPacks.none { it.id == rp.id } &&
+                                (searchQuery.isBlank() || rp.name.contains(searchQuery, ignoreCase = true) || (rp.summary?.contains(searchQuery, ignoreCase = true) == true))
                         }
-                    }
 
-                    // Available Online Packs Section (if online flavor and remote packs exist)
-                    if (!isOffline && remotePacks.isNotEmpty()) {
-                        val availableRemote = remotePacks.filter { rp -> customPacks.none { it.id == rp.id } }
                         if (availableRemote.isNotEmpty()) {
                             item {
                                 Text(
@@ -414,17 +381,25 @@ fun SoundPackDownloadDialog(
                                         } else {
                                             Button(
                                                 onClick = {
-                                                    downloadingMap[rPack.id] = true
-                                                    scope.launch(Dispatchers.IO) {
-                                                        val ok = SoundPackImporter.downloadAndInstall(context, rPack)
-                                                        withContext(Dispatchers.Main) {
-                                                            downloadingMap[rPack.id] = false
-                                                            if (ok) {
-                                                                refreshCustomPacks()
-                                                                selectPack(rPack.id)
-                                                                Toast.makeText(context, "Downloaded and activated ${rPack.name}", Toast.LENGTH_SHORT).show()
-                                                            } else {
-                                                                Toast.makeText(context, "Download failed for ${rPack.name}", Toast.LENGTH_SHORT).show()
+                                                    if (isOffline) {
+                                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(rPack.downloadUrl)).apply {
+                                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                        }
+                                                        context.startActivity(intent)
+                                                        Toast.makeText(context, "Downloading in browser… import .zip once finished", Toast.LENGTH_LONG).show()
+                                                    } else {
+                                                        downloadingMap[rPack.id] = true
+                                                        scope.launch(Dispatchers.IO) {
+                                                            val ok = SoundPackImporter.downloadAndInstall(context, rPack)
+                                                            withContext(Dispatchers.Main) {
+                                                                downloadingMap[rPack.id] = false
+                                                                if (ok) {
+                                                                    refreshCustomPacks()
+                                                                    selectPack(rPack.id)
+                                                                    Toast.makeText(context, "Downloaded and activated ${rPack.name}", Toast.LENGTH_SHORT).show()
+                                                                } else {
+                                                                    Toast.makeText(context, "Download failed for ${rPack.name}", Toast.LENGTH_SHORT).show()
+                                                                }
                                                             }
                                                         }
                                                     }
