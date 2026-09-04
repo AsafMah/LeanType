@@ -1887,7 +1887,27 @@ public final class InputLogic {
                 StatsUtils.onBackspacePressed(1);
             }
             if (mWordComposer.isComposingWord()) {
-                setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
+                final String typedWord = mWordComposer.getTypedWord();
+                setComposingTextInternal(getTextWithUnderline(typedWord), 1);
+                if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
+                        && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
+                    final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+                    if (textBefore != null) {
+                        final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
+                                helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(typedWord, textBefore.toString(), mLatinIME);
+                        if (result != null) {
+                            if (mJustRevertedExpandedShortcut == null
+                                    || !result.getMatchedString().equalsIgnoreCase(mJustRevertedExpandedShortcut)) {
+                                if (result.getPrefixLength() > 0) {
+                                    mConnection.commitText("", 1);
+                                    mConnection.deleteTextBeforeCursor(result.getPrefixLength());
+                                }
+                                commitExpandedText(result.getMatchedString(), result.getExpandedText());
+                                resetComposingState(true);
+                            }
+                        }
+                    }
+                }
             } else {
                 if (wasBatchMode) {
                     mConnection.commitText("", 1);
