@@ -1,16 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.sound
 
+import android.content.Context
+import android.util.Log
+import kotlinx.serialization.json.Json
+import java.net.HttpURLConnection
+import java.net.URL
+
 data class SoundPackInfo(
     val id: String,
     val displayName: String,
     val description: String,
+    val author: String? = null,
+    val versionName: String? = null,
     val isPreset: Boolean = false,
     val isCustom: Boolean = false
 )
 
 object SoundPackUrls {
+    private const val TAG = "SoundPackUrls"
     const val SYSTEM_DEFAULT_ID = "system"
+
+    const val DEFAULT_INDEX_URL = "https://raw.githubusercontent.com/LeanBitLab/leantype-soundpacks/main/index.json"
 
     val PRESET_PACKS = listOf(
         SoundPackInfo(
@@ -87,11 +98,39 @@ object SoundPackUrls {
         )
     )
 
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
     fun getPreset(id: String): SoundPackInfo? {
         return PRESET_PACKS.firstOrNull { it.id == id }
     }
 
     fun isPreset(id: String): Boolean {
         return PRESET_PACKS.any { it.id == id }
+    }
+
+    fun fetchRemoteIndex(indexUrl: String = DEFAULT_INDEX_URL): List<RemoteSoundPack> {
+        return try {
+            val url = URL(indexUrl)
+            val connection = (url.openConnection() as HttpURLConnection).apply {
+                connectTimeout = 8000
+                readTimeout = 8000
+                requestMethod = "GET"
+                setRequestProperty("Accept", "application/json")
+                setRequestProperty("User-Agent", "LeanType")
+            }
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                val parsed = json.decodeFromString<RemoteSoundPackIndex>(body)
+                parsed.packs
+            } else {
+                emptyList()
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "Failed to fetch remote sound pack index from $indexUrl: ${e.message}")
+            emptyList()
+        }
     }
 }

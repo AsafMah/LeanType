@@ -166,4 +166,23 @@ public final class AudioAndHapticFeedbackManager {
         mDoNotDisturb = doNotDisturb;
         mSoundOn = reevaluateIfSoundIsOn();
     }
+
+    public void onStartInputView() {
+        if (mContext != null && mSoundOn) {
+            CustomSoundManager.Companion.getInstance(mContext).onStartInputView();
+        }
+    }
+
+    public void onFinishInputView() {
+        if (mContext != null) {
+            CustomSoundManager.Companion.getInstance(mContext).onFinishInputView();
+        }
+    }
+
+    public void onDestroy() {
+        if (mContext != null) {
+            CustomSoundManager.Companion.getInstance(mContext).onDestroy();
+        }
+    }
 }
+

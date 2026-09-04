@@ -274,11 +274,13 @@ fun createPreferencesSettings(context: Context) = listOf(
             currentStyle == SoundPackUrls.SYSTEM_DEFAULT_ID -> stringResource(R.string.prefs_keypress_sound_style_system)
             SoundPackUrls.isPreset(currentStyle) -> SoundPackUrls.getPreset(currentStyle)?.displayName ?: currentStyle
             else -> {
-                val packDir = SoundPackImporter.getPackDir(context, currentStyle)
-                val nameFile = File(packDir, "name.txt")
-                if (nameFile.exists()) {
-                    try { nameFile.readText().trim() } catch (_: Throwable) { currentStyle }
-                } else currentStyle
+                SoundPackImporter.getManifest(context, currentStyle)?.name ?: run {
+                    val packDir = SoundPackImporter.getPackDir(context, currentStyle)
+                    val nameFile = File(packDir, "name.txt")
+                    if (nameFile.exists()) {
+                        try { nameFile.readText().trim() } catch (_: Throwable) { currentStyle }
+                    } else currentStyle
+                }
             }
         }
         Preference(

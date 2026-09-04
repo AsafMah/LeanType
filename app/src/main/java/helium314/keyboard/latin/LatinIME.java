@@ -836,6 +836,7 @@ public class LatinIME extends InputMethodService implements
         try { unregisterReceiver(mDictionaryDumpBroadcastReceiver); } catch (Exception e) {}
         try { unregisterReceiver(mRestartAfterDeviceUnlockReceiver); } catch (Exception e) {}
         mStatsUtilsManager.onDestroy(this /* context */);
+        AudioAndHapticFeedbackManager.getInstance().onDestroy();
         super.onDestroy();
         deallocateMemory();
     }
@@ -1139,6 +1140,7 @@ public class LatinIME extends InputMethodService implements
         }
 
         mClipboardHistoryManager.onStartInputView();
+        AudioAndHapticFeedbackManager.getInstance().onStartInputView();
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for
         // which we
@@ -1381,6 +1383,7 @@ public class LatinIME extends InputMethodService implements
         }
         mOtpSuggestionManager.stop();
         mClipboardHistoryManager.onFinishInputView();
+        AudioAndHapticFeedbackManager.getInstance().onFinishInputView();
         cleanupInternalStateForFinishInput();
     }
 
