@@ -32,6 +32,9 @@ LeanType combines a lightweight, privacy-focused keyboard foundation with cuttin
 | 🎨 **[Custom Layout Profiles](#21-custom-layout-profiles)** | Save up to 5 custom layout profiles with persistent slot tracking |
 | 🔄 **[In-App Streaming Self-Updater](#22-in-app-streaming-self-updater)** | Direct GitHub release checks and streaming APK installer |
 | 📦 **[Flavor Architecture & Privacy](#23-flavor-architecture--privacy)** | Breakdown of Standard Full, Standard FOSS, Offline, and Lite |
+| 📷 **[Offline Camera OCR & Screenshot Extraction](#24-offline-camera-ocr--screenshot-extraction)** | In-keyboard camera viewfinder, automated screenshot extraction pill, and advanced formatting cleaners |
+| 🔢 **[Inline Math Calculation Suggestions](#25-inline-math-calculation-suggestions)** | High-precision arithmetic expression evaluator on typing `=` with 1-tap replacement |
+| 🎵 **[Custom Sound Packs & Audio Customization](#26-custom-sound-packs--audio-customization)** | Zero-latency key audio engine, 12+ built-in presets, remote repository catalog, and `.zip` imports |
 
 ---
 
@@ -45,6 +48,9 @@ LeanType combines a lightweight, privacy-focused keyboard foundation with cuttin
 | **Multi-Mode In-Keyboard Translation** | Translate text on-device (Offline ML Kit), via Translation Plugin, or Cloud/Local AI with auto-fallback. | `Translation > Translation Mode` |
 | **Whisper Voice Typing** | On-device speech-to-text with quantized multilingual Whisper models and audio visualizer. | `Voice typing > Whisper Speech Models` |
 | **Handwriting Recognition** | Draw characters on a dedicated canvas with in-app model manager (Standard Full flavor). | `Handwriting > Handwriting recognition` |
+| **Offline Camera & Screenshot OCR** | Live in-keyboard camera scanner and screenshot suggestion pill with rich text cleaners (casing, join styles, dehyphenation). | `OCR & Text Extraction` / `Plugins > OCR` |
+| **Inline Math Calculation** | Instant arithmetic calculation suggestions on typing `=` with 1-tap expression replacement. | `Text correction > Inline math calculation` |
+| **Custom Sound Packs** | Zero-latency key audio engine with 12+ built-in presets, remote catalog downloads, and `.zip` import. | `Plugins > Sound` / `Preferences > Sound on keypress` |
 | **Text Editing Panel** | Precision DPAD arrow navigation, Shift selection mode, and clipboard shortcuts. | Toolbar > Text Editing Icon |
 | **Auto-Spanning Toolbar** | Dynamically expands and balances toolbar keys symmetrically across device widths. | `Appearance > Toolbar auto-spacing` |
 | **Touchpad Mode** | Swipe up on Spacebar to activate full cursor control and laptop-style touchpad gestures. | `Gesture typing > Vertical spacebar swipe` |
@@ -372,11 +378,85 @@ Map the custom keycode `-10076` (`SWITCH_TO_USER_IME`) to any toolbar key:
  
 LeanType is published in **3 purpose-built flavors**:
  
-| Flavor | Cloud AI | Offline AI | Voice Input | Handwriting | Translation | In-App Updates | Internet Permission | Min SDK | Approx Size |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Standard Full** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ✅ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~10.8 MB** |
-| **Standard (FOSS)** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ❌ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~10.8 MB** |
-| **Offline** | ❌ | ✅ *(Plugin on 8.0+)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 21 (5.0+) | **~9.8 MB** |
+| Flavor | Cloud AI | Offline AI | Voice Input | Handwriting | OCR Extraction | Translation | In-App Updates | Internet Permission | Min SDK | Approx Size |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Standard Full** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ✅ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~10.8 MB** |
+| **Standard (FOSS)** | ✅ | ❌ | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin/AI)* | ❌ | 🌐 Optional *(Opt-in)* | SDK 23 (6.0+) | **~10.8 MB** |
+| **Offline** | ❌ | ✅ *(Plugin on 8.0+)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ✅ *(Plugin)* | ❌ | 🚫 **None** | SDK 21 (5.0+) | **~9.8 MB** |
 
 > [!TIP]
 > **Concurrent Installation**: The `offline` (`com.leanbitlab.leantype.offline`) build uses a unique package ID, allowing you to install it alongside `standardfull` on the same device!
+
+---
+
+## 24. Offline Camera OCR & Screenshot Extraction
+
+LeanType features an on-device OCR engine powered by ML Kit via the [LeanType OCR Plugin](https://github.com/LeanBitLab/LeanType-Ocr-Plugin) (supported across all flavors), enabling instant text extraction from live camera feeds or captured screenshots with zero internet connectivity.
+
+### 📷 In-Keyboard Camera Scanner
+- Tap the **Camera / OCR** key on the toolbar to open a live camera viewfinder embedded directly inside the keyboard window.
+- **Controls**: Top flash toggle, real-time autofocus, shutter capture button, and gallery image picker fallback.
+- **Instant Result Strip**: Displays recognized text immediately with 1-tap options to copy, insert into the current input field, or apply transformations.
+
+### 🖼️ Screenshot Extraction Suggestion Pill
+- Automatically detects screenshots captured on your device (within 4 minutes) and renders a unified compact pill on the suggestion strip: `[OCR] [Screenshot] [X]`.
+- Tap **`[OCR]`** to extract text directly from the screenshot without leaving your current app.
+- Tap **`[Screenshot]`** to paste or share the image directly.
+- Tap **`[X]`** to dismiss the suggestion.
+
+### 🛠️ Advanced Text Formatting Cleaners
+Customize how extracted text is processed and formatted before insertion:
+- **Casing Transformations**: Original, UPPERCASE, lowercase, Title Case, or Sentence case.
+- **Line Joining Modes**: Keep original line breaks, merge all lines into a single continuous paragraph, or automatically rejoin hyphenated words split across lines (`anti-` + `gravity` $\rightarrow$ `antigravity`).
+- **Punctuation Normalization**: Cleans irregular punctuation marks, curly quotes, and repeated spaces.
+- **Bullet & List-Marker Stripping**: Cleans away bullet characters (`•`, `-`, `*`, `1.`, `a)`) for clean paragraph flow.
+- **Whitespace & Noise Filtering**: Automatically strips leading/trailing blank spaces and filtered OCR noise artifacts.
+- **Configurable Preferences**: Auto-copy recognized text to clipboard, auto-insert directly into text fields, persistent camera flash state, and search indexing support.
+
+---
+
+## 25. Inline Math Calculation Suggestions
+
+Perform calculations instantly while typing in any app without switching to an external calculator:
+
+### 🔢 How It Works
+- Type any arithmetic expression followed immediately by an equals sign (`=`).
+- The evaluated result appears instantly as a clean suggestion chip in the suggestion strip (e.g. typing `25*4=` offers `100`).
+- Tap the chip to replace the entire typed math expression in-place with the evaluated answer.
+
+### ➕ Supported Operations & Math Functions
+- **Basic Arithmetic**: Addition (`+`), subtraction/unary negation (`-`, `−`), multiplication (`*`, `×`), division (`/`, `÷`).
+- **Percentages**: e.g. `500-15%=` $\rightarrow$ `425`, `200+10%=` $\rightarrow$ `220`.
+- **Exponents & Powers**: e.g. `2^8=` $\rightarrow$ `256`.
+- **Grouping Parentheses**: e.g. `(12+8)/4=` $\rightarrow$ `5`.
+- **High Precision**: Built with a pure Kotlin `BigDecimal` parsing engine with robust scientific formatting and division-by-zero protection.
+
+### ⚙️ Settings
+- Enable or disable via **Settings → Text correction → Inline math calculation**.
+
+---
+
+## 26. Custom Sound Packs & Audio Customization
+
+LeanType includes a zero-latency native keypress audio feedback engine that delivers rich auditory tactile response:
+
+### 🎵 12+ Built-in Audio Presets
+- **iOS Tap**: Crisp, modern Apple-style click sound.
+- **Mechanical Cherry MX**: Classic mechanical keyboard tactile switch clicks.
+- **Thocky Mechanical**: Deep, resonant mechanical switch sound profile.
+- **Vintage Typewriter**: Authentic acoustic typewriter key strikes and carriage feel.
+- **Retro CRT Terminal**: Nostalgic 80s phosphor green terminal clicks.
+- **Bubble Pop**: Playful, gentle bubble popping sounds.
+- **Soft Velvet / Pudding**: Muted, low-profile quiet typing experience.
+- **Woodblock Minimal**: Clean organic wooden percussion clicks.
+- **Acoustic Marimba**: Melodic wooden bar acoustic chime feedback.
+- **Modern Crisp Tick**: Subtle, high-frequency modern key tick.
+- **Sci-Fi Cyberpunk**: Futuristic electronic digital interface hums.
+- **8-Bit Chiptune Arcade**: Retro arcade game console key blips.
+
+### 🌐 Remote Sound Pack Repository & Custom Imports
+- **Remote Catalog**: Download additional physical modeling and synthesized instrument packs on demand from the official GitHub sound pack repository (`LeanBitLab/LeanType-Sound-Packs`).
+- **Unbundled Light Footprint**: Sound packs are unbundled from the core APK to keep download sizes under 11 MB.
+- **Custom `.zip` Pack Import**: Import custom sound packs packaged as a `.zip` containing a `soundpack.json` manifest and keypress audio files (`.wav` or `.ogg`).
+- **Live Audition & Volume**: Audition sounds with live sample playback (▶️) and fine-tune keypress audio volume independently from system media volume.
+- **Dedicated Settings Screen**: Access via **Settings → Plugins → Keypress Audio / Sound** or **Settings → Preferences → Sound on keypress**.
