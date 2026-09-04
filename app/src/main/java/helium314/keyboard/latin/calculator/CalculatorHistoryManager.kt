@@ -107,7 +107,8 @@ class CalculatorHistoryManager private constructor(private val context: Context)
 
         fun getInstance(context: Context): CalculatorHistoryManager {
             return instance ?: synchronized(this) {
-                instance ?: CalculatorHistoryManager(context.applicationContext).also { instance = it }
+                val appCtx = runCatching { context.applicationContext }.getOrNull() ?: context
+                instance ?: CalculatorHistoryManager(appCtx).also { instance = it }
             }
         }
     }

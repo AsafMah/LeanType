@@ -42,7 +42,7 @@ class CalculatorView @JvmOverloads constructor(
     }
 
     private var listener: CalculatorListener? = null
-    private val historyManager = CalculatorHistoryManager.getInstance(context)
+    private val historyManager by lazy { CalculatorHistoryManager.getInstance(context) }
 
     // Views
     private var expressionScroll: HorizontalScrollView? = null
@@ -53,9 +53,9 @@ class CalculatorView @JvmOverloads constructor(
     private var historyListContainer: LinearLayout? = null
     private var btnHistory: ImageButton? = null
     private var btnCopy: ImageButton? = null
-    private var btnInsert: Button? = null
+    private var btnInsert: TextView? = null
     private var btnClose: ImageButton? = null
-    private var btnClearHistory: Button? = null
+    private var btnClearHistory: TextView? = null
     private var btnCloseHistory: ImageButton? = null
 
     // Calculator State
@@ -99,7 +99,7 @@ class CalculatorView @JvmOverloads constructor(
 
     private fun setupListeners() {
         fun setKey(id: Int, action: () -> Unit) {
-            findViewById<Button>(id)?.setOnClickListener { v ->
+            findViewById<TextView>(id)?.setOnClickListener { v ->
                 playFeedback(v)
                 action()
             }
@@ -132,7 +132,7 @@ class CalculatorView @JvmOverloads constructor(
 
         // Clear & Backspace
         setKey(R.id.calc_key_clear) { clearAll() }
-        findViewById<Button>(R.id.calc_key_backspace)?.let { btn ->
+        findViewById<TextView>(R.id.calc_key_backspace)?.let { btn ->
             btn.setOnClickListener { v ->
                 playFeedback(v)
                 backspace()
@@ -510,20 +510,20 @@ class CalculatorView @JvmOverloads constructor(
         val keyRadius = 6.dpToPx(resources).toFloat()
 
         standardKeys.forEach { id ->
-            findViewById<Button>(id)?.apply {
+            findViewById<TextView>(id)?.apply {
                 background = createKeyDrawable(keyBgColor, keyRadius)
                 setTextColor(textColor)
             }
         }
 
         functionalKeys.forEach { id ->
-            findViewById<Button>(id)?.apply {
+            findViewById<TextView>(id)?.apply {
                 background = createKeyDrawable(funcBgColor, keyRadius)
                 setTextColor(functionalTextColor)
             }
         }
 
-        findViewById<Button>(R.id.calc_key_equals)?.apply {
+        findViewById<TextView>(R.id.calc_key_equals)?.apply {
             background = createKeyDrawable(equalsBgColor, keyRadius)
             setTextColor(textColor)
         }

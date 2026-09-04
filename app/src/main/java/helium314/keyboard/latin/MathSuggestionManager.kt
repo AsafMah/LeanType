@@ -17,7 +17,7 @@ class MathSuggestionManager(private val latinIME: LatinIME) {
 
     private var mathSuggestionView: View? = null
     private var lastDismissedExpression: String? = null
-    private val historyManager = CalculatorHistoryManager.getInstance(latinIME)
+    private val historyManager by lazy { CalculatorHistoryManager.getInstance(latinIME) }
 
     fun getMathSuggestionView(parent: ViewGroup?): View? {
         mathSuggestionView = null
