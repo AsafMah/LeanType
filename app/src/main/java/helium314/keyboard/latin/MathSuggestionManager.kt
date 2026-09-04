@@ -22,6 +22,7 @@ class MathSuggestionManager(private val latinIME: LatinIME) {
     fun getMathSuggestionView(parent: ViewGroup?): View? {
         mathSuggestionView = null
         if (parent == null) return null
+        if (!latinIME.mSettings.current.mInlineMathCalculation) return null
 
         val connection = latinIME.mInputLogic?.connection ?: return null
         val textBefore = connection.getTextBeforeCursor(60, 0)?.toString() ?: return null

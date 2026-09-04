@@ -150,6 +150,7 @@ object Defaults {
     const val PREF_COMPRESS_SCREENSHOTS = true
     const val PREF_AUTO_READ_OTP = false
     const val PREF_OTP_ALLOWED_SMS_PACKAGE = ""
+    const val PREF_INLINE_MATH_CALCULATION = true
     const val PREF_GESTURE_INPUT = true
     // ponytail: gesture method default value
     const val PREF_GESTURE_METHOD = "fallback"

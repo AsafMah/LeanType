@@ -2008,6 +2008,9 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void setSuggestions(final SuggestedWords suggestedWords) {
+        if (tryShowMathSuggestion()) {
+            return;
+        }
         if (suggestedWords.isEmpty()) {
             // avoids showing clipboard suggestion when starting gesture typing
             // should be fine, as there will be another suggestion in a few ms

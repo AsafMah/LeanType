@@ -106,6 +106,7 @@ fun TextCorrectionScreen(
         Settings.PREF_AUTO_READ_OTP,
         if (prefs.getBoolean(Settings.PREF_AUTO_READ_OTP, Defaults.PREF_AUTO_READ_OTP))
             Settings.PREF_OTP_ALLOWED_SMS_PACKAGE else null,
+        Settings.PREF_INLINE_MATH_CALCULATION,
         Settings.PREF_USE_CONTACTS,
         Settings.PREF_USE_APPS
     )
@@ -385,6 +386,11 @@ fun createCorrectionSettings(context: Context) = listOf(
             items = items,
             default = Defaults.PREF_OTP_ALLOWED_SMS_PACKAGE
         )
+    },
+    Setting(context, Settings.PREF_INLINE_MATH_CALCULATION,
+        R.string.pref_inline_calculator_suggestions, R.string.pref_inline_calculator_suggestions_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_INLINE_MATH_CALCULATION)
     },
     Setting(context, Settings.PREF_USE_CONTACTS,
         R.string.use_contacts_dict, R.string.use_contacts_dict_summary

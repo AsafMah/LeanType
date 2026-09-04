@@ -220,6 +220,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_COMPRESS_SCREENSHOTS = "compress_screenshots";
     public static final String PREF_AUTO_READ_OTP = "auto_read_otp";
     public static final String PREF_OTP_ALLOWED_SMS_PACKAGE = "otp_allowed_sms_package";
+    public static final String PREF_INLINE_MATH_CALCULATION = "pref_inline_calculator_suggestions";
     public static final String PREF_CLIPBOARD_HISTORY_RETENTION_TIME = "clipboard_history_retention_time";
     public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
     public static final String PREF_CLIPBOARD_FOLD_PINNED = "clipboard_fold_pinned";
