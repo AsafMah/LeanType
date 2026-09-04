@@ -419,7 +419,11 @@ fun removePinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
 }
 
 private fun getEnabledToolbarKeys(prefs: SharedPreferences, pref: String, default: String, exclusions: Collection<ToolbarKey> = excludedKeys): List<ToolbarKey> {
-    val string = prefs.getString(pref, default)!!
+    var string = prefs.getString(pref, default)!!
+    if (pref == Settings.PREF_TOOLBAR_KEYS && !string.contains("CALCULATOR")) {
+        upgradeToolbarPref(prefs, pref, default)
+        string = prefs.getString(pref, default)!!
+    }
     return string.split(Separators.ENTRY).mapNotNull {
         val split = it.split(Separators.KV)
         if (split.last() == "true") {

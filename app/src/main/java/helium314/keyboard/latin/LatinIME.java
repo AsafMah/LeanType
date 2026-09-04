@@ -213,6 +213,7 @@ public class LatinIME extends InputMethodService implements
 
     private final ClipboardHistoryManager mClipboardHistoryManager = new ClipboardHistoryManager(this);
     private final OtpSuggestionManager mOtpSuggestionManager = new OtpSuggestionManager(this);
+    private final MathSuggestionManager mMathSuggestionManager = new MathSuggestionManager(this);
 
     private FloatingKeyboardManager mFloatingKeyboardManager;
 
@@ -2078,6 +2079,16 @@ public class LatinIME extends InputMethodService implements
         return false;
     }
 
+    public boolean tryShowMathSuggestion() {
+        if (!hasSuggestionStripView()) return false;
+        final View mathView = mMathSuggestionManager.getMathSuggestionView(mSuggestionStripView);
+        if (mathView != null) {
+            mSuggestionStripView.setExternalSuggestionView(mathView, false);
+            return true;
+        }
+        return false;
+    }
+
     public boolean tryShowClipboardSuggestion() {
         final View clipboardView = mClipboardHistoryManager.getClipboardSuggestionView(getCurrentInputEditorInfo(),
                 mSuggestionStripView);
@@ -2106,8 +2117,8 @@ public class LatinIME extends InputMethodService implements
             return;
         }
         final SettingsValues currentSettings = mSettings.getCurrent();
-        if (tryShowOtpSuggestion() || tryShowClipboardSuggestion()) {
-            // an external (OTP or clipboard) suggestion has been set
+        if (tryShowOtpSuggestion() || tryShowMathSuggestion() || tryShowClipboardSuggestion()) {
+            // an external (OTP, Math, or clipboard) suggestion has been set
             if (hasSuggestionStripView() && currentSettings.mAutoHideToolbar)
                 mSuggestionStripView.setToolbarVisibility(false);
             return;
