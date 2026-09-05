@@ -111,16 +111,18 @@ class CustomSoundManager private constructor(private val appContext: Context) {
         val pool = ensureSoundPool()
 
         scope.launch {
+            val packDir = SoundPackImporter.tryGetPackDir(appContext, activePackId) ?: return@launch
             val manifest = SoundPackImporter.getManifest(appContext, activePackId)
-            val packDir = SoundPackImporter.getPackDir(appContext, activePackId)
+            if (manifest == null && File(packDir, "pack.json").exists()) return@launch
 
             if (manifest != null && manifest.sounds.isNotEmpty()) {
                 packMasterVolume = manifest.defaultMasterVolume.coerceIn(0f, 1f)
                 manifest.sounds.forEach { (eventName, soundEvent) ->
                     val sampleIds = mutableListOf<Int>()
                     val filesToLoad = soundEvent.files.take(SoundPackRules.MAX_VARIANTS_PER_EVENT)
-                    filesToLoad.forEach { relativePath ->
-                        val audioFile = File(packDir, relativePath)
+                    filesToLoad.forEach soundFile@{ relativePath ->
+                        val audioFile = SoundPackImporter.resolveAudioFile(packDir, relativePath)
+                            ?: return@soundFile
                         val sampleId = loadFileSample(pool, audioFile)
                         if (sampleId != 0) {
                             sampleIds.add(sampleId)
@@ -295,17 +297,18 @@ class CustomSoundManager private constructor(private val appContext: Context) {
         val pPool = previewSoundPool ?: createSoundPool().also { previewSoundPool = it }
 
         scope.launch {
+            val packDir = SoundPackImporter.tryGetPackDir(appContext, packId) ?: return@launch
             val manifest = SoundPackImporter.getManifest(appContext, packId)
-            val packDir = SoundPackImporter.getPackDir(appContext, packId)
+            if (manifest == null && File(packDir, "pack.json").exists()) return@launch
 
             var fileToPlay: File? = null
             if (manifest?.preview != null) {
-                fileToPlay = File(packDir, manifest.preview)
+                fileToPlay = SoundPackImporter.resolveAudioFile(packDir, manifest.preview)
             }
             if (fileToPlay == null || !fileToPlay.exists()) {
                 val defaultFiles = manifest?.sounds?.get("keypress.default")?.files
                 if (!defaultFiles.isNullOrEmpty()) {
-                    fileToPlay = File(packDir, defaultFiles.first())
+                    fileToPlay = SoundPackImporter.resolveAudioFile(packDir, defaultFiles.first())
                 }
             }
             if (fileToPlay == null || !fileToPlay.exists()) {

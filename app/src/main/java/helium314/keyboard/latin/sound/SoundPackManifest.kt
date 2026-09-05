@@ -91,6 +91,6 @@ object SoundPackRules {
     )
 
     fun isValidId(id: String): Boolean {
-        return id.matches(Regex("^[A-Za-z0-9._-]+$"))
+        return id.matches(Regex("^[A-Za-z0-9._-]+$")) && !id.endsWith(".")
     }
 }

@@ -4,6 +4,7 @@ package helium314.keyboard.settings.preferences
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,12 +39,56 @@ import helium314.keyboard.latin.utils.AddonPolicy
 import helium314.keyboard.settings.FeedbackManager
 import helium314.keyboard.settings.dialogs.PreferenceDialog
 import helium314.keyboard.settings.filePicker
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.UUID
+
+internal class OcrPluginPreferenceImports(
+    private val context: Context,
+    private val scope: CoroutineScope,
+    private val uriImporter: (Context, Uri) -> Boolean = OcrPluginLoader::importPlugin,
+    private val fileImporter: (Context, File) -> Boolean = OcrPluginLoader::importPluginFromTempFile,
+    private val downloader: (Context, File) -> Boolean = { ctx, file ->
+        OcrPluginLoader.downloadPluginApk(ctx, null, file)
+    },
+) {
+    fun importUri(uri: Uri, onResult: (Boolean) -> Unit) = runImport(onResult) {
+        uriImporter(context, uri)
+    }
+
+    fun download(onResult: (Boolean) -> Unit) = runImport(onResult) {
+        val file = File(context.cacheDir, "ocr_download_${UUID.randomUUID()}.apk")
+        try {
+            if (!downloader(context, file)) return@runImport false
+            ensureActive()
+            fileImporter(context, file)
+        } finally {
+            file.delete()
+        }
+    }
+
+    private fun runImport(onResult: (Boolean) -> Unit, operation: suspend CoroutineScope.() -> Boolean) =
+        scope.launch(Dispatchers.Main.immediate) {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    operation()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("LoadOcrPluginPreference", "OCR plugin import failed", e)
+                    false
+                }
+            }
+            onResult(result)
+        }
+}
 
 @Composable
 fun LoadOcrPluginPreference(
@@ -54,12 +99,13 @@ fun LoadOcrPluginPreference(
 ) {
     if (!AddonPolicy.allowsOcrPlugins()) return
     var showDialog by rememberSaveable { mutableStateOf(false) }
-    var isDownloading by rememberSaveable { mutableStateOf(false) }
+    var isDownloading by remember { mutableStateOf(false) }
     var remoteVersion by remember { mutableStateOf<String?>(null) }
     var isCheckingUpdate by remember { mutableStateOf(false) }
 
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
+    val imports = remember(ctx, scope) { OcrPluginPreferenceImports(ctx.applicationContext, scope) }
 
     val hasInternet = remember {
         AddonPolicy.allowsInAppDownloads() && ctx.packageManager.checkPermission(
@@ -68,45 +114,64 @@ fun LoadOcrPluginPreference(
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
-    val hasPlugin = OcrPluginLoader.hasPlugin(ctx)
-    val localVersion = remember(hasPlugin) { OcrPluginLoader.getPluginVersion(ctx) }
+    var hasPlugin by remember { mutableStateOf(false) }
+    var localVersion by remember { mutableStateOf<String?>(null) }
+    var refreshGeneration by remember { mutableStateOf(0) }
+
+    LaunchedEffect(refreshGeneration) {
+        val installed = withContext(Dispatchers.IO) {
+            OcrPluginLoader.hasPlugin(ctx) to OcrPluginLoader.getPluginVersion(ctx)
+        }
+        hasPlugin = installed.first
+        localVersion = installed.second
+    }
 
     LaunchedEffect(hasPlugin) {
         if (!hasInternet) return@LaunchedEffect
         isCheckingUpdate = true
-        scope.launch(Dispatchers.IO) {
-            try {
+        try {
+            remoteVersion = withContext(Dispatchers.IO) {
                 val url = URL("https://api.github.com/repos/LeanBitLab/LeanType-OCR-Plugin/releases/latest")
                 val conn = url.openConnection() as HttpURLConnection
-                conn.setRequestProperty("User-Agent", "HeliboardL")
-                conn.connect()
-                if (conn.responseCode == 200) {
-                    val response = conn.inputStream.bufferedReader().use { it.readText() }
-                    val regex = "\"tag_name\"\\s*:\\s*\"([^\"]+)\"".toRegex()
-                    val match = regex.find(response)
-                    if (match != null) {
-                        remoteVersion = match.groupValues[1]
-                    }
+                try {
+                    conn.connectTimeout = 12000
+                    conn.readTimeout = 15000
+                    conn.setRequestProperty("User-Agent", "HeliboardL")
+                    conn.connect()
+                    if (conn.responseCode == 200) {
+                        val response = conn.inputStream.bufferedReader().use { it.readText() }
+                        "\"tag_name\"\\s*:\\s*\"([^\"]+)\"".toRegex().find(response)?.groupValues?.get(1)
+                    } else null
+                } finally {
+                    conn.disconnect()
                 }
-            } catch (_: Exception) {
-            } finally {
-                isCheckingUpdate = false
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+        } finally {
+            isCheckingUpdate = false
         }
     }
 
     val launcher = filePicker { uri ->
-        val success = OcrPluginLoader.importPlugin(ctx, uri)
-        showDialog = false
-        if (success) {
-            FeedbackManager.message(ctx, R.string.load_ocr_plugin_success)
-            onSuccess?.invoke()
-        } else {
-            FeedbackManager.message(ctx, R.string.load_ocr_plugin_failed)
+        if (isDownloading) return@filePicker
+        isDownloading = true
+        imports.importUri(uri) { success ->
+            isDownloading = false
+            showDialog = false
+            if (success) {
+                refreshGeneration++
+                FeedbackManager.message(ctx, R.string.load_ocr_plugin_success)
+                onSuccess?.invoke()
+            } else {
+                FeedbackManager.message(ctx, R.string.load_ocr_plugin_failed)
+            }
         }
     }
 
     fun startDownload() {
+        if (isDownloading) return
         if (!hasInternet) {
             showDialog = false
             val url = "https://github.com/LeanBitLab/LeanType-OCR-Plugin/releases"
@@ -123,26 +188,15 @@ fun LoadOcrPluginPreference(
         }
 
         isDownloading = true
-        scope.launch(Dispatchers.IO) {
-            val tempFile = File(ctx.cacheDir, "temp_ocr_plugin.apk")
-            if (tempFile.exists()) tempFile.delete()
-
-            val downloaded = OcrPluginLoader.downloadPluginApk(ctx, null, tempFile)
-
-            withContext(Dispatchers.Main) {
-                isDownloading = false
-                showDialog = false
-                if (downloaded) {
-                    val success = OcrPluginLoader.importPluginFromTempFile(ctx, tempFile)
-                    if (success) {
-                        FeedbackManager.message(ctx, R.string.load_ocr_plugin_success)
-                        onSuccess?.invoke()
-                    } else {
-                        FeedbackManager.message(ctx, R.string.load_ocr_plugin_failed)
-                    }
-                } else {
-                    FeedbackManager.message(ctx, R.string.load_ocr_plugin_failed)
-                }
+        imports.download { success ->
+            isDownloading = false
+            showDialog = false
+            if (success) {
+                refreshGeneration++
+                FeedbackManager.message(ctx, R.string.load_ocr_plugin_success)
+                onSuccess?.invoke()
+            } else {
+                FeedbackManager.message(ctx, R.string.load_ocr_plugin_failed)
             }
         }
     }
@@ -219,10 +273,15 @@ fun LoadOcrPluginPreference(
                         if (hasPlugin) {
                             Button(
                                 onClick = {
-                                    OcrPluginLoader.removePlugin(ctx)
-                                    FeedbackManager.message(ctx, "OCR plugin removed")
-                                    onSuccess?.invoke()
-                                    showDialog = false
+                                    isDownloading = true
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) { OcrPluginLoader.removePlugin(ctx) }
+                                        refreshGeneration++
+                                        isDownloading = false
+                                        FeedbackManager.message(ctx, "OCR plugin removed")
+                                        onSuccess?.invoke()
+                                        showDialog = false
+                                    }
                                 },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.error,
