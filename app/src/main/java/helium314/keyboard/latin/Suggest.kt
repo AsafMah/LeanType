@@ -326,7 +326,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 val isExactOrCaseMatch = firstSuggestion.mWord.equals(consideredWord, ignoreCase = true)
                 val isUserHistory = firstSuggestion.mSourceDict?.mDictType == Dictionary.TYPE_USER_HISTORY
                 val isWhitelist = firstSuggestion.isKindOf(SuggestedWordInfo.KIND_WHITELIST)
-                if (!isExactOrCaseMatch && !isUserHistory && !isWhitelist && expectedContraction == null) {
+                val isShortcut = firstSuggestion.isKindOf(SuggestedWordInfo.KIND_SHORTCUT)
+                if (!isExactOrCaseMatch && !isUserHistory && !isWhitelist && !isShortcut && expectedContraction == null) {
                     return true to false
                 }
             }
