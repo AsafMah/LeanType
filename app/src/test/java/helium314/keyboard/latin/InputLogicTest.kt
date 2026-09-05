@@ -1100,6 +1100,37 @@ class InputLogicTest {
         assertEquals(Constants.TextUtils.CAP_MODE_OFF, inputLogic.getCurrentAutoCapsState(settingsValues))
     }
 
+    @Test fun autoCapsRespectsEditorExclusionsForEveryToggleCombination() {
+        val inputTypes = mapOf(
+            "text" to InputType.TYPE_CLASS_TEXT,
+            "uri" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI),
+            "email" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS),
+            "webEmail" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS),
+            "password" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD),
+            "visiblePassword" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD),
+            "webPassword" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD),
+            "number" to InputType.TYPE_CLASS_NUMBER,
+            "numericPassword" to (InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD),
+        )
+        for ((name, type) in inputTypes) {
+            for (autoCap in listOf(false, true)) {
+                for (force in listOf(false, true)) {
+                    reset()
+                    latinIME.prefs().edit {
+                        putBoolean(Settings.PREF_AUTO_CAP, autoCap)
+                        putBoolean(Settings.PREF_FORCE_AUTO_CAPS, force)
+                    }
+                    setInputType(type)
+                    val expected = if (name == "text" && (autoCap || force)) {
+                        TextUtils.CAP_MODE_SENTENCES
+                    } else Constants.TextUtils.CAP_MODE_OFF
+                    assertEquals(expected, inputLogic.getCurrentAutoCapsState(settingsValues),
+                        "$name: autoCap=$autoCap, force=$force")
+                }
+            }
+        }
+    }
+
     @Test fun noAutospaceInUrlField() {
         reset()
         latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }

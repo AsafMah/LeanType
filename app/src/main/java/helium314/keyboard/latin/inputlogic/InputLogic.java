@@ -3776,7 +3776,6 @@ public final class InputLogic {
                     || InputTypeUtils.isVisiblePasswordInputType(inputType)) {
                 return Constants.TextUtils.CAP_MODE_OFF;
             }
-            inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
         }
         if (!InputTypeUtils.isAnyPasswordInputType(inputType)
                 && !InputTypeUtils.isUriOrEmailType(inputType)
