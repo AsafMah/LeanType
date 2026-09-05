@@ -32,6 +32,7 @@ class OcrCameraView @JvmOverloads constructor(
 
     interface OcrViewListener {
         fun onOcrTextExtracted(lines: List<String>)
+        fun onOcrTextInserted(text: String)
         fun onCloseOcr()
     }
 
@@ -49,6 +50,7 @@ class OcrCameraView @JvmOverloads constructor(
     private var isCameraStarted = false
     private var isLoadingAnimationActive = false
     private var loadingAnimator: ValueAnimator? = null
+    private var generation = 0L
     private val loadingBorderDrawable = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
         cornerRadius = 28f
@@ -100,6 +102,8 @@ class OcrCameraView @JvmOverloads constructor(
     }
 
     fun startCamera() {
+        stopCamera()
+        val session = generation
         if (!OcrPluginLoader.hasPlugin(context)) {
             pluginPanel?.visibility = View.VISIBLE
             controlsBar?.visibility = View.GONE
@@ -131,7 +135,12 @@ class OcrCameraView @JvmOverloads constructor(
             cameraManager?.startCamera(
                 previewView = pv,
                 onReady = {
-                    isCameraStarted = true
+                    if (session == generation) {
+                        isCameraStarted = true
+                        flashBtn?.setImageResource(
+                            if (cameraManager?.isTorchEnabled() == true) R.drawable.ic_flash_on else R.drawable.ic_flash_off
+                        )
+                    }
                 },
                 onError = { e ->
                     Log.e(TAG, "Failed to start camera viewfinder", e)
@@ -141,25 +150,40 @@ class OcrCameraView @JvmOverloads constructor(
     }
 
     fun stopCamera() {
+        generation++
         showLoading(false)
+        pipeline?.stop()
         cameraManager?.stopCamera()
         isCameraStarted = false
         flashBtn?.setImageResource(R.drawable.ic_flash_off)
+        statusIndicator?.animate()?.cancel()
+        statusIndicator?.visibility = View.GONE
     }
 
     fun release() {
         stopCamera()
         cameraManager?.release()
         cameraManager = null
+        pipeline?.release()
         pipeline = null
+    }
+
+    override fun onDetachedFromWindow() {
+        release()
+        super.onDetachedFromWindow()
     }
 
     private fun captureFromCamera() {
         if (!isCameraStarted || isLoadingAnimationActive) return
+        val session = generation
         showLoading(true)
 
         cameraManager?.capturePhoto(
             onCaptured = { bitmap ->
+                if (session != generation || pipeline == null) {
+                    bitmap.recycle()
+                    return@capturePhoto
+                }
                 pipeline?.processImage(
                     bitmap = bitmap,
                     onSuccess = { lines ->
@@ -173,10 +197,16 @@ class OcrCameraView @JvmOverloads constructor(
                     onError = { errorMsg ->
                         showLoading(false)
                         Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
+                    },
+                    isRequestCurrent = { session == generation },
+                    onInsertText = { text ->
+                        showLoading(false)
+                        listener?.onOcrTextInserted(text)
                     }
                 )
             },
             onError = { e ->
+                if (session != generation) return@capturePhoto
                 showLoading(false)
                 Toast.makeText(context, "Capture failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
@@ -212,6 +242,7 @@ class OcrCameraView @JvmOverloads constructor(
     }
 
     private fun showNoTextDetected() {
+        val session = generation
         statusIndicator?.apply {
             animate().cancel()
             alpha = 0f
@@ -221,6 +252,7 @@ class OcrCameraView @JvmOverloads constructor(
                 .setDuration(200)
                 .withEndAction {
                     postDelayed({
+                        if (session != generation) return@postDelayed
                         animate()
                             .alpha(0f)
                             .setDuration(300)

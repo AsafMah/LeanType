@@ -6,10 +6,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.view.Surface
+import androidx.annotation.MainThread
 import androidx.camera.core.Camera
-import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
@@ -20,21 +19,35 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import com.google.common.util.concurrent.ListenableFuture
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.prefs
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class OcrCameraManager(private val context: Context) {
+@MainThread
+class OcrCameraManager(
+    private val context: Context,
+    private val getCameraProvider: () -> ListenableFuture<ProcessCameraProvider> =
+        { ProcessCameraProvider.getInstance(context) }
+) {
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
+    private var preview: Preview? = null
     private var camera: Camera? = null
     private var isTorchOn: Boolean = false
     private val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
-    private var lifecycleOwner: ImeLifecycleOwner = ImeLifecycleOwner()
+    private val lifecycleOwner = ImeLifecycleOwner()
+    private val mainExecutor = ContextCompat.getMainExecutor(context)
+    private var generation = 0L
+    private var captureGeneration = 0L
+    private var active = false
+    private var released = false
 
     companion object {
         private const val TAG = "OcrCameraManager"
         private const val MAX_IMAGE_DIMENSION = 1920
+        private const val PREF_TORCH_CHOICE = "ocr_last_torch_enabled"
     }
 
     private class ImeLifecycleOwner : LifecycleOwner {
@@ -61,26 +74,40 @@ class OcrCameraManager(private val context: Context) {
 
     @SuppressLint("RestrictedApi")
     fun startCamera(previewView: PreviewView, onReady: () -> Unit = {}, onError: (Exception) -> Unit = {}) {
-        val future = ProcessCameraProvider.getInstance(context)
-        future.addListener({
-            try {
-                cameraProvider = future.get()
-                bindCamera(previewView)
-                onReady()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to start camera", e)
-                onError(e)
-            }
-        }, ContextCompat.getMainExecutor(context))
+        if (released) return
+        stopCamera()
+        active = true
+        val request = generation
+        try {
+            val future = getCameraProvider()
+            future.addListener({
+                if (!isCurrent(request)) return@addListener
+                try {
+                    cameraProvider = future.get()
+                    bindCamera(previewView)
+                    if (isCurrent(request)) onReady()
+                } catch (e: Exception) {
+                    if (isCurrent(request)) {
+                        stopCamera()
+                        Log.e(TAG, "Failed to start camera", e)
+                        onError(e)
+                    }
+                }
+            }, mainExecutor)
+        } catch (e: Exception) {
+            stopCamera()
+            onError(e)
+        }
     }
+
+    private fun isCurrent(request: Long) = active && !released && request == generation
 
     private fun bindCamera(previewView: PreviewView) {
         val provider = cameraProvider ?: return
-        provider.unbindAll()
 
         lifecycleOwner.start()
 
-        val preview = Preview.Builder().build().also {
+        preview = Preview.Builder().build().also {
             it.surfaceProvider = previewView.surfaceProvider
         }
 
@@ -91,25 +118,37 @@ class OcrCameraManager(private val context: Context) {
 
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
-        try {
-            camera = provider.bindToLifecycle(
-                lifecycleOwner,
-                cameraSelector,
-                preview,
-                imageCapture
-            )
-            isTorchOn = false
-        } catch (e: Exception) {
-            Log.e(TAG, "Binding camera use cases failed", e)
+        camera = provider.bindToLifecycle(
+            lifecycleOwner,
+            cameraSelector,
+            preview,
+            imageCapture
+        )
+        isTorchOn = false
+        if (context.prefs().getBoolean(OcrPluginLoader.PREF_OCR_PERSIST_FLASH, false) &&
+            context.prefs().getBoolean(PREF_TORCH_CHOICE, false)) {
+            setTorchEnabled(true)
         }
     }
 
     fun toggleTorch(): Boolean {
+        if (!active || released) return false
+        val enabled = setTorchEnabled(!isTorchOn)
+        val prefs = context.prefs()
+        if (prefs.getBoolean(OcrPluginLoader.PREF_OCR_PERSIST_FLASH, false)) {
+            prefs.edit().putBoolean(PREF_TORCH_CHOICE, enabled).apply()
+        } else {
+            prefs.edit().remove(PREF_TORCH_CHOICE).apply()
+        }
+        return enabled
+    }
+
+    private fun setTorchEnabled(enabled: Boolean): Boolean {
         val cam = camera ?: return false
         return try {
             if (cam.cameraInfo.hasFlashUnit()) {
-                isTorchOn = !isTorchOn
-                cam.cameraControl.enableTorch(isTorchOn)
+                cam.cameraControl.enableTorch(enabled)
+                isTorchOn = enabled
                 isTorchOn
             } else {
                 false
@@ -123,42 +162,63 @@ class OcrCameraManager(private val context: Context) {
     fun isTorchEnabled(): Boolean = isTorchOn
 
     fun capturePhoto(onCaptured: (Bitmap) -> Unit, onError: (Exception) -> Unit) {
+        if (!active || released) return
+        val session = generation
+        val request = ++captureGeneration
+        fun deliverError(error: Exception) {
+            mainExecutor.execute {
+                if (isCurrent(session) && request == captureGeneration) onError(error)
+            }
+        }
         val capture = imageCapture ?: run {
-            onError(IllegalStateException("Camera capture is not ready"))
+            deliverError(IllegalStateException("Camera capture is not ready"))
             return
         }
 
-        capture.takePicture(
-            cameraExecutor,
-            object : ImageCapture.OnImageCapturedCallback() {
-                override fun onCaptureSuccess(image: ImageProxy) {
-                    try {
-                        val rotation = image.imageInfo.rotationDegrees
-                        val rawBitmap = image.toBitmap()
-                        val scaledBitmap = scaleAndRotateBitmap(rawBitmap, rotation)
-                        if (scaledBitmap != rawBitmap) {
-                            rawBitmap.recycle()
+        try {
+            capture.takePicture(
+                cameraExecutor,
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(image: ImageProxy) {
+                        var rawBitmap: Bitmap? = null
+                        try {
+                            val rotation = image.imageInfo.rotationDegrees
+                            rawBitmap = image.toBitmap()
+                            val scaledBitmap = scaleAndRotateBitmap(rawBitmap, rotation)
+                            if (scaledBitmap != rawBitmap) {
+                                rawBitmap.recycle()
+                            }
+                            rawBitmap = null
+                            mainExecutor.execute {
+                                if (isCurrent(session) && request == captureGeneration) {
+                                    onCaptured(scaledBitmap)
+                                } else {
+                                    scaledBitmap.recycle()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            rawBitmap?.recycle()
+                            Log.e(TAG, "Error processing captured frame", e)
+                            deliverError(e)
+                        } finally {
+                            image.close()
                         }
-                        image.close()
-                        onCaptured(scaledBitmap)
-                    } catch (e: Exception) {
-                        image.close()
-                        Log.e(TAG, "Error processing captured frame", e)
-                        onError(e)
+                    }
+
+                    override fun onError(exception: ImageCaptureException) {
+                        Log.e(TAG, "Image capture error", exception)
+                        deliverError(exception)
                     }
                 }
-
-                override fun onError(exception: ImageCaptureException) {
-                    Log.e(TAG, "Image capture error", exception)
-                    onError(exception)
-                }
-            }
-        )
+            )
+        } catch (e: Exception) {
+            deliverError(e)
+        }
     }
 
     private fun scaleAndRotateBitmap(src: Bitmap, rotationDegrees: Int): Bitmap {
-        var width = src.width
-        var height = src.height
+        val width = src.width
+        val height = src.height
 
         val maxDim = maxOf(width, height)
         val scale = if (maxDim > MAX_IMAGE_DIMENSION) {
@@ -183,20 +243,38 @@ class OcrCameraManager(private val context: Context) {
     }
 
     fun stopCamera() {
+        generation++
+        active = false
+        val prefs = context.prefs()
+        if (!prefs.getBoolean(OcrPluginLoader.PREF_OCR_PERSIST_FLASH, false)) {
+            prefs.edit().remove(PREF_TORCH_CHOICE).apply()
+        }
         try {
             if (isTorchOn) {
                 camera?.cameraControl?.enableTorch(false)
-                isTorchOn = false
             }
-            cameraProvider?.unbindAll()
-            lifecycleOwner.stop()
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping camera", e)
+            Log.e(TAG, "Error disabling torch", e)
+        }
+        try {
+            val ownedUseCases = listOfNotNull(preview, imageCapture).toTypedArray()
+            if (ownedUseCases.isNotEmpty()) cameraProvider?.unbind(*ownedUseCases)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unbinding camera", e)
+        } finally {
+            isTorchOn = false
+            camera = null
+            preview = null
+            imageCapture = null
+            cameraProvider = null
+            if (!released) lifecycleOwner.stop()
         }
     }
 
     fun release() {
+        if (released) return
         stopCamera()
+        released = true
         lifecycleOwner.destroy()
         cameraExecutor.shutdown()
     }
