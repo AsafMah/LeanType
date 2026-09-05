@@ -22,6 +22,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Side-by-side experimental build** — an `experimental` build type (`com.asafmah.leantypedual.exp`, shown as "LeanTypeDual EXP") that installs alongside the normal build instead of replacing it, so input experiments can be compared against a working daily driver. (#141)
 
 ### Fixed
+- **Sound-pack imports reject unsafe IDs and invalid manifests** before touching installed data, and retain nested audio paths for playback. (#153)
+- **Inline math respects sensitive editors and incognito history**, rejects stale chips after editor changes, preserves surrounding delimiters and whitespace, and evaluates unary operators and percentages correctly. (#153)
+- **OCR work belongs to the active keyboard session**: closing, replacing, or hiding the camera cancels obsolete callbacks and releases camera resources. Capture feedback runs on the main thread, floating keyboards refresh screenshot suggestions, and OCR transitions clear persistent selection. Existing auto-insert and remembered-flash options now take effect without allowing stale results to edit another field. (#153)
+- **OCR plugin replacement preserves the working plugin when validation or copying fails**, and local/downloaded imports no longer perform heavy loading on the settings UI thread. (#153)
+- **Voice input no longer overrides the system microphone mute** and abandons startup cleanly when audio capture cannot start. (#153)
+- **Two-finger touchpad taps survive the final finger lift**, and clipboard edit drafts retain unsaved text and selection across activity recreation. (#153)
 - **Fast double-taps on Shift enable Caps Lock again.** The prior duplicate-event workaround rejected legitimate taps less than 100 ms apart; distinct taps are now identified by their press/release boundary instead. (#146)
 - **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order. (#135, #147)
 
@@ -30,6 +36,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Reframed the two-thumb decoder research as a historical record that distinguishes in-tree preprocessing facts from claims falsified against the closed runtime recognizer. (#147)
 
 ### Reliability & testing
+- Added reproducible JVM/Robolectric regressions for unsafe imports, private/stale math acceptance, camera and OCR cancellation, screenshot visibility, microphone mute, touchpad tap sequences, and clipboard draft restoration. Camera hardware and native plugin behavior still require device validation. (#153)
 - Added source-level and packaged-APK gates that fail upstream merges when LeanTypeDual's identity, privacy flavors, bundled offline dictionaries, fork integrations, or four-flavor release coverage are lost. (#148)
 - Kept the independently useful pointer-id normalization regression coverage, added production-wiring coverage for the no-id-0 case, and pinned the restored connector's exact coordinates, timestamps, and pointer ids. Removed the native research harness whose results were easy to mistake for runtime recognizer behavior. (#147)
 
