@@ -1,0 +1,6 @@
+- Offline Camera OCR & Screenshot Extraction: Live in-keyboard camera viewfinder and automatic screenshot chip with advanced formatting options (casing, join styles, punctuation, dehyphenation).
+- OCR Plugin Lifecycle Fixes: Dynamic ClassLoader invalidation and native library reloading improvements.
+- Inline Math Suggestions: Real-time math expression evaluation on typing '=' with instant suggestion strip answers and one-tap replacement.
+- Sound Packs & Plugins: Dedicated Sound screen under Plugins Hub, remote synthesized pack downloads, and custom .zip imports.
+- Typing & Editing Refinements: Restored Shift double-tap for Caps Lock, improved multiline auto-capitalization, suppressed emojis during gesture typing, and added repeat haptics for backspace/navigation.
+- UI & Stability: Centered toolbar micro-pill indicators, swipe-down toolbar dismissal, and battery/thermal optimizations.
