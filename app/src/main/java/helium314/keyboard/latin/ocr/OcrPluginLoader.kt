@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import dalvik.system.DexClassLoader
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.AddonPolicy
 import helium314.keyboard.latin.utils.prefs
 import java.io.File
 
@@ -69,6 +70,10 @@ object OcrPluginLoader {
 
     @JvmStatic
     fun downloadPluginApk(context: Context, tag: String? = null, tempFile: File): Boolean {
+        if (!AddonPolicy.allowsInAppDownloads() || !AddonPolicy.allowsOcrPlugins()) {
+            Log.w(TAG, "OCR plugin download is disabled for this build")
+            return false
+        }
         val urlsToTry = listOf(
             getPluginDownloadUrl(tag),
             if (tag == null || tag == "latest") {
@@ -184,7 +189,7 @@ object OcrPluginLoader {
 
     @JvmStatic
     fun getRecognizer(context: Context): ITextRecognizer? {
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return null
+        if (!AddonPolicy.allowsOcrPlugins()) return null
         if (activeRecognizer != null) return activeRecognizer
         if (!hasPlugin(context)) return null
 
@@ -245,6 +250,7 @@ object OcrPluginLoader {
     }
 
     fun hasPlugin(context: Context): Boolean {
+        if (!AddonPolicy.allowsOcrPlugins()) return false
         val has = context.prefs().getBoolean(PREF_HAS_PLUGIN, false)
         if (!has) return false
         val apkFile = File(context.filesDir, PLUGIN_FILENAME)
@@ -268,6 +274,10 @@ object OcrPluginLoader {
     }
 
     fun importPlugin(context: Context, uri: Uri): Boolean {
+        if (!AddonPolicy.allowsOcrPlugins()) {
+            Log.w(TAG, "OCR plugin import is disabled for this build")
+            return false
+        }
         return try {
             try {
                 context.codeCacheDir.deleteRecursively()
@@ -303,6 +313,10 @@ object OcrPluginLoader {
     }
 
     fun importPluginFromTempFile(context: Context, tempFile: File): Boolean {
+        if (!AddonPolicy.allowsOcrPlugins()) {
+            Log.w(TAG, "OCR plugin import is disabled for this build")
+            return false
+        }
         return try {
             try {
                 context.codeCacheDir.deleteRecursively()

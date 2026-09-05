@@ -428,6 +428,10 @@ object SoundPackImporter {
         pack: RemoteSoundPack,
         onProgress: (Float) -> Unit = {}
     ): Boolean {
+        if (!helium314.keyboard.latin.utils.AddonPolicy.allowsInAppDownloads()) {
+            Log.w(TAG, "Sound pack download blocked: use browser download and local import")
+            return false
+        }
         val tempZip = File(context.cacheDir, "sound_dl_${UUID.randomUUID()}.zip")
         return try {
             val url = URL(pack.downloadUrl)

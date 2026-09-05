@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.ocr.OcrPluginLoader
+import helium314.keyboard.latin.utils.AddonPolicy
 import helium314.keyboard.settings.FeedbackManager
 import helium314.keyboard.settings.dialogs.PreferenceDialog
 import helium314.keyboard.settings.filePicker
@@ -51,6 +52,7 @@ fun LoadOcrPluginPreference(
     @DrawableRes icon: Int? = null,
     onSuccess: (() -> Unit)? = null,
 ) {
+    if (!AddonPolicy.allowsOcrPlugins()) return
     var showDialog by rememberSaveable { mutableStateOf(false) }
     var isDownloading by rememberSaveable { mutableStateOf(false) }
     var remoteVersion by remember { mutableStateOf<String?>(null) }
@@ -60,7 +62,7 @@ fun LoadOcrPluginPreference(
     val scope = rememberCoroutineScope()
 
     val hasInternet = remember {
-        ctx.packageManager.checkPermission(
+        AddonPolicy.allowsInAppDownloads() && ctx.packageManager.checkPermission(
             "android.permission.INTERNET",
             ctx.packageName
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED

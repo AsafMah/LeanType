@@ -55,6 +55,7 @@ import helium314.keyboard.latin.sound.RemoteSoundPack
 import helium314.keyboard.latin.sound.SoundPackImporter
 import helium314.keyboard.latin.sound.SoundPackUrls
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.utils.AddonPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,7 +67,7 @@ fun SoundPackDownloadDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { context.prefs() }
-    val isOffline = BuildConfig.FLAVOR == "offline"
+    val isOffline = !AddonPolicy.allowsInAppDownloads()
 
     var currentSelectedStyle by remember {
         mutableStateOf(prefs.getString(Settings.PREF_KEYPRESS_SOUND_STYLE, Defaults.PREF_KEYPRESS_SOUND_STYLE) ?: Defaults.PREF_KEYPRESS_SOUND_STYLE)
@@ -385,8 +386,12 @@ fun SoundPackDownloadDialog(
                                                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(rPack.downloadUrl)).apply {
                                                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                                         }
-                                                        context.startActivity(intent)
-                                                        Toast.makeText(context, "Downloading in browser… import .zip once finished", Toast.LENGTH_LONG).show()
+                                                        try {
+                                                            context.startActivity(intent)
+                                                            Toast.makeText(context, "Downloading in browser… import .zip once finished", Toast.LENGTH_LONG).show()
+                                                        } catch (e: android.content.ActivityNotFoundException) {
+                                                            Toast.makeText(context, "No browser available; import a sound pack from storage", Toast.LENGTH_LONG).show()
+                                                        }
                                                     } else {
                                                         downloadingMap[rPack.id] = true
                                                         scope.launch(Dispatchers.IO) {

@@ -180,6 +180,10 @@ object SoundPackUrls {
     fun getPreset(id: String): SoundPackInfo? = null
 
     fun fetchRemoteIndex(indexUrl: String = DEFAULT_INDEX_URL): List<RemoteSoundPack> {
+        if (!helium314.keyboard.latin.utils.AddonPolicy.allowsInAppDownloads()) {
+            Log.i(TAG, "Using the bundled sound catalog: in-app downloads are disabled")
+            return FALLBACK_CATALOG
+        }
         return try {
             val url = URL(indexUrl)
             val connection = (url.openConnection() as HttpURLConnection).apply {
