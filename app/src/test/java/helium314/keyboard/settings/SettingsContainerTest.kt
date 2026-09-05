@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.ocr.OcrPluginLoader
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.settings.screens.createOcrSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -119,10 +120,9 @@ class SettingsContainerTest {
     }
 
     @Test
-    fun upstreamMathOcrAndCloudSettingsAreRegistered() {
+    fun upstreamMathAndOcrSettingsAreRegistered() {
         val keys = listOf(
             Settings.PREF_INLINE_MATH_CALCULATION,
-            Settings.PREF_CLOUD_AI_MAX_TOKENS,
             OcrPluginLoader.PREF_OCR_CASING,
             OcrPluginLoader.PREF_OCR_LINE_JOIN_FORMAT,
             OcrPluginLoader.PREF_OCR_KEEP_LINE_BREAKS,
@@ -157,5 +157,67 @@ class SettingsContainerTest {
             assertEquals(key, container[key]?.key)
             assertEquals("Duplicate setting: $key", 1, container.filter("").count { it.key == key })
         }
+    }
+
+    @Test
+    fun ocrRegistryAndSearchRespectBuildAndApiAvailability() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val keys = createOcrSettings(context).map { it.key } + SettingsWithoutKey.SCREEN_NAV_OCR
+        for (flavor in listOf("standard", "standardfull", "offline", "offlinelite")) {
+            for (buildType in listOf("debug", "nouserlib")) {
+                for (sdk in listOf(25, 26, 33)) {
+                    val candidate = SettingsContainer(context, SettingsAvailability(flavor, buildType, sdk))
+                    val expected = buildType != "nouserlib" && sdk >= 26
+                    for (key in keys) {
+                        val label = "$flavor/$buildType/API$sdk/$key"
+                        assertEquals(label, expected, candidate[key] != null)
+                        assertEquals(label, if (expected) 1 else 0,
+                            candidate.filter("").count { it.key == key })
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun cloudControlsAreOnlyRegisteredForCloudFlavors() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val keys = listOf(
+            SettingsWithoutKey.GEMINI_API_KEY, SettingsWithoutKey.GEMINI_MODEL,
+            SettingsWithoutKey.GEMINI_TARGET_LANGUAGE,
+            SettingsWithoutKey.GROQ_TOKEN, SettingsWithoutKey.GROQ_MODEL,
+            SettingsWithoutKey.HUGGINGFACE_TOKEN, SettingsWithoutKey.HUGGINGFACE_MODEL,
+            SettingsWithoutKey.HUGGINGFACE_ENDPOINT, SettingsWithoutKey.AI_PROVIDER,
+            SettingsWithoutKey.TRANSLATE_GEMINI_MODEL, SettingsWithoutKey.TRANSLATE_GROQ_MODEL,
+            SettingsWithoutKey.TRANSLATE_HUGGINGFACE_MODEL,
+            SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS, SettingsWithoutKey.CLOUD_AI_MAX_TOKENS,
+        )
+        for (flavor in listOf("standard", "standardfull", "offline", "offlinelite")) {
+            val candidate = SettingsContainer(context, SettingsAvailability(flavor = flavor))
+            for (key in keys) {
+                val expected = flavor == "standard" || flavor == "standardfull"
+                assertEquals("$flavor/$key", expected, candidate[key] != null)
+                assertEquals("$flavor/$key", if (expected) 1 else 0,
+                    candidate.filter("").count { it.key == key })
+            }
+        }
+    }
+
+    @Test
+    fun liteHasNoAiNavigationOrSharedAiControls() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val candidate = SettingsContainer(context, SettingsAvailability(flavor = "offlinelite"))
+        val keys = listOf(
+            SettingsWithoutKey.SCREEN_NAV_AI_INTEGRATION, SettingsWithoutKey.CUSTOM_AI_KEYS,
+            SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, SettingsWithoutKey.TRANSLATION_ENGINE,
+            SettingsWithoutKey.OFFLINE_MODEL_PATH, SettingsWithoutKey.OFFLINE_KEEP_MODEL_LOADED,
+            SettingsWithoutKey.LOAD_OFFLINE_AI_PLUGIN,
+        )
+        for (key in keys) {
+            assertNull(key, candidate[key])
+            assertTrue(key, candidate.filter("").none { it.key == key })
+        }
+        assertEquals(Settings.PREF_INLINE_MATH_CALCULATION,
+            candidate[Settings.PREF_INLINE_MATH_CALCULATION]?.key)
     }
 }

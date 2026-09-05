@@ -142,17 +142,7 @@ fun SearchSettingsScreen(
                     if (index > customCount) return@filter false
                 }
                 if (key == "add_custom_layout") return@filter false
-                when (helium314.keyboard.latin.BuildConfig.FLAVOR) {
-                    "offline" -> {
-                        val isOldAndroid = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O
-                        !key.startsWith("gemini") &&
-                        !key.startsWith("groq") &&
-                        !key.startsWith("huggingface") &&
-                        !key.startsWith("ai_provider") &&
-                        (!isOldAndroid || (!key.startsWith("offline_model_path") && !key.startsWith("load_offline_ai_plugin") && !key.startsWith("custom_ai_")))
-                    }
-                    else -> true
-                }
+                true
             } 
         },
         itemContent = { it.Preference() }

@@ -20,6 +20,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.ocr.OcrPluginLoader
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
+import helium314.keyboard.settings.SettingsAvailability
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.LoadOcrPluginPreference
 import helium314.keyboard.settings.preferences.Preference
@@ -42,7 +44,12 @@ import helium314.keyboard.settings.preferences.SwitchPreference
 @Composable
 fun OcrSettingsScreen(
     onClickBack: () -> Unit,
+    availability: SettingsAvailability = SettingsAvailability(),
 ) {
+    if (!availability.ocr) {
+        LaunchedEffect(Unit) { onClickBack() }
+        return
+    }
     val context = LocalContext.current
     var ocrInstalled by remember { mutableStateOf(OcrPluginLoader.hasPlugin(context)) }
 

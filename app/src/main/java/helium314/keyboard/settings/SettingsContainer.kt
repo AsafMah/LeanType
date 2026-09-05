@@ -24,8 +24,11 @@ import helium314.keyboard.settings.screens.createTextExpanderSettings
 import helium314.keyboard.settings.screens.createToolbarSettings
 import helium314.keyboard.settings.screens.createTwoThumbTypingSettings
 
-class SettingsContainer(context: Context) {
-    private val list = createSettings(context)
+class SettingsContainer(
+    context: Context,
+    availability: SettingsAvailability = SettingsAvailability(),
+) {
+    private val list = createSettings(context).filter { availability.isAvailable(it.key) }
     private val map: Map<String, Setting> = HashMap<String, Setting>(list.size).apply {
         list.forEach {
             putIfAbsent(it.key, it)
@@ -35,7 +38,8 @@ class SettingsContainer(context: Context) {
     operator fun get(key: Any): Setting? = map[key]
 
     // filtering could be more elaborate, but should be good enough for a start
-    // always have all settings in search, because:
+    // Keep preference-dependent settings searchable (unsupported build/API features are excluded
+    // at registration), because:
     //  don't show disabled settings -> users confused
     //  show as disabled (i.e. no interaction possible) -> users confused
     //  show, but change will not do anything because another setting needs to be enabled first -> probably best

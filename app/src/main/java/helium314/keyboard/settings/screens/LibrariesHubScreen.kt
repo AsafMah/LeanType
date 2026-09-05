@@ -36,6 +36,7 @@ import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.NextScreenIcon
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
+import helium314.keyboard.settings.SettingsAvailability
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.PreferenceCategory
 
@@ -48,6 +49,7 @@ fun LibrariesHubScreen(
     onClickOcr: () -> Unit = {},
     onClickAIIntegration: () -> Unit = {},
     onClickSound: () -> Unit = {},
+    availability: SettingsAvailability = SettingsAvailability(),
 ) {
     val context = LocalContext.current
     val prefs = remember { context.prefs() }
@@ -85,16 +87,13 @@ fun LibrariesHubScreen(
                         PreferenceCategory("Active Engines & Capabilities")
 
                         // AI Integration Screen (Available in standard, standardfull, offline)
-                        val isSupported = BuildConfig.FLAVOR != "classic"
-                        val aiPluginInstalled = helium314.keyboard.latin.ai.OfflineAiLoader.hasPlugin(context)
-                        if (isSupported) {
-                            val aiSummary = when {
-                                aiPluginInstalled -> stringResource(R.string.libraries_status_active)
-                                else -> stringResource(R.string.libraries_status_not_installed)
-                            }
+                        if (availability.ai) {
                             Preference(
                                 name = stringResource(R.string.settings_screen_ai_integration),
-                                description = aiSummary,
+                                description = stringResource(
+                                    if (availability.cloudAi) R.string.ai_provider_summary
+                                    else R.string.offline_model_summary
+                                ),
                                 onClick = onClickAIIntegration,
                                 icon = R.drawable.ic_proofread
                             ) { NextScreenIcon() }
@@ -117,24 +116,23 @@ fun LibrariesHubScreen(
                         ) { if (isHandwritingSupported) NextScreenIcon() }
 
                         // Text Recognition (OCR) Plugin (ML Kit based)
-                        val isOcrSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
-                        val ocrInstalled = isOcrSupported && OcrPluginLoader.hasPlugin(context)
-                        val ocrSummary = when {
-                            !isOcrSupported -> "Requires Android 8.0+"
-                            ocrInstalled -> {
-                                val script = OcrPluginLoader.getActiveScriptName(context)
-                                if (!script.isNullOrBlank()) "${stringResource(R.string.libraries_status_active)} ($script)"
-                                else stringResource(R.string.libraries_status_active)
+                        if (availability.ocr) {
+                            val ocrInstalled = OcrPluginLoader.hasPlugin(context)
+                            val ocrSummary = when {
+                                ocrInstalled -> {
+                                    val script = OcrPluginLoader.getActiveScriptName(context)
+                                    if (!script.isNullOrBlank()) "${stringResource(R.string.libraries_status_active)} ($script)"
+                                    else stringResource(R.string.libraries_status_active)
+                                }
+                                else -> stringResource(R.string.libraries_status_not_installed)
                             }
-                            else -> stringResource(R.string.libraries_status_not_installed)
+                            Preference(
+                                name = stringResource(R.string.ocr_title),
+                                description = ocrSummary,
+                                onClick = onClickOcr,
+                                icon = R.drawable.ic_ocr
+                            ) { NextScreenIcon() }
                         }
-                        Preference(
-                            name = stringResource(R.string.ocr_title),
-                            description = ocrSummary,
-                            onClick = if (isOcrSupported) onClickOcr else ({}),
-                            enabled = isOcrSupported,
-                            icon = R.drawable.ic_ocr
-                        ) { if (isOcrSupported) NextScreenIcon() }
 
                         // Offline Voice Input
                         val voicePluginManager = remember { helium314.keyboard.latin.voice.VoicePluginManager(context) }
