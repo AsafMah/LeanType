@@ -274,6 +274,13 @@ dependencies {
     // Force 16 KB page-aligned version of graphics-path
     implementation("androidx.graphics:graphics-path:1.1.0")
 
+    // CameraX for in-keyboard OCR viewfinder
+    val cameraxVersion = "1.4.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
     // WorkManager — required by ML Kit Digital Ink plugin (loaded via DexClassLoader).
     // ML Kit internally calls WorkManager.getInstance(context) using the host app context,
     // so the host app must have WorkManagerInitializer registered in its manifest.

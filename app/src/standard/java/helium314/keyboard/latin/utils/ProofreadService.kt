@@ -7,6 +7,8 @@ package helium314.keyboard.latin.utils
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.ai.client.generativeai.GenerativeModel
@@ -14,6 +16,7 @@ import com.google.ai.client.generativeai.type.generationConfig
 import com.google.ai.client.generativeai.type.BlockThreshold
 import com.google.ai.client.generativeai.type.HarmCategory
 import com.google.ai.client.generativeai.type.SafetySetting
+import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -249,6 +252,16 @@ AIProvider.GEMINI
             helium314.keyboard.latin.settings.Defaults.PREF_AI_ALLOW_INSECURE_CONNECTIONS
         )
 
+    fun getCloudMaxTokens(): Int =
+        context.prefs().getInt(
+            helium314.keyboard.latin.settings.Settings.PREF_CLOUD_AI_MAX_TOKENS,
+            helium314.keyboard.latin.settings.Defaults.PREF_CLOUD_AI_MAX_TOKENS
+        )
+
+    fun setCloudMaxTokens(tokens: Int) {
+        context.prefs().edit().putInt(helium314.keyboard.latin.settings.Settings.PREF_CLOUD_AI_MAX_TOKENS, tokens).apply()
+    }
+
 
     /**
      * Tests the API key by making a simple request.
@@ -364,6 +377,13 @@ AIProvider.GEMINI
             }
             
             val response = model.generateContent(fullInput)
+            val finishReason = response.candidates.firstOrNull()?.finishReason?.name ?: ""
+            if (finishReason.contains("MAX_TOKENS", ignoreCase = true) || finishReason.contains("LENGTH", ignoreCase = true)) {
+                Log.w("ProofreadService", "Gemini response was truncated due to max_tokens limit")
+                Handler(Looper.getMainLooper()).post {
+                    KeyboardSwitcher.getInstance().showToast("AI output truncated (token limit reached)", false)
+                }
+            }
             val proofreadText = response.text?.trim()
             
             if (proofreadText.isNullOrBlank()) {
@@ -408,6 +428,13 @@ AIProvider.GEMINI
 
             val targetLanguage = getTargetLanguage()
             val response = model.generateContent(getTranslatePrompt(targetLanguage, text))
+            val finishReason = response.candidates.firstOrNull()?.finishReason?.name ?: ""
+            if (finishReason.contains("MAX_TOKENS", ignoreCase = true) || finishReason.contains("LENGTH", ignoreCase = true)) {
+                Log.w("ProofreadService", "Gemini translation response was truncated due to max_tokens limit")
+                Handler(Looper.getMainLooper()).post {
+                    KeyboardSwitcher.getInstance().showToast("AI output truncated (token limit reached)", false)
+                }
+            }
             val rawTranslatedText = response.text?.trim()
             val translatedText = if (rawTranslatedText != null) cleanTranslationOutput(text, rawTranslatedText) else null
             
@@ -511,11 +538,12 @@ AIProvider.GEMINI
                 })
             }
             
+            val maxTokens = getCloudMaxTokens()
             val requestBody = JSONObject().apply {
                 put("model", modelName)
                 put("messages", messagesArray)
                 put("temperature", 0.1)
-                put("max_tokens", 512)
+                put("max_tokens", maxTokens)
             }
 
             OutputStreamWriter(connection.outputStream).use { writer ->
@@ -561,6 +589,13 @@ AIProvider.GEMINI
             val choices = jsonObject.optJSONArray("choices")
             if (choices != null && choices.length() > 0) {
                 val firstChoice = choices.getJSONObject(0)
+                val finishReason = firstChoice.optString("finish_reason", "")
+                if (finishReason.equals("length", ignoreCase = true)) {
+                    Log.w("ProofreadService", "Cloud AI response was truncated due to max_tokens limit")
+                    Handler(Looper.getMainLooper()).post {
+                        KeyboardSwitcher.getInstance().showToast("AI output truncated (token limit reached)", false)
+                    }
+                }
                 val message = firstChoice.optJSONObject("message")
                 var content = message?.optString("content", "") ?: ""
 

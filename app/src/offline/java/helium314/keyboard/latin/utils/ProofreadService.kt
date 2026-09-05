@@ -368,7 +368,7 @@ private const val TAG = "LlamaProofreadService"
             val showThinkingVal = showThinking ?: sharedPrefs.getBoolean(Settings.PREF_OFFLINE_SHOW_THINKING, Defaults.PREF_OFFLINE_SHOW_THINKING)
 
             // Build the prompt
-            val systemPrompt = overridePrompt ?: getSystemPrompt()
+            val systemPrompt = overridePrompt ?: getSystemPrompt().ifBlank { Defaults.PREF_OFFLINE_SYSTEM_PROMPT }
             val fullPrompt = if (systemPrompt.contains("{text}")) {
                 systemPrompt.replace("{text}", text)
             } else if (overridePrompt != null) {
@@ -392,7 +392,9 @@ private const val TAG = "LlamaProofreadService"
                 } catch (_: Exception) { "" }
                 val localExamples = getProofreadFewShot(currentLocale)
                 val builder = StringBuilder("Instruction: ${instruction.trim()}\n\n")
-                builder.append("Input: heko hw r u\nOutput: Hello, how are you?\n\n")
+                if (localExamples.isEmpty() || currentLocale.lowercase().startsWith("en")) {
+                    builder.append("Input: heko hw r u\nOutput: Hello, how are you?\n\n")
+                }
                 for (ex in localExamples) {
                     builder.append("Input: ${ex.first}\nOutput: ${ex.second}\n\n")
                 }

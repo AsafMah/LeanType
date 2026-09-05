@@ -529,6 +529,72 @@
     <string name="load_offline_ai_plugin_button_delete">Delete plugin</string>
     <string name="load_offline_ai_plugin_success">Offline AI plugin imported successfully</string>
     <string name="load_offline_ai_plugin_failed">Failed to load Offline AI plugin APK</string>
+    <!-- Preferences item for loading an external OCR plugin -->
+    <string name="ocr">Text Recognition (OCR)</string>
+    <string name="ocr_title">Text Recognition (OCR)</string>
+    <string name="ocr_settings_title">Text Recognition Settings</string>
+    <string name="ocr_settings_summary">Extract text from camera and screenshots offline</string>
+    <string name="load_ocr_plugin">Load OCR plugin</string>
+    <string name="load_ocr_plugin_summary">Provide an APK plugin to enable on-device text recognition</string>
+    <string name="load_ocr_plugin_button_delete">Delete plugin</string>
+    <string name="load_ocr_plugin_success">OCR plugin imported successfully</string>
+    <string name="load_ocr_plugin_failed">Failed to load OCR plugin APK</string>
+    <string name="ocr_plugin_required_title">OCR Plugin Required</string>
+    <string name="ocr_plugin_required_summary">Install the Text Recognition plugin APK to enable camera and screenshot OCR.</string>
+    <string name="ocr_plugin_open_settings">Open OCR Settings</string>
+    <string name="ocr_result_title">Extracted Text</string>
+    <string name="ocr_insert_button">Insert Text</string>
+    <string name="ocr_retake_button">Retake</string>
+    <string name="ocr_screenshot_button_desc">Extract text from latest screenshot</string>
+    <string name="ocr_flash_button_desc">Toggle camera flash</string>
+    <string name="ocr_shutter_button_desc">Capture text from camera</string>
+    <string name="ocr_camera_permission_required">Camera permission is required for OCR viewfinder</string>
+    <string name="ocr_camera_start_error">Unable to start camera viewfinder</string>
+    <string name="ocr_no_screenshot_found">No recent screenshot found</string>
+    <string name="ocr_screenshot_load_failed">Failed to load screenshot image</string>
+    <string name="ocr_no_text_detected">No text detected</string>
+    <string name="ocr_keep_line_breaks">Preserve line breaks</string>
+    <string name="ocr_keep_line_breaks_summary">Keep line breaks in recognized text blocks</string>
+    <string name="ocr_suggest_screenshot_text">Suggest text extraction from screenshots</string>
+    <string name="ocr_suggest_screenshot_text_summary">Show OCR text extraction option alongside screenshot suggestions (requires \"Suggest recent screenshots\" to be enabled)</string>
+    <string name="ocr_trim_whitespace">Trim extra whitespace</string>
+    <string name="ocr_trim_whitespace_summary">Strip leading and trailing spaces from recognized text lines</string>
+    <string name="ocr_casing_title">Text capitalization</string>
+    <string name="ocr_casing_as_is">As recognized (Original)</string>
+    <string name="ocr_casing_sentence">Sentence case</string>
+    <string name="ocr_casing_lower">lowercase</string>
+    <string name="ocr_casing_upper">UPPERCASE</string>
+    <string name="ocr_casing_title_case">Title Case (Capitalize Words)</string>
+    <string name="ocr_line_join_title">Line join format</string>
+    <string name="ocr_line_join_newline">Line breaks (Default)</string>
+    <string name="ocr_line_join_space">Single space</string>
+    <string name="ocr_line_join_comma">Comma &amp; space (, )</string>
+    <string name="ocr_line_join_bullet">Bullet points (• )</string>
+    <string name="ocr_line_join_numbered">Numbered list (1. 2. 3.)</string>
+    <string name="ocr_dehyphenate">De-hyphenate broken words</string>
+    <string name="ocr_dehyphenate_summary">Rejoin words split across line breaks by hyphens</string>
+    <string name="ocr_normalize_punctuation">Normalize punctuation &amp; quotes</string>
+    <string name="ocr_normalize_punctuation_summary">Convert smart quotes to standard quotes and fix punctuation spacing</string>
+    <string name="ocr_strip_bullets">Strip list bullets &amp; markers</string>
+    <string name="ocr_strip_bullets_summary">Remove leading bullets, checkboxes, dashes, and numbers from extracted lines</string>
+    <string name="ocr_remove_noise">Filter stray noise characters</string>
+    <string name="ocr_remove_noise_summary">Discard isolated punctuation marks or single non-letter artifacts</string>
+    <string name="ocr_auto_copy">Auto-copy to clipboard</string>
+    <string name="ocr_auto_copy_summary">Automatically copy recognized text to system clipboard upon extraction</string>
+    <string name="ocr_auto_insert">Auto-insert into input field</string>
+    <string name="ocr_auto_insert_summary">Automatically insert extracted text directly into the active text field</string>
+    <string name="ocr_persist_flash">Remember flash state</string>
+    <string name="ocr_persist_flash_summary">Keep flashlight torch on or off across viewfinder sessions</string>
+    <string name="ocr_plugin_category">Plugin management</string>
+    <string name="ocr_permissions_category">Permissions</string>
+    <string name="ocr_camera_permission">Camera permission</string>
+    <string name="ocr_camera_permission_granted">Permission granted</string>
+    <string name="ocr_camera_permission_desc">Tap to grant camera permission for in-keyboard viewfinder</string>
+    <string name="ocr_text_options_category">Text extraction &amp; formatting</string>
+    <string name="ocr_workflow_category">Workflow &amp; automation</string>
+    <string name="ocr_camera_category">Camera &amp; viewfinder</string>
+    <string name="screenshot">Screenshot</string>
+    <string name="ocr_extract_text_button">Extract Text</string>
     <string name="handwriting">Handwriting</string>
     <string name="delete_handwriting_model">Delete downloaded model</string>
     <string name="handwriting_model_deleted">Handwriting model deleted</string>
@@ -582,6 +648,8 @@
     <string name="undo_word">Undo word</string>
     <string name="text_edit">Text editing</string>
     <string name="select_mode">Select mode</string>
+    <string name="pref_inline_calculator_suggestions">Inline math calculation</string>
+    <string name="pref_inline_calculator_suggestions_summary">Suggest calculated results as you type (e.g. 25*4=)</string>
     <string name="touchpad_fullscreen">Full-screen touchpad</string>
     <string name="touchpad_fullscreen_summary">Hide suggestion strip and toolbar when touchpad mode is active</string>
     <!-- Description for "prefs_force_incognito_mode" option. -->
@@ -913,10 +981,10 @@
     <string name="quick_pin_toolbar_keys">Pin toolbar key on long press</string>
     <!-- Description of the setting to quick-pin toolbar keys -->
     <string name="quick_pin_toolbar_keys_summary">This will disable other long press actions for toolbar keys that are not pinned</string>
-    <!-- Title of the setting to show long-press hint dots on toolbar keys -->
-    <string name="toolbar_long_press_hint">Show long-press hint dots</string>
-    <!-- Description of the setting to show long-press hint dots on toolbar keys -->
-    <string name="toolbar_long_press_hint_summary">Show dots on toolbar keys that have a long-press action</string>
+    <!-- Title of the setting to show long-press hint pills on toolbar keys -->
+    <string name="toolbar_long_press_hint">Show long-press hint pills</string>
+    <!-- Description of the setting to show long-press hint pills on toolbar keys -->
+    <string name="toolbar_long_press_hint_summary">Show pills on toolbar keys that have a long-press action</string>
     <!-- Title of the setting to show "..." as hints for more functionality on long-press -->
     <string name="show_popup_hints">Show functional hints</string>
     <!-- Description of the show_popup_hints setting -->
@@ -1137,7 +1205,26 @@ language, hence "No language". -->
     <string name="prefs_keypress_sound_style_settings">Keypress sound style</string>
     <string name="prefs_keypress_sound_style_system">System default</string>
     <string name="prefs_keypress_sound_style_dialog_title">Keypress Sound Style</string>
+    <string name="sound_packs_title">Keypress Audio</string>
     <string name="sound_pack_import_button">Import Sound Pack</string>
+    <string name="prefs_sound_acoustics_category">Acoustics &amp; Playback</string>
+    <string name="prefs_sound_pitch_scale">Pitch Shift</string>
+    <string name="prefs_sound_random_pitch">Random pitch variation</string>
+    <string name="prefs_sound_random_pitch_summary">Subtle micro-pitch variations per keystroke to prevent repetitive audio fatigue</string>
+    <string name="prefs_sound_stereo_pan">Spatial stereo panning</string>
+    <string name="prefs_sound_stereo_pan_summary">Pans audio left or right based on key position across the keyboard</string>
+    <string name="prefs_sound_dynamic_velocity">Dynamic typing velocity</string>
+    <string name="prefs_sound_dynamic_velocity_summary">Subtly accentuates volume during fast typing bursts</string>
+    <string name="prefs_sound_system_category">System &amp; Profiles</string>
+    <string name="prefs_sound_mute_in_silent">Mute in silent/vibrate mode</string>
+    <string name="prefs_sound_mute_in_silent_summary">Suppress keypress sound when device ringer is set to silent or vibrate</string>
+    <string name="prefs_sound_mute_in_dnd">Mute in Do Not Disturb</string>
+    <string name="prefs_sound_mute_in_dnd_summary">Suppress keypress sound when Do Not Disturb is active</string>
+    <string name="prefs_sound_balance_category">Key Sound Balance</string>
+    <string name="prefs_sound_vol_space">Spacebar volume</string>
+    <string name="prefs_sound_vol_delete">Backspace volume</string>
+    <string name="prefs_sound_vol_enter">Enter key volume</string>
+    <string name="prefs_sound_vol_modifiers">Modifiers volume (Shift &amp; Symbols)</string>
     <!-- Title of the setting for key long press delay -->
     <string name="prefs_key_longpress_timeout_settings">Key long press delay</string>
     <!-- Title of the setting for overriding Android SDK level for showing emojis -->
@@ -1628,6 +1715,22 @@ New dictionary:
         <item>32</item>
         <item>64</item>
         <item>128</item>
+    </string-array>
+    <string name="cloud_ai_max_tokens_title">Cloud AI Max Tokens</string>
+    <string name="cloud_ai_max_tokens_summary">Maximum length of AI generated responses</string>
+    <string name="cloud_ai_max_tokens_custom_option">Custom…</string>
+    <string name="cloud_ai_max_tokens_custom_desc">Custom (%1$d tokens)</string>
+    <string-array name="cloud_ai_max_tokens_entries">
+        <item>Compact (1024 tokens)</item>
+        <item>Standard (2048 tokens)</item>
+        <item>Large (4096 tokens)</item>
+        <item>Extra Large (8192 tokens)</item>
+    </string-array>
+    <string-array name="cloud_ai_max_tokens_values" translatable="false">
+        <item>1024</item>
+        <item>2048</item>
+        <item>4096</item>
+        <item>8192</item>
     </string-array>
     <!-- Toast message shown when image pasting is not supported by the app -->
     <string name="image_pasting_not_supported">This app does not support image pasting</string>

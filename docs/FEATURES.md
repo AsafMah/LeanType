@@ -23,6 +23,19 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 
 ## Summary of New Features
 
+### Upstream v4.2 additions
+
+- **Camera and screenshot OCR:** On Android 8.0+, load the optional OCR plugin from
+  `Plugins > OCR` and use the OCR toolbar key after granting camera access. Screenshot
+  extraction additionally requires screenshot suggestions and media access. Formatting
+  settings control casing, line joining, dehyphenation, punctuation, and whitespace.
+  Recognition runs on-device; offline tiers can import a locally obtained plugin.
+- **Inline math:** `Text correction > Inline math calculation` offers a result after
+  an arithmetic expression ending in `=`; tapping the suggestion replaces the expression.
+- **Sound packs:** `Plugins > Keypress Audio` provides volume, pitch, pan, per-key
+  controls, and ZIP import. Packs are no longer bundled in the APK. Standard/Full can
+  download them in-app; Offline and Offline Lite use browser download and local import.
+
 | Feature | Function | Settings Location |
 | :--- | :--- | :--- |
 | **Multi-Provider AI** | Uses Gemini, Groq, or OpenAI to proofread/rewrite text. Fetch latest models dynamically. | `AI Integration > Set AI Provider` |

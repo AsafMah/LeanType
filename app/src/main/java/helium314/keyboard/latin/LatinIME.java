@@ -210,6 +210,7 @@ public class LatinIME extends InputMethodService implements
 
     private final ClipboardHistoryManager mClipboardHistoryManager = new ClipboardHistoryManager(this);
     private final OtpSuggestionManager mOtpSuggestionManager = new OtpSuggestionManager(this);
+    private final MathSuggestionManager mMathSuggestionManager = new MathSuggestionManager(this);
 
     private FloatingKeyboardManager mFloatingKeyboardManager;
 
@@ -841,6 +842,7 @@ public class LatinIME extends InputMethodService implements
         try { unregisterReceiver(mDictionaryDumpBroadcastReceiver); } catch (Exception e) {}
         try { unregisterReceiver(mRestartAfterDeviceUnlockReceiver); } catch (Exception e) {}
         mStatsUtilsManager.onDestroy(this /* context */);
+        AudioAndHapticFeedbackManager.getInstance().onDestroy();
         super.onDestroy();
         deallocateMemory();
     }
@@ -1144,6 +1146,7 @@ public class LatinIME extends InputMethodService implements
         }
 
         mClipboardHistoryManager.onStartInputView();
+        AudioAndHapticFeedbackManager.getInstance().onStartInputView();
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for
         // which we
@@ -1390,6 +1393,7 @@ public class LatinIME extends InputMethodService implements
         }
         mOtpSuggestionManager.stop();
         mClipboardHistoryManager.onFinishInputView();
+        AudioAndHapticFeedbackManager.getInstance().onFinishInputView();
         cleanupInternalStateForFinishInput();
     }
 
@@ -2013,6 +2017,9 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void setSuggestions(final SuggestedWords suggestedWords) {
+        if (tryShowMathSuggestion()) {
+            return;
+        }
         if (suggestedWords.isEmpty()) {
             // avoids showing clipboard suggestion when starting gesture typing
             // should be fine, as there will be another suggestion in a few ms
@@ -2093,6 +2100,16 @@ public class LatinIME extends InputMethodService implements
         return false;
     }
 
+    public boolean tryShowMathSuggestion() {
+        if (!hasSuggestionStripView()) return false;
+        final View mathView = mMathSuggestionManager.getMathSuggestionView(mSuggestionStripView);
+        if (mathView != null) {
+            mSuggestionStripView.setExternalSuggestionView(mathView, false);
+            return true;
+        }
+        return false;
+    }
+
     public boolean tryShowClipboardSuggestion() {
         final View clipboardView = mClipboardHistoryManager.getClipboardSuggestionView(getCurrentInputEditorInfo(),
                 mSuggestionStripView);
@@ -2121,8 +2138,8 @@ public class LatinIME extends InputMethodService implements
             return;
         }
         final SettingsValues currentSettings = mSettings.getCurrent();
-        if (tryShowOtpSuggestion() || tryShowClipboardSuggestion()) {
-            // an external (OTP or clipboard) suggestion has been set
+        if (tryShowOtpSuggestion() || tryShowMathSuggestion() || tryShowClipboardSuggestion()) {
+            // an external (OTP, Math, or clipboard) suggestion has been set
             if (hasSuggestionStripView() && currentSettings.mAutoHideToolbar)
                 mSuggestionStripView.setToolbarVisibility(false);
             return;
@@ -2327,12 +2344,20 @@ public class LatinIME extends InputMethodService implements
                 return;
             }
         }
-        final AudioAndHapticFeedbackManager feedbackManager = AudioAndHapticFeedbackManager.getInstance();
-        if (repeatCount == 0) {
-            // TODO: Reconsider how to perform haptic feedback when repeating key.
-            feedbackManager.performHapticFeedback(keyboardView, hapticEvent);
+        float keyXRatio = 0.5f;
+        if (keyboardView != null) {
+            final helium314.keyboard.keyboard.Keyboard keyboard = keyboardView.getKeyboard();
+            if (keyboard != null) {
+                final helium314.keyboard.keyboard.Key key = keyboard.getKey(code);
+                if (key != null && keyboard.mOccupiedWidth > 0) {
+                    keyXRatio = (key.getX() + key.getWidth() / 2f) / (float) keyboard.mOccupiedWidth;
+                    keyXRatio = Math.max(0f, Math.min(1f, keyXRatio));
+                }
+            }
         }
-        feedbackManager.performAudioFeedback(code, hapticEvent);
+        final AudioAndHapticFeedbackManager feedbackManager = AudioAndHapticFeedbackManager.getInstance();
+        feedbackManager.performHapticFeedback(keyboardView, hapticEvent);
+        feedbackManager.performAudioFeedback(code, hapticEvent, keyXRatio);
     }
 
     // Hooks for hardware keyboard

@@ -156,6 +156,16 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_VIBRATION_AMPLITUDE_SETTINGS = "vibration_amplitude_settings";
     public static final String PREF_KEYPRESS_SOUND_VOLUME = "keypress_sound_volume";
     public static final String PREF_KEYPRESS_SOUND_STYLE = "keypress_sound_style";
+    public static final String PREF_SOUND_PITCH_SCALE = "sound_pitch_scale";
+    public static final String PREF_SOUND_RANDOM_PITCH = "sound_random_pitch";
+    public static final String PREF_SOUND_STEREO_PAN = "sound_stereo_pan";
+    public static final String PREF_SOUND_DYNAMIC_VELOCITY = "sound_dynamic_velocity";
+    public static final String PREF_SOUND_MUTE_IN_SILENT = "sound_mute_in_silent";
+    public static final String PREF_SOUND_MUTE_IN_DND = "sound_mute_in_dnd";
+    public static final String PREF_SOUND_VOL_SPACE = "sound_vol_space";
+    public static final String PREF_SOUND_VOL_DELETE = "sound_vol_delete";
+    public static final String PREF_SOUND_VOL_ENTER = "sound_vol_enter";
+    public static final String PREF_SOUND_VOL_MODIFIERS = "sound_vol_modifiers";
     public static final String PREF_KEY_LONGPRESS_TIMEOUT = "key_longpress_timeout";
     public static final String PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = "enable_emoji_alt_physical_key";
     public static final String PREF_GESTURE_PREVIEW_TRAIL = "gesture_preview_trail";
@@ -264,12 +274,14 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_OFFLINE_MAX_TOKENS = "offline_max_tokens";
     public static final String PREF_OFFLINE_KEEP_MODEL_LOADED = "offline_keep_model_loaded";
     public static final String PREF_AI_ALLOW_INSECURE_CONNECTIONS = "ai_allow_insecure_connections";
+    public static final String PREF_CLOUD_AI_MAX_TOKENS = "cloud_ai_max_tokens";
 
     public static final String PREF_ENABLE_CLIPBOARD_HISTORY = "enable_clipboard_history";
     public static final String PREF_SUGGEST_SCREENSHOTS = "suggest_screenshots";
     public static final String PREF_COMPRESS_SCREENSHOTS = "compress_screenshots";
     public static final String PREF_AUTO_READ_OTP = "auto_read_otp";
     public static final String PREF_OTP_ALLOWED_SMS_PACKAGE = "otp_allowed_sms_package";
+    public static final String PREF_INLINE_MATH_CALCULATION = "pref_inline_calculator_suggestions";
     public static final String PREF_CLIPBOARD_HISTORY_RETENTION_TIME = "clipboard_history_retention_time";
     public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
     public static final String PREF_CLIPBOARD_FOLD_PINNED = "clipboard_fold_pinned";

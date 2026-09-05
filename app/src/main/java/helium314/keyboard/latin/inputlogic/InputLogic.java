@@ -1600,8 +1600,17 @@ public final class InputLogic {
                     @Override
                     public void onSuccess(String proofreadText) {
 
-                        if (proofreadText != null && !proofreadText.equals(mTextBeforeProofread)) {
-
+                        if (proofreadText != null && !proofreadText.isEmpty() && !proofreadText.equals(mTextBeforeProofread)) {
+                            // Truncation safeguard: if original input was substantial (> 20 chars) and proofreadText is less than 30% of original text length, abort to prevent accidental data loss
+                            if (mTextBeforeProofread != null && mTextBeforeProofread.length() > 20 && proofreadText.length() < mTextBeforeProofread.length() * 0.3) {
+                                Log.w(TAG, "Proofread result suspiciously short (" + proofreadText.length() + " vs " + mTextBeforeProofread.length() + "), aborting replacement to prevent truncation data loss");
+                                helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().showToast("Proofread output truncated by model; replacement aborted.", false);
+                                if (!hasSelection) {
+                                    int len = mTextBeforeProofread.length();
+                                    mConnection.setSelection(len, len);
+                                }
+                                return;
+                            }
                             // Text should already be selected (either user selection or selectAll before
                             // API call)
                             // Just commit the new text to replace selection
@@ -1681,7 +1690,16 @@ public final class InputLogic {
                     public void onSuccess(String translatedText) {
 
                         if (translatedText != null && !translatedText.equals(mTextBeforeTranslate)) {
-
+                            // Truncation safeguard: if original input was substantial (> 20 chars) and translatedText is less than 30% of original text length, abort to prevent accidental data loss
+                            if (mTextBeforeTranslate != null && mTextBeforeTranslate.length() > 20 && translatedText.length() < mTextBeforeTranslate.length() * 0.3) {
+                                Log.w(TAG, "Translation result suspiciously short (" + translatedText.length() + " vs " + mTextBeforeTranslate.length() + "), aborting replacement to prevent truncation data loss");
+                                helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().showToast("Translation output truncated by model; replacement aborted.", false);
+                                if (!hasSelection) {
+                                    int len = mTextBeforeTranslate.length();
+                                    mConnection.setSelection(len, len);
+                                }
+                                return;
+                            }
                             mConnection.commitText(translatedText, 1);
 
                         } else {
@@ -2758,7 +2776,27 @@ public final class InputLogic {
                 StatsUtils.onBackspacePressed(1);
             }
             if (mWordComposer.isComposingWord()) {
-                setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
+                final String typedWord = mWordComposer.getTypedWord();
+                setComposingTextInternal(getTextWithUnderline(typedWord), 1);
+                if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
+                        && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
+                    final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+                    if (textBefore != null) {
+                        final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
+                                helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(typedWord, textBefore.toString(), mLatinIME);
+                        if (result != null) {
+                            if (mJustRevertedExpandedShortcut == null
+                                    || !result.getMatchedString().equalsIgnoreCase(mJustRevertedExpandedShortcut)) {
+                                if (result.getPrefixLength() > 0) {
+                                    mConnection.commitText("", 1);
+                                    mConnection.deleteTextBeforeCursor(result.getPrefixLength());
+                                }
+                                commitExpandedText(result.getMatchedString(), result.getExpandedText());
+                                resetComposingState(true);
+                            }
+                        }
+                    }
+                }
             } else {
                 if (wasBatchMode || wholeWordDeleted) {
                     // Composing word gone (whole-word/batch delete): clear the composing span in
@@ -3740,9 +3778,13 @@ public final class InputLogic {
             }
             inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
         }
-        if (settingsValues.mForceAutoCaps && !InputTypeUtils.isPasswordInputType(inputType)
-                && !InputTypeUtils.isVisiblePasswordInputType(inputType)) {
-            inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
+        if (!InputTypeUtils.isAnyPasswordInputType(inputType)
+                && !InputTypeUtils.isUriOrEmailType(inputType)
+                && (inputType & InputType.TYPE_MASK_CLASS) == InputType.TYPE_CLASS_TEXT) {
+            if (settingsValues.mForceAutoCaps
+                    || (inputType & (InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | InputType.TYPE_TEXT_FLAG_CAP_WORDS | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)) == 0) {
+                inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
+            }
         }
         // Warning: this depends on mSpaceState, which may not be the most current
         // value. If
@@ -3816,20 +3858,15 @@ public final class InputLogic {
             final LatinIME.UIHandler handler) {
         clearOneShotSpaceActionAndNotifyIfChanged();
         if (mWordComposer.isComposingWord()) {
-            final SuggestedWordInfo autoCorrection = mWordComposer.getAutoCorrectionOrNull();
             final String typedWord = mWordComposer.getTypedWord();
-            if (autoCorrection != null && !typedWord.equals(autoCorrection.mWord)) {
-                commitCurrentAutoCorrection(settingsValues, LastComposedWord.NOT_A_SEPARATOR, handler);
-            } else {
-                final NgramContext ngramContext = mConnection.getNgramContextFromNthPreviousWord(
-                        settingsValues.mSpacingAndPunctuations, 1);
-                performAdditionToUserHistoryDictionary(settingsValues, typedWord, ngramContext);
-                mLastComposedWord = mWordComposer.commitWord(
-                        LastComposedWord.COMMIT_TYPE_USER_TYPED_WORD, typedWord,
-                        LastComposedWord.NOT_A_SEPARATOR, ngramContext);
-                mConnection.finishComposingText();
-                StatsUtils.onWordCommitUserTyped(typedWord, mWordComposer.isBatchMode());
-            }
+            final NgramContext ngramContext = mConnection.getNgramContextFromNthPreviousWord(
+                    settingsValues.mSpacingAndPunctuations, 1);
+            performAdditionToUserHistoryDictionary(settingsValues, typedWord, ngramContext);
+            mLastComposedWord = mWordComposer.commitWord(
+                    LastComposedWord.COMMIT_TYPE_USER_TYPED_WORD, typedWord,
+                    LastComposedWord.NOT_A_SEPARATOR, ngramContext);
+            mConnection.finishComposingText();
+            StatsUtils.onWordCommitUserTyped(typedWord, mWordComposer.isBatchMode());
         }
         mConnection.performEditorAction(actionId);
     }

@@ -24,6 +24,7 @@ import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
+import android.view.VelocityTracker
 import android.view.View
 import android.view.View.OnLongClickListener
 import android.view.ViewConfiguration
@@ -337,19 +338,10 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         gestureDetector = GestureDetector(context, slidingListener)
     }
 
-    private var swipeDownDismissed = false
-    private val swipeDownDetector = GestureDetector(context, object : SimpleOnGestureListener() {
-        override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-            if (!Settings.getValues().mToolbarSwipeDownDismiss) return false
-            val minVelocity = ViewConfiguration.get(context).scaledMinimumFlingVelocity * 1.5f
-            if (velocityY > minVelocity && Math.abs(velocityY) > Math.abs(velocityX)) {
-                swipeDownDismissed = true
-                listener.onCodeInput(KeyCode.IME_HIDE_UI, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, false)
-                return true
-            }
-            return false
-        }
-    })
+    private var swipeDownStartY = 0f
+    private var swipeDownStartX = 0f
+    private var isSwipeDownTriggered = false
+    private var swipeVelocityTracker: VelocityTracker? = null
 
     // public stuff
 
@@ -757,21 +749,65 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         return true
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (Settings.getValues().mToolbarSwipeDownDismiss) {
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    swipeDownStartY = ev.rawY
+                    swipeDownStartX = ev.rawX
+                    isSwipeDownTriggered = false
+                    swipeVelocityTracker?.recycle()
+                    swipeVelocityTracker = VelocityTracker.obtain().apply {
+                        addMovement(ev)
+                    }
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    swipeVelocityTracker?.addMovement(ev)
+                    if (!isSwipeDownTriggered) {
+                        val dy = ev.rawY - swipeDownStartY
+                        val dx = Math.abs(ev.rawX - swipeDownStartX)
+                        val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+                        val minDistance = Math.max(touchSlop * 2, 20.dpToPx(resources))
+
+                        swipeVelocityTracker?.computeCurrentVelocity(1000)
+                        val vy = swipeVelocityTracker?.yVelocity ?: 0f
+                        val vx = Math.abs(swipeVelocityTracker?.xVelocity ?: 0f)
+                        val minFlingVelocity = ViewConfiguration.get(context).scaledMinimumFlingVelocity
+
+                        val isFlingDown = vy > minFlingVelocity && vy > vx * 1.2f && dy > touchSlop
+                        val isDragDown = dy > minDistance && dy > dx * 1.2f
+
+                        if (isFlingDown || isDragDown) {
+                            isSwipeDownTriggered = true
+                            listener.onCodeInput(KeyCode.IME_HIDE_UI, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, false)
+                            val cancelEvent = MotionEvent.obtain(ev).apply {
+                                action = MotionEvent.ACTION_CANCEL
+                            }
+                            super.dispatchTouchEvent(cancelEvent)
+                            cancelEvent.recycle()
+                            return true
+                        }
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    swipeVelocityTracker?.recycle()
+                    swipeVelocityTracker = null
+                    if (isSwipeDownTriggered) {
+                        isSwipeDownTriggered = false
+                        return true
+                    }
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     override fun onInterceptTouchEvent(motionEvent: MotionEvent): Boolean {
         // Disable More Suggestions if external suggestions are visible
         if (isExternalSuggestionVisible) {
             return false
         }
 
-        // Detect swipe-down to dismiss keyboard
-        if (Settings.getValues().mToolbarSwipeDownDismiss) {
-            swipeDownDetector.onTouchEvent(motionEvent)
-            if (swipeDownDismissed) {
-                swipeDownDismissed = false
-                return true
-            }
-        }
-        
         // In split mode, don't intercept touches on the top row (toolbar row)
         // to prevent accidentally cancelling long presses on toolbar buttons.
         if (Settings.getValues().mSplitToolbar) {

@@ -100,13 +100,23 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     private boolean reevaluateIfSoundIsOn() {
-        if (mSettingsValues == null || !mSettingsValues.mSoundOn || mAudioManager == null || mDoNotDisturb) {
+        if (mSettingsValues == null || !mSettingsValues.mSoundOn || mAudioManager == null) {
             return false;
         }
-        return mAudioManager.getRingerMode() == AudioManager.RINGER_MODE_NORMAL;
+        if (mSettingsValues.mSoundMuteInDnd && mDoNotDisturb) {
+            return false;
+        }
+        if (mSettingsValues.mSoundMuteInSilent && mAudioManager.getRingerMode() != AudioManager.RINGER_MODE_NORMAL) {
+            return false;
+        }
+        return true;
     }
 
     public void performAudioFeedback(final int code, final HapticEvent hapticEvent) {
+        performAudioFeedback(code, hapticEvent, 0.5f);
+    }
+
+    public void performAudioFeedback(final int code, final HapticEvent hapticEvent, final float keyXRatio) {
         if (!mSoundOn) {
             return;
         }
@@ -115,7 +125,7 @@ public final class AudioAndHapticFeedbackManager {
         }
         final float volume = mSettingsValues != null ? mSettingsValues.mKeypressSoundVolume : -0.01f;
         if (mContext != null) {
-            final boolean played = CustomSoundManager.Companion.getInstance(mContext).playSound(code, volume);
+            final boolean played = CustomSoundManager.Companion.getInstance(mContext).playSound(code, volume, keyXRatio);
             if (played) {
                 return;
             }
@@ -166,4 +176,23 @@ public final class AudioAndHapticFeedbackManager {
         mDoNotDisturb = doNotDisturb;
         mSoundOn = reevaluateIfSoundIsOn();
     }
+
+    public void onStartInputView() {
+        if (mContext != null && mSoundOn) {
+            CustomSoundManager.Companion.getInstance(mContext).onStartInputView();
+        }
+    }
+
+    public void onFinishInputView() {
+        if (mContext != null) {
+            CustomSoundManager.Companion.getInstance(mContext).onFinishInputView();
+        }
+    }
+
+    public void onDestroy() {
+        if (mContext != null) {
+            CustomSoundManager.Companion.getInstance(mContext).onDestroy();
+        }
+    }
 }
+

@@ -326,6 +326,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     SPLIT -> KeyCode.SPLIT_LAYOUT
     PROOFREAD -> KeyCode.PROOFREAD
     TRANSLATE -> KeyCode.TRANSLATE
+    OCR -> KeyCode.OCR
     SELECT_MODE -> KeyCode.TOGGLE_SELECTION_MODE
     CUSTOM_AI_1 -> KeyCode.CUSTOM_AI_1
     CUSTOM_AI_2 -> KeyCode.CUSTOM_AI_2
@@ -363,7 +364,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 enum class ToolbarKey {
     VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, HANDWRITING, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
     INCOGNITO, TOUCHPAD, TEXT_EDIT, AUTOCORRECT, AUTOSPACE, AUTO_CAP, FORCE_AUTO_CAP, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
-    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, JOIN_NEXT, FORCE_NEXT_SPACE, UNDO_WORD, PROOFREAD, TRANSLATE, SELECT_MODE,
+    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, JOIN_NEXT, FORCE_NEXT_SPACE, UNDO_WORD, PROOFREAD, TRANSLATE, OCR, SELECT_MODE,
     CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, CUSTOM_AI_4, CUSTOM_AI_5,
     CUSTOM_AI_6, CUSTOM_AI_7, CUSTOM_AI_8, CUSTOM_AI_9, CUSTOM_AI_10
 }
@@ -387,6 +388,7 @@ private val flavorExcludedKeys by lazy {
     }
     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
         otherKeys.add(HANDWRITING)
+        otherKeys.add(OCR)
     }
     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) {
         otherKeys.add(TRANSLATE)
@@ -402,9 +404,9 @@ private val excludedKeys by lazy {
 
 val defaultToolbarPref by lazy {
     val default = when (helium314.keyboard.latin.BuildConfig.FLAVOR) {
-        "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE, TEXT_EDIT)
+        "offline" -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, OCR, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, INCOGNITO, COPY, PASTE, PROOFREAD, TRANSLATE, TEXT_EDIT)
         "offlinelite" -> listOf(SETTINGS, VOICE, CLIPBOARD, UNDO, INCOGNITO, COPY, PASTE)
-        else -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, TEXT_EDIT, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL, SELECT_MODE)
+        else -> listOf(SETTINGS, VOICE, CLIPBOARD, HANDWRITING, OCR, CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, UNDO, PROOFREAD, TRANSLATE, INCOGNITO, TOUCHPAD, TEXT_EDIT, FLOATING, NUMPAD, COPY, PASTE, SELECT_ALL, SELECT_MODE)
     }
         
     val others = entries.filterNot { it in default || it in excludedKeys }
@@ -601,13 +603,31 @@ class LongPressHintDrawable(private val base: Drawable) : Drawable() {
     }
 
     override fun draw(canvas: Canvas) {
-        base.draw(canvas)
         val bounds = bounds
-        val radius = bounds.height() * 0.05f
-        val cx = bounds.right.toFloat() - radius * 3f
-        val cy = bounds.bottom.toFloat() - radius * 3f
-        hintPaint.color = Settings.getValues().mColors.get(ColorType.CLIPBOARD_PIN)
-        canvas.drawCircle(cx, cy, radius, hintPaint)
+        val h = bounds.height().toFloat()
+        val w = bounds.width().toFloat()
+        if (h <= 0f || w <= 0f) return
+
+        val shiftY = (h * 0.08f).coerceAtLeast(2f).toInt()
+        base.setBounds(bounds.left, bounds.top - shiftY, bounds.right, bounds.bottom - shiftY)
+        base.draw(canvas)
+        base.bounds = bounds
+
+        val pillWidth = (w * 0.28f).coerceIn(10f, 32f)
+        val pillHeight = (h * 0.07f).coerceIn(3f, 7f)
+        val cornerRadius = pillHeight / 2f
+        val cx = bounds.exactCenterX()
+        val cy = bounds.bottom.toFloat() - pillHeight / 2f + 1f
+
+        val left = cx - pillWidth / 2f
+        val top = cy - pillHeight / 2f
+        val right = cx + pillWidth / 2f
+        val bottom = cy + pillHeight / 2f
+
+        val baseColor = Settings.getValues().mColors.get(ColorType.CLIPBOARD_PIN)
+        val alpha25 = (Color.alpha(baseColor) * 0.25f).toInt()
+        hintPaint.color = (alpha25 shl 24) or (baseColor and 0x00FFFFFF)
+        canvas.drawRoundRect(left, top, right, bottom, cornerRadius, cornerRadius, hintPaint)
     }
 
     override fun onBoundsChange(bounds: Rect) {
@@ -617,7 +637,7 @@ class LongPressHintDrawable(private val base: Drawable) : Drawable() {
 
     override fun setAlpha(alpha: Int) {
         base.alpha = alpha
-        hintPaint.alpha = (alpha * 0.5f).toInt()
+        hintPaint.alpha = (alpha * 0.25f).toInt()
     }
 
     override fun setColorFilter(colorFilter: ColorFilter?) {

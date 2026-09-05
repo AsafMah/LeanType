@@ -70,11 +70,13 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
                 add(SettingsWithoutKey.GROQ_TOKEN)
                 add(SettingsWithoutKey.GROQ_MODEL)
                 add(SettingsWithoutKey.TRANSLATE_GROQ_MODEL)
+                add(SettingsWithoutKey.CLOUD_AI_MAX_TOKENS)
             }
             "GEMINI" -> {
                 add(SettingsWithoutKey.GEMINI_API_KEY)
                 add(SettingsWithoutKey.GEMINI_MODEL)
                 add(SettingsWithoutKey.TRANSLATE_GEMINI_MODEL)
+                add(SettingsWithoutKey.CLOUD_AI_MAX_TOKENS)
             }
             "OPENAI" -> {
                 add(SettingsWithoutKey.HUGGINGFACE_TOKEN)
@@ -82,6 +84,7 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
                 add(SettingsWithoutKey.HUGGINGFACE_ENDPOINT)
                 add(SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS)
                 add(SettingsWithoutKey.TRANSLATE_HUGGINGFACE_MODEL)
+                add(SettingsWithoutKey.CLOUD_AI_MAX_TOKENS)
             }
         }
     }

@@ -479,6 +479,67 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
     Setting(context, SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS, R.string.ai_allow_insecure_connections_title, R.string.ai_allow_insecure_connections_summary) { setting ->
         SwitchPreference(setting, Defaults.PREF_AI_ALLOW_INSECURE_CONNECTIONS)
     },
+    Setting(context, SettingsWithoutKey.CLOUD_AI_MAX_TOKENS, R.string.cloud_ai_max_tokens_title, R.string.cloud_ai_max_tokens_summary) {
+        val prefs = context.prefs()
+        var maxTokens by remember { mutableStateOf(prefs.getInt(Settings.PREF_CLOUD_AI_MAX_TOKENS, Defaults.PREF_CLOUD_AI_MAX_TOKENS)) }
+        var showListDialog by rememberSaveable { mutableStateOf(false) }
+        var showCustomDialog by rememberSaveable { mutableStateOf(false) }
+
+        val tokenEntries = context.resources.getStringArray(R.array.cloud_ai_max_tokens_entries)
+        val tokenValues = context.resources.getStringArray(R.array.cloud_ai_max_tokens_values).map { it.toInt() }
+        val tokenItems = tokenEntries.zip(tokenValues)
+
+        val currentItem = tokenItems.firstOrNull { it.second == maxTokens }
+        val description = currentItem?.first ?: context.getString(R.string.cloud_ai_max_tokens_custom_desc, maxTokens)
+
+        Preference(
+            name = context.getString(R.string.cloud_ai_max_tokens_title),
+            description = description,
+            onClick = { showListDialog = true }
+        )
+
+        val dialogItems = tokenItems + (context.getString(R.string.cloud_ai_max_tokens_custom_option) to -1)
+
+        if (showListDialog) {
+            ListPickerDialog(
+                onDismissRequest = { showListDialog = false },
+                items = dialogItems,
+                onItemSelected = {
+                    showListDialog = false
+                    if (it.second == -1) {
+                        showCustomDialog = true
+                    } else {
+                        maxTokens = it.second
+                        prefs.edit().putInt(Settings.PREF_CLOUD_AI_MAX_TOKENS, it.second).apply()
+                    }
+                },
+                selectedItem = currentItem ?: dialogItems.last(),
+                title = { Text(context.getString(R.string.cloud_ai_max_tokens_title)) },
+                getItemName = { it.first }
+            )
+        }
+
+        if (showCustomDialog) {
+            TextInputDialog(
+                onDismissRequest = { showCustomDialog = false },
+                onConfirmed = { text ->
+                    showCustomDialog = false
+                    val value = text.toIntOrNull()
+                    if (value != null && value > 0) {
+                        maxTokens = value
+                        prefs.edit().putInt(Settings.PREF_CLOUD_AI_MAX_TOKENS, value).apply()
+                    }
+                },
+                title = { Text(context.getString(R.string.cloud_ai_max_tokens_title)) },
+                initialText = if (maxTokens !in tokenValues) maxTokens.toString() else "",
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                checkTextValid = { text ->
+                    val value = text.toIntOrNull()
+                    value != null && value > 0
+                }
+            )
+        }
+    },
     if (BuildConfig.FLAVOR != "offline" || android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
         Setting(context, SettingsWithoutKey.TRANSLATION_ENGINE, R.string.translation_engine_title, R.string.translation_engine_summary) { setting ->
             val isOfflineFlavor = BuildConfig.FLAVOR == "offline"

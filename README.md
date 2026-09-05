@@ -21,6 +21,9 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 
 ### On top of that — LeanType's AI layer and quality-of-life features
 
+- **Camera and screenshot OCR** - Extract and format text on-device with an optional OCR plugin and user-granted camera/media access (Android 8.0+).
+- **Inline math** - Type an arithmetic expression followed by `=` to offer its result in the suggestion strip.
+- **Custom sound packs** - Import sound-pack ZIPs and tune keypress audio; Standard/Full can download packs in-app, while offline tiers use browser downloads and local import.
 - **[🤖 Multi-Provider AI](docs/FEATURES.md#supported-ai-providers)** - Proofread using **Gemini**, **Groq** (Llama 3, Mixtral), or **OpenAI-compatible** providers, with dynamic fetching of the latest models.
 - **[🛡️ Offline AI (GGUF)](docs/FEATURES.md#5-offline-proofreading-privacy-focused)** - Private, on-device proofreading and translation using local **GGUF models** powered by `llama.cpp` (Offline build only).
 - **🌐 AI Translation** - Translate selected text using your chosen provider, with a separate model selector.
