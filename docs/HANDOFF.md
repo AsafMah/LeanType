@@ -1,15 +1,16 @@
-# LeanTypeDual — Session Handoff (updated 2026-09-03)
+# LeanTypeDual — Session Handoff (updated 2026-09-05)
 
 This document lets a new agent/session resume without re-deriving context. It records
 **what shipped, exactly where everything sits, what is still open, and the traps that cost
-time**. Everything here was verified against the repo, GitHub, and a physical device during
-the session — no assumptions.
+time**. Release and device receipts below are historical; the unreleased integration in
+§2.5 has not been installed or verified on a physical device.
 
 Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 
-> **Current-state refresh 2026-09-03:** §1, §5, §6, §11 and §12 now reflect v0.3.0,
-> LeanBitLab v4.1.8, the Shift fix, the fork-invariant gates, and removal of the falsified
-> gesture experiments. Sections 2, 3 and 7 remain historical context.
+> **Current-state refresh 2026-09-05:** §1 and §2.5 distinguish stabilized `dev` from
+> the pending LeanBitLab v4.2.0 integration. §5, §6, §11 and §12 reflect v0.3.0,
+> LeanBitLab v4.1.8, the Shift fix, the fork-invariant gates, and experiment cleanup.
+> Sections 2.1–2.4, 3 and 7 remain historical context.
 
 ---
 
@@ -18,18 +19,19 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Thing | State |
 |---|---|
 | `main` | `b90d79de1` — released LeanTypeDual 0.3.0 |
-| `dev` | `deaa782dd` — Shift fix (#150), after LeanBitLab v4.1.8 (#149); this cleanup lands next |
+| `dev` integration base | `07ef7536f` — v4.1.8 (#149), Shift fix (#150), and experiment cleanup (#151), including the fork-invariant gates (#148) |
 | Current version | `0.3.0` / versionCode `4300` on both `main` and `dev` |
 | Tag `v0.1.0` | Pushed **and published** with 4 signed APKs |
 | Tag `v0.3.0` | **Published and latest** with 4 signed APKs, all verified after download |
 | Upstream integrated | LeanBitLab/LeanType **v4.1.8** (`cbfaf21a`), covering v4.1.3–v4.1.8 |
 | Phone (SM-S936B) | Last verified with signed **0.3.0/4300**, debug, and EXP packages; wireless ADB is currently unavailable |
 | Tablet | Never verified — still outstanding, low risk |
-| Open PRs | After this cleanup lands, only **#106** (`issue37-slide-target-actions`, unrelated/pre-existing) |
+| Upstream integration under review | v4.2.0, pinned `1383390cb9c48b859f56b6499210cbccbd91996f`; ancestry-preserving merge into the stabilized `dev` base, not `main` |
 
-**No release work is outstanding.** Open work is device verification of the Shift fix and
-v4.1.8 merge, issue #106, and deliberate triage of the backed-up old branches/worktrees.
-The two-track/ideal-prefix experiment was falsified on device and is removed by this cleanup;
+**Upstream integration and comprehensive review come first; no release or installation is
+authorized by this work.** Device verification of the unreleased changes remains outstanding,
+as do unrelated #106 and deliberate triage of backed-up old branches/worktrees.
+The two-track/ideal-prefix experiment was falsified on device and was removed by #151;
 the proven pointer-id normalization remains. See §12.
 
 ---
@@ -72,7 +74,32 @@ fixes, and many emoji/clipboard layout fixes.
 - Fixed fast Shift double-tap/Caps Lock in #150. The fix replaces an arbitrary 100 ms minimum
   with the real invariant: two presses must have an intervening release boundary.
 - Removed the falsified DUAL_POINTER, ideal-prefix and re-timing experiment machinery while
-  retaining the proven pointer-id normalization and side-by-side EXP packaging (#147).
+  retaining the proven pointer-id normalization and side-by-side EXP packaging (#151).
+
+### 2.5 Upstream v4.2.0 integration (not released)
+
+- The provisional merge is `0ab4172f3727d3821eeb34f3e91f91230286380a`, with parents
+  `07ef7536f5fa93e7ec729dd5dd5aeba5bb195807` and
+  `1383390cb9c48b859f56b6499210cbccbd91996f`. The prior upstream ancestor is
+  `cbfaf21a16194ce934c048affac563446f8cebbf`.
+- Shared-file audit includes the semantic auto-resolutions in `InputLogic.java` and
+  `KeyboardActionListenerImpl.kt`, not just Git conflicts. The build delta is CameraX
+  dependencies only: identity, version, four flavors, bundled offline llama/dictionaries,
+  release signing, and EXP packaging stay fork-owned.
+- Keep upstream OCR/camera, math, sound, and voice functionality. Offline tiers can import
+  local addons; new sound/OCR in-app downloads are cloud-only. OCR respects `nouserlib`.
+- The Shift state machine remains identical to stabilized dev and retains all eight
+  release-boundary tests. Explicit short dictionary shortcuts remain eligible for
+  autocorrection without weakening upstream's protection for unknown short tokens.
+- Forced auto-capitalization now reaches the unified input-type guard before adding
+  sentence capitalization, preserving URI/email/password exclusions with either toggle.
+- Cloud responses marked as token-truncated fail before text replacement; Gemini also
+  honors the new cloud max-token setting for both proofreading and translation.
+- Independent review identified additional OCR/camera lifecycle, sound-pack containment,
+  math privacy/replacement, and voice-state blockers. Correction work is isolated from
+  the merge worktree and must be integrated and revalidated before this branch can land.
+- The four known Windows `ParserTest` failures remain the baseline; do not add new skips
+  or baseline entries to conceal integration regressions.
 
 ---
 
