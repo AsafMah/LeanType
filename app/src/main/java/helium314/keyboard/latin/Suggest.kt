@@ -175,7 +175,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         }
 
         // Inline math calculation: offer calculated result chip if typing an arithmetic expression ending in '='
-        val mathMatch = MathEvaluator.evaluateInline(typedWordString)
+        val mathMatch = if (Settings.getValues().mInlineMathCalculation)
+            MathEvaluator.evaluateInline(typedWordString) else null
         if (mathMatch != null) {
             val mathSuggestion = SuggestedWordInfo(
                 mathMatch.resultFormatted,
