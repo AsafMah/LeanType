@@ -7,8 +7,6 @@ package helium314.keyboard.latin.utils
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.ai.client.generativeai.GenerativeModel
@@ -16,7 +14,6 @@ import com.google.ai.client.generativeai.type.generationConfig
 import com.google.ai.client.generativeai.type.BlockThreshold
 import com.google.ai.client.generativeai.type.HarmCategory
 import com.google.ai.client.generativeai.type.SafetySetting
-import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,12 +24,77 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
+internal data class GeminiContentModelConfig(
+    val modelName: String,
+    val apiKey: String,
+    val temperature: Float,
+    val topK: Int,
+    val topP: Float,
+    val maxOutputTokens: Int
+)
+
+internal data class GeminiContentResult(
+    val text: String?,
+    val finishReason: String
+)
+
+internal interface GeminiContentModel {
+    suspend fun generateContent(prompt: String): GeminiContentResult
+}
+
+internal fun interface GeminiContentModelFactory {
+    fun create(config: GeminiContentModelConfig): GeminiContentModel
+}
+
+private object DefaultGeminiContentModelFactory : GeminiContentModelFactory {
+    override fun create(config: GeminiContentModelConfig): GeminiContentModel {
+        val model = GenerativeModel(
+            modelName = config.modelName,
+            apiKey = config.apiKey,
+            generationConfig = generationConfig {
+                temperature = config.temperature
+                topK = config.topK
+                topP = config.topP
+                maxOutputTokens = config.maxOutputTokens
+            },
+            safetySettings = listOf(
+                SafetySetting(HarmCategory.HARASSMENT, BlockThreshold.NONE),
+                SafetySetting(HarmCategory.HATE_SPEECH, BlockThreshold.NONE),
+                SafetySetting(HarmCategory.SEXUALLY_EXPLICIT, BlockThreshold.NONE),
+                SafetySetting(HarmCategory.DANGEROUS_CONTENT, BlockThreshold.NONE)
+            )
+        )
+        return object : GeminiContentModel {
+            override suspend fun generateContent(prompt: String): GeminiContentResult {
+                val response = model.generateContent(prompt)
+                return GeminiContentResult(
+                    text = response.text,
+                    finishReason = response.candidates.firstOrNull()?.finishReason?.name ?: ""
+                )
+            }
+        }
+    }
+}
+
+private fun defaultConnectionFactory(url: URL): HttpURLConnection =
+    url.openConnection() as HttpURLConnection
+
 /**
  * Service for proofreading text using Google's Gemini AI API or HuggingFace Inference API.
  * Stores the API key securely using EncryptedSharedPreferences (API 23+)
  * or regular SharedPreferences with obfuscation (API 21-22).
  */
-class ProofreadService(private val context: Context) {
+class ProofreadService internal constructor(
+    private val context: Context,
+    private val geminiModelFactory: GeminiContentModelFactory,
+    private val connectionFactory: (URL) -> HttpURLConnection
+) {
+
+    constructor(context: Context) : this(
+        context,
+        DefaultGeminiContentModelFactory,
+        ::defaultConnectionFactory
+    )
 
     enum class AIProvider {
         GEMINI, GROQ, OPENAI
@@ -347,22 +409,14 @@ AIProvider.GEMINI
         }
 
         return try {
-            val model = GenerativeModel(
+            val model = geminiModelFactory.create(GeminiContentModelConfig(
                 modelName = getModelName(),
                 apiKey = apiKey,
-                generationConfig = generationConfig {
-                    temperature = 0.1f
-                    topK = 1
-                    topP = 0.95f
-                    maxOutputTokens = 8192
-                },
-                safetySettings = listOf(
-                    SafetySetting(HarmCategory.HARASSMENT, BlockThreshold.NONE),
-                    SafetySetting(HarmCategory.HATE_SPEECH, BlockThreshold.NONE),
-                    SafetySetting(HarmCategory.SEXUALLY_EXPLICIT, BlockThreshold.NONE),
-                    SafetySetting(HarmCategory.DANGEROUS_CONTENT, BlockThreshold.NONE)
-                )
-            )
+                temperature = 0.1f,
+                topK = 1,
+                topP = 0.95f,
+                maxOutputTokens = 8192
+            ))
 
             // If overridePrompt is set, use it directly (relaxed mode for Custom Keys)
             // Otherwise use the strict proofreading prompt
@@ -377,12 +431,10 @@ AIProvider.GEMINI
             }
             
             val response = model.generateContent(fullInput)
-            val finishReason = response.candidates.firstOrNull()?.finishReason?.name ?: ""
+            val finishReason = response.finishReason
             if (finishReason.contains("MAX_TOKENS", ignoreCase = true) || finishReason.contains("LENGTH", ignoreCase = true)) {
                 Log.w("ProofreadService", "Gemini response was truncated due to max_tokens limit")
-                Handler(Looper.getMainLooper()).post {
-                    KeyboardSwitcher.getInstance().showToast("AI output truncated (token limit reached)", false)
-                }
+                return Result.failure(ProofreadException(context.getString(R.string.ai_output_truncated)))
             }
             val proofreadText = response.text?.trim()
             
@@ -409,31 +461,21 @@ AIProvider.GEMINI
         return try {
             val translateModel = getTranslateModelName()
             val modelToUse = if (translateModel.isBlank()) getModelName() else translateModel
-            val model = GenerativeModel(
+            val model = geminiModelFactory.create(GeminiContentModelConfig(
                 modelName = modelToUse,
                 apiKey = apiKey,
-                generationConfig = generationConfig {
-                    temperature = 0.3f
-                    topK = 1
-                    topP = 0.95f
-                    maxOutputTokens = 8192
-                },
-                safetySettings = listOf(
-                    SafetySetting(HarmCategory.HARASSMENT, BlockThreshold.NONE),
-                    SafetySetting(HarmCategory.HATE_SPEECH, BlockThreshold.NONE),
-                    SafetySetting(HarmCategory.SEXUALLY_EXPLICIT, BlockThreshold.NONE),
-                    SafetySetting(HarmCategory.DANGEROUS_CONTENT, BlockThreshold.NONE)
-                )
-            )
+                temperature = 0.3f,
+                topK = 1,
+                topP = 0.95f,
+                maxOutputTokens = 8192
+            ))
 
             val targetLanguage = getTargetLanguage()
             val response = model.generateContent(getTranslatePrompt(targetLanguage, text))
-            val finishReason = response.candidates.firstOrNull()?.finishReason?.name ?: ""
+            val finishReason = response.finishReason
             if (finishReason.contains("MAX_TOKENS", ignoreCase = true) || finishReason.contains("LENGTH", ignoreCase = true)) {
                 Log.w("ProofreadService", "Gemini translation response was truncated due to max_tokens limit")
-                Handler(Looper.getMainLooper()).post {
-                    KeyboardSwitcher.getInstance().showToast("AI output truncated (token limit reached)", false)
-                }
+                return Result.failure(TranslateException(context.getString(R.string.ai_output_truncated)))
             }
             val rawTranslatedText = response.text?.trim()
             val translatedText = if (rawTranslatedText != null) cleanTranslationOutput(text, rawTranslatedText) else null
@@ -515,7 +557,7 @@ AIProvider.GEMINI
         }
 
         val url = URL(endpoint)
-        val connection = url.openConnection() as HttpURLConnection
+        val connection = connectionFactory(url)
         if (allowInsecure && connection is javax.net.ssl.HttpsURLConnection) {
             bypassSSLVerification(connection)
         }
@@ -592,9 +634,7 @@ AIProvider.GEMINI
                 val finishReason = firstChoice.optString("finish_reason", "")
                 if (finishReason.equals("length", ignoreCase = true)) {
                     Log.w("ProofreadService", "Cloud AI response was truncated due to max_tokens limit")
-                    Handler(Looper.getMainLooper()).post {
-                        KeyboardSwitcher.getInstance().showToast("AI output truncated (token limit reached)", false)
-                    }
+                    return Result.failure(ProofreadException(context.getString(R.string.ai_output_truncated)))
                 }
                 val message = firstChoice.optJSONObject("message")
                 var content = message?.optString("content", "") ?: ""

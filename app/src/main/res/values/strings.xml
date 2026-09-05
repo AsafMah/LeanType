@@ -771,6 +771,7 @@
     <string name="proofread_error">Proofreading failed: %s</string>
     <string name="proofread_no_text">No text to proofread</string>
     <string name="proofread_no_api_key">Gemini API key not set. Go to Settings → AI integration.</string>
+    <string name="ai_output_truncated">AI output was cut off before completion. Original text kept.</string>
     <string name="gemini_api_key_title">Gemini API Key</string>
     <string name="gemini_api_key_summary">Enter your Google Gemini API key for proofreading</string>
     <string name="gemini_api_key_hint">Enter API key</string>
