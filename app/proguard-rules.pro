@@ -74,6 +74,13 @@
 -keep class helium314.keyboard.latin.ai.** { *; }
 -keep interface helium314.keyboard.latin.ai.** { *; }
 
+# Keep OCR plugin interface and classes to prevent parameter removal or signature optimization
+-keep interface helium314.keyboard.latin.ocr.ITextRecognizer {
+    <methods>;
+}
+-keep class helium314.keyboard.latin.ocr.** { *; }
+-keep interface helium314.keyboard.latin.ocr.** { *; }
+
 # Keep WorkManager plugin factory & runtime for dynamically loaded plugins
 -keep class helium314.keyboard.latin.work.** { *; }
 -keep interface helium314.keyboard.latin.work.** { *; }
