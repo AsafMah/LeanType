@@ -109,12 +109,8 @@ class ProofreadServicePartialOutputTest {
         val configs = mutableListOf<GeminiContentModelConfig>()
         val service = ProofreadService(
             context,
-            geminiModelFactory = GeminiContentModelFactory { config ->
-                configs.add(config)
-                object : GeminiContentModel {
-                    override suspend fun generateContent(prompt: String) =
-                        GeminiContentResult("A complete response.", "STOP")
-                }
+            geminiModelFactory = fakeGeminiFactory(GeminiContentResult("A complete response.", "STOP")) {
+                configs.add(it)
             },
             connectionFactory = { error("HTTP must not be used for Gemini") }
         )
@@ -144,7 +140,31 @@ class ProofreadServicePartialOutputTest {
         assertEquals("A complete response.", service.translate("hello world").getOrThrow())
     }
 
-    private fun fakeGeminiFactory(result: GeminiContentResult) = GeminiContentModelFactory {
+    @Test
+    fun geminiProofreadingAndTranslationHonorCloudTokenSetting() = runBlocking {
+        val configs = mutableListOf<GeminiContentModelConfig>()
+        val service = ProofreadService(
+            context,
+            geminiModelFactory = fakeGeminiFactory(GeminiContentResult("A complete response.", "STOP")) {
+                configs.add(it)
+            },
+            connectionFactory = { error("HTTP must not be used for Gemini") }
+        )
+        service.setApiKey("fake-gemini-key")
+        service.setProvider(ProofreadService.AIProvider.GEMINI)
+        service.setCloudMaxTokens(2048)
+
+        service.proofread("teh original").getOrThrow()
+        service.translate("hello world").getOrThrow()
+
+        assertEquals(listOf(2048, 2048), configs.map { it.maxOutputTokens })
+    }
+
+    private fun fakeGeminiFactory(
+        result: GeminiContentResult,
+        onConfig: (GeminiContentModelConfig) -> Unit = {},
+    ) = GeminiContentModelFactory { config ->
+        onConfig(config)
         object : GeminiContentModel {
             override suspend fun generateContent(prompt: String): GeminiContentResult = result
         }

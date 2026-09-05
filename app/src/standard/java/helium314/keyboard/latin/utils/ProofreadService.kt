@@ -415,7 +415,7 @@ AIProvider.GEMINI
                 temperature = 0.1f,
                 topK = 1,
                 topP = 0.95f,
-                maxOutputTokens = 8192
+                maxOutputTokens = getCloudMaxTokens()
             ))
 
             // If overridePrompt is set, use it directly (relaxed mode for Custom Keys)
@@ -467,7 +467,7 @@ AIProvider.GEMINI
                 temperature = 0.3f,
                 topK = 1,
                 topP = 0.95f,
-                maxOutputTokens = 8192
+                maxOutputTokens = getCloudMaxTokens()
             ))
 
             val targetLanguage = getTargetLanguage()
