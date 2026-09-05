@@ -52,6 +52,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Facilitates interaction with different kinds of dictionaries. Provides APIs
@@ -68,7 +69,45 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private var mContext: Context? = null
     private var mEnabledDictionariesState: Map<String, Boolean> = emptyMap()
     private var mLoadedDownloadPrefs: Map<String, Any?> = emptyMap()
+    @Volatile
     private var dictionaryGroups = listOf(DictionaryGroup())
+
+    private val mDictionaryRevision = AtomicLong()
+    private val spellingRevision = AtomicLong()
+    private val dictionaryChangeListener = ExpandableBinaryDictionary.DictionaryChangeListener { affectsIndex ->
+        if (affectsIndex) onDictionaryChanged() else invalidateSpellingCaches()
+    }
+
+    override fun getDictionaryRevision(): Long = mDictionaryRevision.get()
+
+    private fun onDictionaryChanged() {
+        mDictionaryRevision.incrementAndGet()
+        invalidateSpellingCaches()
+    }
+
+    private fun invalidateSpellingCaches() {
+        spellingRevision.incrementAndGet()
+        mValidSpellingWordReadCache?.evictAll()
+        mValidSpellingWordWriteCache?.evictAll()
+    }
+
+    private fun observeDictionaryChanges(groups: List<DictionaryGroup>) {
+        for (group in groups) {
+            group.onDictionaryChanged = ::onDictionaryChanged
+            DictionaryFacilitator.DYNAMIC_DICTIONARY_TYPES.forEach {
+                group.getSubDict(it)?.addDictionaryChangeListener(dictionaryChangeListener)
+            }
+        }
+    }
+
+    private fun stopObservingDictionaryChanges(groups: List<DictionaryGroup>) {
+        for (group in groups) {
+            group.onDictionaryChanged = {}
+            DictionaryFacilitator.DYNAMIC_DICTIONARY_TYPES.forEach {
+                group.getSubDict(it)?.removeDictionaryChangeListener(dictionaryChangeListener)
+            }
+        }
+    }
 
     private val initializedMainDictionary = java.util.concurrent.atomic.AtomicBoolean(false)
     private val pendingMainDictionaryLoad = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -219,7 +258,10 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val oldDictionaryGroups: List<DictionaryGroup>
         synchronized(this) {
             oldDictionaryGroups = dictionaryGroups
+            stopObservingDictionaryChanges(oldDictionaryGroups)
             dictionaryGroups = newDictionaryGroups
+            observeDictionaryChanges(newDictionaryGroups)
+            onDictionaryChanged()
             refreshMainDictionaryReadinessState()
             if (hasAtLeastOneUninitializedMainDictionary()) {
                 asyncReloadUninitializedMainDictionaries(context, locales, listener)
@@ -237,9 +279,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 }
             }
         }
-
-        mValidSpellingWordWriteCache?.evictAll()
-        mValidSpellingWordReadCache?.evictAll()
     }
 
     /** creates dictionaryGroups for [newLocales] with given [newSubDictTypes], trying to re-use existing dictionaries.
@@ -345,7 +384,9 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val dictionaryGroupsToClose: List<DictionaryGroup>
         synchronized(this) {
             dictionaryGroupsToClose = dictionaryGroups
+            stopObservingDictionaryChanges(dictionaryGroupsToClose)
             dictionaryGroups = listOf(DictionaryGroup())
+            onDictionaryChanged()
             pendingMainDictionaryLoad.set(false)
             refreshMainDictionaryReadinessState()
         }
@@ -536,9 +577,10 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         if (mValidSpellingWordWriteCache == null)
             return
 
+        val revision = spellingRevision.get()
         val lowerCaseWord = originalWord.lowercase(currentLocale)
         val lowerCaseValid = isValidSpellingWord(lowerCaseWord)
-        mValidSpellingWordWriteCache?.put(lowerCaseWord, lowerCaseValid)
+        cacheSpellingResult(mValidSpellingWordWriteCache, lowerCaseWord, lowerCaseValid, revision)
 
         val capitalWord = StringUtils.capitalizeFirstAndDowncaseRest(originalWord, currentLocale)
         val capitalValid = if (lowerCaseValid) {
@@ -546,7 +588,16 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         } else {
             isValidSpellingWord(capitalWord)
         }
-        mValidSpellingWordWriteCache?.put(capitalWord, capitalValid)
+        cacheSpellingResult(mValidSpellingWordWriteCache, capitalWord, capitalValid, revision)
+    }
+
+    private fun cacheSpellingResult(cache: LruCache<String, Boolean>?, word: String, valid: Boolean, revision: Long) {
+        if (cache == null) return
+        // Use the cache's own monitor only on misses/writes; an older lookup must not repopulate
+        // a cache that was cleared while it was reading native dictionary contents.
+        synchronized(cache) {
+            if (revision == spellingRevision.get()) cache.put(word, valid)
+        }
     }
 
     override fun adjustConfidences(word: String, wasAutoCapitalized: Boolean) {
@@ -986,10 +1037,12 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     // meaning that it always has default mConfidence. So we cannot choose to only check preferred
     // locale, and instead simply return true if word is in any of the available dictionaries
     override fun isValidSpellingWord(word: String): Boolean {
+        val revision = spellingRevision.get()
+        if (isBlacklisted(word)) return false
         mValidSpellingWordReadCache?.get(word)?.let { return it }
         mValidSpellingWordWriteCache?.get(word)?.let { return it }
         val result = dictionaryGroups.any { isValidWord(word, SPELLING_DICTIONARY_TYPES, it) }
-        mValidSpellingWordReadCache?.put(word, result)
+        cacheSpellingResult(mValidSpellingWordReadCache, word, result, revision)
         return result
     }
 
@@ -1007,10 +1060,12 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     override fun isBlacklisted(word: String): Boolean = dictionaryGroups.any { it.isBlacklisted(word) }
 
     override fun removeWord(word: String) {
+        if (word.isEmpty()) return
         sessionWordBoost?.removeWord(word)
         for (dictionaryGroup in dictionaryGroups) {
             dictionaryGroup.removeWord(word)
         }
+        onDictionaryChanged()
     }
 
     override fun reloadBlacklist() {
@@ -1024,11 +1079,17 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val group = currentlyPreferredDictionaryGroup
         // Resolve the user dictionary first: if it isn't loaded we cannot add, and we must NOT
         // un-blacklist the word in that case (that would leave it neither blocked nor added).
-        val userDict = group.getSubDict(Dictionary.TYPE_USER) ?: return
-        group.removeFromBlacklist(word) // promoting a word un-blocks it
-        scope.launch {
-            // adding can throw IllegalArgumentException on some devices, see addToPersonalDictionaryIfInvalidButInHistory
-            runCatching { UserDictionary.Words.addWord(userDict.mContext, word, 250, null, group.locale) }
+        val userDict = group.getSubDict(Dictionary.TYPE_USER) as? UserBinaryDictionary
+        if (userDict == null) {
+            Log.w(TAG, "Cannot add word '$word': personal dictionary is unavailable")
+            return
+        }
+        val promotion = group.beginPromotion(word)
+        userDict.addWordToUserDictionary(word) { published ->
+            if (dictionaryGroups.any { it === group }) {
+                group.completePromotion(word, promotion, published)
+                if (published) onDictionaryChanged()
+            }
         }
     }
 
@@ -1176,17 +1237,33 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 /** A group of dictionaries that work together for a single language. */
 private class DictionaryGroup(
     val locale: Locale = Locale(""),
-    private var mainDict: Dictionary? = null,
+    @Volatile private var mainDict: Dictionary? = null,
     subDicts: Map<String, ExpandableBinaryDictionary> = emptyMap(),
     context: Context? = null
 ) {
     private val subDicts: ConcurrentHashMap<String, ExpandableBinaryDictionary> = ConcurrentHashMap(subDicts)
+    @Volatile
+    var onDictionaryChanged: () -> Unit = {}
 
     // Monitor for the blacklist set + file I/O. The previous code used
     // `synchronized(this)` inside an `apply { }` and `scope.launch { }` block, which
     // re-bound `this` to the inner receiver (the HashSet / CoroutineScope). Two
     // concurrent blacklist operations could then run without mutual exclusion.
     private val blacklistLock = Any()
+    private val pendingPromotions = mutableMapOf<String, Any>()
+
+    fun beginPromotion(word: String): Any = synchronized(blacklistLock) {
+        Any().also { pendingPromotions[word.lowercase(locale)] = it }
+    }
+
+    fun completePromotion(word: String, promotion: Any, published: Boolean) {
+        synchronized(blacklistLock) {
+            val lowercase = word.lowercase(locale)
+            if (pendingPromotions[lowercase] !== promotion) return
+            pendingPromotions.remove(lowercase)
+            if (published) removeFromBlacklist(word)
+        }
+    }
 
     /** Removes a word from all dictionaries in this group. If the word is in a read-only dictionary, it is blacklisted. */
     fun removeWord(word: String) {
@@ -1272,7 +1349,7 @@ private class DictionaryGroup(
     // --------------- Blacklist -------------------
 
     // Limit parallelism to prevent excessive I/O operations
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(2))
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
 
     // words cannot be (permanently) removed from some dictionaries, so we use a blacklist for "removing" words
     private val blacklistFile = if (context == null) null
@@ -1298,6 +1375,7 @@ private class DictionaryGroup(
                 Regex(Regex.escape(pattern))
             }
         }
+        onDictionaryChanged()
     }
     private val blacklist = hashSetOf<String>().apply {
         val file = blacklistFile
@@ -1326,11 +1404,7 @@ private class DictionaryGroup(
     }
 
     fun isBlacklisted(word: String): Boolean {
-        val userDict = getSubDict(Dictionary.TYPE_USER)
         val lowercased = word.lowercase(locale)
-        if (userDict != null && (userDict.isInDictionary(word) || userDict.isInDictionary(lowercased))) {
-            return false
-        }
         val patterns = compiledBlacklistPatterns
         return patterns.any { it.matches(lowercased) }
     }
@@ -1338,6 +1412,7 @@ private class DictionaryGroup(
     fun addToBlacklist(word: String) {
         val lowercase = word.lowercase(locale)
         synchronized(blacklistLock) {
+            pendingPromotions.remove(lowercase)
             if (!blacklist.add(lowercase)) return
             rebuildCompiledPatterns()
         }
@@ -1430,6 +1505,7 @@ private class DictionaryGroup(
         // Close old dictionary if exists. Main dictionary can be assigned multiple times.
         val oldDict = mainDict
         mainDict = newMainDict
+        onDictionaryChanged()
         if (oldDict != null && newMainDict !== oldDict)
             oldDict.close()
     }

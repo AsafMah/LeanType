@@ -29,12 +29,16 @@ import helium314.keyboard.latin.utils.CombinedFormatUtils;
 import helium314.keyboard.latin.utils.ExecutorUtils;
 
 import java.io.File;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -94,11 +98,38 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
     /** Indicates whether a task for reloading the dictionary has been scheduled. */
     private final AtomicBoolean mIsReloading;
 
-    /** Indicates whether the current dictionary needs to be recreated. */
-    private boolean mNeedsToRecreate;
+    private final AtomicLong mRecreateGeneration = new AtomicLong();
+    private volatile long mLoadedRecreateGeneration;
 
     private final ReentrantReadWriteLock mLock;
     private final Object mIterationLock = new Object();
+    private volatile boolean mClosed;
+    private final ArrayDeque<Runnable> mPendingWriteTasks = new ArrayDeque<>();
+    public interface DictionaryChangeListener {
+        void onDictionaryChanged(boolean affectsIndex);
+    }
+
+    private final CopyOnWriteArraySet<DictionaryChangeListener> mDictionaryChangeListeners = new CopyOnWriteArraySet<>();
+
+    public void addDictionaryChangeListener(final DictionaryChangeListener listener) {
+        mDictionaryChangeListeners.add(listener);
+    }
+
+    public void removeDictionaryChangeListener(final DictionaryChangeListener listener) {
+        mDictionaryChangeListeners.remove(listener);
+    }
+
+    /** Called after the native contents have changed, not when an update is merely queued. */
+    protected final void notifyDictionaryChanged() {
+        notifyDictionaryChanged(true);
+    }
+
+    private void notifyDictionaryChanged(final boolean affectsIndex) {
+        if (mClosed) return;
+        for (final DictionaryChangeListener listener : mDictionaryChangeListeners) {
+            listener.onDictionaryChanged(affectsIndex);
+        }
+    }
 
     /* A extension for a binary dictionary file. */
     protected static final String DICT_FILE_EXTENSION = ".dict";
@@ -144,7 +175,6 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
         mDictFile = getDictFile(context, dictName, dictFile);
         mBinaryDictionary = null;
         mIsReloading = new AtomicBoolean();
-        mNeedsToRecreate = false;
         mLock = new ReentrantReadWriteLock();
     }
 
@@ -159,8 +189,47 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
         return dictFile != null ? dictFile.getName() : name + "." + locale.toLanguageTag();
     }
 
-    private void asyncExecuteTaskWithWriteLock(final Runnable task) {
-        asyncExecuteTaskWithLock(mLock.writeLock(), task);
+    protected void asyncExecuteTaskWithWriteLock(final Runnable task) {
+        synchronized (mPendingWriteTasks) {
+            mPendingWriteTasks.add(task);
+            if (mPendingWriteTasks.size() != 1) return;
+            try {
+                ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD)
+                        .execute(this::drainWriteTasks);
+            } catch (final RejectedExecutionException e) {
+                mPendingWriteTasks.removeFirst();
+                throw e;
+            }
+        }
+    }
+
+    private void drainWriteTasks() {
+        Throwable failure = null;
+        while (true) {
+            final Runnable task;
+            synchronized (mPendingWriteTasks) {
+                task = mPendingWriteTasks.getFirst();
+            }
+            mLock.writeLock().lock();
+            try {
+                task.run();
+            } catch (final RuntimeException | Error e) {
+                Log.e(TAG, "Dictionary mutation failed: " + mDictName, e);
+                if (failure == null) failure = e;
+            } finally {
+                mLock.writeLock().unlock();
+            }
+            final boolean hasMore;
+            synchronized (mPendingWriteTasks) {
+                mPendingWriteTasks.removeFirst();
+                hasMore = !mPendingWriteTasks.isEmpty();
+            }
+            if (!hasMore) break;
+        }
+        // Accepted operations must still complete if an earlier one fails. Preserve its failure
+        // after draining rather than leaving later operations stuck behind an abandoned owner.
+        if (failure instanceof RuntimeException) throw (RuntimeException) failure;
+        if (failure instanceof Error) throw (Error) failure;
     }
 
     private static void asyncExecuteTaskWithLock(final Lock lock, final Runnable task) {
@@ -206,7 +275,12 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
      */
     @Override
     public void close() {
+        mClosed = true;
         asyncExecuteTaskWithWriteLock(this::closeBinaryDictionary);
+    }
+
+    protected final boolean isClosed() {
+        return mClosed;
     }
 
     protected Map<String, String> getHeaderAttributeMap() {
@@ -245,6 +319,7 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
         asyncExecuteTaskWithWriteLock(() -> {
             removeBinaryDictionaryLocked();
             createOnMemoryBinaryDictionaryLocked();
+            notifyDictionaryChanged();
         });
     }
 
@@ -266,7 +341,8 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
         }
     }
 
-    private void updateDictionaryWithWriteLock(@NonNull final Runnable updateTask) {
+    private void updateDictionaryWithWriteLock(@NonNull final Runnable updateTask,
+            final boolean affectsIndex) {
         reloadDictionaryIfRequired();
         asyncExecuteTaskWithWriteLock(() -> {
             if (getBinaryDictionary() == null) {
@@ -274,6 +350,7 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
             }
             runGCIfRequiredLocked(true /* mindsBlockByGC */);
             updateTask.run();
+            notifyDictionaryChanged(affectsIndex);
         });
     }
 
@@ -285,7 +362,7 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
             final String shortcutTarget, final int shortcutFreq, final boolean isNotAWord,
             final boolean isPossiblyOffensive, final int timestamp) {
         updateDictionaryWithWriteLock(() -> addUnigramLocked(word, frequency, shortcutTarget,
-                shortcutFreq, isNotAWord, isPossiblyOffensive, timestamp));
+                shortcutFreq, isNotAWord, isPossiblyOffensive, timestamp), true);
     }
 
     protected void addUnigramLocked(final String word, final int frequency,
@@ -312,6 +389,8 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
                 if (DEBUG) {
                     Log.i(TAG, "Cannot remove unigram entry: " + word);
                 }
+            } else {
+                notifyDictionaryChanged();
             }
         });
     }
@@ -359,7 +438,7 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
                             + " context: " + ngramContext);
                 }
             }
-        });
+        }, !TYPE_USER_HISTORY.equals(mDictType));
     }
 
     @Override
@@ -567,15 +646,19 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
      *
      */
     protected void setNeedsToRecreate() {
-        mNeedsToRecreate = true;
+        mRecreateGeneration.incrementAndGet();
     }
 
-    void clearNeedsToRecreate() {
-        mNeedsToRecreate = false;
+    long getRecreateGeneration() {
+        return mRecreateGeneration.get();
+    }
+
+    void clearNeedsToRecreate(final long loadedGeneration) {
+        mLoadedRecreateGeneration = loadedGeneration;
     }
 
     boolean isNeededToRecreate() {
-        return mNeedsToRecreate;
+        return mLoadedRecreateGeneration != mRecreateGeneration.get();
     }
 
     /**
@@ -589,6 +672,7 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
      * design.
      */
     public final void reloadDictionaryIfRequired() {
+        if (mClosed) return;
         if (!isReloadRequired())
             return;
         asyncReloadDictionary();
@@ -598,7 +682,7 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
      * Returns whether a dictionary reload is required.
      */
     private boolean isReloadRequired() {
-        return mBinaryDictionary == null || mNeedsToRecreate;
+        return mBinaryDictionary == null || isNeededToRecreate();
     }
 
     /**
@@ -610,8 +694,11 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
             return;
         }
         final File dictFile = mDictFile;
-        asyncExecuteTaskWithWriteLock(() -> {
+        final Runnable reloadTask = () -> {
+            final long generation = getRecreateGeneration();
+            boolean loaded = false;
             try {
+                if (mClosed) return;
                 if (!dictFile.exists() || isNeededToRecreate()) {
                     // If the dictionary file does not exist or contents have been updated,
                     // generate a new one.
@@ -630,11 +717,20 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
                         createNewDictionaryLocked();
                     }
                 }
-                clearNeedsToRecreate();
+                clearNeedsToRecreate(generation);
+                loaded = true;
+                if (!isNeededToRecreate()) notifyDictionaryChanged();
             } finally {
                 isReloading.set(false);
+                if (loaded && isNeededToRecreate()) reloadDictionaryIfRequired();
             }
-        });
+        };
+        try {
+            asyncExecuteTaskWithWriteLock(reloadTask);
+        } catch (final RejectedExecutionException e) {
+            isReloading.set(false);
+            throw e;
+        }
     }
 
     /**
