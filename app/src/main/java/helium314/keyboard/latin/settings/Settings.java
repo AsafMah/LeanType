@@ -457,6 +457,24 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         mPrefs.unregisterOnSharedPreferenceChangeListener(this);
     }
 
+    /** Refresh a bulk import without losing the current editor, locale, or keyboard script. */
+    public void reloadSettings() {
+        mSettingsValuesLock.lock();
+        try {
+            ToolbarUtilsKt.clearCustomToolbarKeyCodes();
+            if (mSettingsValues == null) {
+                loadSettings(mContext);
+            } else {
+                loadSettings(mContext, mSettingsValues.mLocale, mSettingsValues.mInputAttributes,
+                        mSettingsValues.mCurrentKeyboardScript);
+            }
+            StatsUtils.onLoadSettings(mSettingsValues);
+            helium314.keyboard.latin.LatinIME.sSettingsDirty = true;
+        } finally {
+            mSettingsValuesLock.unlock();
+        }
+    }
+
     public void startListener() {
         mPrefs.registerOnSharedPreferenceChangeListener(this);
     }

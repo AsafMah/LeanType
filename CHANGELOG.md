@@ -22,6 +22,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Side-by-side experimental build** — an `experimental` build type (`com.asafmah.leantypedual.exp`, shown as "LeanTypeDual EXP") that installs alongside the normal build instead of replacing it, so input experiments can be compared against a working daily driver. (#141)
 
 ### Fixed
+- **Settings imports refresh active two-thumb settings immediately** and finish asynchronously without freezing the settings screen or leaving preference listeners disabled. Archives are validated before replacing selected data. (#152)
 - **Fast double-taps on Shift enable Caps Lock again.** The prior duplicate-event workaround rejected legitimate taps less than 100 ms apart; distinct taps are now identified by their press/release boundary instead. (#146)
 - **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order. (#135, #147)
 
@@ -30,6 +31,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Reframed the two-thumb decoder research as a historical record that distinguishes in-tree preprocessing facts from claims falsified against the closed runtime recognizer. (#147)
 
 ### Reliability & testing
+- Added deterministic backup/restore regressions for slow providers, lifecycle disposal, rejected archives, and immediate two-thumb settings refresh. (#152)
 - Added source-level and packaged-APK gates that fail upstream merges when LeanTypeDual's identity, privacy flavors, bundled offline dictionaries, fork integrations, or four-flavor release coverage are lost. (#148)
 - Kept the independently useful pointer-id normalization regression coverage, added production-wiring coverage for the no-id-0 case, and pinned the restored connector's exact coordinates, timestamps, and pointer ids. Removed the native research harness whose results were easy to mistake for runtime recognizer behavior. (#147)
 
