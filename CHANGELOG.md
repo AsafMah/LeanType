@@ -15,7 +15,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Upstream
-- Merged **LeanBitLab/LeanType v4.2.0** (pinned at `1383390c`) — adds camera/screenshot OCR, inline math, configurable sound packs, and voice, suggestion, and AI fixes. Preserves LeanTypeDual's four privacy flavors, bundled offline AI/dictionaries, identity/version, two-thumb integration, and release-boundary Shift fix.
+- Merged **LeanBitLab/LeanType v4.2.0** (pinned at `1383390c`) — adds camera/screenshot OCR, inline math, configurable sound packs, and voice, suggestion, and AI fixes. Preserves LeanTypeDual's four privacy flavors, bundled offline AI/dictionaries, identity/version, two-thumb integration, and release-boundary Shift fix. Integration corrections honor the math toggle and cloud token limit, exclude unsupported AI/OCR settings, reject truncated cloud output, and retain short shortcuts and sound-settings search. CI also covers result-gate, baseline, and native-workflow-only changes.
 - Merged **LeanBitLab/LeanType v4.1.8** (pinned at `3717aa80`, covering v4.1.3–v4.1.8, 178 commits) — adds sound packs, plugin/model management improvements, floating-keyboard fixes, next-word suggestion fixes, and Android compatibility updates. LeanTypeDual retains its distinct `applicationId` and version, four privacy flavors, bundled offline AI and dictionaries, Java fallback gesture engine, and two-thumb typing. (#149)
 
 ### Added

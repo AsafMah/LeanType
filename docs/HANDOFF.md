@@ -95,9 +95,20 @@ fixes, and many emoji/clipboard layout fixes.
   sentence capitalization, preserving URI/email/password exclusions with either toggle.
 - Cloud responses marked as token-truncated fail before text replacement; Gemini also
   honors the new cloud max-token setting for both proofreading and translation.
+- Inline math candidates honor the existing enable/disable preference. Build/API
+  availability now gates both settings lookup and search, the plugin hub, and direct
+  OCR/AI routes. Offline/lite no longer expose cloud controls; unsupported OCR does not
+  offer camera-permission actions. Supported local OCR imports remain available.
+- Unit-test workflow triggers include the result checker and baseline paths; native-test
+  triggers include their own workflow. Existing tooling tests enforce these trigger paths.
 - Independent review identified additional OCR/camera lifecycle, sound-pack containment,
   math privacy/replacement, and voice-state blockers. Correction work is isolated from
   the merge worktree and must be integrated and revalidated before this branch can land.
+- Remaining inherited AI risks are tracked in #154: stale-editor callbacks, shared offline
+  inference-flow races, the offline target-language stub, and input logging. Token-limit
+  handling does not resolve these or constitute AI-wide safety approval. Offline setup
+  also still advertises a disconnected external AI plugin despite bundled llama/GGUF;
+  that baseline setup mismatch is deferred, not disguised as a working optional backend.
 - The four known Windows `ParserTest` failures remain the baseline; do not add new skips
   or baseline entries to conceal integration regressions.
 
