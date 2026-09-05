@@ -39,11 +39,32 @@ import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.NextScreenIcon
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
+import helium314.keyboard.settings.SettingsDestination
+import helium314.keyboard.settings.SettingsModule
 import helium314.keyboard.settings.dialogs.SoundPackDownloadDialog
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.PreferenceCategory
 import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
+
+// The dedicated screen owns playback previews and pack state; search links back to it.
+fun createSoundSettings(context: Context) = listOf(
+    Settings.PREF_KEYPRESS_SOUND_STYLE to R.string.prefs_keypress_sound_style_settings,
+    Settings.PREF_KEYPRESS_SOUND_VOLUME to R.string.prefs_keypress_sound_volume_settings,
+    Settings.PREF_SOUND_PITCH_SCALE to R.string.prefs_sound_pitch_scale,
+    Settings.PREF_SOUND_RANDOM_PITCH to R.string.prefs_sound_random_pitch,
+    Settings.PREF_SOUND_STEREO_PAN to R.string.prefs_sound_stereo_pan,
+    Settings.PREF_SOUND_DYNAMIC_VELOCITY to R.string.prefs_sound_dynamic_velocity,
+    Settings.PREF_SOUND_MUTE_IN_SILENT to R.string.prefs_sound_mute_in_silent,
+    Settings.PREF_SOUND_MUTE_IN_DND to R.string.prefs_sound_mute_in_dnd,
+    Settings.PREF_SOUND_VOL_SPACE to R.string.prefs_sound_vol_space,
+    Settings.PREF_SOUND_VOL_DELETE to R.string.prefs_sound_vol_delete,
+    Settings.PREF_SOUND_VOL_ENTER to R.string.prefs_sound_vol_enter,
+    Settings.PREF_SOUND_VOL_MODIFIERS to R.string.prefs_sound_vol_modifiers,
+).map { (key, title) ->
+    SettingsModule(key, SettingsDestination.Sound, title, iconRes = R.drawable.ic_play_arrow)
+        .createNavigationSetting(context)
+}
 
 @Composable
 fun SoundSettingsScreen(

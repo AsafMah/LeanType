@@ -42,6 +42,21 @@ class AddonBoundaryTest {
     }
 
     @Test
+    fun offlineOcrDownloadIsBlockedBeforeResolvingTheRemoteArtifact() {
+        assumeTrue(BuildConfig.FLAVOR in listOf("offline", "offlinelite"))
+        val context = mock(Context::class.java)
+        val abis = Build.SUPPORTED_ABIS
+        try {
+            // Any attempt to construct the download URL fails before it can reach the network.
+            ReflectionHelpers.setStaticField(Build::class.java, "SUPPORTED_ABIS", null)
+            assertFalse(OcrPluginLoader.downloadPluginApk(context, tempFile = File("unused.apk")))
+            verifyNoInteractions(context)
+        } finally {
+            ReflectionHelpers.setStaticField(Build::class.java, "SUPPORTED_ABIS", abis)
+        }
+    }
+
+    @Test
     fun unsupportedOcrCannotImportOrDiscoverRestoredPlugins() {
         val context = mock(Context::class.java)
         val sdk = Build.VERSION.SDK_INT

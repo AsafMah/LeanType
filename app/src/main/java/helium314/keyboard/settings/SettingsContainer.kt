@@ -18,6 +18,7 @@ import helium314.keyboard.settings.screens.createGestureTypingSettings
 import helium314.keyboard.settings.screens.createLanguageSettings
 import helium314.keyboard.settings.screens.createLayoutSettings
 import helium314.keyboard.settings.screens.createOcrSettings
+import helium314.keyboard.settings.screens.createSoundSettings
 import helium314.keyboard.settings.screens.createPreferencesSettings
 import helium314.keyboard.settings.screens.createTextExpanderSettings
 import helium314.keyboard.settings.screens.createToolbarSettings
@@ -135,6 +136,7 @@ private val modules = listOf(
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_ADVANCED, SettingsDestination.Advanced, R.string.settings_screen_advanced, iconRes = R.drawable.ic_settings_advanced, provider = ::createAdvancedSettings),
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_ABOUT, SettingsDestination.About, R.string.settings_screen_about, iconRes = R.drawable.ic_settings_about, provider = ::createAboutSettings),
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_OCR, SettingsDestination.OCR, R.string.ocr_settings_title, iconRes = R.drawable.ic_ocr, provider = ::createOcrSettings),
+    SettingsModule(SettingsWithoutKey.SCREEN_NAV_SOUND, SettingsDestination.Sound, R.string.sound_packs_title, iconRes = R.drawable.ic_play_arrow, provider = ::createSoundSettings),
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_LIBRARIES, SettingsDestination.Libraries, R.string.libraries_hub_title, iconRes = R.drawable.ic_emoji_objects),
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_BACKGROUND_SERVICES, SettingsDestination.BackgroundServices, titleString = "Background Services", provider = ::createBackgroundServicesSettings)
 )
@@ -204,6 +206,7 @@ object SettingsWithoutKey {
     const val SCREEN_NAV_ABOUT = "screen_nav_about"
     const val SCREEN_NAV_LIBRARIES = "screen_nav_libraries"
     const val SCREEN_NAV_OCR = "screen_nav_ocr"
+    const val SCREEN_NAV_SOUND = "screen_nav_sound"
     const val SCREEN_NAV_DICTIONARIES = "screen_nav_dictionaries"
     const val SCREEN_NAV_BACKGROUND_SERVICES = "screen_nav_background_services"
 }
