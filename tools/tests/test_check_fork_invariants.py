@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import sys
 import tempfile
@@ -16,6 +17,27 @@ import check_fork_invariants as gate  # noqa: E402
 
 FIXTURE = Path(__file__).parent / "fixtures" / "fork_invariants"
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+class WorkflowPathTests(unittest.TestCase):
+    def test_gate_and_workflow_changes_trigger_their_tests(self):
+        workflows = {
+            "build-test-auto.yml": (
+                "tools/check_test_results.py",
+                "tools/test_baselines/**",
+            ),
+            "native-tests.yml": (".github/workflows/native-tests.yml",),
+        }
+        for workflow, paths in workflows.items():
+            source = (REPO_ROOT / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
+            for event in ("push", "pull_request"):
+                with self.subTest(workflow=workflow, event=event):
+                    block = re.search(rf"(?ms)^  {event}:\n(.*?)(?=^ {{0,2}}\S|\Z)", source)
+                    self.assertIsNotNone(block, f"missing {event} trigger")
+                    paths_block = re.search(r"(?ms)^    paths:(.*?)(?=^    \S|\Z)", block[1])
+                    self.assertIsNotNone(paths_block, f"missing {event} paths")
+                    for path in paths:
+                        self.assertIn(f"'{path}'", paths_block[1])
 
 
 class ForkInvariantTests(unittest.TestCase):
