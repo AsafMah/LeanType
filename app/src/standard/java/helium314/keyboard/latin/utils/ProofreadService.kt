@@ -7,6 +7,8 @@ package helium314.keyboard.latin.utils
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.ai.client.generativeai.GenerativeModel
@@ -14,6 +16,7 @@ import com.google.ai.client.generativeai.type.generationConfig
 import com.google.ai.client.generativeai.type.BlockThreshold
 import com.google.ai.client.generativeai.type.HarmCategory
 import com.google.ai.client.generativeai.type.SafetySetting
+import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -374,6 +377,13 @@ class ProofreadService(private val context: Context) {
             }
             
             val response = model.generateContent(fullInput)
+            val finishReason = response.candidates.firstOrNull()?.finishReason?.name ?: ""
+            if (finishReason.contains("MAX_TOKENS", ignoreCase = true) || finishReason.contains("LENGTH", ignoreCase = true)) {
+                Log.w("ProofreadService", "Gemini response was truncated due to max_tokens limit")
+                Handler(Looper.getMainLooper()).post {
+                    KeyboardSwitcher.getInstance().showToast("AI output truncated (token limit reached)", false)
+                }
+            }
             val proofreadText = response.text?.trim()
             
             if (proofreadText.isNullOrBlank()) {
@@ -418,6 +428,13 @@ class ProofreadService(private val context: Context) {
 
             val targetLanguage = getTargetLanguage()
             val response = model.generateContent(getTranslatePrompt(targetLanguage, text))
+            val finishReason = response.candidates.firstOrNull()?.finishReason?.name ?: ""
+            if (finishReason.contains("MAX_TOKENS", ignoreCase = true) || finishReason.contains("LENGTH", ignoreCase = true)) {
+                Log.w("ProofreadService", "Gemini translation response was truncated due to max_tokens limit")
+                Handler(Looper.getMainLooper()).post {
+                    KeyboardSwitcher.getInstance().showToast("AI output truncated (token limit reached)", false)
+                }
+            }
             val rawTranslatedText = response.text?.trim()
             val translatedText = if (rawTranslatedText != null) cleanTranslationOutput(text, rawTranslatedText) else null
             
@@ -575,6 +592,9 @@ class ProofreadService(private val context: Context) {
                 val finishReason = firstChoice.optString("finish_reason", "")
                 if (finishReason.equals("length", ignoreCase = true)) {
                     Log.w("ProofreadService", "Cloud AI response was truncated due to max_tokens limit")
+                    Handler(Looper.getMainLooper()).post {
+                        KeyboardSwitcher.getInstance().showToast("AI output truncated (token limit reached)", false)
+                    }
                 }
                 val message = firstChoice.optJSONObject("message")
                 var content = message?.optString("content", "") ?: ""

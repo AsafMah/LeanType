@@ -962,7 +962,16 @@ public final class InputLogic {
                     public void onSuccess(String translatedText) {
 
                         if (translatedText != null && !translatedText.equals(mTextBeforeTranslate)) {
-
+                            // Truncation safeguard: if original input was substantial (> 20 chars) and translatedText is less than 30% of original text length, abort to prevent accidental data loss
+                            if (mTextBeforeTranslate != null && mTextBeforeTranslate.length() > 20 && translatedText.length() < mTextBeforeTranslate.length() * 0.3) {
+                                Log.w(TAG, "Translation result suspiciously short (" + translatedText.length() + " vs " + mTextBeforeTranslate.length() + "), aborting replacement to prevent truncation data loss");
+                                helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().showToast("Translation output truncated by model; replacement aborted.", false);
+                                if (!hasSelection) {
+                                    int len = mTextBeforeTranslate.length();
+                                    mConnection.setSelection(len, len);
+                                }
+                                return;
+                            }
                             mConnection.commitText(translatedText, 1);
 
                         } else {
