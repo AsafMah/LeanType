@@ -1,4 +1,4 @@
-# LeanTypeDual — Session Handoff (updated 2026-09-05)
+# LeanTypeDual — Session Handoff (updated 2026-09-06)
 
 This document lets a new agent/session resume without re-deriving context. It records
 **what shipped, exactly where everything sits, what is still open, and the traps that cost
@@ -7,7 +7,17 @@ time**. Release and device receipts below are historical; the unreleased integra
 
 Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 
-> **Current-state refresh 2026-09-05:** §1 and §2.5 distinguish stabilized `dev` from
+> **Current-state refresh 2026-09-06:** completed integration, runtime and state corrections
+> have been combined locally at `938997b7635ad43ff95215d1a206b2a28db8e682`, preserving all three
+> source heads (`3e2ce8612`, `9b006c82a`, `fefbafa92`). Only CHANGELOG required conflict
+> resolution; the Suggest math gate and generation-aware caches coexist. The local cleanup
+> following that base removes dead pointer-grace/seed machinery, unused spacing work,
+> inactive settings, an unreachable blocked-words screen and a duplicate toolbar preference
+> snapshot, preserving live composition, the connector and stored user data. None of this is released
+> or installed. Correct issue ownership is #152 runtime, #153 restore/dictionary state and
+> #154 remaining AI. Stabilized remote `dev` remains `07ef7536f`.
+>
+> **Previous refresh 2026-09-05:** §1 and §2.5 distinguish stabilized `dev` from
 > the pending LeanBitLab v4.2.0 integration. §5, §6, §11 and §12 reflect v0.3.0,
 > LeanBitLab v4.1.8, the Shift fix, the fork-invariant gates, and experiment cleanup.
 > Sections 2.1–2.4, 3 and 7 remain historical context.
@@ -28,8 +38,8 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Tablet | Never verified — still outstanding, low risk |
 | Upstream integration under review | v4.2.0, pinned `1383390cb9c48b859f56b6499210cbccbd91996f`; ancestry-preserving merge into the stabilized `dev` base, not `main` |
 
-**Upstream integration and comprehensive review come first; no release or installation is
-authorized by this work.** Device verification of the unreleased changes remains outstanding,
+**Current priority is stabilization and a candidate build, not another broad review.**
+No release or installation has been performed. Device verification of the unreleased changes remains outstanding,
 as do unrelated #106 and deliberate triage of backed-up old branches/worktrees.
 The two-track/ideal-prefix experiment was falsified on device and was removed by #151;
 the proven pointer-id normalization remains. See §12.
@@ -101,9 +111,10 @@ fixes, and many emoji/clipboard layout fixes.
   offer camera-permission actions. Supported local OCR imports remain available.
 - Unit-test workflow triggers include the result checker and baseline paths; native-test
   triggers include their own workflow. Existing tooling tests enforce these trigger paths.
-- Independent review identified additional OCR/camera lifecycle, sound-pack containment,
-  math privacy/replacement, and voice-state blockers. Correction work is isolated from
-  the merge worktree and must be integrated and revalidated before this branch can land.
+- Completed OCR/camera lifecycle, sound-pack containment, math privacy/replacement, voice,
+  clipboard/touchpad and restore/dictionary-state corrections are now combined at `938997b76`.
+  The combined 232-case targeted integration run passed with fresh result-gate output.
+  Dead-code cleanup follows in a separate commit; device evidence is still outstanding.
 - Remaining inherited AI risks are tracked in #154: stale-editor callbacks, shared offline
   inference-flow races, the offline target-language stub, and input logging. Token-limit
   handling does not resolve these or constitute AI-wide safety approval. Offline setup

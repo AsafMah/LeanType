@@ -24,10 +24,8 @@ import java.util.List;
  *       counteract that by injecting synthetic on-stroke waypoints at each tap's centroid so
  *       the recognizer reads the tap as a deliberate detour on the glide path.</li>
  *   <li><b>Stray opposite-hand tap (e.g. "giraffe" with a left-thumb {@code i}):</b> the tap
- *       looks geometrically out of place and skews the recognizer toward the wrong word. The
- *       midline-based dampener (TODO; not in the MVP) would reduce that tap's influence by
- *       padding its on-path neighbours instead of removing the tap outright (removing risks
- *       losing keys that ONLY that hand types).</li>
+ *       looks geometrically out of place and can skew the recognizer toward the wrong word.
+ *       The proximity guard leaves distant taps unchanged rather than amplifying them.</li>
  * </ul>
  *
  * <p>The whole hinter is gated by {@code PREF_GESTURE_DUAL_THUMB_HINTING} (default off, marked
@@ -133,14 +131,11 @@ public final class DualThumbHinter {
      * @param keyWidthPx most common key width in pixels (used as the spatial radius for the
      *     "tap stays on one key" classifier). Pass {@code Math.max(keyWidthPx, 1)} to avoid
      *     divide-by-zero if the keyboard hasn't been laid out yet.
-     * @param midlineXPx horizontal pixel offset of the left/right hand split. Currently
-     *     informational — reserved for the (future) stray-tap dampener.
      * @return a {@link Result} carrying the hinted aggregate AND just the synthetic
      *     injections separately. The hinted aggregate may equal {@code input} if no
      *     injections were made.
      */
-    public static Result postProcess(final InputPointers input, final int keyWidthPx,
-            @SuppressWarnings("unused") final int midlineXPx) {
+    public static Result postProcess(final InputPointers input, final int keyWidthPx) {
         final int n = input.getPointerSize();
         if (n < 2) return new Result(input, new InputPointers(0));
         final int[] xs = input.getXCoordinates();
@@ -187,13 +182,6 @@ public final class DualThumbHinter {
                         cxRaw, cyRaw, overlappingStroke.pointerId, baseTime + offset));
             }
         }
-
-        // TODO(#2.1 follow-up): stray-tap dampener. For each TAP that's geometrically a detour
-        // off its overlapping STROKE AND on the opposite side of midlineXPx from the STROKE's
-        // dominant side, append duplicates of the stroke's neighbouring on-path points instead
-        // (do NOT delete the tap — letters that only that hand types must survive). The
-        // proximity guard above only PREVENTS regressing the "giraffe" case; the dampener
-        // would actively IMPROVE it.
 
         if (injections.isEmpty()) return new Result(input, new InputPointers(0));
 

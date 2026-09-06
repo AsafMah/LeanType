@@ -93,14 +93,4 @@ public interface DrawingProxy {
     /** True when there are debug points currently visible on the overlay. */
     boolean hasGestureDebugPoints();
 
-    /**
-     * Toggle a "commit pending" visual indicator on the gesture floating preview text
-     * (feature #1.2). Shown during the autospace grace window so the user has a visible cue
-     * that a commit is imminent — addressing the perceived sluggishness when the grace timer
-     * delays the commit. Implementations typically append an ellipsis to the displayed word.
-     *
-     * @param pending {@code true} when a grace-deferred commit is queued; {@code false} on
-     *     normal commit / cancel / continuation.
-     */
-    void setGestureCommitPending(boolean pending);
 }

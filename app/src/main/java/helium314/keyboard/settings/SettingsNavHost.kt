@@ -39,7 +39,6 @@ import helium314.keyboard.settings.screens.SubtypeScreen
 import helium314.keyboard.settings.screens.TextCorrectionScreen
 import helium314.keyboard.settings.screens.ToolbarScreen
 import helium314.keyboard.settings.screens.TwoThumbTypingScreen
-import helium314.keyboard.settings.screens.BlocklistScreen
 import helium314.keyboard.settings.screens.UpdatesScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -194,9 +193,6 @@ fun SettingsNavHost(
         composable(SettingsDestination.TextExpander) {
             TextExpanderScreen(onClickBack = ::goBack)
         }
-        composable(SettingsDestination.Blocklist) {
-            BlocklistScreen(onClickBack = ::goBack)
-        }
         composable(SettingsDestination.BackgroundServices) {
             helium314.keyboard.settings.screens.BackgroundServicesScreen(onClickBack = ::goBack)
         }
@@ -241,7 +237,6 @@ object SettingsDestination {
     const val CustomAIKeys = "custom_ai_keys"
     const val CustomAIKeyConfig = "custom_ai_key_config/"
     const val TextExpander = "text_expander"
-    const val Blocklist = "blocklist"
 
     const val BackgroundServices = "background_services"
     const val OfflineVoice = "offline_voice"

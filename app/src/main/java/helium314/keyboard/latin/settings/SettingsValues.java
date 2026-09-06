@@ -130,18 +130,12 @@ public class SettingsValues {
         public final boolean mGestureFloatingPreviewDynamicEnabled;
         public final int mGestureFastTypingCooldown;
         public final int mGestureTrailFadeoutDuration;
-        // Two-thumb typing settings (see plan in PR #improve-two-thumb-typing).
-        // Wired into preferences here; behaviour for each is implemented in follow-up changes.
+        // Two-thumb typing settings.
         public final boolean mGestureManualSpacing;
         public final boolean mGestureFragmentBackspace;
-        public final int mGestureAutospaceGraceMs;
-        public final int mGestureTapPromotionMs;
         public final boolean mGestureDualThumbHinting;
-        public final int mGestureDualThumbMidlinePct;
         public final boolean mGestureDebugDrawPoints;
         public final boolean mGestureDebugAccumulateFragments;
-        public final boolean mGestureApostropheKey;
-        public final boolean mAutospaceVisualHint;
         // Unified combining-mode (replaces gesture-only grace + tap-promotion). Default 0 = off.
         public final int mCombiningGraceMs;
         public final boolean mCombiningAutocorrectOnAutospace;
@@ -156,7 +150,6 @@ public class SettingsValues {
         // Multi-part word composition (this branch).
         public final boolean mMultipartAutoExtendInCombining;
         public final boolean mMultipartFullWordSuggestions;
-        public final boolean mMultipartTapSeedGesture;
         public final boolean mMultipartRerecognizeTaps;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final boolean mRecordInputTraces;
@@ -196,7 +189,6 @@ public class SettingsValues {
         public final boolean mAutoHidePinnedKeys;
         public final boolean mRememberToolbarState;
         public final boolean mToolbarSwipeDownToHide;
-        public final boolean mShowOnlyToolbarWithHardwareKeyboard;
         public final boolean mAlphaAfterEmojiInEmojiView;
         public final boolean mAlphaAfterClipHistoryEntry;
         public final boolean mAlphaAfterSymbolAndSpace;
@@ -473,23 +465,13 @@ public class SettingsValues {
                                 Defaults.PREF_GESTURE_MANUAL_SPACING);
                 mGestureFragmentBackspace = prefs.getBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE,
                                 Defaults.PREF_GESTURE_FRAGMENT_BACKSPACE);
-                mGestureAutospaceGraceMs = prefs.getInt(Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS,
-                                Defaults.PREF_GESTURE_AUTOSPACE_GRACE_MS);
-                mGestureTapPromotionMs = prefs.getInt(Settings.PREF_GESTURE_TAP_PROMOTION_MS,
-                                Defaults.PREF_GESTURE_TAP_PROMOTION_MS);
                 mGestureDualThumbHinting = prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
                                 Defaults.PREF_GESTURE_DUAL_THUMB_HINTING);
-                mGestureDualThumbMidlinePct = prefs.getInt(Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT,
-                                Defaults.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT);
                 mGestureDebugDrawPoints = prefs.getBoolean(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS,
                                 Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS);
                 mGestureDebugAccumulateFragments = prefs.getBoolean(
                                 Settings.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS,
                                 Defaults.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS);
-                mGestureApostropheKey = prefs.getBoolean(Settings.PREF_GESTURE_APOSTROPHE_KEY,
-                                Defaults.PREF_GESTURE_APOSTROPHE_KEY);
-                mAutospaceVisualHint = prefs.getBoolean(Settings.PREF_AUTOSPACE_VISUAL_HINT,
-                                Defaults.PREF_AUTOSPACE_VISUAL_HINT);
                 mCombiningGraceMs = prefs.getInt(Settings.PREF_COMBINING_GRACE_MS,
                                 Defaults.PREF_COMBINING_GRACE_MS);
                 mCombiningAutocorrectOnAutospace = prefs.getBoolean(
@@ -521,9 +503,6 @@ public class SettingsValues {
                 mMultipartFullWordSuggestions = prefs.getBoolean(
                                 Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS,
                                 Defaults.PREF_MULTIPART_FULL_WORD_SUGGESTIONS);
-                mMultipartTapSeedGesture = nonNormalTwoThumbSpacing || prefs.getBoolean(
-                                Settings.PREF_MULTIPART_TAP_SEED_GESTURE,
-                                Defaults.PREF_MULTIPART_TAP_SEED_GESTURE);
                 mMultipartRerecognizeTaps = prefs.getBoolean(
                                 Settings.PREF_MULTIPART_RERECOGNIZE_TAPS,
                                 Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS);
@@ -653,9 +632,6 @@ public class SettingsValues {
                                 Defaults.PREF_REMEMBER_TOOLBAR_STATE);
                 mToolbarSwipeDownToHide = prefs.getBoolean(Settings.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE,
                                 Defaults.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE);
-                mShowOnlyToolbarWithHardwareKeyboard = prefs.getBoolean(
-                                Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD,
-                                Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD);
                 // Migration: clear any old saved value and reset to default
                 if (!prefs.contains(Settings.PREF_AUTO_HIDE_PINNED_KEYS)) {
                     prefs.edit().putBoolean(Settings.PREF_AUTO_HIDE_PINNED_KEYS, Defaults.PREF_AUTO_HIDE_PINNED_KEYS).apply();

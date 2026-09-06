@@ -102,11 +102,6 @@ public final class InputLogic {
     private int mSpaceState;
     // Never null
     private SuggestedWords mSuggestedWords = SuggestedWords.getEmptyInstance();
-    // #14 spacing-policy signals — recomputed every keystroke from the suggestion results at zero
-    // extra native cost (see computeSpacingSignals / setSuggestedWords). Consumed by the upcoming
-    // signal-driven grace + two-gate Assisted-tier logic.
-    private boolean mSpacingComplete;        // typed word is a real dictionary word
-    private float mSpacingPrefixRichScore;   // fraction of candidates that are completions [0..1]
     private final Suggest mSuggest;
     private final DictionaryFacilitator mDictionaryFacilitator;
     private SingleDictionaryFacilitator mEmojiDictionaryFacilitator;
@@ -119,12 +114,8 @@ public final class InputLogic {
     private int mDeleteCount;
     private long mLastKeyTime;
 
-    // Two-thumb typing (#1.4): when {@code mGestureTapPromotionMs > 0} AND the user starts a
-    // gesture within that window of their last letter tap, the gesture extends the existing
-    // composing word instead of replacing it (the manual-spacing-extend path). Flag is set in
-    // {@link #onStartBatchInput} and consumed at the end of {@link #onUpdateTailBatchInputCompleted}.
-    // This lets us make the "extend or not" decision based on the timing AT THE MOMENT OF
-    // GESTURE-START, not gesture-end (so a long gesture doesn't lose the promotion).
+    // Capture whether the gesture extends the current composition at gesture start,
+    // so a long gesture does not lose that decision before its result arrives.
     private boolean mGestureExtendsByTapPromotion;
 
     // Snapshot of {@code keyboardSwitcher.getKeyboardShiftMode()} captured at the start of
@@ -155,8 +146,7 @@ public final class InputLogic {
     // an autospace because the timer fires once the user pauses.
     //
     // Visual: while a commit is pending, the spacebar shows a countdown progress bar
-    // (the {@link MainKeyboardView#setCombiningMode} call) — replaces the older
-    // PREF_AUTOSPACE_VISUAL_HINT flash, which was decoupled from the state that caused it.
+    // (the {@link MainKeyboardView#setCombiningMode} call).
     //
     // All access on the main thread (touch events + Handler posts to main looper).
     private final Handler mCombiningHandler = new Handler(Looper.getMainLooper());
@@ -921,9 +911,6 @@ public final class InputLogic {
         // Combining mode: cancelled gesture wipes the would-be-fragment from the composing
         // word — drop the timer so we don't fire an autospace based on stale state.
         cancelCombiningMode();
-        // Drop any seed codepoint stashed by PointerTracker so the next gesture doesn't
-        // strip its first letter against a stale seed.
-        helium314.keyboard.keyboard.PointerTracker.consumeGestureSeedCodepoint();
         // Two-thumb typing: a cancelled gesture never reaches onUpdateTailBatchInputCompleted,
         // which is the only routine site that clears the merged-trail extend-base. Drop it here
         // so this cancelled gesture's trail can't leak into the next one.
@@ -1168,16 +1155,6 @@ public final class InputLogic {
             mCombiningHandler.removeCallbacks(mPendingCombiningCommit);
             mPendingCombiningCommit = null;
         }
-    }
-
-    /** Combining-mode seeding helper: last codepoint of the current composing word, or 0
-     *  if no composing word. Currently unused but kept available for future seeding work. */
-    @SuppressWarnings("unused")
-    private int lastCodepointOfTypedWord() {
-        if (!mWordComposer.isComposingWord()) return 0;
-        final String w = mWordComposer.getTypedWord();
-        if (w.isEmpty()) return 0;
-        return w.codePointBefore(w.length());
     }
 
     /** Public accessor so PointerTracker / KeyboardActionListenerImpl can ask "are we extending right now?". */
@@ -1426,9 +1403,6 @@ public final class InputLogic {
             mWordComposer.setAutoCorrection(suggestedWordInfo);
         }
         mSuggestedWords = suggestedWords;
-        final SpacingSignals spacingSignals = computeSpacingSignals(suggestedWords);
-        mSpacingComplete = spacingSignals.complete;
-        mSpacingPrefixRichScore = spacingSignals.prefixRichScore;
         final boolean newAutoCorrectionIndicator = suggestedWords.mWillAutoCorrect;
 
         // Put a blue underline to a word in TextView which will be auto-corrected.
@@ -1444,43 +1418,6 @@ public final class InputLogic {
             // the practice.
             setComposingTextInternal(textWithUnderline, 1);
         }
-    }
-
-    /**
-     * #14 spacing-policy signals derived from the current suggestion results, computed every
-     * keystroke at zero extra native cost.
-     * <ul>
-     *   <li>{@code complete} — the typed word is a real dictionary word (valid AND not just
-     *       user-typed). A confident "this is a finished word".</li>
-     *   <li>{@code prefixRichScore} — fraction of candidates that are completions (longer words
-     *       sharing this stem), in [0..1]. High = lots left to extend to (keep the word open);
-     *       low = little left (safe to auto-commit).</li>
-     * </ul>
-     * Static + pure so it can be unit-tested without a live InputLogic.
-     */
-    static final class SpacingSignals {
-        final boolean complete;
-        final float prefixRichScore;
-        SpacingSignals(final boolean complete, final float prefixRichScore) {
-            this.complete = complete;
-            this.prefixRichScore = prefixRichScore;
-        }
-    }
-
-    static SpacingSignals computeSpacingSignals(final SuggestedWords suggestedWords) {
-        final int n = suggestedWords.size();
-        if (n == 0) return new SpacingSignals(false, 0f);
-        final SuggestedWordInfo typed = suggestedWords.mTypedWordInfo;
-        final boolean complete = suggestedWords.mTypedWordValid
-                && typed != null && typed.mSourceDict != null
-                && !Dictionary.TYPE_USER_TYPED.equals(typed.mSourceDict.mDictType);
-        int completions = 0;
-        for (int i = 0; i < n; i++) {
-            if (suggestedWords.getInfo(i).getKind() == SuggestedWordInfo.KIND_COMPLETION) {
-                completions++;
-            }
-        }
-        return new SpacingSignals(complete, (float) completions / n);
     }
 
     /**
@@ -4200,32 +4137,8 @@ public final class InputLogic {
             }
         }
         if (TextUtils.isEmpty(batchInputText)) {
-            // Still need to clear the seed slot so it doesn't leak into the next gesture.
-            helium314.keyboard.keyboard.PointerTracker.consumeGestureSeedCodepoint();
             return;
         }
-        // Combining-mode seeding: if PointerTracker seeded this gesture with a prior tap's
-        // coords, the recognizer typically includes that letter as the first char of the
-        // result. We strip it (case-insensitive) so the existing concat below doesn't
-        // double-count it. See PointerTracker for the full rationale.
-        //
-        // Multi-part word composition (#1.6): the top suggestion isn't always the seeded
-        // continuation — e.g. swiping "nology" after "tech" might recognize as "biology"
-        // because the second swipe's path can match both. When a seed is set, prefer any
-        // suggestion (in score order) whose first letter matches the seed; only fall back
-        // to the top suggestion if none match.
-        // Combining-mode seeding: if PointerTracker seeded this gesture with a prior tap's
-        // coords, the recognizer typically includes that letter as the first char of the
-        // result. We strip it (case-insensitive) so the existing concat below doesn't
-        // double-count it. See PointerTracker for the full rationale.
-        final int seedCp = helium314.keyboard.keyboard.PointerTracker.consumeGestureSeedCodepoint();
-        if (seedCp > 0 && batchInputText.length() > 0) {
-            final int firstCp = batchInputText.codePointAt(0);
-            if (Character.toLowerCase(firstCp) == Character.toLowerCase(seedCp)) {
-                batchInputText = batchInputText.substring(Character.charCount(firstCp));
-            }
-        }
-        if (batchInputText.isEmpty()) return;
         mCombiningWordHasGestureFragment = true;
         mConnection.beginBatchEdit();
         // Two-thumb typing (#1.1 + #1.4): when either manual spacing OR tap-promotion-extend
@@ -4266,8 +4179,7 @@ public final class InputLogic {
         final String prevTypedWord = (extendExistingCompose && !usedMergedTrail)
                 ? mWordComposer.getTypedWord() : "";
         if (settingsValues.mGestureDebugDrawPoints) {
-            Log.d(TAG, "batch merge seed=" + seedCp
-                    + " extendExisting=" + extendExistingCompose
+            Log.d(TAG, "batch merge extendExisting=" + extendExistingCompose
                     + " combiningExtends=" + combiningExtendsSwipe
                     + " usedMergedTrail=" + usedMergedTrail
                     + " prevTyped='" + prevTypedWord + "'"

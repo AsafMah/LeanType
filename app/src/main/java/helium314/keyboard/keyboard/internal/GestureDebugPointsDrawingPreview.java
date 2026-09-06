@@ -22,7 +22,7 @@ import java.util.Arrays;
  * point-shaping experiments — the user can toggle {@code PREF_GESTURE_DEBUG_DRAW_POINTS} on,
  * gesture a word, and visually inspect raw vs. processed samples.
  *
- * <p>The overlay snapshots the inputs at each batch-end (immediate or grace-deferred) and keeps
+ * <p>The overlay snapshots the inputs at each batch-end and keeps
  * them visible until the next batch starts, so the trail is still on screen when the user
  * compares it with the suggestion strip. The overlay distinguishes the streams and gesture
  * structure:

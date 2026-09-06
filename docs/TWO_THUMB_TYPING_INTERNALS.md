@@ -1,5 +1,14 @@
 # Two-thumb typing — internals guide
 
+> **Current cleanup (2026-09-06):** the implementation walkthrough below is historical.
+> The pointer-level deferred-grace timer, legacy tap-seed producer/consumer, unused spacing
+> signals, hand-split slider and inactive grace/tap-promotion/apostrophe/flash preferences have
+> been removed. They were unreachable or had no runtime effect. `InputLogic` still owns the
+> live combining timer; manual/timed composition, the spacebar countdown, `WordComposer`'s
+> existing connector and pointer-ID normalization remain. Stored retired preference keys
+> are ignored, not erased. Historical code snippets and defaults below are not current API
+> documentation and do not establish recognition quality.
+
 A code-level walkthrough of the changes introduced by the `copilot/improve-two-thumb-typing` PR. The user-facing reference lives in [`FEATURES.md`](FEATURES.md); this document is for reviewers / maintainers and explains the *systems* the PR touches, *what* was changed in each, and *why*.
 
 The PR addresses [HeliBoard issue #291](https://github.com/Helium314/HeliBoard/issues/291) ("Improving simultaneous/two-finger swiping") and adds a unified Nintype-style "combining mode" on top of LeanType's existing gesture pipeline.

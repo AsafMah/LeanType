@@ -90,6 +90,22 @@ class SettingsContainerTest {
     }
 
     @Test
+    fun obsoleteTwoThumbSettingsAreAbsentFromRegistryAndSearch() {
+        val retiredKeys = listOf(
+            "gesture_autospace_grace_ms",
+            "gesture_tap_promotion_ms",
+            "multipart_tap_seed_gesture",
+            "gesture_dual_thumb_midline_pct",
+            "gesture_apostrophe_key",
+            "autospace_visual_hint",
+        )
+        for (key in retiredKeys) {
+            assertNull(key, container[key])
+            assertTrue(key, container.filter("").none { it.key == key })
+        }
+    }
+
+    @Test
     fun twoThumbFragmentBackspaceLabelMatchesBehavior() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         assertEquals("Delete last fragment", context.getString(R.string.two_thumb_backspace_fragment))

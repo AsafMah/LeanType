@@ -105,8 +105,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private final Drawable mIncognitoIcon;
     // --- Two-thumb typing: combining-mode visual --------------------------------------------
     // While the unified combining-mode grace timer is pending in InputLogic, we draw a
-    // countdown progress bar at the bottom of the space bar AND a faint translucent tint
-    // over the whole keyboard to reinforce "next input extends the current word". A
+    // countdown progress bar at the bottom of the space bar. A
     // ValueAnimator drives invalidations at ~60fps so the bar shrinks smoothly; on cancel
     // / timer-expiry we set mCombiningModeActive=false and the bar disappears next frame.
     private boolean mCombiningModeActive = false;
@@ -316,11 +315,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     }
 
     /**
-     * Combining mode (replaces the older PREF_AUTOSPACE_VISUAL_HINT flash): turn the
+     * Combining mode: turn the
      * progress-bar indicator on the spacebar on/off. While on, a countdown bar shrinks
-     * from full width at {@code startTimeMs} to zero at {@code startTimeMs + graceMs};
-     * the keyboard ALSO draws a faint translucent tint over the whole view to signal
-     * "your next input extends the current word".
+     * from full width at {@code startTimeMs} to zero at {@code startTimeMs + graceMs}.
      *
      * <p>Called from {@link helium314.keyboard.latin.inputlogic.InputLogic} on every
      * tap / gesture completion (active=true) and on commit / cancel (active=false).
@@ -342,9 +339,6 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         mCombiningCompositionActiveForDebug = compositionActiveForDebug;
         mCombiningStartTimeMs = startTimeMs;
         mCombiningGraceMs = graceMs;
-        // Always invalidate the whole view once so the global tint overlay appears or
-        // clears immediately — invalidateKey() in the animator only refreshes the space
-        // key's bounds, which isn't enough for the keyboard-wide tint.
         invalidate();
         if (!mCombiningModeActive) return;
         if (mSpaceKey == null) return;
@@ -582,11 +576,6 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     @Override
     public boolean hasGestureDebugPoints() {
         return mGestureDebugPointsDrawingPreview.hasSnapshot();
-    }
-
-    @Override
-    public void setGestureCommitPending(final boolean pending) {
-        mGestureFloatingTextDrawingPreview.setCommitPending(pending);
     }
 
     // Note that this method is called from a non-UI thread.

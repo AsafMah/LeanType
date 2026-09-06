@@ -57,7 +57,6 @@ fun TwoThumbTypingScreen(
     val autospaceMode = spacingMode == SPACING_MODE_AUTOSPACE
     val nonNormalSpacing = spacingMode != SPACING_MODE_NORMAL
     val backspaceBehavior = currentBackspaceBehavior(prefs)
-    val dualThumbHinting = prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING, Defaults.PREF_GESTURE_DUAL_THUMB_HINTING)
     val debugDrawPoints = prefs.getBoolean(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS, Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS)
 
     val items = buildList {
@@ -83,9 +82,6 @@ fun TwoThumbTypingScreen(
 
         add(R.string.settings_category_two_thumb_typing_recognition)
         add(Settings.PREF_GESTURE_DUAL_THUMB_HINTING)
-        if (dualThumbHinting) {
-            add(Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT)
-        }
 
         add(R.string.settings_category_two_thumb_typing_troubleshooting)
         add(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS)
@@ -200,15 +196,6 @@ fun createTwoThumbTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
         R.string.two_thumb_point_hinting, R.string.two_thumb_point_hinting_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_DUAL_THUMB_HINTING)
-    },
-    Setting(context, Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT, R.string.gesture_dual_thumb_midline) { def ->
-        SliderPreference(
-            name = def.title,
-            key = def.key,
-            default = Defaults.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT,
-            range = 30f..70f,
-            description = { value -> "${value.toInt()}%" }
-        )
     },
     Setting(context, Settings.PREF_GESTURE_DEBUG_DRAW_POINTS,
         R.string.gesture_debug_draw_points, R.string.gesture_debug_draw_points_summary) {

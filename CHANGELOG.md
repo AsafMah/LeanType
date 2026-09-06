@@ -34,6 +34,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Gesture typing no longer silently returns zero suggestions** when a stroke's touch points never carry pointer id 0 — reachable in two-thumb use (thumb A down, thumb B down, thumb A lifts, thumb B swipes on). Raw MotionEvent pointer ids are now renumbered in first-seen order. (#135, #147)
 
 ### Changed
+- Removed obsolete gesture-grace and tap-seed machinery, unconsumed spacing calculations, and inactive settings including the nonfunctional hand-split slider. The live combining timer, manual composition, connector and pointer normalization are unchanged. (#16)
+- Removed an unreachable duplicate blocked-words screen and a duplicate hardware-toolbar preference snapshot. The reachable blocked-words editor, stored lists and existing panel visibility behavior are unchanged. (#153)
 - **Removed falsified two-thumb recognition experiments from production paths.** The separate decoder-track mode, synthetic ideal-prefix trail, and their timing controls produced incorrect words with the gesture library that actually runs on devices. Multi-part composition now uses the proven pre-experiment connector path directly again. (#147)
 - Reframed the two-thumb decoder research as a historical record that distinguishes in-tree preprocessing facts from claims falsified against the closed runtime recognizer. (#147)
 

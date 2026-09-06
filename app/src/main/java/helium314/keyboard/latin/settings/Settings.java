@@ -175,17 +175,12 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GESTURE_SPACE_AWARE = "gesture_space_aware";
     public static final String PREF_GESTURE_FAST_TYPING_COOLDOWN = "gesture_fast_typing_cooldown";
     public static final String PREF_GESTURE_TRAIL_FADEOUT_DURATION = "gesture_trail_fadeout_duration";
-    // Two-thumb typing prefs (behaviour is wired in follow-up changes; defaults preserve current behaviour).
+    // Two-thumb typing preferences.
     public static final String PREF_GESTURE_MANUAL_SPACING = "gesture_manual_spacing";
     public static final String PREF_GESTURE_FRAGMENT_BACKSPACE = "gesture_fragment_backspace";
-    public static final String PREF_GESTURE_AUTOSPACE_GRACE_MS = "gesture_autospace_grace_ms";
-    public static final String PREF_GESTURE_TAP_PROMOTION_MS = "gesture_tap_promotion_ms";
     public static final String PREF_GESTURE_DUAL_THUMB_HINTING = "gesture_dual_thumb_hinting";
-    public static final String PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT = "gesture_dual_thumb_midline_pct";
     public static final String PREF_GESTURE_DEBUG_DRAW_POINTS = "gesture_debug_draw_points";
     public static final String PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS = "gesture_debug_accumulate_fragments";
-    public static final String PREF_GESTURE_APOSTROPHE_KEY = "gesture_apostrophe_key";
-    public static final String PREF_AUTOSPACE_VISUAL_HINT = "autospace_visual_hint";
     // Unified "combining-mode" model: after every composing-word-extending event (tap OR
     // gesture), wait this many milliseconds; any new tap/gesture within the window EXTENDS
     // the same composing word, anything else (or expiry) commits + autospaces. 0 disables.
@@ -222,7 +217,6 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // When a swipe starts while combining mode is armed AND a composing word already exists,
     // prepend a synthetic input point at the tail of the composing word so the gesture
     // recognizer treats it as a continuation. Helps tap-then-swipe joins land sensibly.
-    public static final String PREF_MULTIPART_TAP_SEED_GESTURE = "multipart_tap_seed_gesture";
     // Live-converge (opt-in): while building a word that already contains a swipe, route a
     // tapped letter through the gesture recognizer together with the accumulated stroke and
     // re-recognize the whole word, instead of literally appending it to a (possibly

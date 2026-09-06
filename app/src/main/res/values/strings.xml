@@ -126,14 +126,6 @@
     <string name="add_to_dictionary">Add to dictionary</string>
     <!-- Action: permanently block the long-pressed word from suggestions -->
     <string name="block_word">Block word</string>
-    <!-- Title of the blocklist settings screen, listing words blocked from suggestions -->
-    <string name="blocklist">Blocklist</string>
-    <!-- Description for the blocklist settings entry -->
-    <string name="blocklist_summary">View and remove words you have blocked from suggestions</string>
-    <!-- Shown when a locale has no blocked words -->
-    <string name="blocklist_empty">No blocked words</string>
-    <!-- Content description for the button that removes a word from the blocklist -->
-    <string name="blocklist_remove">Remove from blocklist</string>
     <!-- Option name for threshold before adding words to personal dictionary -->
     <string name="add_to_personal_dict_threshold">Learning threshold</string>
     <string name="add_to_personal_dict_threshold_times_1">Add after typing 1 time</string>
@@ -315,32 +307,16 @@
     <string name="gesture_fragment_backspace">Backspace removes last fragment</string>
     <!-- Description for "gesture_fragment_backspace". -->
     <string name="gesture_fragment_backspace_summary">In manual-spacing mode, backspace removes the most recent swipe instead of one character</string>
-    <!-- Title of the setting that adds a small grace period after the last finger lifts during which a new touch is treated as a continuation of the same gesture. -->
-    <string name="gesture_autospace_grace">Autospace grace period</string>
     <!-- Text shown when the autospace grace period is zero (disabled). -->
     <string name="gesture_autospace_grace_off">Off</string>
-    <!-- Title of the setting that lets a tap on a letter, immediately followed by a swipe, become a single combined gesture. -->
-    <string name="gesture_tap_promotion">Tap-then-swipe window</string>
-    <!-- Description for "gesture_tap_promotion". -->
-    <string name="gesture_tap_promotion_summary">Allow a tap followed by a quick swipe to combine into one word</string>
     <!-- Title of the experimental setting that reweights tap points from one thumb when the other thumb is actively swiping. -->
     <string name="gesture_dual_thumb_hinting">Two-thumb point hinting (experimental)</string>
     <!-- Description for "gesture_dual_thumb_hinting". -->
     <string name="gesture_dual_thumb_hinting_summary">Improve recognition when one thumb taps while the other swipes</string>
-    <!-- Title of the slider that picks where the keyboard is split between left and right hand. -->
-    <string name="gesture_dual_thumb_midline">Left/right hand split</string>
     <!-- Title of the setting that overlays, on the keyboard, what the gesture recognizer saw and chose. -->
     <string name="gesture_debug_draw_points">Typing insight</string>
     <!-- Description for "gesture_debug_draw_points". -->
     <string name="gesture_debug_draw_points_summary">Show what the keyboard saw and chose as you type: the gesture trail, where taps landed, a tick when a tap joins a swipe, and the word it picked.</string>
-    <!-- Title of the setting that enables an apostrophe key dedicated for gesture typing of contractions. -->
-    <string name="gesture_apostrophe_key">Apostrophe key for gestures</string>
-    <!-- Description for "gesture_apostrophe_key". -->
-    <string name="gesture_apostrophe_key_summary">Show a swipeable apostrophe key so contractions like "it\'s" can be glided in one stroke</string>
-    <!-- Title of the setting that enables a brief visual flash on the space key whenever an automatic space is inserted. -->
-    <string name="autospace_visual_hint">Flash space key on auto-space</string>
-    <!-- Description for "autospace_visual_hint". -->
-    <string name="autospace_visual_hint_summary">Briefly highlight the space bar each time an automatic space is inserted</string>
     <!-- Title of the unified combining-mode grace setting. -->
     <string name="combining_grace">Combining grace period</string>
     <!-- Description of the unified combining-mode grace setting. -->
@@ -381,8 +357,6 @@
     <string name="two_thumb_multi_part_words_summary">During the countdown, the next tap or swipe extends the current word instead of starting a new one (tech + nology → technology).</string>
     <string name="multipart_full_word_suggestions">Suggestions for full composing word</string>
     <string name="multipart_full_word_suggestions_summary">During multi-part composition, the suggestion strip shows alternatives for the entire word so far, not just the most recent fragment.</string>
-    <string name="multipart_tap_seed_gesture">Seed swipe from typed prefix</string>
-    <string name="multipart_tap_seed_gesture_summary">When you type some letters and then swipe while combining mode is armed, treat the swipe as a continuation of the typed prefix.</string>
     <!-- Title of the experimental setting that re-recognizes a whole swiped+tapped word when a tap follows a swipe. -->
     <string name="multipart_rerecognize_taps">Re-recognize taps within swiped words</string>
     <!-- Description for "multipart_rerecognize_taps". -->

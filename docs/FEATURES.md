@@ -253,7 +253,7 @@ Add these to your prompt to enforce a specific role.
 
 ## Two-thumb Typing (experimental)
 
-LeanType ships a set of opt-in tweaks for typing with two thumbs at once — mixing taps and swipes naturally, getting fewer dropped letters when one thumb taps while the other glides, and Nintype-style "manual spacing" where the word doesn't auto-commit until you tap space. All options live under **Settings → Two-thumb typing (experimental)** and default to **off** (or 0 for the sliders), so you only get the behaviour you opt into.
+LeanTypeDual supports composing words from taps and gesture fragments. Options live under **Settings → Two-thumb typing**; the screen currently requires gesture typing and a loaded native gesture library. Normal spacing is the default. Timed and manual composition are opt-in, and recognition experiments are separately default-off.
 
 > ⚠️ These features change how gestures and taps interact. Try them one at a time so you can tell what's helping vs. hurting your typing.
 
@@ -261,41 +261,32 @@ LeanType ships a set of opt-in tweaks for typing with two thumbs at once — mix
 
 | Pref | Behaviour |
 | :--- | :--- |
-| **Manual spacing** (`gesture_manual_spacing`) | When ON, lifting all fingers after a gesture **does not** auto-commit or insert an autospace. The gesture's result becomes/extends a composing word. Multiple gestures and taps chain into one logical word until you explicitly tap space, punctuation, or Enter. Best paired with the next option. |
-| **Backspace removes last fragment** (`gesture_fragment_backspace`) | Only visible when Manual spacing is on. Backspace pops the entire previous fragment (one swipe's output, or one tap's letter) in a single keystroke instead of one character at a time. |
-| **Autospace grace period** (`gesture_autospace_grace_ms`, 0–500 ms) | Only visible when Manual spacing is off (mutually exclusive). A middle ground: keep the autospace, but delay it by N ms after the last finger lifts. If a new finger goes **down** within that window, the deferred commit is dropped and the gesture continues into the same word — no matter how long that next gesture itself takes. Set to 0 to disable. While the timer is pending, the floating preview text shows a trailing ellipsis (`…`) so you can see the system is waiting. |
+| **Spacing mode** | Normal, timed auto-spacing, or manual. Manual mode keeps a composing word open across taps and gestures until an explicit commit. Timed mode uses `combining_grace_ms` plus optional extra tap time; a new fragment restarts the timer. |
+| **Backspace behavior** | In non-normal spacing modes, choose character, last-fragment, or whole-word deletion. Fragment boundaries are stored as lengths; this is not a full undo history of prior recognition results. |
+| **Timed auto-spacing options** | Control autocorrection, gesture-only spacing/timer gates, suggestion-strip behavior after commit, and optional deferred spacing. `InputLogic` owns this timer; the pointer aggregator finishes a gesture immediately when its last finger lifts. |
 
 > Side effect: when Manual spacing is on, the **Autospace before/after gesture typing** toggles under **Settings → Text correction → Space** are hidden — they become runtime no-ops.
 
 ### Combining taps and swipes
 
-| Pref | Behaviour |
-| :--- | :--- |
-| **Tap-then-swipe window** (`gesture_tap_promotion_ms`, 0–200 ms) | When > 0, lets you **tap one or more letters** then immediately **swipe** the rest, getting one merged word. Example: tap `p`, tap `a`, swipe `ul` → `paul`. Set to 0 to disable. The window is measured against the *last letter input* — chains grow naturally as long as each new tap arrives within the window of the previous one. |
+Manual/timed composition keeps the typed prefix in the same composing word. Full-word suggestions use the retained `WordComposer` connector. Optional tap re-recognition is an experiment, not a promise that the recognizer will preserve every tapped letter.
 
 ### Visual feedback
 
-| Pref | Behaviour |
-| :--- | :--- |
-| **Flash space key on auto-space** (`autospace_visual_hint`, on by default) | When ON, the space bar briefly highlights every time an automatic space is silently inserted. Most useful when grace-period auto-spacing is on, since the actual insertion is decoupled from any visible keystroke. |
-
-### Layout extras
-
-| Pref | Behaviour |
-| :--- | :--- |
-| **Apostrophe key for gestures** (`gesture_apostrophe_key`) | When ON, surfaces a swipeable apostrophe key so contractions like `it's` or `don't` can be glided in one stroke. Toggle is visible; actual layout integration depends on whether the active layout exposes the apostrophe — see [layouts.md](../layouts.md) if you maintain a custom layout. |
+The spacebar countdown reflects a pending combining-mode auto-space, subject to the active editor and spacing gates. There is no separate legacy auto-space flash or deferred-pointer ellipsis.
 
 ### Recognition & debug
 
 | Pref | Behaviour |
 | :--- | :--- |
-| **Two-thumb point hinting (experimental)** (`gesture_dual_thumb_hinting`) | When ON, the keyboard post-processes the gesture's raw points before feeding them to the recognizer: tap-bursts that overlap an active stroke get reinforced with synthetic on-stroke waypoints at the tap's centre so the library doesn't under-weight them. Includes a proximity guard so a stray opposite-hand tap doesn't get amplified into a recognition-deforming detour. Most useful for words like `firetruck` (`fretrc` swipe + `iuk` taps). |
-| **Left/right hand split** (`gesture_dual_thumb_midline_pct`, 30–70 %) | Only visible when Point hinting is on. Where the keyboard splits between your left and right hand. Currently used only by the (forthcoming) stray-tap dampener; the proximity guard above is independent of this slider. |
+| **Two-thumb point hinting (experimental)** (`gesture_dual_thumb_hinting`) | Default-off. Inserts synthetic waypoints for nearby tap-bursts overlapping a stroke. A proximity guard leaves distant taps unchanged. Recognition quality depends on the runtime library and needs device evidence; this is not a proven accuracy improvement. |
 | **Draw gesture points (debug)** (`gesture_debug_draw_points`) | When ON, overlays the raw gesture samples (small red dots) and any synthetic points injected by Point hinting (larger blue dots) on the keyboard. Useful when iterating on hinting or filing bug reports — turn off for daily typing. |
 
 ### Why these exist
 
 These features all started from [HeliBoard issue #291](https://github.com/Helium314/HeliBoard/issues/291) ("Improving simultaneous/two-finger swiping") and Nintype's old "autospace off" + "tap during swipe" behaviours. They're shipped as experimental opt-ins so you can A/B them on your own typing style without risk to the existing single-thumb gesture experience.
+
+The obsolete pointer-grace timer, tap-seed settings, hand-split slider, apostrophe preference and flash setting were removed because they were unreachable or had no implementation. Old stored preferences are ignored; current composition settings and user data are retained.
 
 | `#generate` | **Content Generator** | "You are a creative content generator. Output ONLY content." |
 

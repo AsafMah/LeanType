@@ -384,7 +384,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             @NonNull final KeyboardSwitchState toggleState) {
         cancelOcrWork();
         final boolean suppressKeyboard = isImeSuppressedByHardwareKeyboard(settingsValues, toggleState)
-                || (settingsValues.mShowOnlyToolbarWithHardwareKeyboard && settingsValues.mHasHardwareKeyboard);
+                || settingsValues.mShowToolbarOnly;
         final int visibility = suppressKeyboard ? View.GONE : View.VISIBLE;
         final int stripVisibility = settingsValues.mToolbarMode == ToolbarMode.HIDDEN ? View.GONE : View.VISIBLE;
         mStripContainer.setVisibility(stripVisibility);

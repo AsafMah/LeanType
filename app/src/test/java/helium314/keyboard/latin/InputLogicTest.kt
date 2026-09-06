@@ -1060,13 +1060,7 @@ class InputLogicTest {
         assertFalse(composer.isExtendBatchInputBaseSet)
     }
 
-    // Static-seed reachability guard. PointerTracker's tap-seed path (sLastLetterTap*) is gated
-    // on (!isMultipartComposeActive() && mCombiningGraceMs > 0). But grace > 0 forces multi-part
-    // composition active, so that conjunction is unsatisfiable and the seed is currently
-    // unreachable dead code. These pin the interlock: if a future settings refactor decouples
-    // them and re-arms the seed, it must first add the stale-static cleanup (the seed statics are
-    // process-global and never reset on delete / commit / field switch).
-    @Test fun graceImpliesMultipartComposeActive_keepsSeedPathDead() {
+    @Test fun graceImpliesMultipartComposeActive() {
         reset()
         latinIME.prefs().edit { putInt(Settings.PREF_COMBINING_GRACE_MS, 1000) }
         setText("") // force a settings reload
