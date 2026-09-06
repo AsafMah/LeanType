@@ -2,6 +2,7 @@
 package helium314.keyboard.settings.preferences
 
 import android.content.Intent
+import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
@@ -10,6 +11,8 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,12 +35,10 @@ import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
 import helium314.keyboard.latin.AppUpgrade
 import helium314.keyboard.latin.R
-import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.database.Database
 import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
-import helium314.keyboard.latin.utils.ExecutorUtils
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
@@ -51,18 +52,107 @@ import helium314.keyboard.settings.dialogs.InfoDialog
 import helium314.keyboard.settings.filePicker
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.FileInputStream
+import java.io.InputStream
+import java.io.IOException
 import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.UUID
 import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
+import java.util.zip.CRC32
+import java.util.zip.CheckedInputStream
+import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
-import androidx.core.content.edit
 import helium314.keyboard.settings.FeedbackManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
+
+internal class BackupRestoreOperationQueue(private val worker: Executor, private val main: Executor) {
+    private val pending = ArrayDeque<() -> Unit>()
+
+    @Synchronized
+    fun submit(work: () -> Unit, onComplete: () -> Unit = {}, onError: (Throwable) -> Unit) {
+        pending.addLast {
+            worker.execute {
+                val result = runCatching(work)
+                main.execute {
+                    try {
+                        result.getOrThrow()
+                        onComplete()
+                    } catch (t: Throwable) {
+                        onError(t)
+                    } finally {
+                        next()
+                    }
+                }
+            }
+        }
+        if (pending.size == 1) pending.first().invoke()
+    }
+
+    @Synchronized
+    private fun next() {
+        pending.removeFirst()
+        pending.firstOrNull()?.invoke()
+    }
+}
+
+// Operations keep this handle; disposal clears the callbacks that capture UI state.
+internal class BackupRestoreCallbacks(
+    private var onError: ((String) -> Unit)?,
+    private var onSuccess: (() -> Unit)?
+) : LifecycleEventObserver {
+    fun error(message: String) = onError?.invoke(message)
+    fun success() = onSuccess?.invoke()
+    fun detach() {
+        onError = null
+        onSuccess = null
+    }
+    override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+        if (event == Lifecycle.Event.ON_DESTROY) detach()
+    }
+}
+
+@Composable
+private fun rememberBackupRestoreCallbacks(onError: (String) -> Unit): BackupRestoreCallbacks {
+    val ctx = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val currentError by rememberUpdatedState(onError)
+    val callbacks = remember(ctx, lifecycle) {
+        BackupRestoreCallbacks({ currentError(it) }, {
+            (ctx.getActivity() as? SettingsActivity)?.prefChanged()
+        })
+    }
+    DisposableEffect(callbacks, lifecycle) {
+        lifecycle.addObserver(callbacks)
+        onDispose {
+            lifecycle.removeObserver(callbacks)
+            callbacks.detach()
+        }
+    }
+    return callbacks
+}
+
+private fun reportBackupRestoreError(ctx: Context, callbacks: BackupRestoreCallbacks, prefix: String, error: Throwable) {
+    val message = error.message ?: error.javaClass.simpleName
+    callbacks.error(prefix + message)
+    FeedbackManager.message(ctx, ctx.getString(
+        if (prefix == "b") R.string.backup_error else R.string.restore_error, message
+    ))
+    Log.w("AdvancedScreen", "error during backup/restore", error)
+}
+
+private val backupRestoreOperations by lazy {
+    BackupRestoreOperationQueue(
+        Executors.newSingleThreadExecutor { Thread(it, "BackupRestore") },
+        Executor { Handler(Looper.getMainLooper()).post(it) }
+    )
+}
 
 @Composable
 fun BackupRestorePreference(setting: Setting) {
@@ -175,97 +265,44 @@ private fun backupLauncher(
     selectedCategories: Set<BackupCategory>,
     onError: (String) -> Unit
 ): ManagedActivityResultLauncher<Intent, ActivityResult> {
-    val ctx = LocalContext.current
+    val ctx = LocalContext.current.applicationContext
+    val callbacks = rememberBackupRestoreCallbacks(onError)
     return filePicker { uri ->
-        val filesDir = ctx.filesDir ?: return@filePicker
-        val filesPath = filesDir.path + File.separator
-        val files = mutableListOf<File>()
-        filesDir.walk().forEach { file ->
-            val path = file.path.replace(filesPath, "")
-            if (file.isFile && backupFilePatterns.any { path.matches(it) }) {
-                val cat = getCategoryForFilePath(path)
-                if (cat == null || selectedCategories.contains(cat)) {
-                    files.add(file)
-                }
-            }
-        }
-        val protectedFilesDir = DeviceProtectedUtils.getFilesDir(ctx)
-        val protectedFilesPath = protectedFilesDir.path + File.separator
-        val protectedFiles = mutableListOf<File>()
-        protectedFilesDir.walk().forEach { file ->
-            val path = file.path.replace(protectedFilesPath, "")
-            if (file.isFile && backupFilePatterns.any { path.matches(it) }) {
-                val cat = getCategoryForFilePath(path)
-                if (cat == null || selectedCategories.contains(cat)) {
-                    protectedFiles.add(file)
-                }
-            }
-        }
-        val wait = CountDownLatch(1)
-        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
-            try {
-                ctx.getActivity()?.contentResolver?.openOutputStream(uri)?.use { os ->
-                    val zipStream = ZipOutputStream(os)
-                    files.forEach {
-                        val fileStream = FileInputStream(it).buffered()
-                        zipStream.putNextEntry(ZipEntry(it.path.replace(filesPath, "")))
-                        fileStream.copyTo(zipStream, 1024)
-                        fileStream.close()
-                        zipStream.closeEntry()
-                    }
-                    protectedFiles.forEach {
-                        val fileStream = FileInputStream(it).buffered()
-                        zipStream.putNextEntry(ZipEntry(it.path.replace(protectedFilesDir.path, "unprotected")))
-                        fileStream.copyTo(zipStream, 1024)
-                        fileStream.close()
-                        zipStream.closeEntry()
-                    }
-                    if (selectedCategories.contains(BackupCategory.CLIPBOARD)) {
-                        val dbFile = ctx.getDatabasePath(Database.NAME)
-                        if (dbFile.exists()) {
-                            val fileStream = FileInputStream(dbFile).buffered()
-                            zipStream.putNextEntry(ZipEntry(Database.NAME))
-                            fileStream.copyTo(zipStream, 1024)
-                            fileStream.close()
-                            zipStream.closeEntry()
-                        }
-                    }
-                    val filteredPrefs = ctx.prefs().all.filter {
-                        selectedCategories.contains(getCategoryForPrefKey(it.key))
-                    }
-                    zipStream.putNextEntry(ZipEntry(PREFS_FILE_NAME))
-                    settingsToJsonStream(filteredPrefs, zipStream)
-                    zipStream.closeEntry()
+        val categories = selectedCategories.toSet()
+        backupRestoreOperations.submit(work = {
+            backupData(ctx, categories) { ctx.contentResolver.openOutputStream(uri) }
+        }, onError = { t ->
+            reportBackupRestoreError(ctx, callbacks, "b", t)
+        })
+    }
+}
 
-                    val filteredProtectedPrefs = ctx.protectedPrefs().all.filter {
-                        selectedCategories.contains(getCategoryForPrefKey(it.key))
-                    }
-                    zipStream.putNextEntry(ZipEntry(PROTECTED_PREFS_FILE_NAME))
-                    settingsToJsonStream(filteredProtectedPrefs, zipStream)
-                    zipStream.closeEntry()
-
-                    for ((entryName, prefsForBackup) in auxiliaryPrefsToBackUp(ctx)) {
-                        val cat = getCategoryForFilePath(entryName)
-                        if (cat == null || selectedCategories.contains(cat)) {
-                            val filteredAuxPrefs = prefsForBackup.all.filter {
-                                selectedCategories.contains(getCategoryForPrefKey(it.key))
-                            }
-                            zipStream.putNextEntry(ZipEntry(entryName))
-                            settingsToJsonStream(filteredAuxPrefs, zipStream)
-                            zipStream.closeEntry()
-                        }
-                    }
-                    zipStream.close()
+internal fun backupData(ctx: Context, categories: Set<BackupCategory>, openOutput: () -> OutputStream?) {
+    val output = openOutput() ?: throw IOException("Could not open backup document")
+    ZipOutputStream(output).use { zip ->
+        fun writeFile(file: File, name: String) {
+            zip.putNextEntry(ZipEntry(name))
+            file.inputStream().buffered().use { it.copyTo(zip) }
+            zip.closeEntry()
+        }
+        listOf(ctx.filesDir to "", DeviceProtectedUtils.getFilesDir(ctx) to "unprotected/").forEach { (base, prefix) ->
+            base.walk().filter { it.isFile }.forEach { file ->
+                val name = file.relativeTo(base).invariantSeparatorsPath
+                if (backupFilePatterns.any { name.matches(it) } && getCategoryForFilePath(name) in categories) {
+                    writeFile(file, prefix + name)
                 }
-            } catch (t: Throwable) {
-                onError("b" + t.message)
-                Log.w("AdvancedScreen", "error during backup", t)
-            } finally {
-                wait.countDown()
             }
         }
-        if (!wait.await(30, TimeUnit.SECONDS)) {
-            Log.w("AdvancedScreen", "Backup timed out")
+        if (BackupCategory.CLIPBOARD in categories) {
+            ctx.getDatabasePath(Database.NAME).takeIf { it.exists() }?.let { writeFile(it, Database.NAME) }
+        }
+        backupPreferences(ctx).forEach { (name, prefs) ->
+            val category = getCategoryForFilePath(name)
+            if (category == null || category in categories) {
+                zip.putNextEntry(ZipEntry(name))
+                settingsToJsonStream(prefs.all.filter { it.key?.let(::getCategoryForPrefKey) in categories }, zip)
+                zip.closeEntry()
+            }
         }
     }
 }
@@ -275,145 +312,202 @@ private fun restoreLauncher(
     selectedCategories: Set<BackupCategory>,
     onError: (String) -> Unit
 ): ManagedActivityResultLauncher<Intent, ActivityResult> {
-    val ctx = LocalContext.current
+    val ctx = LocalContext.current.applicationContext
+    val callbacks = rememberBackupRestoreCallbacks(onError)
     return filePicker { uri ->
-        val wait = CountDownLatch(1)
-        val restoredDb = ctx.getDatabasePath(Database.NAME + "_restored")
-        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
-            try {
-                ctx.getActivity()?.contentResolver?.openInputStream(uri)?.use { inputStream ->
-                    ZipInputStream(inputStream).use { zip ->
-                        var entry: ZipEntry? = zip.nextEntry
-                        val filesDir = ctx.filesDir ?: return@execute
-                        val deviceProtectedFilesDir = DeviceProtectedUtils.getFilesDir(ctx)
+        val categories = selectedCategories.toSet()
+        backupRestoreOperations.submit(work = {
+            restoreBackupData(ctx, categories) { ctx.contentResolver.openInputStream(uri) }
+        }, onComplete = {
+            completeRestore(ctx)
+            FeedbackManager.message(ctx, R.string.backup_restored)
+            callbacks.success()
+        }, onError = { t ->
+            reportBackupRestoreError(ctx, callbacks, "r", t)
+        })
+    }
+}
 
-                        // Targeted deletion based on selected categories
-                        if (selectedCategories.contains(BackupCategory.LAYOUTS)) {
-                            File(filesDir, "layouts").deleteRecursively()
-                        }
-                        if (selectedCategories.contains(BackupCategory.DICTIONARY_HISTORY)) {
-                            File(filesDir, "dicts").deleteRecursively()
-                            File(filesDir, "blacklists").deleteRecursively()
-                            File(deviceProtectedFilesDir, "blacklists").deleteRecursively()
-                            filesDir.listFiles()?.forEach {
-                                if (it.name.startsWith("UserHistoryDictionary")) it.delete()
-                            }
-                        }
-                        if (selectedCategories.contains(BackupCategory.THEME_APPEARANCE)) {
-                            File(filesDir, "custom_font").delete()
-                            File(filesDir, "custom_emoji_font").delete()
-                            deviceProtectedFilesDir.listFiles()?.forEach {
-                                if (it.name.startsWith("custom_background_image")) it.delete()
-                            }
-                        }
-                        if (selectedCategories.contains(BackupCategory.CLIPBOARD)) {
-                            ClipboardDao.closeInstance()
-                            Database.closeInstance()
-                            ctx.deleteDatabase(Database.NAME)
-                        }
-
-                        LayoutUtilsCustom.onLayoutFileChanged()
-                        Settings.getInstance().stopListener()
-                        while (entry != null) {
-                            if (entry.name.startsWith("unprotected${File.separator}")) {
-                                val adjustedName = entry.name.substringAfter("unprotected${File.separator}")
-                                if (backupFilePatterns.any { adjustedName.matches(it) }) {
-                                    val cat = getCategoryForFilePath(adjustedName)
-                                    if (cat == null || selectedCategories.contains(cat)) {
-                                        File(deviceProtectedFilesDir, adjustedName).delete()
-                                        if (!restoreEntryToDir(zip, deviceProtectedFilesDir, adjustedName)) {
-                                            Log.w("AdvancedScreen", "skipping unsafe backup entry $adjustedName")
-                                        }
-                                    }
-                                }
-                            } else if (backupFilePatterns.any { entry.name.matches(it) }) {
-                                val cat = getCategoryForFilePath(entry.name)
-                                if (cat == null || selectedCategories.contains(cat)) {
-                                    File(filesDir, entry.name).delete()
-                                    if (!restoreEntryToDir(zip, filesDir, entry.name)) {
-                                        Log.w("AdvancedScreen", "skipping unsafe backup entry ${entry.name}")
-                                    }
-                                }
-                            } else if (entry.name == Database.NAME) {
-                                if (selectedCategories.contains(BackupCategory.CLIPBOARD)) {
-                                    FileUtils.copyStreamToNewFile(zip, restoredDb)
-                                }
-                            } else if (entry.name == PREFS_FILE_NAME) {
-                                val prefLines = String(zip.readBytes()).split("\n")
-                                val prefs = ctx.prefs()
-                                prefs.edit(commit = true) {
-                                    prefs.all.keys.forEach { key ->
-                                        if (selectedCategories.contains(getCategoryForPrefKey(key))) {
-                                            remove(key)
-                                        }
-                                    }
-                                }
-                                readJsonLinesToSettings(prefLines, prefs, selectedCategories)
-                            } else if (entry.name == PROTECTED_PREFS_FILE_NAME) {
-                                val prefLines = String(zip.readBytes()).split("\n")
-                                val protectedPrefs = ctx.protectedPrefs()
-                                protectedPrefs.edit(commit = true) {
-                                    protectedPrefs.all.keys.forEach { key ->
-                                        if (selectedCategories.contains(getCategoryForPrefKey(key))) {
-                                            remove(key)
-                                        }
-                                    }
-                                }
-                                readJsonLinesToSettings(prefLines, protectedPrefs, selectedCategories)
-                            } else {
-                                val auxPrefs = auxiliaryPrefsToBackUp(ctx)[entry.name]
-                                if (auxPrefs != null) {
-                                    val cat = getCategoryForFilePath(entry.name)
-                                    if (cat == null || selectedCategories.contains(cat)) {
-                                        val prefLines = String(zip.readBytes()).split("\n")
-                                        auxPrefs.edit(commit = true) {
-                                            auxPrefs.all.keys.forEach { key ->
-                                                if (selectedCategories.contains(getCategoryForPrefKey(key))) {
-                                                    remove(key)
-                                                }
-                                            }
-                                        }
-                                        readJsonLinesToSettings(prefLines, auxPrefs, selectedCategories)
-                                    }
-                                }
-                            }
-                            zip.closeEntry()
-                            entry = zip.nextEntry
-                        }
+internal fun restoreBackupData(
+    ctx: Context,
+    selectedCategories: Set<BackupCategory>,
+    openInput: () -> InputStream?
+) {
+    val staging = File(ctx.cacheDir, "restore-${UUID.randomUUID()}")
+    check(staging.mkdirs()) { "Could not create restore staging directory" }
+    try {
+        val archive = File(staging, "backup.zip")
+        (openInput() ?: throw IOException("Could not open backup document")).use { input ->
+            archive.outputStream().use { input.copyTo(it) }
+        }
+        val preferences = backupPreferences(ctx)
+        val stagedPreferences = linkedMapOf<String, Map<String, Any>>()
+        val stagedFiles = mutableListOf<Pair<File, File>>()
+        val seen = hashSetOf<String>()
+        var stagedDatabase: File? = null
+        var hasBackupContent = false
+        ZipFile(archive).use { zip ->
+            val entries = zip.entries()
+            while (entries.hasMoreElements()) {
+                val entry = entries.nextElement()
+                val name = validatedEntryName(entry)
+                check(seen.add(name)) { "Duplicate backup entry: $name" }
+                if (entry.isDirectory && name == "unprotected/") continue
+                val unprotected = name.startsWith("unprotected/")
+                val relative = if (unprotected) name.removePrefix("unprotected/") else name
+                val base = if (unprotected) DeviceProtectedUtils.getFilesDir(ctx) else ctx.filesDir
+                val target = checkedRestoreTarget(base, relative)
+                val category = getCategoryForFilePath(relative)
+                if ((!unprotected && (name in preferences || name == Database.NAME)) ||
+                    (category != null && (entry.isDirectory || backupFilePatterns.any { relative.matches(it) }))) {
+                    hasBackupContent = true
+                }
+                if (!entry.isDirectory && !unprotected && name in preferences) {
+                    val values = readBackupEntry(zip, entry) { input ->
+                        input.bufferedReader().use { parseBackupPreferences(it.readLines()) }
                     }
+                    if (category == null || category in selectedCategories) stagedPreferences[name] = values
+                } else if (!entry.isDirectory && !unprotected && name == Database.NAME) {
+                    val file = File(staging, "clipboard.db")
+                    readBackupEntry(zip, entry) { input -> file.outputStream().use { input.copyTo(it) } }
+                    validateClipboardDatabase(file)
+                    if (BackupCategory.CLIPBOARD in selectedCategories) stagedDatabase = file
+                } else if (category in selectedCategories &&
+                    (entry.isDirectory || backupFilePatterns.any { relative.matches(it) })) {
+                    val file = checkedRestoreTarget(File(staging, "files"), name)
+                    if (entry.isDirectory) {
+                        check(file.mkdirs() || file.isDirectory) { "Could not stage directory: $name" }
+                    } else {
+                        check(file.parentFile!!.mkdirs() || file.parentFile!!.isDirectory)
+                        readBackupEntry(zip, entry) { input -> file.outputStream().use { input.copyTo(it) } }
+                    }
+                    stagedFiles.add(file to target)
                 }
-                if (selectedCategories.contains(BackupCategory.CLIPBOARD)) {
-                    Database.copyFromDb(restoredDb, ctx)
-                }
-                Handler(Looper.getMainLooper()).post {
-                    FeedbackManager.message(ctx, R.string.backup_restored)
-                }
-            } catch (t: Throwable) {
-                onError("r" + t.message)
-                Log.w("AdvancedScreen", "error during restore", t)
-            } finally {
-                wait.countDown()
             }
+            require(hasBackupContent) { "Archive contains no backup data" }
         }
-        if (!wait.await(30, TimeUnit.SECONDS)) {
-            Log.w("AdvancedScreen", "Restore timed out")
+        // Every entry and preferences section has been validated before touching live user data.
+        Settings.getInstance().stopListener()
+        try {
+            deleteSelectedBackupData(ctx, selectedCategories)
+            stagedFiles.forEach { (source, target) ->
+                if (source.isDirectory) {
+                    check(target.mkdirs() || target.isDirectory) { "Could not restore directory: ${target.name}" }
+                } else {
+                    source.copyTo(target, overwrite = true)
+                }
+            }
+            stagedPreferences.forEach { (name, values) ->
+                applyBackupPreferences(preferences.getValue(name), values, selectedCategories)
+            }
+            stagedDatabase?.let { file ->
+                val restoredDb = ctx.getDatabasePath(Database.NAME + "_restored")
+                try {
+                    file.copyTo(restoredDb, overwrite = true)
+                    Database.copyFromDb(restoredDb, ctx)
+                } finally {
+                    restoredDb.delete()
+                }
+            }
+            LayoutUtilsCustom.onLayoutFileChanged()
+            AppUpgrade.checkVersionUpgrade(ctx)
+            AppUpgrade.transferOldPinnedClips(ctx)
+        } finally {
+            Settings.getInstance().startListener()
         }
-        AppUpgrade.checkVersionUpgrade(ctx)
-        AppUpgrade.transferOldPinnedClips(ctx)
-        Settings.getInstance().startListener()
+    } finally {
+        staging.deleteRecursively()
+    }
+}
+
+internal fun completeRestore(ctx: Context) {
+    Settings.getInstance().stopListener()
+    try {
         SubtypeSettings.reloadEnabledSubtypes(ctx)
-        val newDictBroadcast = Intent(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION)
-        ctx.getActivity()?.sendBroadcast(newDictBroadcast)
         LayoutUtilsCustom.onLayoutFileChanged()
         LayoutUtilsCustom.removeMissingLayouts(ctx)
-        (ctx.getActivity() as? SettingsActivity)?.prefChanged()
+        Settings.clearCachedBackgroundImages()
+        Settings.clearCachedTypeface()
         SupportedEmojis.load(ctx)
+        Settings.getInstance().reloadSettings()
+        ctx.sendBroadcast(Intent(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION).setPackage(ctx.packageName))
         KeyboardSwitcher.getInstance().setThemeNeedsReload()
+    } finally {
+        Settings.getInstance().startListener()
+    }
+}
+
+private fun backupPreferences(ctx: Context) = mapOf(
+    PREFS_FILE_NAME to ctx.prefs(),
+    PROTECTED_PREFS_FILE_NAME to ctx.protectedPrefs(),
+) + auxiliaryPrefsToBackUp(ctx)
+
+private fun <T> readBackupEntry(zip: ZipFile, entry: ZipEntry, read: (InputStream) -> T): T {
+    val checksum = CRC32()
+    return CheckedInputStream(zip.getInputStream(entry), checksum).use {
+        val result = read(it)
+        require(checksum.value == entry.crc) { "Corrupt backup entry: ${entry.name}" }
+        result
+    }
+}
+
+private fun validatedEntryName(entry: ZipEntry): String {
+    val name = entry.name.replace('\\', '/')
+    val parts = name.removeSuffix("/").split('/')
+    require(name.isNotEmpty() && !name.startsWith('/') && ':' !in name && '\u0000' !in name &&
+        parts.none { it.isEmpty() || it == "." || it == ".." }) { "Unsafe backup entry: ${entry.name}" }
+    return name
+}
+
+private fun checkedRestoreTarget(base: File, name: String): File {
+    val target = File(base, name)
+    require(target.canonicalPath.startsWith(base.canonicalPath + File.separator)) {
+        "Unsafe backup entry: $name"
+    }
+    return target
+}
+
+private fun validateClipboardDatabase(file: File) {
+    android.database.sqlite.SQLiteDatabase.openDatabase(
+        file.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+    ).use { db ->
+        db.rawQuery("PRAGMA quick_check", null).use {
+            require(it.moveToFirst() && it.getString(0) == "ok") { "Invalid clipboard database" }
+        }
+        db.rawQuery("SELECT TIMESTAMP, PINNED, TEXT FROM CLIPBOARD LIMIT 0", null).close()
+    }
+}
+
+private fun deleteSelectedBackupData(ctx: Context, categories: Set<BackupCategory>) {
+    val files = mutableListOf<File>()
+    listOf(ctx.filesDir, DeviceProtectedUtils.getFilesDir(ctx)).distinct().forEach { base ->
+        base.listFiles().orEmpty().forEach { file ->
+            val category = when {
+                file.name == "layouts" -> BackupCategory.LAYOUTS
+                file.name in setOf("dicts", "blacklists") || file.name.startsWith("UserHistoryDictionary") ->
+                    BackupCategory.DICTIONARY_HISTORY
+                file.name in setOf("custom_font", "custom_emoji_font") || file.name.startsWith("custom_background_image") ->
+                    BackupCategory.THEME_APPEARANCE
+                else -> null
+            }
+            if (category in categories) files.add(checkedRestoreTarget(base, file.name))
+        }
+    }
+    files.forEach { root ->
+        root.walkBottomUp().forEach { file ->
+            check(file.delete() || !file.exists()) { "Could not replace ${file.path}" }
+        }
+    }
+    if (BackupCategory.CLIPBOARD in categories) {
+        ClipboardDao.closeInstance()
+        Database.closeInstance()
+        val database = ctx.getDatabasePath(Database.NAME)
+        check(!database.exists() || ctx.deleteDatabase(Database.NAME)) { "Could not replace clipboard database" }
     }
 }
 
 @Suppress("UNCHECKED_CAST") // it is checked... but whatever (except string set, because can't check for that))
-private fun settingsToJsonStream(settings: Map<String?, Any?>, out: OutputStream) {
+internal fun settingsToJsonStream(settings: Map<String?, Any?>, out: OutputStream) {
     val booleans = settings.filter { it.key is String && it.value is Boolean } as Map<String, Boolean>
     val ints = settings.filter { it.key is String && it.value is Int } as Map<String, Int>
     val longs = settings.filter { it.key is String && it.value is Long } as Map<String, Long>
@@ -435,37 +529,46 @@ private fun settingsToJsonStream(settings: Map<String?, Any?>, out: OutputStream
     out.write(Json.encodeToString(stringSets).toByteArray())
 }
 
-private fun readJsonLinesToSettings(list: List<String>, prefs: SharedPreferences, selectedCategories: Set<BackupCategory>): Boolean {
-    val i = list.iterator()
-    val e = prefs.edit()
-    try {
-        while (i.hasNext()) {
-            when (i.next()) {
-                "boolean settings" -> Json.decodeFromString<Map<String, Boolean>>(i.next())
-                    .filter { selectedCategories.contains(getCategoryForPrefKey(it.key)) }
-                    .forEach { e.putBoolean(it.key, it.value) }
-                "int settings" -> Json.decodeFromString<Map<String, Int>>(i.next())
-                    .filter { selectedCategories.contains(getCategoryForPrefKey(it.key)) }
-                    .forEach { e.putInt(it.key, it.value) }
-                "long settings" -> Json.decodeFromString<Map<String, Long>>(i.next())
-                    .filter { selectedCategories.contains(getCategoryForPrefKey(it.key)) }
-                    .forEach { e.putLong(it.key, it.value) }
-                "float settings" -> Json.decodeFromString<Map<String, Float>>(i.next())
-                    .filter { selectedCategories.contains(getCategoryForPrefKey(it.key)) }
-                    .forEach { e.putFloat(it.key, it.value) }
-                "string settings" -> Json.decodeFromString<Map<String, String>>(i.next())
-                    .filter { selectedCategories.contains(getCategoryForPrefKey(it.key)) }
-                    .forEach { e.putString(it.key, it.value) }
-                "string set settings" -> Json.decodeFromString<Map<String, Set<String>>>(i.next())
-                    .filter { selectedCategories.contains(getCategoryForPrefKey(it.key)) }
-                    .forEach { e.putStringSet(it.key, it.value) }
-            }
+private fun parseBackupPreferences(lines: List<String>): Map<String, Any> {
+    val values = linkedMapOf<String, Any>()
+    val headers = hashSetOf<String>()
+    val iterator = lines.dropLastWhile { it.isBlank() }.iterator()
+    while (iterator.hasNext()) {
+        val header = iterator.next()
+        require(headers.add(header) && iterator.hasNext()) { "Invalid preferences section: $header" }
+        val json = iterator.next()
+        val section: Map<String, Any> = when (header) {
+            "boolean settings" -> Json.decodeFromString<Map<String, Boolean>>(json)
+            "int settings" -> Json.decodeFromString<Map<String, Int>>(json)
+            "long settings" -> Json.decodeFromString<Map<String, Long>>(json)
+            "float settings" -> Json.decodeFromString<Map<String, Float>>(json)
+            "string settings" -> Json.decodeFromString<Map<String, String>>(json)
+            "string set settings" -> Json.decodeFromString<Map<String, Set<String>>>(json)
+            else -> throw IllegalArgumentException("Unknown preferences section: $header")
         }
-        e.commit()
-        return true
-    } catch (e: Exception) {
-        return false
+        section.forEach { (key, value) ->
+            require(!values.containsKey(key)) { "Duplicate preference: $key" }
+            values[key] = value
+        }
     }
+    require(headers.size == 6) { "Incomplete backup preferences" }
+    return values
+}
+
+private fun applyBackupPreferences(prefs: SharedPreferences, values: Map<String, Any>, categories: Set<BackupCategory>) {
+    val editor = prefs.edit()
+    prefs.all.keys.filter { getCategoryForPrefKey(it) in categories }.forEach { editor.remove(it) }
+    values.filter { getCategoryForPrefKey(it.key) in categories }.forEach { (key, value) ->
+        when (value) {
+            is Boolean -> editor.putBoolean(key, value)
+            is Int -> editor.putInt(key, value)
+            is Long -> editor.putLong(key, value)
+            is Float -> editor.putFloat(key, value)
+            is String -> editor.putString(key, value)
+            is Set<*> -> editor.putStringSet(key, value.map { it as String }.toSet())
+        }
+    }
+    check(editor.commit()) { "Could not save restored preferences" }
 }
 
 /**
@@ -484,26 +587,15 @@ private fun auxiliaryPrefsToBackUp(ctx: android.content.Context): Map<String, Sh
             to DeviceProtectedUtils.getSharedPreferences(ctx, "floating_keyboard_prefs"),
     )
 
-private fun restoreEntryToDir(zip: ZipInputStream, baseDir: File, entryName: String): Boolean {
-    val file = File(baseDir, entryName)
-    val canonicalBase = baseDir.canonicalFile
-    val canonicalTarget = file.canonicalFile
-    if (canonicalTarget.path != canonicalBase.path
-        && !canonicalTarget.path.startsWith(canonicalBase.path + File.separator)
-    ) return false
-    FileUtils.copyStreamToNewFile(zip, file)
-    return true
-}
-
 private const val PREFS_FILE_NAME = "preferences.json"
 private const val PROTECTED_PREFS_FILE_NAME = "protected_preferences.json"
 private const val FLOATING_KEYBOARD_PREFS_FILE_NAME = "floating_keyboard_preferences.json"
 
 private val backupFilePatterns by lazy { listOf(
-    "blacklists${File.separator}.*\\.txt".toRegex(),
-    "layouts${File.separator}.*${LayoutUtilsCustom.CUSTOM_LAYOUT_PREFIX}+\\..{0,4}".toRegex(), // can't expect a period at the end, as this would break restoring older backups
-    "dicts${File.separator}.*${File.separator}.*user\\.dict".toRegex(),
-    "UserHistoryDictionary.*${File.separator}UserHistoryDictionary.*\\.(body|header)".toRegex(),
+    "blacklists/.*\\.txt".toRegex(),
+    "layouts/.*${LayoutUtilsCustom.CUSTOM_LAYOUT_PREFIX}+\\..{0,4}".toRegex(), // can't expect a period at the end, as this would break restoring older backups
+    "dicts/.*/.*user\\.dict".toRegex(),
+    "UserHistoryDictionary.*/UserHistoryDictionary.*\\.(body|header)".toRegex(),
     "custom_background_image.*".toRegex(),
     "custom_font".toRegex(),
     "custom_emoji_font".toRegex(),

@@ -18,14 +18,16 @@ import helium314.keyboard.latin.common.InputPointers
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.utils.JniUtils
+import helium314.keyboard.latin.utils.ExecutorUtils
 import helium314.keyboard.latin.utils.SuggestionResults
 import helium314.keyboard.latin.utils.prefs
 import java.util.function.BiConsumer
+import java.util.ArrayDeque
+import java.util.concurrent.ScheduledExecutorService
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.mockito.Mockito
 import org.robolectric.Robolectric
@@ -45,6 +47,7 @@ class SwipeGestureEngineTest {
 
     @AfterTest
     fun tearDown() {
+        ExecutorUtils.setExecutorServiceForTests(null)
         JniUtils.sHaveGestureLib = false
         JniUtils.sHaveNativeGestureLib = false
     }
@@ -112,18 +115,19 @@ class SwipeGestureEngineTest {
         val composer = WordComposer().apply { setBatchInputPointers(pointers) }
         val suggest = Suggest(facilitator)
         val settings = SettingsValuesForSuggestion(false, false, "fallback")
+        val tasks = ArrayDeque<Runnable>()
+        val executor = Mockito.mock(ScheduledExecutorService::class.java)
+        Mockito.doAnswer { tasks.addLast(it.getArgument(0)); null }
+            .`when`(executor).execute(Mockito.any(Runnable::class.java))
+        ExecutorUtils.setExecutorServiceForTests(executor)
 
         suggest.getSuggestedWords(
             composer, NgramContext.EMPTY_PREV_WORDS_INFO, keyboard, settings,
             false, SuggestedWords.INPUT_STYLE_TAIL_BATCH, 1,
         )
 
-        val indexField = Suggest::class.java.getDeclaredField("gestureIndex").apply { isAccessible = true }
-        repeat(100) {
-            if (indexField.get(suggest) != null) return@repeat
-            Thread.sleep(20)
-        }
-        assertNotNull(indexField.get(suggest), "fallback index should finish building")
+        assertEquals(1, tasks.size)
+        tasks.removeFirst().run()
 
         val result = suggest.getSuggestedWords(
             composer, NgramContext.EMPTY_PREV_WORDS_INFO, keyboard, settings,
