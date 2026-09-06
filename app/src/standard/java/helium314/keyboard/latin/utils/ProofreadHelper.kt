@@ -27,11 +27,12 @@ object ProofreadHelper {
     
     // Track current operation for cancellation
     private var currentJob: Job? = null
+    private val operationOwner = AiOperationOwner()
     
     // Check if an operation is in progress
     @JvmStatic
     val isOperationInProgress: Boolean
-        get() = currentJob?.isActive == true
+        get() = operationOwner.active
     
     // Store original text for potential undo
     @JvmStatic
@@ -51,13 +52,11 @@ object ProofreadHelper {
      */
     @JvmStatic
     fun cancelCurrentOperation() {
-        if (currentJob?.isActive == true) {
-            currentJob?.cancel()
-            currentJob = null
-            mainHandler.post {
-                KeyboardSwitcher.getInstance().hideLoadingAnimation()
-                // Toast removed as visual feedback (stopping animation) is sufficient
-            }
+        val id = operationOwner.invalidate()
+        currentJob?.cancel()
+        currentJob = null
+        operationOwner.postIfIdle(id) {
+            KeyboardSwitcher.getInstance().hideLoadingAnimation()
         }
     }
     
@@ -72,6 +71,8 @@ object ProofreadHelper {
         allowEmptyInput: Boolean = false,
         skipApiKeyCheck: Boolean = false
     ) {
+        currentJob?.cancel()
+        val ticket = operationOwner.begin(context)
         val service = ProofreadService(context)
 
         // Check if API key/token is configured based on provider (unless plugin handles operation)
@@ -80,7 +81,7 @@ object ProofreadHelper {
             when (provider) {
                 ProofreadService.AIProvider.GEMINI -> {
                     if (!service.hasApiKey()) {
-                        mainHandler.post {
+                        ticket.post(complete = true) {
                             KeyboardSwitcher.getInstance().showToast(
                                 context.getString(R.string.proofread_no_api_key),
                                 true
@@ -91,7 +92,7 @@ object ProofreadHelper {
                 }
                 ProofreadService.AIProvider.GROQ -> {
                     if (service.getGroqToken() == null) {
-                        mainHandler.post {
+                        ticket.post(complete = true) {
                             KeyboardSwitcher.getInstance().showToast(
                                 context.getString(R.string.huggingface_no_token),
                                 true
@@ -102,7 +103,7 @@ object ProofreadHelper {
                 }
                 ProofreadService.AIProvider.OPENAI -> {
                     if (service.getHuggingFaceToken() == null) {
-                        mainHandler.post {
+                        ticket.post(complete = true) {
                             KeyboardSwitcher.getInstance().showToast(
                                 context.getString(R.string.huggingface_no_token),
                                 true
@@ -115,7 +116,7 @@ object ProofreadHelper {
         }
 
         if (!allowEmptyInput && text.isBlank()) {
-            mainHandler.post {
+            ticket.post(complete = true) {
                 KeyboardSwitcher.getInstance().showToast(
                     context.getString(noTextErrorResId),
                     true
@@ -128,15 +129,19 @@ object ProofreadHelper {
         lastOriginalText = text
 
         // Show loading animation on suggestion strip
-        mainHandler.post {
+        ticket.post {
             KeyboardSwitcher.getInstance().showLoadingAnimation()
         }
 
         // Launch coroutine for API call and track it for cancellation
         currentJob = scope.launch {
-            val result = apiCall(service)
+            val result = try {
+                apiCall(service)
+            } catch (error: Exception) {
+                Result.failure(error)
+            }
 
-            mainHandler.post {
+            ticket.post(complete = true) {
                 currentJob = null
                 // Hide loading animation
                 KeyboardSwitcher.getInstance().hideLoadingAnimation()
@@ -146,11 +151,12 @@ object ProofreadHelper {
                         onSuccess(resultText)
                     },
                     onFailure = { error ->
-                        onError(error.message ?: "Unknown error")
-                        KeyboardSwitcher.getInstance().showToast(
-                            context.getString(errorResId, error.message ?: "Unknown error"),
-                            false
-                        )
+                        if (error !is kotlinx.coroutines.CancellationException) {
+                            onError(error.message ?: "Unknown error")
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(errorResId, error.message ?: "Unknown error"), false
+                            )
+                        }
                     }
                 )
             }

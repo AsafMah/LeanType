@@ -26,11 +26,12 @@ object ProofreadHelper {
     
     // Track current operation for cancellation
     private var currentJob: Job? = null
+    private val operationOwner = AiOperationOwner()
     
     // Check if an operation is in progress
     @JvmStatic
     val isOperationInProgress: Boolean
-        get() = currentJob?.isActive == true
+        get() = operationOwner.active
     
     // Store original text for potential undo
     @JvmStatic
@@ -60,13 +61,11 @@ object ProofreadHelper {
      */
     @JvmStatic
     fun cancelCurrentOperation() {
-        if (currentJob?.isActive == true) {
-            currentJob?.cancel()
-            currentJob = null
-            mainHandler.post {
-                KeyboardSwitcher.getInstance().hideLoadingAnimation()
-                // Toast removed as visual feedback (stopping animation) is sufficient
-            }
+        val id = operationOwner.invalidate()
+        currentJob?.cancel()
+        currentJob = null
+        operationOwner.postIfIdle(id) {
+            KeyboardSwitcher.getInstance().hideLoadingAnimation()
         }
     }
     
@@ -80,11 +79,13 @@ object ProofreadHelper {
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
     ) {
+        currentJob?.cancel()
+        val ticket = operationOwner.begin(context)
         val service = ProofreadService(context)
 
         // Check if Model is configured
         if (!skipModelCheck && service.getModelPath().isNullOrBlank()) {
-            mainHandler.post {
+            ticket.post(complete = true) {
                 KeyboardSwitcher.getInstance().showToast(
                     "No local model selected. Please select a GGUF model in Settings.",
                     true
@@ -94,7 +95,7 @@ object ProofreadHelper {
         }
 
         if (text.isBlank()) {
-            mainHandler.post {
+            ticket.post(complete = true) {
                 KeyboardSwitcher.getInstance().showToast(
                     context.getString(noTextErrorResId),
                     true
@@ -107,15 +108,19 @@ object ProofreadHelper {
         lastOriginalText = text
 
         // Show loading animation on suggestion strip
-        mainHandler.post {
+        ticket.post {
             KeyboardSwitcher.getInstance().showLoadingAnimation()
         }
 
         // Launch coroutine for inference and track it for cancellation
         currentJob = scope.launch {
-            val result = apiCall(service)
+            val result = try {
+                apiCall(service)
+            } catch (error: Exception) {
+                Result.failure(error)
+            }
 
-            mainHandler.post {
+            ticket.post(complete = true) {
                 currentJob = null
                 // Hide loading animation
                 KeyboardSwitcher.getInstance().hideLoadingAnimation()
@@ -125,11 +130,12 @@ object ProofreadHelper {
                         onSuccess(resultText)
                     },
                     onFailure = { error ->
-                        onError(error.message ?: "Unknown error")
-                        KeyboardSwitcher.getInstance().showToast(
-                            context.getString(errorResId, error.message ?: "Unknown error"),
-                            false
-                        )
+                        if (error !is kotlinx.coroutines.CancellationException) {
+                            onError(error.message ?: "Unknown error")
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(errorResId, error.message ?: "Unknown error"), false
+                            )
+                        }
                     }
                 )
             }

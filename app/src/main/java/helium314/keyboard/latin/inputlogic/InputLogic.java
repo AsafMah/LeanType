@@ -1474,10 +1474,10 @@ public final class InputLogic {
         }
     }
 
-    // Store last text before proofreading for undo functionality
-    private String mTextBeforeProofread = null;
+    private long mAiRequestId;
 
     private void handleProofread() {
+        final long requestId = ++mAiRequestId;
         Log.i(TAG, "handleProofread() called");
 
         // If an operation is in progress, cancel it
@@ -1486,47 +1486,10 @@ public final class InputLogic {
             helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
             return;
         }
-        String textToProofread;
-        final boolean hasSelection = mConnection.hasSelection();
-
-        if (hasSelection) {
-            final CharSequence selectedText = mConnection.getSelectedText(0);
-            textToProofread = selectedText != null ? selectedText.toString() : "";
-            Log.i(TAG, "Proofreading selected text: " + textToProofread.length() + " chars");
-        } else {
-            // Get entire text field content FIRST to ensure we capture everything relative
-            // to cursor
-            final int maxChars = 60000;
-            CharSequence textBefore = null;
-            CharSequence textAfter = null;
-            try {
-                textBefore = mConnection.getTextBeforeCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text before cursor: " + e);
-            }
-
-            try {
-                textAfter = mConnection.getTextAfterCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text after cursor: " + e);
-                // Try with smaller amount if large amount failed
-                try {
-                    textAfter = mConnection.getTextAfterCursor(2048, 0);
-                } catch (Exception e2) {
-                    Log.e(TAG, "Failed to get text after cursor (retry): " + e2);
-                }
-            }
-
-            final String before = textBefore != null ? textBefore.toString() : "";
-            final String after = textAfter != null ? textAfter.toString() : "";
-            textToProofread = before + after;
-
-            // Select all text NOW so user sees what will be proofread
-            mConnection.selectAll();
-        }
-
-        // Store original text for undo (via standard undo mechanism)
-        mTextBeforeProofread = textToProofread;
+        final var request = helium314.keyboard.latin.utils.AiEditorRequest.prepare(mLatinIME, mConnection, false);
+        if (request == null) return;
+        final String textToProofread = request.getOriginalText();
+        final boolean hasSelection = request.getHasSelection();
 
         // Use the Kotlin helper for async proofreading
         helium314.keyboard.latin.utils.ProofreadHelper.proofreadAsync(
@@ -1536,14 +1499,15 @@ public final class InputLogic {
                 new helium314.keyboard.latin.utils.ProofreadHelper.ProofreadCallback() {
                     @Override
                     public void onSuccess(String proofreadText) {
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
 
-                        if (proofreadText != null && !proofreadText.isEmpty() && !proofreadText.equals(mTextBeforeProofread)) {
+                        if (proofreadText != null && !proofreadText.isEmpty() && !proofreadText.equals(textToProofread)) {
                             // Truncation safeguard: if original input was substantial (> 20 chars) and proofreadText is less than 30% of original text length, abort to prevent accidental data loss
-                            if (mTextBeforeProofread != null && mTextBeforeProofread.length() > 20 && proofreadText.length() < mTextBeforeProofread.length() * 0.3) {
-                                Log.w(TAG, "Proofread result suspiciously short (" + proofreadText.length() + " vs " + mTextBeforeProofread.length() + "), aborting replacement to prevent truncation data loss");
+                            if (textToProofread.length() > 20 && proofreadText.length() < textToProofread.length() * 0.3) {
+                                Log.w(TAG, "Proofread result suspiciously short; replacement aborted");
                                 helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().showToast("Proofread output truncated by model; replacement aborted.", false);
                                 if (!hasSelection) {
-                                    int len = mTextBeforeProofread.length();
+                                    int len = textToProofread.length();
                                     mConnection.setSelection(len, len);
                                 }
                                 return;
@@ -1557,7 +1521,7 @@ public final class InputLogic {
 
                             // Deselect the text since no changes were made
                             if (!hasSelection) {
-                                int len = mTextBeforeProofread != null ? mTextBeforeProofread.length() : 0;
+                                int len = textToProofread.length();
                                 mConnection.setSelection(len, len);
                             }
                         }
@@ -1565,57 +1529,19 @@ public final class InputLogic {
 
                     @Override
                     public void onError(String errorMessage) {
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
                         // Error toast is already shown by ProofreadHelper
-                        Log.e(TAG, "Proofreading error: " + errorMessage);
+                        Log.e(TAG, "Proofreading failed");
                     }
                 });
     }
 
-    // Store last text before translation for undo functionality
-    private String mTextBeforeTranslate = null;
-
     private void handleTranslate() {
-
-        // Get selected text or entire text field content
-        String textToTranslate;
-        final boolean hasSelection = mConnection.hasSelection();
-
-        if (hasSelection) {
-            final CharSequence selectedText = mConnection.getSelectedText(0);
-            textToTranslate = selectedText != null ? selectedText.toString() : "";
-
-        } else {
-            // Get entire text field content FIRST
-            final int maxChars = 60000;
-            CharSequence textBefore = null;
-            CharSequence textAfter = null;
-            try {
-                textBefore = mConnection.getTextBeforeCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text before cursor: " + e);
-            }
-
-            try {
-                textAfter = mConnection.getTextAfterCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text after cursor: " + e);
-                try {
-                    textAfter = mConnection.getTextAfterCursor(2048, 0);
-                } catch (Exception e2) {
-                    Log.e(TAG, "Failed to get text after cursor (retry): " + e2);
-                }
-            }
-
-            final String before = textBefore != null ? textBefore.toString() : "";
-            final String after = textAfter != null ? textAfter.toString() : "";
-            textToTranslate = before + after;
-
-            // Select all text NOW
-            mConnection.selectAll();
-        }
-
-        // Store original text for undo
-        mTextBeforeTranslate = textToTranslate;
+        final long requestId = ++mAiRequestId;
+        final var request = helium314.keyboard.latin.utils.AiEditorRequest.prepare(mLatinIME, mConnection, false);
+        if (request == null) return;
+        final String textToTranslate = request.getOriginalText();
+        final boolean hasSelection = request.getHasSelection();
 
         // Use the Kotlin helper for async translation
         helium314.keyboard.latin.utils.ProofreadHelper.translateAsync(
@@ -1625,14 +1551,15 @@ public final class InputLogic {
                 new helium314.keyboard.latin.utils.ProofreadHelper.ProofreadCallback() {
                     @Override
                     public void onSuccess(String translatedText) {
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
 
-                        if (translatedText != null && !translatedText.equals(mTextBeforeTranslate)) {
+                        if (translatedText != null && !translatedText.equals(textToTranslate)) {
                             // Truncation safeguard: if original input was substantial (> 20 chars) and translatedText is less than 30% of original text length, abort to prevent accidental data loss
-                            if (mTextBeforeTranslate != null && mTextBeforeTranslate.length() > 20 && translatedText.length() < mTextBeforeTranslate.length() * 0.3) {
-                                Log.w(TAG, "Translation result suspiciously short (" + translatedText.length() + " vs " + mTextBeforeTranslate.length() + "), aborting replacement to prevent truncation data loss");
+                            if (textToTranslate.length() > 20 && translatedText.length() < textToTranslate.length() * 0.3) {
+                                Log.w(TAG, "Translation result suspiciously short; replacement aborted");
                                 helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().showToast("Translation output truncated by model; replacement aborted.", false);
                                 if (!hasSelection) {
-                                    int len = mTextBeforeTranslate.length();
+                                    int len = textToTranslate.length();
                                     mConnection.setSelection(len, len);
                                 }
                                 return;
@@ -1641,7 +1568,7 @@ public final class InputLogic {
 
                         } else {
                             if (!hasSelection) {
-                                int len = mTextBeforeTranslate != null ? mTextBeforeTranslate.length() : 0;
+                                int len = textToTranslate.length();
                                 mConnection.setSelection(len, len);
                             }
                         }
@@ -1649,7 +1576,8 @@ public final class InputLogic {
 
                     @Override
                     public void onError(String errorMessage) {
-                        Log.e(TAG, "Translation error: " + errorMessage);
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
+                        Log.e(TAG, "Translation failed");
                     }
                 });
     }
@@ -4884,6 +4812,7 @@ public final class InputLogic {
     }
 
     private void handleCustomAIKey(int index) {
+        final long requestId = ++mAiRequestId;
         final android.content.SharedPreferences prefs = helium314.keyboard.latin.utils.DeviceProtectedUtils
                 .getSharedPreferences(mLatinIME);
         String prompt = prefs.getString("pref_custom_ai_prompt_" + index, "");
@@ -4949,96 +4878,24 @@ public final class InputLogic {
         // it.
         prompt = prompt + systemInstruction;
 
-        // Get selected text or entire text field content
-        String textToProcess;
-        final boolean hasSelection = mConnection.hasSelection();
-
-        if (hasSelection) {
-            final CharSequence selectedText = mConnection.getSelectedText(0);
-            textToProcess = selectedText != null ? selectedText.toString() : "";
-            // If appending on a selection, we unselect (move cursor to end of selection) so
-            // we don't overwrite?
-            // User requested "generate wish after 'see you'", which implies keeping 'see
-            // you'.
-            if (shouldAppend) {
-                mConnection.setSelection(mConnection.getExpectedSelectionEnd(), mConnection.getExpectedSelectionEnd());
-                // Insert a separator?
-                // For now, let's just append. The AI result might need leading space/newline.
-                // We can inject a newline into the prompt request implicitly or ask the AI to
-                // include it?
-                // Better: "Output result. Start with a newline if appropriate." - simplistic
-                // but maybe enough.
-            }
-        } else {
-            // Get entire text field content FIRST
-            final int maxChars = 60000;
-            CharSequence textBefore = null;
-            CharSequence textAfter = null;
-            try {
-                textBefore = mConnection.getTextBeforeCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text before cursor: " + e);
-            }
-
-            try {
-                textAfter = mConnection.getTextAfterCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text after cursor: " + e);
-                try {
-                    textAfter = mConnection.getTextAfterCursor(2048, 0);
-                } catch (Exception e2) {
-                    Log.e(TAG, "Failed to get text after cursor (retry): " + e2);
-                }
-            }
-
-            final String before = textBefore != null ? textBefore.toString() : "";
-            final String after = textAfter != null ? textAfter.toString() : "";
-            textToProcess = before + after;
-
-            if (!shouldAppend) {
-                // Select all text NOW so user sees what will be processed
-                mConnection.selectAll();
-            } else {
-                // If appending, we probably want to move cursor to the end so we append at the
-                // end of the current text?
-                // Or just leave cursor where it is? "generate good night wash" context is whole
-                // text.
-                // Usually "append" means add to the end of the document.
-                // But if cursor is in middle, maybe insert there?
-                // Let's assume append means "add to end of context".
-                // But context is "before + after".
-                // Let's safe bet: Move cursor to end of text.
-                // Because onTextInput inserts at cursor.
-                if (textToProcess.length() > 0) {
-                    // We don't have absolute position easily unless we assume 0 is start.
-                    // beginBatchEdit/endBatchEdit might be needed if we move cursor?
-                    // Actually, we can just delete nothing and insert.
-                    // But we need to be at the end.
-                    // We can try: mConnection.setSelection(textToProcess.length(),
-                    // textToProcess.length())?
-                    // But we don't know the absolute offset of 'textBefore'.
-                    // Wait, textBefore + textAfter = whole text.
-                    // But we are at cursor.
-                    // To go to end: move cursor by textAfter.length().
-                    if (after.length() > 0 && mConnection.getExpectedSelectionEnd() >= 0) {
-                        int newPos = mConnection.getExpectedSelectionEnd() + after.length();
-                        mConnection.setSelection(newPos, newPos);
-                    }
-                }
-            }
-        }
+        final var request = helium314.keyboard.latin.utils.AiEditorRequest.prepare(mLatinIME, mConnection, shouldAppend);
+        if (request == null) return;
+        final String textToProcess = request.getOriginalText();
+        final boolean hasSelection = request.getHasSelection();
 
         helium314.keyboard.latin.utils.ProofreadHelper.INSTANCE.customAsync(mLatinIME,
                 textToProcess, prompt, hasSelection, showThinking,
                 new helium314.keyboard.latin.utils.ProofreadHelper.ProofreadCallback() {
                     @Override
                     public void onSuccess(String resultText) {
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
                         mLatinIME.onTextInput(resultText);
                     }
 
                     @Override
                     public void onError(String errorMessage) {
-                        Log.e(TAG, "Custom AI Error: " + errorMessage);
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
+                        Log.e(TAG, "Custom AI failed");
                         KeyboardSwitcher.getInstance().showToast("AI Error: " + errorMessage, true);
                     }
                 });

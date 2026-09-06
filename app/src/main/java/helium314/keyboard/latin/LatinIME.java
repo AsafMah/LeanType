@@ -818,6 +818,7 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onDestroy() {
         mInputSessionGeneration++;
+        helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
         mKeyboardSwitcher.cancelOcrWork();
         helium314.keyboard.latin.gesture.SwipeGestureEngine.cancelIndexing();
         if (sInstance == this) {
@@ -1033,6 +1034,7 @@ public class LatinIME extends InputMethodService implements
     public void onStartInput(final EditorInfo editorInfo, final boolean restarting) {
         // Invalidate before UIHandler can defer this callback, even when EditorInfo is reused.
         mInputSessionGeneration++;
+        helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
         mClipboardHistoryManager.onStartInput();
         mKeyboardSwitcher.cancelOcrWork();
         mHandler.onStartInput(editorInfo, restarting);
@@ -1046,6 +1048,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onFinishInputView(final boolean finishingInput) {
+        helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
         mKeyboardSwitcher.cancelOcrWork();
         StatsUtils.onFinishInputView();
         mHandler.onFinishInputView(finishingInput);
@@ -1065,6 +1068,7 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onFinishInput() {
         mInputSessionGeneration++;
+        helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
         mClipboardHistoryManager.onFinishInput();
         mKeyboardSwitcher.cancelOcrWork();
         mHandler.onFinishInput();
