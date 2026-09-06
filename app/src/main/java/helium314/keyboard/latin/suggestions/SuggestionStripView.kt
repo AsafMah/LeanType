@@ -902,7 +902,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                         && (srcDict.mDictType == Dictionary.TYPE_USER_HISTORY
                                 || srcDict.mDictType == Dictionary.TYPE_USER_TYPED)
                 if (isUncurated) {
-                    val word = wordView.text.toString()
+                    val word = info.mWord
                     val dialog = AlertDialog.Builder(getPlatformDialogThemeContext(context))
                         .setTitle(word)
                         .setPositiveButton(R.string.add_to_dictionary) { di, _ ->
