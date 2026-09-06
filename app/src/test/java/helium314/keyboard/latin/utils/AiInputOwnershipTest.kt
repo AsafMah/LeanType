@@ -95,8 +95,26 @@ class AiInputOwnershipTest {
         request("handleTranslate")
         start = end
         clearInvocations(connection)
-        complete(text)
+        complete("changed translation")
         verify(connection, never()).setSelection(anyInt(), anyInt())
+        assertEquals(emptyList<String>(), commits)
+    }
+
+    @Test fun unavailableSourceFailsClosedBeforeStartingBackend() {
+        `when`(editor.getExtractedText(any(), anyInt())).thenReturn(null)
+        request("handleProofread")
+        assertEquals(0, HelperShadow.callbacks.size)
+        verify(connection, never()).setSelection(anyInt(), anyInt())
+        assertEquals(emptyList<String>(), commits)
+    }
+
+    @Test fun repeatedSelectedTextElsewhereIsNotTheOriginalRange() {
+        text = "same same"
+        end = 4
+        request("handleProofread")
+        start = 5
+        end = 9
+        complete()
         assertEquals(emptyList<String>(), commits)
     }
 

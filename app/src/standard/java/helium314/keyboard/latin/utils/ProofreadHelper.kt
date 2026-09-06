@@ -5,8 +5,6 @@
 package helium314.keyboard.latin.utils
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.RichInputConnection
@@ -22,7 +20,6 @@ import kotlinx.coroutines.launch
  * This avoids the complexity of Java-Kotlin coroutine interop.
  */
 object ProofreadHelper {
-    private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(Dispatchers.IO)
     
     // Track current operation for cancellation
@@ -134,7 +131,7 @@ object ProofreadHelper {
         }
 
         // Launch coroutine for API call and track it for cancellation
-        currentJob = scope.launch {
+        currentJob = scope.launch(ticket) {
             val result = try {
                 apiCall(service)
             } catch (error: Exception) {
@@ -426,12 +423,12 @@ object ProofreadHelper {
                         val missingNames = missingModels.joinToString(", ") { getLanguageDisplayName(context, it) }
                         val errorMsg = context.getString(R.string.translation_specific_model_not_downloaded, missingNames)
                         if (isOfflineOnly || !hasAiConfigured) {
-                            mainHandler.post {
+                            postAiFeedback {
                                 KeyboardSwitcher.getInstance().showToast(errorMsg, true)
                             }
                             return@performAsyncOperation Result.failure(Exception(errorMsg))
                         } else {
-                            mainHandler.post {
+                            postAiFeedback {
                                 KeyboardSwitcher.getInstance().showToast(
                                     context.getString(R.string.translation_switching_to_ai, missingNames),
                                     false
@@ -450,7 +447,7 @@ object ProofreadHelper {
                         } else if (isOfflineOnly || !hasAiConfigured) {
                             Result.failure(Exception("Plugin translation returned empty result"))
                         } else {
-                            mainHandler.post {
+                            postAiFeedback {
                                 KeyboardSwitcher.getInstance().showToast(
                                     context.getString(R.string.translation_plugin_fallback_to_ai),
                                     false
@@ -460,10 +457,11 @@ object ProofreadHelper {
                             service.translate(text)
                         }
                     } catch (e: Throwable) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         if (isOfflineOnly || !hasAiConfigured) {
                             Result.failure(e)
                         } else {
-                            mainHandler.post {
+                            postAiFeedback {
                                 KeyboardSwitcher.getInstance().showToast(
                                     context.getString(R.string.translation_plugin_fallback_to_ai),
                                     false
@@ -474,7 +472,7 @@ object ProofreadHelper {
                         }
                     }
                 } else if (isOfflineOnly || !hasAiConfigured) {
-                    mainHandler.post {
+                    postAiFeedback {
                         KeyboardSwitcher.getInstance().showToast(
                             context.getString(R.string.translation_model_not_downloaded),
                             true
@@ -483,7 +481,7 @@ object ProofreadHelper {
                     Result.failure(Exception("Translation plugin not available"))
                 } else {
                     if (!isOnlineOnly) {
-                        mainHandler.post {
+                        postAiFeedback {
                             KeyboardSwitcher.getInstance().showToast(
                                 context.getString(R.string.translation_plugin_fallback_to_ai),
                                 false

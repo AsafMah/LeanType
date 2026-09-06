@@ -4,6 +4,13 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import helium314.keyboard.latin.LatinIME
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
+
+internal suspend fun postAiFeedback(action: () -> Unit) {
+    coroutineContext[AiOperationOwner.FeedbackKey]?.post(action = action)
+}
 
 /** A worker finishing does not end ownership: its Main delivery may still be queued. */
 internal class AiOperationOwner {
@@ -28,7 +35,10 @@ internal class AiOperationOwner {
         handler.post { if (generation == id && !active) action() }
     }
 
-    inner class Ticket(private val id: Long, private val validEditor: () -> Boolean) {
+    object FeedbackKey : CoroutineContext.Key<Ticket>
+
+    inner class Ticket(private val id: Long, private val validEditor: () -> Boolean) :
+        AbstractCoroutineContextElement(FeedbackKey) {
         fun post(complete: Boolean = false, action: () -> Unit) {
             handler.post {
                 if (generation != id) return@post

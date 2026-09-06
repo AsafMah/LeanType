@@ -22,6 +22,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Side-by-side experimental build** — an `experimental` build type (`com.asafmah.leantypedual.exp`, shown as "LeanTypeDual EXP") that installs alongside the normal build instead of replacing it, so input experiments can be compared against a working daily driver. (#141)
 
 ### Fixed
+- Bundled offline generation no longer loses immediate completion/errors or drops tokens when the consumer is delayed. Loading, prediction and unloading share one engine lock; cancelled native calls drain before reuse and cannot publish into a later request. (#154)
 - Offline translation remembers its selected target across settings recreation and uses the same language for plugin requests and bundled-model prompts, including legacy language-name preferences. (#154)
 - AI proofreading, translation and custom-key results only apply to their originating, unchanged editor/range; cancelled or superseded requests cannot deliver queued results or errors into another session. (#154)
 - **Sound-pack imports reject unsafe IDs and invalid manifests** before touching installed data, and retain nested audio paths for playback. (#152)
@@ -42,6 +43,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Reframed the two-thumb decoder research as a historical record that distinguishes in-tree preprocessing facts from claims falsified against the closed runtime recognizer. (#147)
 
 ### Reliability & testing
+- AI regressions cover editor/range ownership, queued plugin feedback, settings recreation, native-event ordering and logging at the real service/JVM-wrapper seam. Application content logs are removed and wrapper parameters are redacted; the bundled native library's prompt diagnostics still require an audited dependency rebuild before native log privacy can be claimed. (#154)
 - Added reproducible JVM/Robolectric regressions for unsafe imports, private/stale math acceptance, camera and OCR cancellation, screenshot visibility, microphone mute, touchpad tap sequences, and clipboard draft restoration. Camera hardware and native plugin behavior still require device validation. (#152)
 - Added deterministic backup/restore regressions for slow providers, lifecycle disposal, rejected archives, and immediate two-thumb settings refresh. (#153)
 - Added controlled dictionary/index lifecycle regressions for mutation publication, stale builds, provider changes during reload, shutdown, and cached predictions. Routine history learning does not force full gesture-index rebuilds. (#153)
