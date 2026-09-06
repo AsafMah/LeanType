@@ -13,8 +13,8 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 > resolution; the Suggest math gate and generation-aware caches coexist. The local cleanup
 > following that base removes dead pointer-grace/seed machinery, unused spacing work,
 > inactive settings, an unreachable blocked-words screen and a duplicate toolbar preference
-> snapshot, preserving live composition, the connector and stored user data. None of this is released
-> or installed. Correct issue ownership is #152 runtime, #153 restore/dictionary state and
+> snapshot, preserving live composition, the connector and stored user data. None of this is released.
+> The comparison candidate was installed on request (receipt below). Correct issue ownership is #152 runtime, #153 restore/dictionary state and
 > #154 remaining AI. Stabilized remote `dev` remains `07ef7536f`.
 >
 > **Candidate receipt:** cleanup is committed at `b5760728b414763171fe29bd0db77b45419c0bb9`.
@@ -24,8 +24,13 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 > `1e61a30d41aae0445edeaae3885600395091fcc15d77e399d17072a767f65fc9`).
 > This is the cloud-capable standard flavor, debug-signed as `com.asafmah.leantypedual.exp`,
 > label **LeanTypeDual EXP**, version `0.3.0-exp` / `4300`, minSdk 23, targetSdk 35,
-> ARM32/ARM64. APK manifest and signature inspection passed. No version bump, release,
-> push or device installation was performed.
+> ARM32/ARM64. APK manifest and signature inspection passed. No version bump, release or
+> push was performed. On 2026-09-06 at 20:49 +03:00 the user requested installation:
+> `adb install -r` updated the existing EXP app on Samsung SM-S936B, preserving its data.
+> The installed `base.apk` hash matches the candidate above. EXP was already enabled;
+> the selected daily keyboard remains `com.asafmah.leantypedual/helium314.keyboard.latin.LatinIME`.
+> Installation is not phone-behavior acceptance. The comparison APK remains unchanged while
+> AI #154 implementation continues.
 >
 > **Cleanup evidence:** 190 targeted JVM/Robolectric cases, zero failures, fresh result gate;
 > three inherited ignored tests remain. `InputLogicTest` also retains three `runTests`
@@ -60,7 +65,8 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Upstream integration under review | v4.2.0, pinned `1383390cb9c48b859f56b6499210cbccbd91996f`; ancestry-preserving merge into the stabilized `dev` base, not `main` |
 
 **Current priority is stabilization and a candidate build, not another broad review.**
-No release or installation has been performed. Device verification of the unreleased changes remains outstanding,
+No release has been performed. The EXP comparison candidate is installed as recorded above;
+device verification of the unreleased changes remains outstanding,
 as do unrelated #106 and deliberate triage of backed-up old branches/worktrees.
 The two-track/ideal-prefix experiment was falsified on device and was removed by #151;
 the proven pointer-id normalization remains. See §12.
