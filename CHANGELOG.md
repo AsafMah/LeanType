@@ -22,6 +22,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Side-by-side experimental build** — an `experimental` build type (`com.asafmah.leantypedual.exp`, shown as "LeanTypeDual EXP") that installs alongside the normal build instead of replacing it, so input experiments can be compared against a working daily driver. (#141)
 
 ### Fixed
+- Add/Block suggestion actions use the actual word, not its displayed physical-keyboard shortcut number. (#40)
 - AI actions explain when an editor cannot provide complete text or accept the requested selection. Editing text or moving the selection while AI runs still rejects stale results, but now clears that editor's loading indicator without affecting a newer request or editor. (#154)
 - Bundled offline generation no longer loses immediate completion/errors or drops tokens when the consumer is delayed. Loading, prediction and unloading share one engine lock; cancelled native calls drain before reuse and cannot publish into a later request. (#154)
 - Offline translation remembers its selected target across settings recreation and uses the same language for plugin requests and bundled-model prompts, including legacy language-name preferences. (#154)

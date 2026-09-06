@@ -2,8 +2,8 @@
 
 This document lets a new agent/session resume without re-deriving context. It records
 **what shipped, exactly where everything sits, what is still open, and the traps that cost
-time**. Release and device receipts below are historical; the unreleased integration in
-§2.5 has not been installed or verified on a physical device.
+time**. Older release/device receipts are historical. The cleanup comparison candidate is
+installed as recorded below; installation is not verification of its behavior on a phone.
 
 Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 
@@ -32,6 +32,34 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 > Installation is not phone-behavior acceptance. The comparison APK remains unchanged while
 > AI #154 implementation continues.
 >
+> **AI follow-up (not in the installed comparison APK):** `0e528460b` binds callbacks to
+> editor/request/source snapshots; `790cd7e2f` reconciles offline language preferences;
+> `79d659f3b` serializes native generation, model loading and unloading and removes application
+> content logs. Offline and standard actual-path receipts enumerate 58 executions with no
+> skips in `app\build\test-results\ai-154-receipts\executed-methods.txt`. A bounded handoff
+> review found two additional UX gaps, corrected in `38fe4ab2b`: unavailable editor snapshots
+> now produce localized feedback, and changed text in the same editor no longer strands the
+> loading indicator. Its follow-up receipts cover 70 executions (35 each offline/standard),
+> zero skips; 14 failures per flavor were reproduced before correction. See
+> `app\build\test-results\ai-154-receipts\integration-followup\`.
+> Cancellation rejects delivery immediately; a blocking native call drains before the
+> shared engine lock is released for another request. This does not promise instant native
+> interruption or establish native generation quality on a phone.
+>
+> **Remaining native privacy boundary:** the cached `io.github.ljcamargo:llamacpp-kotlin:0.4.0`
+> contains JNI prompt diagnostics. Public dependency source at
+> `ljcamargo/kotlinllamacpp@c292c068bdd258203dd41fc6d0f08578eddd59f3`,
+> `llamaCpp/src/main/cpp/jni.cpp`, defines `LOGI` directly as `__android_log_print` and logs
+> `doCompletion: prompt='%s'`. This supports the binary finding but is not a reproducible
+> provenance match for the published AAR. Application/JVM-map redaction does not suppress
+> native logs. Keep #154 open pending a pinned, audited native dependency fix and device
+> evidence; no backend substitution has been made.
+>
+> **Curation follow-up:** `1839c4c62` uses the canonical suggestion word for Add/Block dialog
+> actions, not the rendered label containing physical-keyboard shortcut superscripts.
+> Both real rendering/dialog callback regressions failed before the change and passed after.
+> This does not change legacy regex blacklist storage or trust/provenance behavior.
+>
 > **Cleanup evidence:** 190 targeted JVM/Robolectric cases, zero failures, fresh result gate;
 > three inherited ignored tests remain. `InputLogicTest` also retains three `runTests`
 > early returns (Hangul insertion, dictionary-dependent tap-only indicator and autocorrect
@@ -59,8 +87,8 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Current version | `0.3.0` / versionCode `4300` on both `main` and `dev` |
 | Tag `v0.1.0` | Pushed **and published** with 4 signed APKs |
 | Tag `v0.3.0` | **Published and latest** with 4 signed APKs, all verified after download |
-| Upstream integrated | LeanBitLab/LeanType **v4.1.8** (`cbfaf21a`), covering v4.1.3–v4.1.8 |
-| Phone (SM-S936B) | Last verified with signed **0.3.0/4300**, debug, and EXP packages; wireless ADB is currently unavailable |
+| Upstream on stabilized `dev` | LeanBitLab/LeanType **v4.1.8**; local combined work also contains **v4.2.0**, pinned at `1383390c` |
+| Phone (SM-S936B) | EXP **0.3.0/4300** comparison APK installed over paired wireless ADB on September 6; the normal keyboard was left selected |
 | Tablet | Never verified — still outstanding, low risk |
 | Upstream integration under review | v4.2.0, pinned `1383390cb9c48b859f56b6499210cbccbd91996f`; ancestry-preserving merge into the stabilized `dev` base, not `main` |
 
