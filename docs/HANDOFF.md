@@ -17,7 +17,7 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 > The comparison candidate was installed on request (receipt below). Correct issue ownership is #152 runtime, #153 restore/dictionary state and
 > #154 remaining AI. Stabilized remote `dev` remains `07ef7536f`.
 >
-> **Candidate receipt:** cleanup is committed at `b5760728b414763171fe29bd0db77b45419c0bb9`.
+> **First candidate receipt (superseded on the phone):** cleanup is committed at `b5760728b414763171fe29bd0db77b45419c0bb9`.
 > `:app:assembleStandardExperimental` produced
 > `app\build\outputs\apk\standard\experimental\1-LeanTypeDual_0.3.0-standard-experimental.apk`
 > (25,377,250 bytes; SHA-256
@@ -29,10 +29,10 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 > `adb install -r` updated the existing EXP app on Samsung SM-S936B, preserving its data.
 > The installed `base.apk` hash matches the candidate above. EXP was already enabled;
 > the selected daily keyboard remains `com.asafmah.leantypedual/helium314.keyboard.latin.LatinIME`.
-> Installation is not phone-behavior acceptance. The comparison APK remains unchanged while
-> AI #154 implementation continues.
+> Installation is not phone-behavior acceptance. An immutable copy is retained in the session
+> artifacts as `LeanTypeDual-EXP-b5760728b.apk`; the ordinary Gradle output path is reused below.
 >
-> **AI follow-up (not in the installed comparison APK):** `0e528460b` binds callbacks to
+> **AI follow-up (now included in installed EXP):** `0e528460b` binds callbacks to
 > editor/request/source snapshots; `790cd7e2f` reconciles offline language preferences;
 > `79d659f3b` serializes native generation, model loading and unloading and removes application
 > content logs. Offline and standard actual-path receipts enumerate 58 executions with no
@@ -45,6 +45,17 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 > Cancellation rejects delivery immediately; a blocking native call drains before the
 > shared engine lock is released for another request. This does not promise instant native
 > interruption or establish native generation quality on a phone.
+>
+> **Current phone candidate:** `:app:assembleStandardExperimental` at source
+> `0304f22c849020426b97187fa072a39f80e6b223` produced the updated APK at the Gradle path above
+> (28,679,741 bytes; SHA-256
+> `5dd3e65e1cf98e78d7d2a989ff7a5bf1715c1d66588ab032d6698edf46930b15`).
+> Saved separately as `LeanTypeDual-EXP-0304f22c8.apk` in session artifacts. On September 6
+> at 21:38 +03:00, `adb install -r` updated EXP on the same Samsung; installed APK hash
+> matches. The selected normal keyboard was unchanged. This remains standard/cloud-capable,
+> EXP `0.3.0-exp` / `4300`, not an offline-AI release. The integrated AI/curation/input run
+> executed 215 cases with fresh results and zero failures; inherited ignored/early-returned
+> InputLogic cases still do not establish phone behavior.
 >
 > **Remaining native privacy boundary:** the cached `io.github.ljcamargo:llamacpp-kotlin:0.4.0`
 > contains JNI prompt diagnostics. Public dependency source at
@@ -88,12 +99,12 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Tag `v0.1.0` | Pushed **and published** with 4 signed APKs |
 | Tag `v0.3.0` | **Published and latest** with 4 signed APKs, all verified after download |
 | Upstream on stabilized `dev` | LeanBitLab/LeanType **v4.1.8**; local combined work also contains **v4.2.0**, pinned at `1383390c` |
-| Phone (SM-S936B) | EXP **0.3.0/4300** comparison APK installed over paired wireless ADB on September 6; the normal keyboard was left selected |
+| Phone (SM-S936B) | EXP **0.3.0/4300** updated with AI/curation fixes on September 6 at 21:38 +03:00; the normal keyboard was left selected |
 | Tablet | Never verified — still outstanding, low risk |
 | Upstream integration under review | v4.2.0, pinned `1383390cb9c48b859f56b6499210cbccbd91996f`; ancestry-preserving merge into the stabilized `dev` base, not `main` |
 
 **Current priority is stabilization and a candidate build, not another broad review.**
-No release has been performed. The EXP comparison candidate is installed as recorded above;
+No release has been performed. The AI/curation EXP candidate is installed as recorded above;
 device verification of the unreleased changes remains outstanding,
 as do unrelated #106 and deliberate triage of backed-up old branches/worktrees.
 The two-track/ideal-prefix experiment was falsified on device and was removed by #151;
