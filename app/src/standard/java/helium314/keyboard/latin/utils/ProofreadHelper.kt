@@ -69,7 +69,10 @@ object ProofreadHelper {
         skipApiKeyCheck: Boolean = false
     ) {
         currentJob?.cancel()
-        val ticket = operationOwner.begin(context)
+        val ticket = operationOwner.begin(context) {
+            currentJob = null
+            KeyboardSwitcher.getInstance().hideLoadingAnimation()
+        }
         val service = ProofreadService(context)
 
         // Check if API key/token is configured based on provider (unless plugin handles operation)
@@ -139,10 +142,6 @@ object ProofreadHelper {
             }
 
             ticket.post(complete = true) {
-                currentJob = null
-                // Hide loading animation
-                KeyboardSwitcher.getInstance().hideLoadingAnimation()
-
                 result.fold(
                     onSuccess = { resultText ->
                         onSuccess(resultText)

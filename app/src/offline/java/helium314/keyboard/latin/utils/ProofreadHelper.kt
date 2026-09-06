@@ -77,7 +77,10 @@ object ProofreadHelper {
         onError: (String) -> Unit
     ) {
         currentJob?.cancel()
-        val ticket = operationOwner.begin(context)
+        val ticket = operationOwner.begin(context) {
+            currentJob = null
+            KeyboardSwitcher.getInstance().hideLoadingAnimation()
+        }
         val service = ProofreadService(context)
 
         // Check if Model is configured
@@ -118,10 +121,6 @@ object ProofreadHelper {
             }
 
             ticket.post(complete = true) {
-                currentJob = null
-                // Hide loading animation
-                KeyboardSwitcher.getInstance().hideLoadingAnimation()
-
                 result.fold(
                     onSuccess = { resultText ->
                         onSuccess(resultText)

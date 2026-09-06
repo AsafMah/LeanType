@@ -41,6 +41,7 @@ import helium314.keyboard.latin.dictionary.DictionaryFactory;
 import helium314.keyboard.latin.LastComposedWord;
 import helium314.keyboard.latin.LatinIME;
 import helium314.keyboard.latin.NgramContext;
+import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputConnection;
 import helium314.keyboard.latin.SingleDictionaryFacilitator;
 import helium314.keyboard.latin.Suggest;
@@ -1476,6 +1477,14 @@ public final class InputLogic {
 
     private long mAiRequestId;
 
+    private helium314.keyboard.latin.utils.AiEditorRequest prepareAiRequest(final boolean append) {
+        final var request = helium314.keyboard.latin.utils.AiEditorRequest.prepare(mLatinIME, mConnection, append);
+        if (request == null) {
+            KeyboardSwitcher.getInstance().showToast(mLatinIME.getString(R.string.ai_editor_unavailable), true);
+        }
+        return request;
+    }
+
     private void handleProofread() {
         final long requestId = ++mAiRequestId;
         Log.i(TAG, "handleProofread() called");
@@ -1486,7 +1495,7 @@ public final class InputLogic {
             helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
             return;
         }
-        final var request = helium314.keyboard.latin.utils.AiEditorRequest.prepare(mLatinIME, mConnection, false);
+        final var request = prepareAiRequest(false);
         if (request == null) return;
         final String textToProofread = request.getOriginalText();
         final boolean hasSelection = request.getHasSelection();
@@ -1538,7 +1547,7 @@ public final class InputLogic {
 
     private void handleTranslate() {
         final long requestId = ++mAiRequestId;
-        final var request = helium314.keyboard.latin.utils.AiEditorRequest.prepare(mLatinIME, mConnection, false);
+        final var request = prepareAiRequest(false);
         if (request == null) return;
         final String textToTranslate = request.getOriginalText();
         final boolean hasSelection = request.getHasSelection();
@@ -4878,7 +4887,7 @@ public final class InputLogic {
         // it.
         prompt = prompt + systemInstruction;
 
-        final var request = helium314.keyboard.latin.utils.AiEditorRequest.prepare(mLatinIME, mConnection, shouldAppend);
+        final var request = prepareAiRequest(shouldAppend);
         if (request == null) return;
         final String textToProcess = request.getOriginalText();
         final boolean hasSelection = request.getHasSelection();

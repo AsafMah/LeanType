@@ -15,10 +15,11 @@ class AiEditorRequest private constructor(
     val originalText: String,
     val hasSelection: Boolean,
 ) {
-    fun isCurrent(): Boolean = Looper.myLooper() == Looper.getMainLooper()
+    fun isSameEditorSession(): Boolean = Looper.myLooper() == Looper.getMainLooper()
         && ime.inputSessionGeneration == generation
         && ime.currentInputConnection === connection
-        && read(connection) == state
+
+    fun isCurrent(): Boolean = isSameEditorSession() && read(connection) == state
 
     private data class State(val text: String, val start: Int, val end: Int)
 
@@ -52,7 +53,14 @@ class AiEditorRequest private constructor(
                 if (selected) state.end else state.text.length
             } else if (selected) state.start else 0
             val end = if (append) start else if (selected) state.end else state.text.length
-            if (start != state.start || end != state.end) richConnection.setSelection(start, end)
+            if (start != state.start || end != state.end) {
+                val selectedRange = try {
+                    richConnection.setSelection(start, end)
+                } catch (_: RuntimeException) {
+                    false
+                }
+                if (!selectedRange) return null
+            }
             val expected = state.copy(start = start, end = end)
             val request = AiEditorRequest(ime, before.connection, before.generation, expected, source, selected)
             return request.takeIf { it.isCurrent() }

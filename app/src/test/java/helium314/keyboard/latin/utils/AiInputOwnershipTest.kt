@@ -6,6 +6,8 @@ import android.view.inputmethod.InputConnection
 import androidx.test.core.app.ApplicationProvider
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.RichInputConnection
+import helium314.keyboard.latin.R
+import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.inputlogic.InputLogic
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -20,7 +22,7 @@ import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], shadows = [AiInputOwnershipTest.HelperShadow::class])
+@Config(sdk = [33], shadows = [AiInputOwnershipTest.HelperShadow::class, ProofreadHelperOwnershipTest.SwitcherShadow::class])
 class AiInputOwnershipTest {
     private val ime = mock(LatinIME::class.java)
     private val connection = mock(RichInputConnection::class.java)
@@ -34,6 +36,7 @@ class AiInputOwnershipTest {
 
     @Before fun setUp() {
         HelperShadow.callbacks.clear()
+        clearInvocations(KeyboardSwitcher.getInstance())
         field("mLatinIME", ime)
         field("mConnection", connection)
         `when`(ime.inputSessionGeneration).thenAnswer { generation }
@@ -61,6 +64,7 @@ class AiInputOwnershipTest {
         doAnswer { start = 0; end = text.length; null }.`when`(connection).selectAll()
         doAnswer { commits.add(it.getArgument(0)); null }.`when`(ime).onTextInput(anyString())
         val context = ApplicationProvider.getApplicationContext<Context>()
+        `when`(ime.getString(anyInt())).thenAnswer { context.getString(it.getArgument(0)) }
         `when`(ime.createDeviceProtectedStorageContext()).thenReturn(context)
         `when`(ime.applicationInfo).thenReturn(context.applicationInfo)
         `when`(ime.getSharedPreferences(anyString(), anyInt())).thenAnswer {
@@ -106,6 +110,60 @@ class AiInputOwnershipTest {
         assertEquals(0, HelperShadow.callbacks.size)
         verify(connection, never()).setSelection(anyInt(), anyInt())
         assertEquals(emptyList<String>(), commits)
+    }
+
+    @Test fun proofreadNotifiesUnsupportedEditor() = assertUnsupportedEditor("handleProofread")
+    @Test fun translateNotifiesUnsupportedEditor() = assertUnsupportedEditor("handleTranslate")
+    @Test fun customNotifiesUnsupportedEditor() = assertUnsupportedEditor("handleCustomAIKey")
+
+    @Test fun proofreadNotifiesPartialSnapshot() = assertPartialSnapshot("handleProofread")
+    @Test fun translateNotifiesPartialSnapshot() = assertPartialSnapshot("handleTranslate")
+    @Test fun customNotifiesPartialSnapshot() = assertPartialSnapshot("handleCustomAIKey")
+
+    @Test fun proofreadNotifiesFailedSelection() = assertFailedSelection("handleProofread")
+    @Test fun translateNotifiesFailedSelection() = assertFailedSelection("handleTranslate")
+    @Test fun customNotifiesFailedSelection() = assertFailedSelection("handleCustomAIKey")
+
+    @Test fun refusedSelectionCannotBeAcceptedEvenWhenSnapshotReportsRequestedRange() {
+        start = 4
+        end = 4
+        doAnswer { start = it.getArgument(0); end = it.getArgument(1); false }
+            .`when`(connection).setSelection(anyInt(), anyInt())
+        request("handleProofread")
+        assertNotifiedWithoutBackend()
+    }
+
+    private fun assertUnsupportedEditor(method: String) {
+        `when`(editor.getExtractedText(any(), anyInt())).thenReturn(null)
+        request(method)
+        assertNotifiedWithoutBackend()
+        verify(connection, never()).setSelection(anyInt(), anyInt())
+    }
+
+    private fun assertPartialSnapshot(method: String) {
+        `when`(editor.getExtractedText(any(), anyInt())).thenReturn(ExtractedText().apply {
+            text = this@AiInputOwnershipTest.text
+            partialStartOffset = 2
+            partialEndOffset = 5
+        })
+        request(method)
+        assertNotifiedWithoutBackend()
+        verify(connection, never()).setSelection(anyInt(), anyInt())
+    }
+
+    private fun assertFailedSelection(method: String) {
+        start = 4
+        end = 4
+        doReturn(false).`when`(connection).setSelection(anyInt(), anyInt())
+        request(method)
+        assertNotifiedWithoutBackend()
+        verify(connection).setSelection(anyInt(), anyInt())
+    }
+
+    private fun assertNotifiedWithoutBackend() {
+        assertEquals(0, HelperShadow.callbacks.size)
+        assertEquals(emptyList<String>(), commits)
+        verify(KeyboardSwitcher.getInstance()).showToast(ime.getString(R.string.ai_editor_unavailable), true)
     }
 
     @Test fun repeatedSelectedTextElsewhereIsNotTheOriginalRange() {
