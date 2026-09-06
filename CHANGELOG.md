@@ -22,6 +22,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Side-by-side experimental build** — an `experimental` build type (`com.asafmah.leantypedual.exp`, shown as "LeanTypeDual EXP") that installs alongside the normal build instead of replacing it, so input experiments can be compared against a working daily driver. (#141)
 
 ### Fixed
+- Offline translation remembers its selected target across settings recreation and uses the same language for plugin requests and bundled-model prompts, including legacy language-name preferences. (#154)
 - AI proofreading, translation and custom-key results only apply to their originating, unchanged editor/range; cancelled or superseded requests cannot deliver queued results or errors into another session. (#154)
 - **Sound-pack imports reject unsafe IDs and invalid manifests** before touching installed data, and retain nested audio paths for playback. (#152)
 - **Inline math respects sensitive editors and incognito history**, rejects stale chips after editor changes, preserves surrounding delimiters and whitespace, and evaluates unary operators and percentages correctly. (#152)

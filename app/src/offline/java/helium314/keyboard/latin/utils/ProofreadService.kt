@@ -310,8 +310,38 @@ private const val TAG = "LlamaProofreadService"
 
     fun setModelName(name: String) { /* No-op */ }
 
-    fun getTargetLanguage(): String = "English"
-    fun setTargetLanguage(language: String) { /* No-op */ }
+    fun getTargetLanguage(): String {
+        val stored = sharedPrefs.getString("gemini_target_language", null)?.takeIf { it.isNotBlank() }
+            ?: sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE,
+                Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE)
+            ?: Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE
+        return languageCode(stored)
+    }
+
+    fun setTargetLanguage(language: String) {
+        val code = languageCode(language)
+        sharedPrefs.edit().putString("gemini_target_language", code)
+            .putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, languageName(code)).apply()
+    }
+
+    private fun languageCode(value: String): String {
+        val trimmed = value.trim()
+        if (trimmed.matches(Regex("[a-zA-Z]{2,3}([-_][a-zA-Z0-9]{2,8})*"))) {
+            return java.util.Locale.forLanguageTag(trimmed.replace('_', '-')).toLanguageTag()
+        }
+        val names = context.resources.getStringArray(helium314.keyboard.latin.R.array.translate_language_names)
+        val codes = context.resources.getStringArray(helium314.keyboard.latin.R.array.translate_language_codes)
+        val index = names.indexOfFirst { it.equals(trimmed, ignoreCase = true) }
+        if (index in codes.indices) return codes[index]
+        return java.util.Locale.getAvailableLocales().firstOrNull {
+            it.getDisplayName(java.util.Locale.ENGLISH).equals(trimmed, ignoreCase = true)
+        }?.toLanguageTag() ?: trimmed
+    }
+
+    private fun languageName(code: String): String =
+        if (code.matches(Regex("[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*")))
+            java.util.Locale.forLanguageTag(code).getDisplayName(java.util.Locale.ENGLISH)
+        else code
 
     fun getTranslateModelName(): String = ""
     fun setTranslateModelName(modelName: String) { /* No-op */ }
@@ -330,7 +360,7 @@ private const val TAG = "LlamaProofreadService"
      * Run llamacpp inference for translation.
      */
     suspend fun translate(text: String): Result<String> {
-        val target = sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE) ?: Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE
+        val target = languageName(getTargetLanguage())
         val systemPromptTemplate = getTranslateSystemPrompt().takeIf { it.isNotBlank() } ?: Defaults.PREF_OFFLINE_TRANSLATE_SYSTEM_PROMPT
         val prompt = systemPromptTemplate.replace("{lang}", target)
         return proofread(text, overridePrompt = prompt, targetLanguage = target)
