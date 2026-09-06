@@ -17,6 +17,27 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 > or installed. Correct issue ownership is #152 runtime, #153 restore/dictionary state and
 > #154 remaining AI. Stabilized remote `dev` remains `07ef7536f`.
 >
+> **Candidate receipt:** cleanup is committed at `b5760728b414763171fe29bd0db77b45419c0bb9`.
+> `:app:assembleStandardExperimental` produced
+> `app\build\outputs\apk\standard\experimental\1-LeanTypeDual_0.3.0-standard-experimental.apk`
+> (25,377,250 bytes; SHA-256
+> `1e61a30d41aae0445edeaae3885600395091fcc15d77e399d17072a767f65fc9`).
+> This is the cloud-capable standard flavor, debug-signed as `com.asafmah.leantypedual.exp`,
+> label **LeanTypeDual EXP**, version `0.3.0-exp` / `4300`, minSdk 23, targetSdk 35,
+> ARM32/ARM64. APK manifest and signature inspection passed. No version bump, release,
+> push or device installation was performed.
+>
+> **Cleanup evidence:** 190 targeted JVM/Robolectric cases, zero failures, fresh result gate;
+> three inherited ignored tests remain. `InputLogicTest` also retains three `runTests`
+> early returns (Hangul insertion, dictionary-dependent tap-only indicator and autocorrect
+> revert), so these are not claimed as executed coverage. The new arbiter tests execute
+> the real aggregation/down-event path; hardware visibility invokes `setMainKeyboardFrame`
+> on inflated views for hardware/preference/state combinations; Compose navigates from
+> Dictionaries to the surviving blocked-words editor. These do not exercise closed native
+> recognition or the original Notes/Word paragraph report. AI #154 and the remaining
+> dictionary/curation/workflow packages are still open; this candidate is not a claim that
+> the whole quality plan is finished.
+>
 > **Previous refresh 2026-09-05:** §1 and §2.5 distinguish stabilized `dev` from
 > the pending LeanBitLab v4.2.0 integration. §5, §6, §11 and §12 reflect v0.3.0,
 > LeanBitLab v4.1.8, the Shift fix, the fork-invariant gates, and experiment cleanup.
