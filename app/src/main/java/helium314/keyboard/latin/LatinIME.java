@@ -156,6 +156,8 @@ public class LatinIME extends InputMethodService implements
     final InputLogic mInputLogic = new InputLogic(this, this, mDictionaryFacilitator);
     private boolean mLastMainDictionaryAvailable = false;
 
+    private long mInputSessionGeneration;
+
     // TODO: Move these {@link View}s to {@link KeyboardSwitcher}.
     View mInputView;
     private InsetsOutlineProvider mInsetsUpdater;
@@ -815,6 +817,8 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
+        mInputSessionGeneration++;
+        mKeyboardSwitcher.cancelOcrWork();
         helium314.keyboard.latin.gesture.SwipeGestureEngine.cancelIndexing();
         if (sInstance == this) {
             sInstance = null;
@@ -1027,6 +1031,10 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onStartInput(final EditorInfo editorInfo, final boolean restarting) {
+        // Invalidate before UIHandler can defer this callback, even when EditorInfo is reused.
+        mInputSessionGeneration++;
+        mClipboardHistoryManager.onStartInput();
+        mKeyboardSwitcher.cancelOcrWork();
         mHandler.onStartInput(editorInfo, restarting);
     }
 
@@ -1038,6 +1046,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onFinishInputView(final boolean finishingInput) {
+        mKeyboardSwitcher.cancelOcrWork();
         StatsUtils.onFinishInputView();
         mHandler.onFinishInputView(finishingInput);
         mStatsUtilsManager.onFinishInputView();
@@ -1055,6 +1064,9 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onFinishInput() {
+        mInputSessionGeneration++;
+        mClipboardHistoryManager.onFinishInput();
+        mKeyboardSwitcher.cancelOcrWork();
         mHandler.onFinishInput();
         // Auto-dismiss floating keyboard when the input session ends
         // (user navigated away from text input)
@@ -1358,6 +1370,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onWindowHidden() {
+        mKeyboardSwitcher.cancelOcrWork();
         super.onWindowHidden();
         Log.i(TAG, "onWindowHidden");
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
@@ -2404,6 +2417,10 @@ public class LatinIME extends InputMethodService implements
 
     public ClipboardHistoryManager getClipboardHistoryManager() {
         return mClipboardHistoryManager;
+    }
+
+    public long getInputSessionGeneration() {
+        return mInputSessionGeneration;
     }
 
     void launchSettings() {

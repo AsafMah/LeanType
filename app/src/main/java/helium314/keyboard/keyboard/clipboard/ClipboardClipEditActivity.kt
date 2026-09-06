@@ -109,6 +109,7 @@ class ClipboardClipEditActivity : Activity() {
 
     private fun buildEditor(text: String): EditText {
         return EditText(this).apply {
+            id = R.id.clipboard_clip_editor
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 dp(280)

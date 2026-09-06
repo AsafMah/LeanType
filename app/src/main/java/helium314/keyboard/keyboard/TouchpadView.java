@@ -80,6 +80,8 @@ public class TouchpadView extends LinearLayout {
         public void run() {
             if (mIsTwoFingerTap) {
                 mIsTwoFingerLongPress = true;
+                mTwoFingerTapCount = 0;
+                removeCallbacks(mTwoFingerTapRunnable);
                 if (mListener != null) {
                     mListener.onThreeFingerSwipeLeft();
                 }
@@ -301,6 +303,12 @@ public class TouchpadView extends LinearLayout {
                         
                         removeCallbacks(mTwoFingerTapRunnable);
                         postDelayed(mTwoFingerLongPressRunnable, 400);
+                    } else if (pointerCount > 2) {
+                        mIsTwoFingerTap = false;
+                        mIsTwoFingerScroll = false;
+                        mTwoFingerTapCount = 0;
+                        removeCallbacks(mTwoFingerTapRunnable);
+                        removeCallbacks(mTwoFingerLongPressRunnable);
                     }
                     return true;
 
@@ -315,6 +323,8 @@ public class TouchpadView extends LinearLayout {
                         
                         if (Math.abs(midX - mTwoFingerStartX) > 5f * density || Math.abs(midY - mTwoFingerStartY) > 5f * density) {
                             mIsTwoFingerTap = false;
+                            mTwoFingerTapCount = 0;
+                            removeCallbacks(mTwoFingerTapRunnable);
                             removeCallbacks(mTwoFingerLongPressRunnable);
                         }
 
@@ -412,8 +422,7 @@ public class TouchpadView extends LinearLayout {
                     mIsTwoFingerTap = false;
                     removeCallbacks(mTwoFingerLongPressRunnable);
                     mIsTwoFingerLongPress = false;
-                    mTwoFingerTapCount = 0;
-                    removeCallbacks(mTwoFingerTapRunnable);
+                    // POINTER_UP already scheduled the completed two-finger tap.
                     if (mSelectionMode) {
                         mSelectionMode = false;
                         applySurfaceColor();
@@ -450,6 +459,9 @@ public class TouchpadView extends LinearLayout {
                         mTwoFingerTapCount++;
                         removeCallbacks(mTwoFingerTapRunnable);
                         postDelayed(mTwoFingerTapRunnable, 250);
+                    } else {
+                        mTwoFingerTapCount = 0;
+                        removeCallbacks(mTwoFingerTapRunnable);
                     }
                     mIsTwoFingerScroll = false;
                     mIsTwoFingerTap = false;

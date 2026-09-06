@@ -216,9 +216,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mKeyboardView != null) {
             mKeyboardView.onHideWindow();
         }
-        if (mOcrCameraView != null && mOcrCameraView.isShown()) {
-            mOcrCameraView.stopCamera();
-        }
+        cancelOcrWork();
     }
 
     public void onConfigurationChanged(final Configuration newConfig) {
@@ -384,6 +382,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private void setMainKeyboardFrame(
             @NonNull final SettingsValues settingsValues,
             @NonNull final KeyboardSwitchState toggleState) {
+        cancelOcrWork();
         final boolean suppressKeyboard = isImeSuppressedByHardwareKeyboard(settingsValues, toggleState)
                 || (settingsValues.mShowOnlyToolbarWithHardwareKeyboard && settingsValues.mHasHardwareKeyboard);
         final int visibility = suppressKeyboard ? View.GONE : View.VISIBLE;
@@ -417,9 +416,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             mHandwritingView.setVisibility(View.GONE);
         }
         if (mOcrCameraView != null) {
-            if (mOcrCameraView.isShown()) {
-                mOcrCameraView.stopCamera();
-            }
             mOcrCameraView.setVisibility(View.GONE);
         }
         if (mOcrResultView != null) {
@@ -450,6 +446,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     // Implements {@link KeyboardState.SwitchActions}.
     @Override
     public void setEmojiKeyboard() {
+        cancelOcrWork();
         if (DEBUG_ACTION) {
             Log.d(TAG, "setEmojiKeyboard");
         }
@@ -482,6 +479,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     // Implements {@link KeyboardState.SwitchActions}.
     @Override
     public void setClipboardKeyboard() {
+        cancelOcrWork();
         if (DEBUG_ACTION) {
             Log.d(TAG, "setClipboardKeyboard");
         }
@@ -511,6 +509,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     public void setHandwritingKeyboard() {
+        cancelOcrWork();
         if (DEBUG_ACTION) {
             Log.d(TAG, "setHandwritingKeyboard");
         }
@@ -559,7 +558,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mTouchpadView != null) {
             mTouchpadView.setVisibility(View.GONE);
         }
-        KeyboardActionListenerImpl.sPersistentTextEditModeActive = false;
+        clearTextEditModeState();
+        cancelOcrWork();
         mMainKeyboardFrame.setVisibility(View.VISIBLE);
         mKeyboardView.setVisibility(View.GONE);
         mEmojiTabStripView.setVisibility(View.GONE);
@@ -597,7 +597,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mTouchpadView != null) {
             mTouchpadView.setVisibility(View.GONE);
         }
-        KeyboardActionListenerImpl.sPersistentTextEditModeActive = false;
+        clearTextEditModeState();
+        cancelOcrWork();
         mMainKeyboardFrame.setVisibility(View.VISIBLE);
         mKeyboardView.setVisibility(View.GONE);
         mEmojiTabStripView.setVisibility(View.GONE);
@@ -617,7 +618,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         }
         mStripContainer.setVisibility(View.VISIBLE);
         if (mOcrCameraView != null) {
-            mOcrCameraView.stopCamera();
             mOcrCameraView.setVisibility(View.GONE);
         }
         if (mOcrResultView != null) {
@@ -634,15 +634,14 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     public void hideOcrPanels() {
+        clearTextEditModeState();
+        cancelOcrWork();
         if (mOcrStripScrollView != null) {
             mOcrStripScrollView.setVisibility(View.GONE);
         }
         mSuggestionStripView.setVisibility(View.VISIBLE);
         mStripContainer.setVisibility(View.VISIBLE);
         if (mOcrCameraView != null) {
-            if (mOcrCameraView.isShown()) {
-                mOcrCameraView.stopCamera();
-            }
             mOcrCameraView.setVisibility(View.GONE);
         }
         if (mOcrResultView != null) {
@@ -654,6 +653,11 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     public boolean isOcrShowing() {
         return (mOcrCameraView != null && mOcrCameraView.isShown())
                 || (mOcrResultView != null && mOcrResultView.isShown());
+    }
+
+    public void cancelOcrWork() {
+        if (mOcrCameraView != null) mOcrCameraView.stopCamera();
+        if (mLatinIME != null) mLatinIME.getClipboardHistoryManager().cancelScreenshotOcr();
     }
 
     @Override
@@ -1058,6 +1062,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     public void deallocateMemory() {
+        cancelOcrWork();
         if (mKeyboardView != null) {
             mKeyboardView.cancelAllOngoingEvents();
             mKeyboardView.deallocateMemory();
@@ -1086,6 +1091,11 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
     @SuppressLint("InflateParams")
     public View onCreateInputView(@NonNull Context displayContext, final boolean isHardwareAcceleratedDrawingEnabled) {
+        cancelOcrWork();
+        if (mOcrCameraView != null) {
+            mOcrCameraView.release();
+            mOcrCameraView = null;
+        }
         if (mCurrentInputView != null) {
             mCurrentInputView.removeAllViews();
         }
@@ -1118,6 +1128,13 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
                 @Override
                 public void onOcrTextExtracted(@NonNull List<String> lines) {
                     showOcrResult(lines);
+                }
+
+                @Override
+                public void onOcrTextInserted(@NonNull String text) {
+                    if (!mLatinIME.getCurrentInputStarted() || mLatinIME.getCurrentInputEditorInfo() == null) return;
+                    mLatinIME.onTextInput(text);
+                    hideOcrPanels();
                 }
 
                 @Override

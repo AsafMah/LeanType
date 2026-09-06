@@ -10,6 +10,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
@@ -46,30 +47,41 @@ object SoundPackImporter {
     }
 
     fun getPackDir(context: Context, packId: String): File {
-        val cleanId = packId.replace("[^a-zA-Z0-9._-]".toRegex(), "_")
-        return File(getSoundPacksDir(context), cleanId)
+        require(SoundPackRules.isValidId(packId)) { "Invalid sound pack ID: $packId" }
+        val root = getSoundPacksDir(context).canonicalFile
+        val directory = File(root, packId).canonicalFile
+        require(directory.parentFile == root && directory.name == packId) {
+            "Sound pack must be a strict direct child of its root"
+        }
+        return directory
+    }
+
+    internal fun tryGetPackDir(context: Context, packId: String): File? = try {
+        getPackDir(context, packId)
+    } catch (e: IllegalArgumentException) {
+        Log.e(TAG, "Invalid sound pack directory for '$packId'", e)
+        null
+    } catch (e: IOException) {
+        Log.e(TAG, "Cannot resolve sound pack directory for '$packId'", e)
+        null
     }
 
     fun isPackInstalled(context: Context, packId: String): Boolean {
         if (packId == SoundPackUrls.SYSTEM_DEFAULT_ID) return true
-        val packDir = getPackDir(context, packId)
-        if (!packDir.exists() || !packDir.isDirectory) return false
-        val manifestFile = File(packDir, "pack.json")
-        if (manifestFile.exists()) return true
-        val files = getPackAudioFiles(context, packId)
-        return files.isValid
+        return getManifest(context, packId) != null
     }
 
     fun getManifest(context: Context, packId: String): SoundPackManifest? {
         if (packId == SoundPackUrls.SYSTEM_DEFAULT_ID) return null
-        val packDir = getPackDir(context, packId)
+        val packDir = tryGetPackDir(context, packId) ?: return null
         if (!packDir.exists() || !packDir.isDirectory) return null
         val manifestFile = File(packDir, "pack.json")
         if (manifestFile.exists()) {
             try {
-                return json.decodeFromString<SoundPackManifest>(manifestFile.readText(Charsets.UTF_8))
+                return readManifest(manifestFile).takeIf { it.id == packId }
             } catch (e: Throwable) {
-                Log.w(TAG, "Failed to parse pack.json for $packId: ${e.message}")
+                Log.e(TAG, "Invalid pack.json for $packId", e)
+                return null
             }
         }
 
@@ -83,10 +95,10 @@ object SoundPackImporter {
                 packId.replace("_", " ").replaceFirstChar { it.uppercase() }
             }
             val soundsMap = mutableMapOf<String, SoundEvent>()
-            audioFiles.standardFile?.let { soundsMap["keypress.default"] = SoundEvent(files = listOf(it.name)) }
-            audioFiles.spaceFile?.let { soundsMap["keypress.space"] = SoundEvent(files = listOf(it.name)) }
-            audioFiles.deleteFile?.let { soundsMap["keypress.delete"] = SoundEvent(files = listOf(it.name)) }
-            audioFiles.enterFile?.let { soundsMap["keypress.return"] = SoundEvent(files = listOf(it.name)) }
+            audioFiles.standardFile?.let { soundsMap["keypress.default"] = SoundEvent(files = listOf(it.relativeTo(packDir).invariantSeparatorsPath)) }
+            audioFiles.spaceFile?.let { soundsMap["keypress.space"] = SoundEvent(files = listOf(it.relativeTo(packDir).invariantSeparatorsPath)) }
+            audioFiles.deleteFile?.let { soundsMap["keypress.delete"] = SoundEvent(files = listOf(it.relativeTo(packDir).invariantSeparatorsPath)) }
+            audioFiles.enterFile?.let { soundsMap["keypress.return"] = SoundEvent(files = listOf(it.relativeTo(packDir).invariantSeparatorsPath)) }
 
             return SoundPackManifest(
                 schemaVersion = 1,
@@ -100,13 +112,16 @@ object SoundPackImporter {
     }
 
     fun getPackAudioFiles(context: Context, packId: String): PackFiles {
-        val packDir = getPackDir(context, packId)
+        val packDir = tryGetPackDir(context, packId)
+            ?: return PackFiles(null, null, null, null)
         if (!packDir.exists() || !packDir.isDirectory) {
             return PackFiles(null, null, null, null)
         }
 
-        val allFiles = packDir.walkTopDown().maxDepth(3).filter { file ->
-            file.isFile && file.extension.lowercase() in SoundPackRules.AUDIO_EXTENSIONS
+        val allFiles = packDir.walkTopDown().onEnter { dir ->
+            dir.canonicalFile == dir.absoluteFile
+        }.filter { file ->
+            file.isFile && resolveAudioFile(packDir, file.relativeTo(packDir).invariantSeparatorsPath) != null
         }.toList()
 
         fun findFile(prefixes: List<String>): File? {
@@ -123,6 +138,35 @@ object SoundPackImporter {
         val enter = findFile(listOf("enter", "return")) ?: standard
 
         return PackFiles(standard, space, delete, enter)
+    }
+
+    internal fun resolveAudioFile(packDir: File, relativePath: String): File? {
+        if (relativePath.isBlank() || File(relativePath).isAbsolute) return null
+        if (relativePath.split('/', '\\').any { it == "." || it == ".." }) return null
+        return try {
+            val root = packDir.canonicalFile
+            File(root, relativePath).canonicalFile.takeIf {
+                it.path.startsWith(root.path + File.separator) &&
+                    it.isFile && it.extension.lowercase() in SoundPackRules.AUDIO_EXTENSIONS
+            }
+        } catch (e: IOException) {
+            Log.e(TAG, "Cannot resolve sound pack audio '$relativePath' in '$packDir'", e)
+            null
+        }
+    }
+
+    private fun readManifest(file: File): SoundPackManifest {
+        val manifest = json.decodeFromString<SoundPackManifest>(file.readText(Charsets.UTF_8))
+        require(manifest.schemaVersion == 1 && SoundPackRules.isValidId(manifest.id)) {
+            "Invalid sound pack schema or ID"
+        }
+        require(manifest.sounds.isNotEmpty() && manifest.sounds.values.all { event ->
+            event.files.isNotEmpty() && event.files.all { resolveAudioFile(file.parentFile!!, it) != null }
+        }) { "Invalid sound pack audio references" }
+        require(manifest.preview == null || resolveAudioFile(file.parentFile!!, manifest.preview) != null) {
+            "Invalid sound pack preview"
+        }
+        return manifest
     }
 
     val LEGACY_ID_MAP = mapOf(
@@ -162,11 +206,12 @@ object SoundPackImporter {
         for (dir in dirs) {
             val id = dir.name
             if (SoundPackUrls.isPreset(id)) continue
+            val safeDir = tryGetPackDir(context, id) ?: continue
 
             // Auto-clean legacy folder if new canonical pack exists
             val canonicalId = LEGACY_ID_MAP[id]
-            if (canonicalId != null && File(packsDir, canonicalId).exists()) {
-                dir.deleteRecursively()
+            if (canonicalId != null && isPackInstalled(context, canonicalId)) {
+                safeDir.deleteRecursively()
                 continue
             }
 
@@ -225,7 +270,7 @@ object SoundPackImporter {
     ): String? {
         val ext = originalName.substringAfterLast(".", "ogg").lowercase()
         val rawName = originalName.substringBeforeLast(".")
-        val cleanId = "custom_${rawName.replace("[^a-zA-Z0-9_-]".toRegex(), "_").lowercase()}_${System.currentTimeMillis() % 10000}"
+        val cleanId = "custom_${UUID.randomUUID()}"
         val displayName = customName?.takeIf { it.isNotBlank() } ?: rawName
         val packDir = getPackDir(context, cleanId)
         packDir.mkdirs()
@@ -283,25 +328,24 @@ object SoundPackImporter {
 
             // Locate pack.json or audio files
             val manifestFile = findPackJson(stagingDir)
-            var manifest: SoundPackManifest? = null
+            val manifest: SoundPackManifest?
             val effectiveRoot = manifestFile?.parentFile ?: findAudioRoot(stagingDir) ?: stagingDir
 
             if (manifestFile != null && manifestFile.exists()) {
-                try {
-                    val parsed = json.decodeFromString<SoundPackManifest>(manifestFile.readText(Charsets.UTF_8))
-                    if (parsed.schemaVersion == 1 && SoundPackRules.isValidId(parsed.id) && parsed.sounds.isNotEmpty()) {
-                        manifest = parsed
-                    }
+                manifest = try {
+                    readManifest(manifestFile)
                 } catch (e: Throwable) {
-                    Log.w(TAG, "pack.json failed validation: ${e.message}")
+                    Log.e(TAG, "pack.json failed validation", e)
+                    return null
                 }
+            } else {
+                manifest = null
             }
 
             val finalId = if (manifest != null) {
                 manifest.id
             } else {
-                val baseName = zipFile.nameWithoutExtension.replace("[^a-zA-Z0-9_-]".toRegex(), "_").lowercase()
-                "custom_${baseName}_${System.currentTimeMillis() % 10000}"
+                "custom_${UUID.randomUUID()}"
             }
 
             val finalDir = getPackDir(context, finalId)
@@ -329,10 +373,10 @@ object SoundPackImporter {
                     name = name,
                     summary = "Custom imported sound pack",
                     sounds = buildMap {
-                        packAudio.standardFile?.let { put("keypress.default", SoundEvent(files = listOf(it.name))) }
-                        packAudio.spaceFile?.let { put("keypress.space", SoundEvent(files = listOf(it.name))) }
-                        packAudio.deleteFile?.let { put("keypress.delete", SoundEvent(files = listOf(it.name))) }
-                        packAudio.enterFile?.let { put("keypress.return", SoundEvent(files = listOf(it.name))) }
+                        packAudio.standardFile?.let { put("keypress.default", SoundEvent(files = listOf(it.relativeTo(finalDir).invariantSeparatorsPath))) }
+                        packAudio.spaceFile?.let { put("keypress.space", SoundEvent(files = listOf(it.relativeTo(finalDir).invariantSeparatorsPath))) }
+                        packAudio.deleteFile?.let { put("keypress.delete", SoundEvent(files = listOf(it.relativeTo(finalDir).invariantSeparatorsPath))) }
+                        packAudio.enterFile?.let { put("keypress.return", SoundEvent(files = listOf(it.relativeTo(finalDir).invariantSeparatorsPath))) }
                     }
                 )
                 File(finalDir, "pack.json").writeText(json.encodeToString(generatedManifest))
@@ -414,13 +458,18 @@ object SoundPackImporter {
     private fun findPackJson(root: File): File? {
         val direct = File(root, "pack.json")
         if (direct.exists()) return direct
-        return root.walkTopDown().maxDepth(3).firstOrNull { it.isFile && it.name == "pack.json" }
+        return root.walkTopDown().firstOrNull { it.isFile && it.name == "pack.json" }
     }
 
     private fun findAudioRoot(root: File): File? {
-        return root.walkTopDown().maxDepth(3).firstOrNull { dir ->
-            dir.isDirectory && dir.listFiles()?.any { it.isFile && it.extension.lowercase() in SoundPackRules.AUDIO_EXTENSIONS } == true
+        val audio = root.walkTopDown().filter {
+            it.isFile && it.extension.lowercase() in SoundPackRules.AUDIO_EXTENSIONS
+        }.toList()
+        var commonParent = audio.firstOrNull()?.parentFile ?: return null
+        while (audio.any { !it.path.startsWith(commonParent.path + File.separator) }) {
+            commonParent = commonParent.parentFile ?: return null
         }
+        return commonParent
     }
 
     fun downloadAndInstall(
@@ -489,7 +538,7 @@ object SoundPackImporter {
 
     fun deletePack(context: Context, packId: String): Boolean {
         if (packId == SoundPackUrls.SYSTEM_DEFAULT_ID || SoundPackUrls.isPreset(packId)) return false
-        val packDir = getPackDir(context, packId)
+        val packDir = tryGetPackDir(context, packId) ?: return false
         val deleted = packDir.deleteRecursively()
         CustomSoundManager.getInstance(context).reloadIfActive(packId)
         return deleted

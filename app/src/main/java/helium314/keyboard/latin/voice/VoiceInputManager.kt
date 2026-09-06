@@ -156,9 +156,7 @@ class VoiceInputManager(
     }
 
     private fun initiateSessionHandshake(sessionId: String) {
-        if (state == VoiceState.CONNECTING_PLUGIN) {
-            updateState(VoiceState.STARTING_SESSION)
-        }
+        updateState(VoiceState.STARTING_SESSION)
 
         val pipe: Array<ParcelFileDescriptor>
         try {
@@ -279,7 +277,16 @@ class VoiceInputManager(
         }
 
         // Start hardware audio capture IMMEDIATELY so the green mic privacy dot appears without IPC delay
-        startAudioRecordingThread()
+        if (!startAudioRecordingThread()) {
+            val audioManager = ims.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+            notifyError(if (audioManager?.isMicrophoneMute == true)
+                "Microphone is muted in system settings"
+            else
+                "Failed to start microphone recording")
+            cleanupSession()
+            updateState(VoiceState.ERROR)
+            return
+        }
 
         try {
             val pfdForPlugin = audioPipeReadSide
@@ -306,13 +313,9 @@ class VoiceInputManager(
         }
 
         val audioManager = ims.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-        try {
-            if (audioManager?.isMicrophoneMute == true) {
-                Log.w(TAG, "Microphone was muted in AudioManager, unmuting...")
-                audioManager.isMicrophoneMute = false
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to unmute via AudioManager", e)
+        if (audioManager?.isMicrophoneMute == true) {
+            Log.w(TAG, "startAudioRecordingThread: Microphone is muted in system settings")
+            return false
         }
 
         val minBufSize = AudioRecord.getMinBufferSize(

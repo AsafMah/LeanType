@@ -8,6 +8,7 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.AddonPolicy
 import helium314.keyboard.latin.utils.prefs
 import java.io.File
+import java.util.UUID
 
 object OcrPluginLoader {
     private const val CURRENT_INTERFACE_VERSION = 1
@@ -31,14 +32,25 @@ object OcrPluginLoader {
     private var activeRecognizer: ITextRecognizer? = null
     private var cachedClassLoader: PluginClassLoader? = null
     private var cachedApkModified: Long = 0L
+    private val runtimeLock = Any()
 
-    @JvmStatic
-    fun resetRecognizer() {
-        activeRecognizer?.release()
-        activeRecognizer = null
+    internal var importValidator: (Context, File) -> Boolean = ::validateImport
+    internal var moveImportedFile: (File, File) -> Boolean = { source, target ->
+        source.renameTo(target)
     }
 
-    private fun invalidateClassLoader() {
+    @JvmStatic
+    fun resetRecognizer(): Unit = synchronized(runtimeLock) {
+        val recognizer = activeRecognizer
+        activeRecognizer = null
+        try {
+            recognizer?.release()
+        } catch (e: Throwable) {
+            Log.w(TAG, "Failed to release OCR recognizer", e)
+        }
+    }
+
+    private fun invalidateClassLoader(): Unit = synchronized(runtimeLock) {
         resetRecognizer()
         cachedClassLoader = null
         cachedApkModified = 0L
@@ -188,19 +200,19 @@ object OcrPluginLoader {
     }
 
     @JvmStatic
-    fun getRecognizer(context: Context): ITextRecognizer? {
-        if (!AddonPolicy.allowsOcrPlugins()) return null
-        if (activeRecognizer != null) return activeRecognizer
-        if (!hasPlugin(context)) return null
+    fun getRecognizer(context: Context): ITextRecognizer? = synchronized(runtimeLock) {
+        if (!AddonPolicy.allowsOcrPlugins()) return@synchronized null
+        if (activeRecognizer != null) return@synchronized activeRecognizer
+        if (!hasPlugin(context)) return@synchronized null
 
         val apkFile = File(context.filesDir, PLUGIN_FILENAME)
         if (!apkFile.exists()) {
             context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
-            return null
+            return@synchronized null
         }
         apkFile.setReadOnly()
 
-        return loadRecognizerInternal(context, apkFile)
+        loadRecognizerInternal(context, apkFile)
     }
 
     private fun loadRecognizerInternal(context: Context, apkFile: File): ITextRecognizer? {
@@ -249,12 +261,12 @@ object OcrPluginLoader {
         }
     }
 
-    fun hasPlugin(context: Context): Boolean {
-        if (!AddonPolicy.allowsOcrPlugins()) return false
+    fun hasPlugin(context: Context): Boolean = synchronized(runtimeLock) {
+        if (!AddonPolicy.allowsOcrPlugins()) return@synchronized false
         val has = context.prefs().getBoolean(PREF_HAS_PLUGIN, false)
-        if (!has) return false
+        if (!has) return@synchronized false
         val apkFile = File(context.filesDir, PLUGIN_FILENAME)
-        return apkFile.exists() && apkFile.length() > 0
+        apkFile.exists() && apkFile.length() > 0
     }
 
     fun getPluginVersion(context: Context): String? {
@@ -273,82 +285,134 @@ object OcrPluginLoader {
         return recognizer?.getDisplayName() ?: recognizer?.getScriptName()
     }
 
+    @Synchronized
     fun importPlugin(context: Context, uri: Uri): Boolean {
         if (!AddonPolicy.allowsOcrPlugins()) {
             Log.w(TAG, "OCR plugin import is disabled for this build")
             return false
         }
-        return try {
-            try {
-                context.codeCacheDir.deleteRecursively()
-            } catch (_: Exception) {}
-
-            val targetFile = File(context.filesDir, PLUGIN_FILENAME)
-            if (targetFile.exists()) targetFile.delete()
-
+        return importFromSource(context) { candidate ->
             context.contentResolver.openInputStream(uri)?.use { input ->
-                java.io.FileOutputStream(targetFile).use { output ->
+                candidate.outputStream().use { output ->
                     input.copyTo(output)
                 }
-            } ?: return false
-
-            targetFile.setReadOnly()
-            invalidateClassLoader()
-
-            val recognizer = loadRecognizerInternal(context, targetFile)
-            val success = recognizer != null
-            if (success) {
-                context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
-                Log.i(TAG, "OCR plugin imported and verified successfully")
-            } else {
-                targetFile.delete()
-                context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
-                Log.w(TAG, "OCR plugin verification failed")
-            }
-            success
-        } catch (e: Throwable) {
-            Log.e(TAG, "Failed to import OCR plugin", e)
-            false
+            } ?: error("Cannot open OCR plugin")
         }
     }
 
+    @Synchronized
     fun importPluginFromTempFile(context: Context, tempFile: File): Boolean {
         if (!AddonPolicy.allowsOcrPlugins()) {
             Log.w(TAG, "OCR plugin import is disabled for this build")
             return false
         }
-        return try {
+        val success = importFromSource(context) { candidate -> tempFile.copyTo(candidate) }
+        if (success) {
+            // A caller may pass the installed APK itself; never delete the committed destination.
             try {
-                context.codeCacheDir.deleteRecursively()
-            } catch (_: Exception) {}
-
-            val targetFile = File(context.filesDir, PLUGIN_FILENAME)
-            if (targetFile.exists()) targetFile.delete()
-
-            tempFile.copyTo(targetFile, overwrite = true)
-            tempFile.delete()
-            targetFile.setReadOnly()
-
-            invalidateClassLoader()
-
-            val recognizer = loadRecognizerInternal(context, targetFile)
-            val success = recognizer != null
-            if (success) {
-                context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, true).apply()
-                Log.i(TAG, "OCR plugin imported from temp file successfully")
-            } else {
-                targetFile.delete()
-                context.prefs().edit().putBoolean(PREF_HAS_PLUGIN, false).apply()
-                Log.w(TAG, "OCR plugin temp file verification failed")
+                if (tempFile.canonicalFile != File(context.filesDir, PLUGIN_FILENAME).canonicalFile) {
+                    tempFile.delete()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not remove imported OCR source file", e)
             }
-            success
+        }
+        return success
+    }
+
+    private fun importFromSource(context: Context, copy: (File) -> Unit): Boolean {
+        val target = File(context.filesDir, PLUGIN_FILENAME)
+        val staging = File(context.filesDir, "ocr_import_${UUID.randomUUID()}")
+        val candidate = File(staging, "candidate.apk")
+        val backup = File(staging, "previous.apk")
+        val preferences = context.prefs()
+        val wasInstalled = preferences.getBoolean(PREF_HAS_PLUGIN, false)
+        var replaced = false
+        var committed = false
+        return try {
+            check(staging.mkdirs()) { "Cannot create OCR import staging directory" }
+            copy(candidate)
+            check(candidate.isFile && candidate.length() > 0 && candidate.setReadOnly()) {
+                "Cannot prepare OCR plugin for validation"
+            }
+            check(importValidator(context, candidate)) { "OCR plugin verification failed" }
+
+            // Staging/validation never holds the runtime lock needed by the installed recognizer.
+            synchronized(runtimeLock) {
+                try {
+                    if (target.exists()) {
+                        check(target.isFile && moveImportedFile(target, backup)) { "Cannot back up OCR plugin" }
+                    }
+                    check(moveImportedFile(candidate, target)) { "Cannot commit OCR plugin" }
+                    replaced = true
+                    check(preferences.edit().putBoolean(PREF_HAS_PLUGIN, true).commit()) {
+                        "Cannot save OCR plugin installation state"
+                    }
+                    committed = true
+                    invalidateClassLoader()
+                } catch (e: Throwable) {
+                    if (backup.exists()) {
+                        if (target.exists()) {
+                            target.setWritable(true)
+                            target.delete()
+                        }
+                        if (!backup.renameTo(target)) {
+                            Log.e(TAG, "Could not restore OCR plugin; backup retained at ${backup.path}")
+                        }
+                    } else if (replaced) {
+                        target.setWritable(true)
+                        target.delete()
+                    }
+                    if (replaced) preferences.edit().putBoolean(PREF_HAS_PLUGIN, wasInstalled).commit()
+                    throw e
+                }
+            }
+            Log.i(TAG, "OCR plugin imported and verified successfully")
+            true
         } catch (e: Throwable) {
-            Log.e(TAG, "Failed to import OCR plugin from temp file", e)
+            Log.e(TAG, "Failed to import OCR plugin", e)
             false
+        } finally {
+            // If restoration itself fails, retain the only surviving old APK for recovery.
+            if (committed || !backup.exists()) {
+                try {
+                    staging.walkBottomUp().forEach { it.setWritable(true); it.delete() }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not remove OCR staging files", e)
+                }
+            }
         }
     }
 
-    fun removePlugin(context: Context) {
+    private fun validateImport(context: Context, apk: File): Boolean {
+        var recognizer: ITextRecognizer? = null
+        return try {
+            ensureWorkManagerInitialized(context)
+            val libraries = File(apk.parentFile, "lib").apply { mkdirs() }
+            val dexCache = File(apk.parentFile, "dex").apply { mkdirs() }
+            extractNativeLibs(apk, libraries)
+            val loader = PluginClassLoader(
+                apk.absolutePath, dexCache.absolutePath, libraries.absolutePath, context.classLoader
+            )
+            recognizer = loader.loadClass(PLUGIN_CLASS_NAME).getDeclaredConstructor()
+                .newInstance() as ITextRecognizer
+            if (recognizer.getInterfaceVersion() > CURRENT_INTERFACE_VERSION) return false
+            recognizer.init(PluginContext(context.applicationContext, apk.absolutePath, loader))
+            recognizer.isAvailable()
+        } catch (e: Throwable) {
+            Log.w(TAG, "OCR plugin candidate validation failed", e)
+            false
+        } finally {
+            try {
+                recognizer?.release()
+            } catch (e: Throwable) {
+                Log.w(TAG, "Failed to release OCR validation recognizer", e)
+            }
+        }
+    }
+
+    @Synchronized
+    fun removePlugin(context: Context): Unit = synchronized(runtimeLock) {
         try {
             invalidateClassLoader()
             val apkFile = File(context.filesDir, PLUGIN_FILENAME)
