@@ -1,15 +1,18 @@
 package helium314.keyboard.latin
 
 import android.view.KeyEvent
+import android.view.View
 import android.view.inputmethod.EditorInfo
 import helium314.keyboard.ShadowInputMethodManager2
 import helium314.keyboard.event.Event
 import helium314.keyboard.keyboard.KeyboardActionListenerImpl
 import helium314.keyboard.keyboard.KeyboardSwitcher
+import helium314.keyboard.keyboard.MainKeyboardView
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.inputlogic.InputLogic
 import helium314.keyboard.latin.ocr.OcrCameraView
 import helium314.keyboard.latin.ocr.OcrPipeline
+import helium314.keyboard.latin.settings.Settings
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -40,6 +43,28 @@ class OcrSwitcherTest {
 
     @Test fun cameraEntryAndExitDoNotLeaveArrowSelecting() = assertOcrTransition(false)
     @Test fun resultEntryAndExitDoNotLeaveArrowSelecting() = assertOcrTransition(true)
+
+    @Test fun cameraRelayoutPreservesCameraAndSuppressesUnderlyingKeyboard() {
+        val camera = mock(OcrCameraView::class.java)
+        val keyboard = mock(MainKeyboardView::class.java)
+        `when`(camera.visibility).thenReturn(View.VISIBLE)
+        KeyboardSwitcher::class.java.getDeclaredField("mOcrCameraView")
+            .apply { isAccessible = true }.set(switcher, camera)
+        KeyboardSwitcher::class.java.getDeclaredField("mKeyboardView")
+            .apply { isAccessible = true }.set(switcher, keyboard)
+        KeyboardSwitcher::class.java.getDeclaredMethod(
+            "setMainKeyboardFrame",
+            helium314.keyboard.latin.settings.SettingsValues::class.java,
+            KeyboardSwitcher.KeyboardSwitchState::class.java,
+        ).apply { isAccessible = true }.invoke(
+            switcher, Settings.getValues(), KeyboardSwitcher.KeyboardSwitchState.OTHER,
+        )
+        assertTrue(switcher.isOcrCameraShowing)
+        verify(camera, never()).stopCamera()
+        verify(keyboard).visibility = View.INVISIBLE
+        verify(keyboard).isClickable = false
+        verify(keyboard).isFocusable = false
+    }
 
     private fun assertOcrTransition(result: Boolean) {
         for (name in listOf("mMainKeyboardFrame", "mKeyboardView", "mEmojiTabStripView",

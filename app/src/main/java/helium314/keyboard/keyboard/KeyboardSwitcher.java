@@ -382,6 +382,22 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private void setMainKeyboardFrame(
             @NonNull final SettingsValues settingsValues,
             @NonNull final KeyboardSwitchState toggleState) {
+        if (isOcrShowing()) {
+            if (mKeyboardView != null) {
+                mKeyboardView.setVisibility(View.INVISIBLE);
+                mKeyboardView.setClickable(false);
+                mKeyboardView.setFocusable(false);
+            }
+            if (mOcrCameraView != null && mOcrCameraView.isShown()) {
+                mOcrCameraView.bringToFront();
+            } else if (mOcrResultView != null && mOcrResultView.isShown()) {
+                mOcrResultView.bringToFront();
+            }
+            if (mCurrentInputView != null) {
+                mCurrentInputView.post(mCurrentInputView::requestApplyInsets);
+            }
+            return;
+        }
         cancelOcrWork();
         final boolean suppressKeyboard = isImeSuppressedByHardwareKeyboard(settingsValues, toggleState)
                 || settingsValues.mShowToolbarOnly;
@@ -561,7 +577,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         clearTextEditModeState();
         cancelOcrWork();
         mMainKeyboardFrame.setVisibility(View.VISIBLE);
-        mKeyboardView.setVisibility(View.GONE);
+        mKeyboardView.setVisibility(View.INVISIBLE);
+        mKeyboardView.setClickable(false);
+        mKeyboardView.setFocusable(false);
         mEmojiTabStripView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(View.GONE);
         mStripContainer.setVisibility(View.GONE);
@@ -578,15 +596,17 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             mOcrResultView.setVisibility(View.GONE);
         }
         if (mOcrCameraView != null) {
-            final int keyboardHeight = ResourceUtils.getKeyboardHeight(mThemeContext.getResources(), Settings.getValues());
+            final int ocrCameraHeight = ResourceUtils.getOcrCameraHeight(mThemeContext.getResources(), Settings.getValues());
             final android.view.ViewGroup.LayoutParams lp = mOcrCameraView.getLayoutParams();
             if (lp != null) {
-                lp.height = keyboardHeight;
+                lp.height = ocrCameraHeight;
                 mOcrCameraView.setLayoutParams(lp);
             }
             mOcrCameraView.setVisibility(View.VISIBLE);
+            mOcrCameraView.bringToFront();
             mOcrCameraView.startCamera();
         }
+        requestInputViewLayoutAndInsets();
     }
 
     public void showOcrResult(@NonNull final List<String> lines) {
@@ -600,7 +620,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         clearTextEditModeState();
         cancelOcrWork();
         mMainKeyboardFrame.setVisibility(View.VISIBLE);
-        mKeyboardView.setVisibility(View.GONE);
+        mKeyboardView.setVisibility(View.INVISIBLE);
+        mKeyboardView.setClickable(false);
+        mKeyboardView.setFocusable(false);
         mEmojiTabStripView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(View.GONE);
         mClipboardStripScrollView.setVisibility(View.GONE);
@@ -630,7 +652,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             mOcrResultView.setResultText(lines);
             mOcrResultView.applyColors(Settings.getValues().mColors);
             mOcrResultView.setVisibility(View.VISIBLE);
+            mOcrResultView.bringToFront();
         }
+        requestInputViewLayoutAndInsets();
     }
 
     public void hideOcrPanels() {
@@ -647,12 +671,33 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mOcrResultView != null) {
             mOcrResultView.setVisibility(View.GONE);
         }
+        if (mKeyboardView != null) {
+            mKeyboardView.setVisibility(View.VISIBLE);
+            mKeyboardView.setClickable(true);
+            mKeyboardView.setFocusable(true);
+        }
+        requestInputViewLayoutAndInsets();
         setAlphabetKeyboard();
     }
 
+    private void requestInputViewLayoutAndInsets() {
+        if (mCurrentInputView != null) {
+            if (mCurrentInputView.isInLayout()) {
+                mCurrentInputView.post(mCurrentInputView::requestLayout);
+            } else {
+                mCurrentInputView.requestLayout();
+            }
+            mCurrentInputView.post(mCurrentInputView::requestApplyInsets);
+        }
+    }
+
+    public boolean isOcrCameraShowing() {
+        return mOcrCameraView != null && (mOcrCameraView.isShown() || mOcrCameraView.getVisibility() == View.VISIBLE);
+    }
+
     public boolean isOcrShowing() {
-        return (mOcrCameraView != null && mOcrCameraView.isShown())
-                || (mOcrResultView != null && mOcrResultView.isShown());
+        return isOcrCameraShowing()
+                || (mOcrResultView != null && (mOcrResultView.isShown() || mOcrResultView.getVisibility() == View.VISIBLE));
     }
 
     public void cancelOcrWork() {
@@ -1013,7 +1058,11 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     public View getVisibleKeyboardView() {
-        if (isShowingEmojiPalettes()) {
+        if (isOcrCameraShowing()) {
+            return mOcrCameraView;
+        } else if (mOcrResultView != null && (mOcrResultView.isShown() || mOcrResultView.getVisibility() == View.VISIBLE)) {
+            return mOcrResultView;
+        } else if (isShowingEmojiPalettes()) {
             return mEmojiPalettesView;
         } else if (isShowingClipboardHistory()) {
             return mClipboardHistoryView;

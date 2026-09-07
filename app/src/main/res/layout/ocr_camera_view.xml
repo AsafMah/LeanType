@@ -6,6 +6,9 @@
     android:id="@+id/ocr_camera_view"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clickable="true"
+    android:focusable="true"
+    android:soundEffectsEnabled="false"
     android:visibility="gone"
     android:background="#000000">
 
@@ -15,13 +18,22 @@
         android:layout_height="match_parent"
         app:scaleType="fillCenter" />
 
-    <!-- Status indicator (e.g. No text detected) -->
+    <!-- Transparent touch barrier above preview to consume all preview touches and handle focus -->
+    <View
+        android:id="@+id/ocr_touch_shield"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true"
+        android:focusable="true"
+        android:soundEffectsEnabled="false" />
+
+    <!-- Status indicator (e.g. No text detected) - no pill background -->
     <TextView
         android:id="@+id/ocr_status_indicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:background="@drawable/clipboard_suggestion_background"
+        android:background="@null"
         android:textColor="#FFFFFF"
         android:text="@string/ocr_no_text_detected"
         android:textSize="14sp"
@@ -38,6 +50,8 @@
         android:layout_gravity="bottom"
         android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:clickable="true"
+        android:focusable="true"
         android:paddingStart="32dp"
         android:paddingEnd="32dp"
         android:paddingBottom="24dp"
@@ -59,13 +73,30 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <ImageButton
-            android:id="@+id/btn_ocr_shutter"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:src="@drawable/ic_shutter"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/ocr_shutter_button_desc" />
+        <FrameLayout
+            android:layout_width="72dp"
+            android:layout_height="72dp">
+
+            <ImageButton
+                android:id="@+id/btn_ocr_shutter"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_shutter"
+                android:scaleType="fitCenter"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/ocr_shutter_button_desc" />
+
+            <ProgressBar
+                android:id="@+id/ocr_shutter_progress"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="4dp"
+                android:indeterminate="true"
+                android:indeterminateTint="#FFFFFFFF"
+                android:clickable="false"
+                android:focusable="false"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <View
             android:layout_width="0dp"

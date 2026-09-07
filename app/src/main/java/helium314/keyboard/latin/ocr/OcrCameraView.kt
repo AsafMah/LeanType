@@ -2,16 +2,20 @@
 package helium314.keyboard.latin.ocr
 
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.camera.view.PreviewView
@@ -37,9 +41,11 @@ class OcrCameraView @JvmOverloads constructor(
     }
 
     private var previewView: PreviewView? = null
+    private var touchShield: View? = null
     private var pluginPanel: LinearLayout? = null
     private var controlsBar: LinearLayout? = null
     private var shutterBtn: ImageButton? = null
+    private var shutterProgress: ProgressBar? = null
     private var flashBtn: ImageButton? = null
     private var closeBtn: ImageButton? = null
     private var statusIndicator: TextView? = null
@@ -62,17 +68,45 @@ class OcrCameraView @JvmOverloads constructor(
         private const val TAG = "OcrCameraView"
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (visibility != VISIBLE) {
+            return super.dispatchTouchEvent(ev)
+        }
+        // Let buttons and children handle their own clicks
+        super.dispatchTouchEvent(ev)
+        // Always return true so KeyboardWrapperView never falls through to MainKeyboardView
+        return true
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_UP) {
+            performClick()
+            previewView?.let { pv ->
+                cameraManager?.focus(pv, event.x, event.y)
+            }
+        }
+        return true
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
     override fun onFinishInflate() {
         super.onFinishInflate()
         previewView = findViewById(R.id.ocr_preview_view)
+        touchShield = findViewById(R.id.ocr_touch_shield)
         pluginPanel = findViewById(R.id.ocr_plugin_required_panel)
         controlsBar = findViewById(R.id.ocr_controls_bar)
         shutterBtn = findViewById(R.id.btn_ocr_shutter)
+        shutterProgress = findViewById(R.id.ocr_shutter_progress)
         flashBtn = findViewById(R.id.btn_ocr_flash)
         closeBtn = findViewById(R.id.btn_ocr_close)
         statusIndicator = findViewById(R.id.ocr_status_indicator)
 
         previewView?.scaleType = PreviewView.ScaleType.FILL_CENTER
+        previewView?.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+
+        isClickable = true
+        isFocusable = true
+        isSoundEffectsEnabled = false
 
         findViewById<Button>(R.id.ocr_btn_load_plugin)?.setOnClickListener {
             openOcrSettings()
@@ -85,7 +119,26 @@ class OcrCameraView @JvmOverloads constructor(
         this.listener = listener
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun setupButtons() {
+        touchShield?.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    view.performClick()
+                    previewView?.let { pv ->
+                        cameraManager?.focus(pv, event.x, event.y)
+                    }
+                    true
+                }
+                else -> true
+            }
+        }
+        touchShield?.setOnClickListener { }
+
         shutterBtn?.setOnClickListener {
             captureFromCamera()
         }
@@ -217,9 +270,31 @@ class OcrCameraView @JvmOverloads constructor(
         if (show) {
             if (isLoadingAnimationActive) return
             isLoadingAnimationActive = true
-            controlsBar?.foreground = loadingBorderDrawable
+            shutterBtn?.isEnabled = false
 
             val accentColor = Settings.getValues().mColors.get(ColorType.GESTURE_TRAIL)
+
+            // Color change and scale animation on shutter button
+            shutterBtn?.let { btn ->
+                btn.imageTintList = ColorStateList.valueOf(accentColor)
+                btn.animate()
+                    .scaleX(0.82f)
+                    .scaleY(0.82f)
+                    .setDuration(200)
+                    .start()
+            }
+
+            // Prominent circular progress spinner around shutter
+            shutterProgress?.let { progress ->
+                progress.indeterminateTintList = ColorStateList.valueOf(accentColor)
+                progress.visibility = View.VISIBLE
+            }
+
+            // Ensure no pill is shown during processing
+            statusIndicator?.visibility = View.GONE
+            statusIndicator?.text = ""
+
+            controlsBar?.foreground = loadingBorderDrawable
             loadingAnimator = ValueAnimator.ofFloat(0.25f, 1f).apply {
                 duration = 800
                 repeatMode = ValueAnimator.REVERSE
@@ -234,6 +309,24 @@ class OcrCameraView @JvmOverloads constructor(
         } else {
             if (!isLoadingAnimationActive) return
             isLoadingAnimationActive = false
+
+            // Restore shutter button
+            shutterBtn?.let { btn ->
+                btn.imageTintList = null
+                btn.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setDuration(200)
+                    .start()
+                btn.isEnabled = true
+            }
+
+            // Hide circular progress spinner
+            shutterProgress?.visibility = View.GONE
+
+            // Hide status indicator
+            statusIndicator?.visibility = View.GONE
+
             loadingAnimator?.cancel()
             loadingAnimator = null
             loadingBorderDrawable.setStroke(4, Color.TRANSPARENT)
@@ -244,6 +337,7 @@ class OcrCameraView @JvmOverloads constructor(
     private fun showNoTextDetected() {
         val session = generation
         statusIndicator?.apply {
+            text = context.getString(R.string.ocr_no_text_detected)
             animate().cancel()
             alpha = 0f
             visibility = View.VISIBLE
@@ -280,8 +374,7 @@ class OcrCameraView @JvmOverloads constructor(
 
     fun applyColors(colors: Colors) {
         statusIndicator?.let {
-            colors.setBackground(it, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
-            it.setTextColor(colors.get(ColorType.KEY_TEXT))
+            it.setTextColor(Color.WHITE)
         }
     }
 }

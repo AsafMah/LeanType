@@ -9,6 +9,7 @@ import android.view.Surface
 import androidx.annotation.MainThread
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
@@ -24,6 +25,7 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @MainThread
 class OcrCameraManager(
@@ -160,6 +162,20 @@ class OcrCameraManager(
     }
 
     fun isTorchEnabled(): Boolean = isTorchOn
+
+    fun focus(previewView: PreviewView, x: Float, y: Float) {
+        val cam = camera ?: return
+        try {
+            val factory = previewView.meteringPointFactory
+            val point = factory.createPoint(x, y)
+            val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                .build()
+            cam.cameraControl.startFocusAndMetering(action)
+        } catch (e: Exception) {
+            Log.e(TAG, "Focus failed", e)
+        }
+    }
 
     fun capturePhoto(onCaptured: (Bitmap) -> Unit, onError: (Exception) -> Unit) {
         if (!active || released) return

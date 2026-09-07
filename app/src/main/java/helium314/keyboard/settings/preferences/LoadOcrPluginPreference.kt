@@ -43,6 +43,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -95,6 +97,7 @@ fun LoadOcrPluginPreference(
     title: String,
     summary: String? = null,
     @DrawableRes icon: Int? = null,
+    restartOnSuccess: Boolean = true,
     onSuccess: (() -> Unit)? = null,
 ) {
     if (!AddonPolicy.allowsOcrPlugins()) return
@@ -124,6 +127,15 @@ fun LoadOcrPluginPreference(
         }
         hasPlugin = installed.first
         localVersion = installed.second
+    }
+    val updateAvailable = remember(localVersion, remoteVersion) {
+        val installedVersion = localVersion
+        val availableVersion = remoteVersion
+        if (installedVersion != null && availableVersion != null) {
+            isUpdateAvailable(installedVersion, availableVersion)
+        } else {
+            false
+        }
     }
 
     LaunchedEffect(hasPlugin) {
@@ -164,6 +176,12 @@ fun LoadOcrPluginPreference(
                 refreshGeneration++
                 FeedbackManager.message(ctx, R.string.load_ocr_plugin_success)
                 onSuccess?.invoke()
+                if (restartOnSuccess) {
+                    scope.launch {
+                        delay(2000)
+                        Runtime.getRuntime().exit(0)
+                    }
+                }
             } else {
                 FeedbackManager.message(ctx, R.string.load_ocr_plugin_failed)
             }
@@ -195,6 +213,12 @@ fun LoadOcrPluginPreference(
                 refreshGeneration++
                 FeedbackManager.message(ctx, R.string.load_ocr_plugin_success)
                 onSuccess?.invoke()
+                if (restartOnSuccess) {
+                    scope.launch {
+                        delay(2000)
+                        Runtime.getRuntime().exit(0)
+                    }
+                }
             } else {
                 FeedbackManager.message(ctx, R.string.load_ocr_plugin_failed)
             }
@@ -242,17 +266,18 @@ fun LoadOcrPluginPreference(
                             .padding(top = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
-                            onClick = { startDownload() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            val buttonText = when {
-                                remoteVersion != null && localVersion != null && remoteVersion != localVersion ->
-                                    "Update to $remoteVersion"
-                                remoteVersion != null -> "Download plugin ($remoteVersion)"
-                                else -> "Download plugin"
+                        if (!hasPlugin || updateAvailable) {
+                            Button(
+                                onClick = { startDownload() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                val buttonText = when {
+                                    updateAvailable -> "Update to $remoteVersion"
+                                    remoteVersion != null -> "Download plugin ($remoteVersion)"
+                                    else -> "Download plugin"
+                                }
+                                Text(buttonText)
                             }
-                            Text(buttonText)
                         }
 
                         OutlinedButton(
@@ -278,9 +303,13 @@ fun LoadOcrPluginPreference(
                                         withContext(Dispatchers.IO) { OcrPluginLoader.removePlugin(ctx) }
                                         refreshGeneration++
                                         isDownloading = false
-                                        FeedbackManager.message(ctx, "OCR plugin removed")
+                                        FeedbackManager.message(ctx, "OCR plugin removed. Restarting...")
                                         onSuccess?.invoke()
                                         showDialog = false
+                                        if (restartOnSuccess) {
+                                            delay(2000)
+                                            Runtime.getRuntime().exit(0)
+                                        }
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(
@@ -297,6 +326,7 @@ fun LoadOcrPluginPreference(
             }
         ) {
             val message = when {
+                hasPlugin && updateAvailable -> "An update is available for the OCR plugin!\nLocal version: $localVersion\nLatest version: $remoteVersion\n\nDo you want to download and update?"
                 hasPlugin -> "OCR plugin is active (version $localVersion).\n\nWarning: loading external code can be a security risk. Only use a plugin from a source you trust."
                 remoteVersion != null -> "Download the latest OCR plugin (version $remoteVersion) from GitHub, or load an APK from local storage.\n\nWarning: loading external code can be a security risk. Only use a plugin from a source you trust."
                 else -> "Download the OCR plugin from GitHub, or load an APK from local storage.\n\nWarning: loading external code can be a security risk. Only use a plugin from a source you trust."
@@ -304,4 +334,22 @@ fun LoadOcrPluginPreference(
             Text(message, style = MaterialTheme.typography.bodyMedium)
         }
     }
+}
+
+private fun isUpdateAvailable(local: String, remote: String): Boolean {
+    val cleanLocal = local.removePrefix("v").trim()
+    val cleanRemote = remote.removePrefix("v").trim()
+    if (cleanLocal == cleanRemote) return false
+
+    val localParts = cleanLocal.split(".").mapNotNull { it.toIntOrNull() }
+    val remoteParts = cleanRemote.split(".").mapNotNull { it.toIntOrNull() }
+
+    val maxLength = maxOf(localParts.size, remoteParts.size)
+    for (i in 0 until maxLength) {
+        val localPart = localParts.getOrElse(i) { 0 }
+        val remotePart = remoteParts.getOrElse(i) { 0 }
+        if (remotePart > localPart) return true
+        if (localPart > remotePart) return false
+    }
+    return false
 }
