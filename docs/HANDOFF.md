@@ -51,6 +51,55 @@ The original Notes/Word paragraph-deletion report is still unresolved.
 This is positive initial feedback for the installed upstream-aligned EXP baseline
 (`b0398220a`), not a claim that every gesture case or the paragraph-backspace report is fixed.
 
+**Integration:** #155 is the new PR into `dev`, not the historical merged #134.
+The PR and issues #152/#153/#154 are In Progress on project #3; parent epic #16 is
+also In Progress. Scope updates on those issues explicitly supersede old four-flavor,
+Java-index and bundled-native retention requirements. Do not self-merge.
+
+CI follow-through is test-only: a bounded worker heap fixes the missing-result OOM,
+and shared Robolectric input-method configuration prevents app-startup subtype
+queries from reaching incomplete framework stubs. The apparent `MiscTest` width
+failure was an uncaught asynchronous shortcut-query exception before its test body.
+Per-class shadow configuration and a restore-teardown join were insufficient and
+were not retained. A service-loaded fixture reset hook clears mutable shadow state;
+test-local Kotlin shadows do not get a generated reset provider merely by adding
+`@Resetter`. Both SDK 33 and 35 reproduce the original query NPE without the shared
+configuration, and lifecycle regressions fail without the reset hook. The full
+Windows run now contains 610 cases and only the four existing Parser baseline
+failures. Baselines and exclusions are unchanged. No production probe remains;
+the phone APK has not changed. Check the exact PR head's CI before merging.
+
+### Remaining fork inventory
+
+Frozen comparison: `b1694d8df` versus integrated upstream `52567c0f`. It contains 282
+paths (+22,920/-2,567 text lines): 103 Java/Kotlin production, 21 resources/data,
+7 native diagnostic scaffolding, 57 JVM tests/fixtures, 29 build/tooling and 65
+docs/branding/history. About 65% of added text is tests, tooling or documentation.
+This is not the PR-vs-dev diff and is not 282 features; mixed-file tags are not ownership.
+The later CI-only follow-ups do not change the installed keyboard's production behavior.
+
+| Group | Disposition |
+|---|---|
+| Dual-thumb composition, spacing/deletion support and pointer normalization | Keep as the core. |
+| Old recognizer, bundled AI/handwriting runtimes and Lite distribution | Already retired; no private backend maintenance remains. |
+| Shortcut rows, clipboard editor/actions, general toolbar extras, power/HCESAR layouts | Independent optional extras, still present; decide before removing. |
+| Dictionary curation/trust/ranking | Separate, larger product decision; preserve stored data and avoid a new redesign. |
+| Tap reinterpretation/point hinting and trace/native replay scaffolding | Optional, live diagnostic/experimental paths; defaults are off, not proof of dead code. |
+| Later AI/OCR/math/import/state corrections | Existing carried repairs, not original fork features or permission for more broad repair work. |
+
+First isolated upstream candidates: accelerated-emoji deletion (LeanBitLab/LeanType#423),
+null IME-token guards, and preserving the selected custom layout across a symbol round-trip.
+Service-identity reuse and dictionary-query snapshot/private-weight fixes need a focused
+lifecycle/concurrency case before submission. Fast Shift, direct IME switching, broad AI
+functionality and five custom-layout slots already exist upstream; propose only residual fixes.
+No additional upstream PR or optional-feature removal has been performed.
+
+Detailed current inventory: session artifact `MINIMAL_FORK_INVENTORY.md`, with
+`remaining-fork-paths.csv`, `remaining-fork-coverage.json` and
+`refresh-remaining-fork-ledger.ps1`. All 282 paths are enumerated; unmapped paths fail
+generation. The older `minimal-fork-*` CSV/JSON retain the historical 229/289 comparison.
+Neither inventory is a fresh whole-codebase correctness audit.
+
 **Current phone receipt:** `LeanTypeDual-EXP-upstream-52567c0-8291f4fc.apk`, saved
 immutably in the session artifact directory, is Standard EXP `0.3.0-exp` / `4300`,
 package `com.asafmah.leantypedual.exp`, 28,584,477 bytes, SHA-256
