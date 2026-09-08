@@ -34,11 +34,11 @@ import helium314.keyboard.settings.screens.PersonalDictionaryScreen
 import helium314.keyboard.settings.screens.BlockedWordsScreen
 import helium314.keyboard.settings.screens.PreferencesScreen
 import helium314.keyboard.settings.screens.SecondaryLayoutScreen
+import helium314.keyboard.settings.screens.SoundSettingsScreen
 import helium314.keyboard.settings.screens.SubtypeScreen
 import helium314.keyboard.settings.screens.TextCorrectionScreen
 import helium314.keyboard.settings.screens.ToolbarScreen
 import helium314.keyboard.settings.screens.TwoThumbTypingScreen
-import helium314.keyboard.settings.screens.BlocklistScreen
 import helium314.keyboard.settings.screens.UpdatesScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -124,8 +124,16 @@ fun SettingsNavHost(
                 onClickOfflineVoice = { navController.navigate(SettingsDestination.OfflineVoice) },
                 onClickTranslation = { navController.navigate(SettingsDestination.Translation) },
                 onClickHandwriting = { navController.navigate(SettingsDestination.Handwriting) },
-                onClickAIIntegration = { navController.navigate(SettingsDestination.AIIntegration) }
+                onClickOcr = { navController.navigate(SettingsDestination.OCR) },
+                onClickAIIntegration = { navController.navigate(SettingsDestination.AIIntegration) },
+                onClickSound = { navController.navigate(SettingsDestination.Sound) }
             )
+        }
+        composable(SettingsDestination.Sound) {
+            SoundSettingsScreen(onClickBack = ::goBack)
+        }
+        composable(SettingsDestination.OCR) {
+            helium314.keyboard.settings.screens.OcrSettingsScreen(onClickBack = ::goBack)
         }
         composable(SettingsDestination.CustomAIKeys) {
             CustomAIKeysScreen(
@@ -185,9 +193,6 @@ fun SettingsNavHost(
         composable(SettingsDestination.TextExpander) {
             TextExpanderScreen(onClickBack = ::goBack)
         }
-        composable(SettingsDestination.Blocklist) {
-            BlocklistScreen(onClickBack = ::goBack)
-        }
         composable(SettingsDestination.BackgroundServices) {
             helium314.keyboard.settings.screens.BackgroundServicesScreen(onClickBack = ::goBack)
         }
@@ -232,12 +237,13 @@ object SettingsDestination {
     const val CustomAIKeys = "custom_ai_keys"
     const val CustomAIKeyConfig = "custom_ai_key_config/"
     const val TextExpander = "text_expander"
-    const val Blocklist = "blocklist"
 
     const val BackgroundServices = "background_services"
     const val OfflineVoice = "offline_voice"
     const val Translation = "translation"
     const val Handwriting = "handwriting"
+    const val OCR = "ocr"
+    const val Sound = "sound"
     val navTarget = MutableStateFlow(Settings)
 
     // Use SupervisorJob so a cancellation in one navigation hop

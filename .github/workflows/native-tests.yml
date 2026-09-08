@@ -6,10 +6,10 @@ name: Native tests
 on:
   push:
     branches: [dev]
-    paths: ['app/src/main/jni/**']
+    paths: ['app/src/main/jni/**', '.github/workflows/native-tests.yml']
   pull_request:
     branches: [dev, main]
-    paths: ['app/src/main/jni/**']
+    paths: ['app/src/main/jni/**', '.github/workflows/native-tests.yml']
 
 jobs:
   native-host-tests:

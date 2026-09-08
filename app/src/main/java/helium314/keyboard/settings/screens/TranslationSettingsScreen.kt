@@ -39,11 +39,6 @@ import helium314.keyboard.settings.preferences.TranslationTargetLanguagePreferen
 fun TranslationSettingsScreen(
     onClickBack: () -> Unit,
 ) {
-    if (BuildConfig.FLAVOR == "offlinelite") {
-        onClickBack()
-        return
-    }
-
     val context = LocalContext.current
     var translationInstalled by remember { mutableStateOf(TranslationLoader.hasPlugin(context)) }
 

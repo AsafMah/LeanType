@@ -88,11 +88,6 @@ public class GestureFloatingTextDrawingPreview extends AbstractDrawingPreview {
     private int mPreviewTextX;
     private int mPreviewTextY;
     private SuggestedWords mSuggestedWords = SuggestedWords.getEmptyInstance();
-    // Two-thumb typing (#1.2): when the autospace grace period defers the commit, append "…"
-    // to the displayed word as a visual cue that a commit is imminent but the user can still
-    // continue typing to extend the same word. Toggled via DrawingProxy.setGestureCommitPending
-    // from PointerTracker right after the grace timer is scheduled / cleared.
-    private boolean mIsCommitPending;
     private final int[] mLastPointerCoords = CoordinateUtils.newInstance();
 
     public GestureFloatingTextDrawingPreview(final TypedArray mainKeyboardViewAttr) {
@@ -116,25 +111,9 @@ public class GestureFloatingTextDrawingPreview extends AbstractDrawingPreview {
         updatePreviewPosition();
     }
 
-    /**
-     * Set whether the displayed word should be tagged as "commit pending" (with a trailing "…").
-     * No-op when the preview isn't enabled or the visual state is unchanged.
-     */
-    public void setCommitPending(final boolean pending) {
-        if (mIsCommitPending == pending) return;
-        mIsCommitPending = pending;
-        if (!isPreviewEnabled()) return;
-        // Geometry depends on the displayed text width — recompute so the rounded background
-        // tracks the new (possibly longer) text.
-        updatePreviewPosition();
-    }
-
-    /** Returns the word the preview is currently displaying, with the pending-commit suffix when applicable. */
     private String getDisplayedWord() {
         if (mSuggestedWords.isEmpty()) return "";
-        final String word = mSuggestedWords.getWord(0);
-        if (TextUtils.isEmpty(word)) return "";
-        return mIsCommitPending ? word + "\u2026" : word;
+        return mSuggestedWords.getWord(0);
     }
 
     @Override

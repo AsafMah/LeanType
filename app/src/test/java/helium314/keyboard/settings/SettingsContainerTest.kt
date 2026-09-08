@@ -3,7 +3,9 @@ package helium314.keyboard.settings
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.ocr.OcrPluginLoader
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.settings.screens.createOcrSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -88,6 +90,23 @@ class SettingsContainerTest {
     }
 
     @Test
+    fun obsoleteTwoThumbSettingsAreAbsentFromRegistryAndSearch() {
+        val retiredKeys = listOf(
+            "gesture_method",
+            "gesture_autospace_grace_ms",
+            "gesture_tap_promotion_ms",
+            "multipart_tap_seed_gesture",
+            "gesture_dual_thumb_midline_pct",
+            "gesture_apostrophe_key",
+            "autospace_visual_hint",
+        )
+        for (key in retiredKeys) {
+            assertNull(key, container[key])
+            assertTrue(key, container.filter("").none { it.key == key })
+        }
+    }
+
+    @Test
     fun twoThumbFragmentBackspaceLabelMatchesBehavior() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         assertEquals("Delete last fragment", context.getString(R.string.two_thumb_backspace_fragment))
@@ -115,5 +134,107 @@ class SettingsContainerTest {
     fun onlyToolbarWithHardwareKeyboardSettingIsRegistered() {
         assertEquals(Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD,
             container[Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD]?.key)
+    }
+
+    @Test
+    fun upstreamMathAndOcrSettingsAreRegistered() {
+        val keys = listOf(
+            Settings.PREF_INLINE_MATH_CALCULATION,
+            OcrPluginLoader.PREF_OCR_CASING,
+            OcrPluginLoader.PREF_OCR_LINE_JOIN_FORMAT,
+            OcrPluginLoader.PREF_OCR_KEEP_LINE_BREAKS,
+            OcrPluginLoader.PREF_OCR_TRIM_WHITESPACE,
+            OcrPluginLoader.PREF_OCR_DEHYPHENATE,
+            OcrPluginLoader.PREF_OCR_NORMALIZE_PUNCTUATION,
+            OcrPluginLoader.PREF_OCR_STRIP_BULLETS,
+            OcrPluginLoader.PREF_OCR_REMOVE_NOISE,
+            OcrPluginLoader.PREF_OCR_AUTO_COPY,
+            OcrPluginLoader.PREF_OCR_AUTO_INSERT,
+            OcrPluginLoader.PREF_OCR_SUGGEST_SCREENSHOT_TEXT,
+            OcrPluginLoader.PREF_OCR_PERSIST_FLASH,
+        )
+        for (key in keys) {
+            assertEquals(key, container[key]?.key)
+            assertEquals("Duplicate setting: $key", 1, container.filter("").count { it.key == key })
+        }
+    }
+
+    @Test
+    fun soundControlsRemainSearchableAfterMovingToPlugins() {
+        val keys = listOf(
+            Settings.PREF_SOUND_ON, Settings.PREF_KEYPRESS_SOUND_STYLE,
+            Settings.PREF_KEYPRESS_SOUND_VOLUME, Settings.PREF_SOUND_PITCH_SCALE,
+            Settings.PREF_SOUND_RANDOM_PITCH, Settings.PREF_SOUND_STEREO_PAN,
+            Settings.PREF_SOUND_DYNAMIC_VELOCITY, Settings.PREF_SOUND_MUTE_IN_SILENT,
+            Settings.PREF_SOUND_MUTE_IN_DND, Settings.PREF_SOUND_VOL_SPACE,
+            Settings.PREF_SOUND_VOL_DELETE, Settings.PREF_SOUND_VOL_ENTER,
+            Settings.PREF_SOUND_VOL_MODIFIERS,
+        )
+        for (key in keys) {
+            assertEquals(key, container[key]?.key)
+            assertEquals("Duplicate setting: $key", 1, container.filter("").count { it.key == key })
+        }
+    }
+
+    @Test
+    fun ocrRegistryAndSearchRespectBuildAndApiAvailability() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val keys = createOcrSettings(context).map { it.key } + SettingsWithoutKey.SCREEN_NAV_OCR
+        for (flavor in listOf("standard", "standardfull", "offline")) {
+            for (buildType in listOf("debug", "nouserlib")) {
+                for (sdk in listOf(25, 26, 33)) {
+                    val candidate = SettingsContainer(context, SettingsAvailability(flavor, buildType, sdk))
+                    val expected = buildType != "nouserlib" && sdk >= 26
+                    for (key in keys) {
+                        val label = "$flavor/$buildType/API$sdk/$key"
+                        assertEquals(label, expected, candidate[key] != null)
+                        assertEquals(label, if (expected) 1 else 0,
+                            candidate.filter("").count { it.key == key })
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun cloudControlsAreOnlyRegisteredForCloudFlavors() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val keys = listOf(
+            SettingsWithoutKey.GEMINI_API_KEY, SettingsWithoutKey.GEMINI_MODEL,
+            SettingsWithoutKey.GEMINI_TARGET_LANGUAGE,
+            SettingsWithoutKey.GROQ_TOKEN, SettingsWithoutKey.GROQ_MODEL,
+            SettingsWithoutKey.HUGGINGFACE_TOKEN, SettingsWithoutKey.HUGGINGFACE_MODEL,
+            SettingsWithoutKey.HUGGINGFACE_ENDPOINT, SettingsWithoutKey.AI_PROVIDER,
+            SettingsWithoutKey.TRANSLATE_GEMINI_MODEL, SettingsWithoutKey.TRANSLATE_GROQ_MODEL,
+            SettingsWithoutKey.TRANSLATE_HUGGINGFACE_MODEL,
+            SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS, SettingsWithoutKey.CLOUD_AI_MAX_TOKENS,
+        )
+        for (flavor in listOf("standard", "standardfull", "offline")) {
+            val candidate = SettingsContainer(context, SettingsAvailability(flavor = flavor))
+            for (key in keys) {
+                val expected = flavor == "standard" || flavor == "standardfull"
+                assertEquals("$flavor/$key", expected, candidate[key] != null)
+                assertEquals("$flavor/$key", if (expected) 1 else 0,
+                    candidate.filter("").count { it.key == key })
+            }
+        }
+    }
+
+    @Test
+    fun offlineBeforeOreoHasNoAiNavigationOrSharedAiControls() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val candidate = SettingsContainer(context, SettingsAvailability(flavor = "offline", sdk = 25))
+        val keys = listOf(
+            SettingsWithoutKey.SCREEN_NAV_AI_INTEGRATION, SettingsWithoutKey.CUSTOM_AI_KEYS,
+            SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, SettingsWithoutKey.TRANSLATION_ENGINE,
+            SettingsWithoutKey.OFFLINE_MODEL_PATH, SettingsWithoutKey.OFFLINE_KEEP_MODEL_LOADED,
+            SettingsWithoutKey.LOAD_OFFLINE_AI_PLUGIN,
+        )
+        for (key in keys) {
+            assertNull(key, candidate[key])
+            assertTrue(key, candidate.filter("").none { it.key == key })
+        }
+        assertEquals(Settings.PREF_INLINE_MATH_CALCULATION,
+            candidate[Settings.PREF_INLINE_MATH_CALCULATION]?.key)
     }
 }

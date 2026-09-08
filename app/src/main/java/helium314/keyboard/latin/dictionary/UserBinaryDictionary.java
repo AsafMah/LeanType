@@ -7,6 +7,7 @@
 package helium314.keyboard.latin.dictionary;
 
 import android.content.Context;
+import android.content.ContentValues;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteException;
@@ -23,6 +24,7 @@ import helium314.keyboard.latin.utils.SubtypeLocaleUtils;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.function.Consumer;
 
 /**
  * An expandable dictionary that stores the words in the user dictionary provider into a binary
@@ -74,6 +76,7 @@ public class UserBinaryDictionary extends ExpandableBinaryDictionary {
             @Override
             public void onChange(final boolean self, final Uri uri) {
                 setNeedsToRecreate();
+                reloadDictionaryIfRequired();
             }
         };
         context.getContentResolver().registerContentObserver(Words.CONTENT_URI, true, mObserver);
@@ -83,6 +86,59 @@ public class UserBinaryDictionary extends ExpandableBinaryDictionary {
     public static UserBinaryDictionary getDictionary(
             final Context context, final Locale locale, final File dictFile, final String dictNamePrefix) {
         return new UserBinaryDictionary(context, locale, true, dictFile, dictNamePrefix + NAME);
+    }
+
+    /** Completes only after the provider entry is available in the native dictionary. */
+    public void addWordToUserDictionary(final String word, final Consumer<Boolean> onComplete) {
+        asyncExecuteTaskWithWriteLock(() -> {
+            if (isClosed()) {
+                onComplete.accept(false);
+                return;
+            }
+            try {
+                final ContentValues values = new ContentValues();
+                values.put(Words.WORD, word);
+                values.put(Words.FREQUENCY, HISTORICAL_DEFAULT_USER_DICTIONARY_FREQUENCY);
+                values.put(Words.LOCALE, TextUtils.isEmpty(mLocaleString) ? null : mLocaleString);
+                values.put(Words.APP_ID, 0);
+                if (mContext.getContentResolver().insert(Words.CONTENT_URI, values) == null) {
+                    throw new IllegalStateException("User dictionary provider rejected insertion");
+                }
+                setNeedsToRecreate();
+            } catch (final Exception e) {
+                Log.w(TAG, "Failed to add word to user dictionary: " + word, e);
+                onComplete.accept(false);
+                return;
+            }
+            publishAddedWordLocked(word, onComplete);
+        });
+    }
+
+    private void publishAddedWordLocked(final String word, final Consumer<Boolean> onComplete) {
+        if (isClosed()) {
+            onComplete.accept(false);
+            return;
+        }
+        final long generation = getRecreateGeneration();
+        boolean published = false;
+        try {
+            createNewDictionaryLocked();
+            clearNeedsToRecreate(generation);
+            if (!isClosed() && isNeededToRecreate()) {
+                // A provider notification arrived after the query snapshot. Yield to queued work
+                // and read again; neither validity nor promotion completion may publish that snapshot.
+                asyncExecuteTaskWithWriteLock(() -> publishAddedWordLocked(word, onComplete));
+                return;
+            }
+            published = !isClosed() && isInDictionaryLocked(word);
+            if (!published && !isClosed()) {
+                Log.w(TAG, "Inserted word was not loaded into the user dictionary: " + word);
+            }
+        } catch (final Exception e) {
+            Log.w(TAG, "Failed to load added word into user dictionary: " + word, e);
+        }
+        notifyDictionaryChanged();
+        onComplete.accept(published);
     }
 
     @Override

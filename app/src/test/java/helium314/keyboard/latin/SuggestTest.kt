@@ -285,6 +285,18 @@ class SuggestTest {
         assert(!result.last()) // should not be corrected
     }
 
+    @Test fun `short unknown tokens are not corrected to dictionary unigrams`() {
+        val result = shouldBeAutoCorrected(
+            "gd",
+            listOf(suggestion("good", 700000, Locale.ENGLISH)),
+            null,
+            null,
+            Locale.ENGLISH,
+            thresholdAggressive
+        )
+        assert(!result.last())
+    }
+
     @Test fun `multi-word filter removes phrases only when enabled`() {
         fun results() = SuggestionResults(3, false, false).apply {
             add(suggestion("single", 100, Locale.ENGLISH))

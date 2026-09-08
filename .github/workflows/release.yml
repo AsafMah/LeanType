@@ -1,4 +1,4 @@
-# Builds the signed release APKs (all four flavors) and drafts a GitHub Release.
+# Builds the signed release APKs (all three flavors) and drafts a GitHub Release.
 #
 # Triggers on pushing a version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`),
 # or manually via "Run workflow" (workflow_dispatch) for a signing/build dry run that
@@ -60,7 +60,7 @@ jobs:
           EOF
 
       - name: Build signed release APKs (all flavors)
-        run: ./gradlew :app:assembleStandardRelease :app:assembleStandardfullRelease :app:assembleOfflineRelease :app:assembleOfflineliteRelease
+        run: ./gradlew :app:assembleStandardRelease :app:assembleStandardfullRelease :app:assembleOfflineRelease
 
       - name: Verify packaged LeanTypeDual invariants
         run: |
@@ -77,14 +77,14 @@ jobs:
           for apk in app/build/outputs/apk/*/release/*.apk; do
             "$APKSIGNER" verify --verbose --print-certs "$apk"
             case "$apk" in
-              *-standard-release.apk|*-standardfull-release.apk|*-offlinelite-release.apk)
+              *-standard-release.apk|*-standardfull-release.apk|*-offline-release.apk)
                 "$APKSIGNER" verify --verbose --min-sdk-version 21 --max-sdk-version 23 "$apk"
                 legacy_count=$((legacy_count + 1))
                 ;;
             esac
             count=$((count + 1))
           done
-          test "$count" -eq 4
+          test "$count" -eq 3
           test "$legacy_count" -eq 3
 
       - name: Generate release notes

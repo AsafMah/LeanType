@@ -10,6 +10,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
 import helium314.keyboard.latin.RichInputMethodManager
+import helium314.keyboard.latin.ai.OfflineAiLoader
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import kotlinx.coroutines.Dispatchers
@@ -18,188 +19,116 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.nehuatl.llamacpp.LlamaHelper
 import java.io.File
 
 /**
- * Offline proofreading service using llamacpp-kotlin with GGUF models.
- *
- * Uses LlamaHelper for on-device inference with llama.cpp backend.
- * Supports any GGUF model for text correction/generation.
- *
- * Expected model files:
- * - Any GGUF format model file
+ * Offline proofreading service using modular LeanType-Offline-AI-Plugin with GGUF models.
  */
 class ProofreadService(private val context: Context) {
 
-     val sharedPrefs: SharedPreferences by lazy {
+    private val sharedPrefs: SharedPreferences by lazy {
         context.prefs()
     }
 
     val prefs: SharedPreferences get() = sharedPrefs
 
     // Singleton holder for model state to prevent reloading on every request
-object ModelHolder {
-var llamaHelper: LlamaHelper? = null
-var currentModelPath: String? = null
-var isModelAvailable: Boolean = true
-var isModelLoaded: Boolean = false
+    object ModelHolder {
+        var currentModelPath: String? = null
+        var isModelAvailable: Boolean = true
+        var isModelLoaded: Boolean = false
 
-// Smart Unload Logic
-private var unloadJob: Job? = null
-private val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
-private const val UNLOAD_DELAY_MS = 10 * 60 * 1000L // 10 minutes
-private val loadMutex = Mutex()
+        // Smart Unload Logic
+        private var unloadJob: Job? = null
+        private val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+        private const val UNLOAD_DELAY_MS = 10 * 60 * 1000L // 10 minutes
+        private val loadMutex = Mutex()
 
-// Flow for LLM events
-val llmFlow = MutableSharedFlow<LlamaHelper.LLMEvent>(
-    extraBufferCapacity = 64,
-    onBufferOverflow = BufferOverflow.DROP_OLDEST
-)
+        @Synchronized
+        fun scheduleUnload(context: Context) {
+            unloadJob?.cancel()
 
-@Synchronized
-fun scheduleUnload(context: Context) {
-    unloadJob?.cancel()
+            val prefs = context.prefs()
+            val keepLoaded = prefs.getBoolean(Settings.PREF_OFFLINE_KEEP_MODEL_LOADED, Defaults.PREF_OFFLINE_KEEP_MODEL_LOADED)
 
-    val prefs = context.prefs()
-    val keepLoaded = prefs.getBoolean(Settings.PREF_OFFLINE_KEEP_MODEL_LOADED, Defaults.PREF_OFFLINE_KEEP_MODEL_LOADED)
+            if (keepLoaded) {
+                 Log.i(TAG, "Model unload skipped (Keep Model Loaded enabled)")
+                 return
+            }
 
-    if (keepLoaded) {
-         Log.i(TAG, "Model unload skipped (Keep Model Loaded enabled)")
-         return
-    }
-
-    unloadJob = scope.launch {
-        delay(UNLOAD_DELAY_MS)
-        unloadModel()
-        Log.i(TAG, "Offline AI model unloaded due to inactivity")
-    }
-}
-
-@Synchronized
-fun cancelUnload() {
-    unloadJob?.cancel()
-    unloadJob = null
-}
-
-@Synchronized
-fun unloadModel() {
-    try {
-        llamaHelper?.release()
-    } catch (e: Exception) {
-        Log.w(TAG, "Error unloading llama model", e)
-    }
-    llamaHelper = null
-    currentModelPath = null
-    isModelLoaded = false
-    isModelAvailable = true
-}
-
-suspend fun loadModel(
-    context: Context,
-    modelPath: String
-): Boolean = loadMutex.withLock {
-    cancelUnload()
-
-    // Check if already loaded with same path
-    if (isModelLoaded && currentModelPath == modelPath && llamaHelper != null) {
-        return true
-    }
-
-    unloadModel() // Ensure clean slate if path changed
-
-    return try {
-        val contentResolver = context.contentResolver
-        val helper = LlamaHelper(
-            contentResolver,
-            scope,
-            llmFlow
-        )
-
-        // Get llama via reflection
-        val llamaField = LlamaHelper::class.java.getDeclaredField("llama\$delegate").apply { isAccessible = true }
-        val llamaLazy = llamaField.get(helper) as Lazy<org.nehuatl.llamacpp.LlamaAndroid>
-        val llama = llamaLazy.value
-
-        // Detach model file descriptor
-        val uri = android.net.Uri.parse(modelPath)
-        val pfd = contentResolver.openFileDescriptor(uri, "r")
-            ?: throw IllegalArgumentException("Failed to open model file descriptor")
-        val modelFd = pfd.detachFd()
-
-        // Calculate optimal threads count (4 threads is the sweet spot for mobile CPUs)
-        val cores = Runtime.getRuntime().availableProcessors()
-        val threads = if (cores <= 4) cores else 4
-
-        Log.i(TAG, "Loading GGUF model: threads=$threads (cores=$cores), use_mmap=false")
-
-        // Construct parameters map
-        val params = mutableMapOf<String, Any>(
-            "model" to modelPath,
-            "model_fd" to modelFd,
-            "use_mmap" to false,
-            "use_mlock" to false,
-            "n_ctx" to 2048,
-            "embedding" to false,
-            "n_batch" to 512,
-            "n_threads" to threads,
-            "n_gpu_layers" to 0,
-            "vocab_only" to false,
-            "lora" to "",
-            "lora_scaled" to 1.0,
-            "rope_freq_base" to 0.0,
-            "rope_freq_scale" to 0.0
-        )
-
-        // JNI callback called by native code for each token
-        val callback: (String) -> Unit = { word ->
-            try {
-                val allTextField = LlamaHelper::class.java.getDeclaredField("allText").apply { isAccessible = true }
-                val currentAllText = allTextField.get(helper) as String
-                allTextField.set(helper, currentAllText + word)
-
-                val tokenCountField = LlamaHelper::class.java.getDeclaredField("tokenCount").apply { isAccessible = true }
-                val currentCount = tokenCountField.get(helper) as Int
-                tokenCountField.set(helper, currentCount + 1)
-
-                helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Ongoing(word, currentCount + 1))
-            } catch (e: Throwable) {
-                Log.e(TAG, "Error in native token callback", e)
+            unloadJob = scope.launch {
+                delay(UNLOAD_DELAY_MS)
+                unloadModel(context)
+                Log.i(TAG, "Offline AI model unloaded due to inactivity")
             }
         }
 
-        // Start the engine
-        val result = llama.startEngine(params, callback)
+        @Synchronized
+        fun cancelUnload() {
+            unloadJob?.cancel()
+            unloadJob = null
+        }
 
-        val contextId = result?.get("contextId") as? Int
-            ?: throw IllegalStateException("contextId not found in result map")
+        @Synchronized
+        fun unloadModel(context: Context? = null) {
+            try {
+                if (context != null) {
+                    OfflineAiLoader.getProvider(context)?.unloadModel()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error unloading llama model", e)
+            }
+            currentModelPath = null
+            isModelLoaded = false
+            isModelAvailable = true
+        }
 
-        // Set currentContext via reflection
-        val currentContextField = LlamaHelper::class.java.getDeclaredField("currentContext").apply { isAccessible = true }
-        currentContextField.set(helper, contextId)
+        suspend fun loadModel(
+            context: Context,
+            modelPath: String
+        ): Boolean = loadMutex.withLock {
+            cancelUnload()
 
-        // Emit Loaded event
-        helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Loaded(modelPath))
+            val provider = OfflineAiLoader.getProvider(context)
+            if (provider == null) {
+                Log.w(TAG, "Offline AI Plugin not installed/available")
+                isModelAvailable = false
+                return false
+            }
 
-        llamaHelper = helper
-        currentModelPath = modelPath
-        isModelLoaded = true
-        isModelAvailable = true
-        true
-    } catch (e: Throwable) {
-        Log.e(TAG, "Failed to load GGUF model", e)
-        isModelAvailable = false
-        false
+            // Check if already loaded with same path
+            if (isModelLoaded && currentModelPath == modelPath && provider.isModelLoaded()) {
+                return true
+            }
+
+            unloadModel(context) // Ensure clean slate if path changed
+
+            return try {
+                val cores = Runtime.getRuntime().availableProcessors()
+                val threads = if (cores <= 4) cores else 4
+
+                Log.i(TAG, "Loading GGUF model via AI Plugin: path=$modelPath threads=$threads")
+                val success = provider.loadModel(context, modelPath, threads, 2048)
+                if (success) {
+                    currentModelPath = modelPath
+                    isModelLoaded = true
+                    isModelAvailable = true
+                } else {
+                    isModelLoaded = false
+                    isModelAvailable = false
+                }
+                success
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to load GGUF model via plugin", e)
+                isModelAvailable = false
+                false
+            }
+        }
+
+        private const val TAG = "LlamaProofreadService"
     }
-}
-
-private const val TAG = "LlamaProofreadService"
-}
 
     // AI Provider support (API compatibility)
     enum class AIProvider {
@@ -310,8 +239,20 @@ private const val TAG = "LlamaProofreadService"
 
     fun setModelName(name: String) { /* No-op */ }
 
-    fun getTargetLanguage(): String = "English"
-    fun setTargetLanguage(language: String) { /* No-op */ }
+    fun getTargetLanguage(): String {
+        val lang = sharedPrefs.getString(
+            helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE,
+            sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "en")
+        ) ?: "en"
+        return if (lang.equals("English", ignoreCase = true)) "en" else lang
+    }
+
+    fun setTargetLanguage(language: String) {
+        sharedPrefs.edit()
+            .putString(helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, language)
+            .putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, language)
+            .apply()
+    }
 
     fun getTranslateModelName(): String = ""
     fun setTranslateModelName(modelName: String) { /* No-op */ }
@@ -330,7 +271,7 @@ private const val TAG = "LlamaProofreadService"
      * Run llamacpp inference for translation.
      */
     suspend fun translate(text: String): Result<String> {
-        val target = sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE) ?: Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE
+        val target = getTargetLanguage()
         val systemPromptTemplate = getTranslateSystemPrompt().takeIf { it.isNotBlank() } ?: Defaults.PREF_OFFLINE_TRANSLATE_SYSTEM_PROMPT
         val prompt = systemPromptTemplate.replace("{lang}", target)
         return proofread(text, overridePrompt = prompt, targetLanguage = target)
@@ -350,10 +291,13 @@ private const val TAG = "LlamaProofreadService"
             return@withContext Result.failure(ProofreadException("Model not loaded. Please select a GGUF model file."))
         }
 
+        val provider = OfflineAiLoader.getProvider(context)
+            ?: return@withContext Result.failure(ProofreadException("Offline AI plugin not installed. Please install the plugin in Settings."))
+
         // Load model (or get cached)
         if (!ModelHolder.loadModel(context, modelPath)) {
              Log.e(TAG, "Model load failed")
-             return@withContext Result.failure(ProofreadException("Failed to load model."))
+             return@withContext Result.failure(ProofreadException("Failed to load model in AI plugin."))
         }
 
         // Cancel unload timer while working
@@ -368,7 +312,7 @@ private const val TAG = "LlamaProofreadService"
             val showThinkingVal = showThinking ?: sharedPrefs.getBoolean(Settings.PREF_OFFLINE_SHOW_THINKING, Defaults.PREF_OFFLINE_SHOW_THINKING)
 
             // Build the prompt
-            val systemPrompt = overridePrompt ?: getSystemPrompt()
+            val systemPrompt = overridePrompt ?: getSystemPrompt().ifBlank { Defaults.PREF_OFFLINE_SYSTEM_PROMPT }
             val fullPrompt = if (systemPrompt.contains("{text}")) {
                 systemPrompt.replace("{text}", text)
             } else if (overridePrompt != null) {
@@ -392,7 +336,9 @@ private const val TAG = "LlamaProofreadService"
                 } catch (_: Exception) { "" }
                 val localExamples = getProofreadFewShot(currentLocale)
                 val builder = StringBuilder("Instruction: ${instruction.trim()}\n\n")
-                builder.append("Input: heko hw r u\nOutput: Hello, how are you?\n\n")
+                if (localExamples.isEmpty() || currentLocale.lowercase().startsWith("en")) {
+                    builder.append("Input: heko hw r u\nOutput: Hello, how are you?\n\n")
+                }
                 for (ex in localExamples) {
                     builder.append("Input: ${ex.first}\nOutput: ${ex.second}\n\n")
                 }
@@ -400,44 +346,17 @@ private const val TAG = "LlamaProofreadService"
                 builder.toString()
             }
 
-            // Collect generated text from the flow
-            val generatedText = StringBuilder()
-            val helper = ModelHolder.llamaHelper
-                ?: return@withContext Result.failure(ProofreadException("Model not available"))
-
-            // Use predict with custom parameters
-            predictWithParams(
-                helper = helper,
-                prompt = fullPrompt,
-                temp = temp,
-                topP = topP,
-                topK = topK,
-                minP = minP,
-                maxTokens = maxTokens,
-                showThinking = showThinkingVal
-            )
-
-            // Collect events until done
-            ModelHolder.llmFlow.takeWhile { event ->
-                when (event) {
-                    is LlamaHelper.LLMEvent.Ongoing -> {
-                        generatedText.append(event.word)
-                        true
-                    }
-                    is LlamaHelper.LLMEvent.Done -> {
-                        false
-                    }
-                    is LlamaHelper.LLMEvent.Error -> {
-                        throw ProofreadException(event.toString())
-                    }
-                    else -> true
-                }
-            }.collect {}
+            // Use provider to generate completion
+            val output = provider.generate(fullPrompt, mapOf(
+                "temperature" to temp.toDouble(),
+                "top_p" to topP.toDouble(),
+                "top_k" to topK,
+                "min_p" to minP.toDouble(),
+                "max_tokens" to maxTokens
+            ))
 
             // Schedule unload after work is done
             ModelHolder.scheduleUnload(context)
-
-            val output = generatedText.toString().trim()
 
             // Robust cleaning of the generated output
             var cleanedOutput = output
@@ -495,7 +414,6 @@ private const val TAG = "LlamaProofreadService"
                 cleanedOutput
             }
 
-            Log.i(TAG, "proofread: input='$text' prompt='$fullPrompt' generated='$output' final='$finalOutput'")
             if (finalOutput.isNotBlank()) {
                 Result.success(finalOutput)
             } else {
@@ -503,90 +421,9 @@ private const val TAG = "LlamaProofreadService"
             }
 
         } catch (e: Throwable) {
-            if (e is kotlinx.coroutines.CancellationException) {
-                // Cancel completion job if running
-                try {
-                    val helper = ModelHolder.llamaHelper
-                    if (helper != null) {
-                        val completionJobField = LlamaHelper::class.java.getDeclaredField("completionJob").apply { isAccessible = true }
-                        val completionJob = completionJobField.get(helper) as? Job
-                        completionJob?.cancel()
-                    }
-                } catch (ex: Throwable) {
-                    Log.w(TAG, "Failed to cancel completion job", ex)
-                }
-                throw e
-            }
             Log.e(TAG, "Proofread failed", e)
             ModelHolder.scheduleUnload(context) // Ensure we still schedule unload on error
             Result.failure(ProofreadException(e.message ?: "Unknown error"))
-        }
-    }
-
-    private fun predictWithParams(
-        helper: LlamaHelper,
-        prompt: String,
-        temp: Float,
-        topP: Float,
-        topK: Int,
-        minP: Float,
-        maxTokens: Int,
-        showThinking: Boolean
-    ) {
-        try {
-            // Get currentContext via reflection
-            val currentContextField = LlamaHelper::class.java.getDeclaredField("currentContext").apply { isAccessible = true }
-            val currentContext = currentContextField.get(helper) as? Int ?: throw IllegalStateException("Model not loaded yet")
-
-            // Get llama via reflection
-            val llamaField = LlamaHelper::class.java.getDeclaredField("llama\$delegate").apply { isAccessible = true }
-            val llamaLazy = llamaField.get(helper) as Lazy<org.nehuatl.llamacpp.LlamaAndroid>
-            val llama = llamaLazy.value
-
-            // Reset tokenCount and allText
-            val tokenCountField = LlamaHelper::class.java.getDeclaredField("tokenCount").apply { isAccessible = true }
-            tokenCountField.set(helper, 0)
-
-            val allTextField = LlamaHelper::class.java.getDeclaredField("allText").apply { isAccessible = true }
-            allTextField.set(helper, "")
-
-            // Emit Started event
-            helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Started(prompt))
-
-            // Build parameters map
-            val params = mutableMapOf<String, Any>(
-                "prompt" to prompt,
-                "emit_partial_completion" to true,
-                "temperature" to temp.toDouble(),
-                "top_p" to topP.toDouble(),
-                "top_k" to topK,
-                "min_p" to minP.toDouble(),
-                "n_predict" to maxTokens,
-                "stop" to listOf("\nInput:", "\nInstruction:", "\nOutput:", "\nCorrected:")
-            )
-
-            // Get completionJob field
-            val completionJobField = LlamaHelper::class.java.getDeclaredField("completionJob").apply { isAccessible = true }
-
-            // Launch completion using helper.scope
-            val job = helper.scope.launch {
-                val startTime = System.currentTimeMillis()
-                try {
-                    llama.launchCompletion(currentContext, params)
-                } catch (e: Throwable) {
-                    Log.e(TAG, "Completion failed", e)
-                    helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Error("Completion failed: ${e.message}"))
-                    return@launch
-                }
-                val duration = System.currentTimeMillis() - startTime
-                val allText = allTextField.get(helper) as String
-                val tokenCount = tokenCountField.get(helper) as Int
-                helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Done(allText, tokenCount, duration))
-            }
-            completionJobField.set(helper, job)
-        } catch (e: Throwable) {
-            Log.e(TAG, "Failed to setup prediction", e)
-            helper.sharedFlow.tryEmit(LlamaHelper.LLMEvent.Error("Failed to setup prediction: ${e.message}"))
         }
     }
 

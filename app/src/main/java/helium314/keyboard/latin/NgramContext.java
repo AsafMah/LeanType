@@ -217,15 +217,20 @@ public class NgramContext {
 
     public void outputToArray(final int[][] codePointArrays,
             final boolean[] isBeginningOfSentenceArray) {
-        for (int i = 0; i < mPrevWordsCount; i++) {
-            final WordInfo wordInfo = mPrevWordsInfo[i];
-            if (wordInfo == null || !wordInfo.isValid()) {
+        for (int i = 0; i < codePointArrays.length; i++) {
+            if (i < mPrevWordsCount) {
+                final WordInfo wordInfo = mPrevWordsInfo[i];
+                if (wordInfo == null || !wordInfo.isValid()) {
+                    codePointArrays[i] = new int[0];
+                    isBeginningOfSentenceArray[i] = false;
+                    continue;
+                }
+                codePointArrays[i] = StringUtils.toCodePointArray(wordInfo.mWord);
+                isBeginningOfSentenceArray[i] = wordInfo.mIsBeginningOfSentence;
+            } else {
                 codePointArrays[i] = new int[0];
                 isBeginningOfSentenceArray[i] = false;
-                continue;
             }
-            codePointArrays[i] = StringUtils.toCodePointArray(wordInfo.mWord);
-            isBeginningOfSentenceArray[i] = wordInfo.mIsBeginningOfSentence;
         }
     }
 

@@ -51,11 +51,7 @@ android {
         create("offline") {
             dimension = "privacy"
             applicationIdSuffix = ".offline"
-            minSdk = 26
-        }
-        create("offlinelite") {
-            dimension = "privacy"
-            applicationIdSuffix = ".offlinelite"
+            minSdk = 21
         }
     }
 
@@ -127,7 +123,6 @@ android {
                 "standard" -> "1"
                 "standardfull" -> "1"
                 "offline" -> "2"
-                "offlinelite" -> "3"
                 else -> ""
             }
             if (number.isNotEmpty()) {
@@ -148,14 +143,12 @@ android {
                 variant.proguardFiles.add(project.layout.buildDirectory.file(getDefaultProguardFile("proguard-android.txt").absolutePath))
                 variant.proguardFiles.add(project.layout.buildDirectory.file(project.buildFile.parent + "/proguard-rules.pro"))
             }
-            if (variant.flavorName == "standard" || variant.flavorName == "standardfull") {
-                // Ignore all dictionary assets in standard/standardfull flavors
-                val dictsDir = project.file("src/main/assets/dicts")
-                if (dictsDir.exists() && dictsDir.isDirectory) {
-                    dictsDir.listFiles()?.forEach { file ->
-                        if (file.name.endsWith(".dict")) {
-                            patterns.add(file.name)
-                        }
+            // Dictionaries are downloaded on demand, as in upstream.
+            val dictsDir = project.file("src/main/assets/dicts")
+            if (dictsDir.exists() && dictsDir.isDirectory) {
+                dictsDir.listFiles()?.forEach { file ->
+                    if (file.name.endsWith(".dict")) {
+                        patterns.add(file.name)
                     }
                 }
             }
@@ -206,6 +199,12 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all {
+                // Robolectric's multi-SDK suite outgrows Gradle's default 512 MB test heap.
+                it.maxHeapSize = "2g"
+                it.maxParallelForks = 1
+                it.jvmArgs("-XX:+ExitOnOutOfMemoryError")
+            }
         }
     }
 
@@ -268,21 +267,22 @@ dependencies {
     "standardfullImplementation"("com.google.ai.client.generativeai:generativeai:0.9.0")
     "standardfullImplementation"("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // local llm proofreading (offline)
-    "offlineImplementation"("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
+    // Offline AI is supplied by the upstream plugin.
 
     // Force 16 KB page-aligned version of graphics-path
     implementation("androidx.graphics:graphics-path:1.1.0")
 
-    // WorkManager — required by ML Kit Digital Ink plugin (loaded via DexClassLoader).
+    // CameraX for in-keyboard OCR viewfinder
+    val cameraxVersion = "1.4.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // WorkManager — required by plugins loaded via DexClassLoader.
     // ML Kit internally calls WorkManager.getInstance(context) using the host app context,
     // so the host app must have WorkManagerInitializer registered in its manifest.
     implementation("androidx.work:work-runtime-ktx:2.10.1")
-
-    // ML Kit Digital Ink Recognition — required by the handwriting plugin.
-    // ML Kit's internal asset manager and native library loader use the host app context,
-    // so the host app must compile and include the client library resources/libraries.
-    "standardfullImplementation"("com.google.mlkit:digital-ink-recognition:19.0.0")
 
     // test
     testImplementation(kotlin("test"))

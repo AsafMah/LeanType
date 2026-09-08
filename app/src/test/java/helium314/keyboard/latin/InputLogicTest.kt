@@ -1060,13 +1060,7 @@ class InputLogicTest {
         assertFalse(composer.isExtendBatchInputBaseSet)
     }
 
-    // Static-seed reachability guard. PointerTracker's tap-seed path (sLastLetterTap*) is gated
-    // on (!isMultipartComposeActive() && mCombiningGraceMs > 0). But grace > 0 forces multi-part
-    // composition active, so that conjunction is unsatisfiable and the seed is currently
-    // unreachable dead code. These pin the interlock: if a future settings refactor decouples
-    // them and re-arms the seed, it must first add the stale-static cleanup (the seed statics are
-    // process-global and never reset on delete / commit / field switch).
-    @Test fun graceImpliesMultipartComposeActive_keepsSeedPathDead() {
+    @Test fun graceImpliesMultipartComposeActive() {
         reset()
         latinIME.prefs().edit { putInt(Settings.PREF_COMBINING_GRACE_MS, 1000) }
         setText("") // force a settings reload
@@ -1098,6 +1092,37 @@ class InputLogicTest {
         }
         setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
         assertEquals(Constants.TextUtils.CAP_MODE_OFF, inputLogic.getCurrentAutoCapsState(settingsValues))
+    }
+
+    @Test fun autoCapsRespectsEditorExclusionsForEveryToggleCombination() {
+        val inputTypes = mapOf(
+            "text" to InputType.TYPE_CLASS_TEXT,
+            "uri" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI),
+            "email" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS),
+            "webEmail" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS),
+            "password" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD),
+            "visiblePassword" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD),
+            "webPassword" to (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD),
+            "number" to InputType.TYPE_CLASS_NUMBER,
+            "numericPassword" to (InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD),
+        )
+        for ((name, type) in inputTypes) {
+            for (autoCap in listOf(false, true)) {
+                for (force in listOf(false, true)) {
+                    reset()
+                    latinIME.prefs().edit {
+                        putBoolean(Settings.PREF_AUTO_CAP, autoCap)
+                        putBoolean(Settings.PREF_FORCE_AUTO_CAPS, force)
+                    }
+                    setInputType(type)
+                    val expected = if (name == "text" && (autoCap || force)) {
+                        TextUtils.CAP_MODE_SENTENCES
+                    } else Constants.TextUtils.CAP_MODE_OFF
+                    assertEquals(expected, inputLogic.getCurrentAutoCapsState(settingsValues),
+                        "$name: autoCap=$autoCap, force=$force")
+                }
+            }
+        }
     }
 
     @Test fun noAutospaceInUrlField() {

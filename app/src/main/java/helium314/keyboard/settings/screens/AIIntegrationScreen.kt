@@ -5,6 +5,7 @@
 package helium314.keyboard.settings.screens
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,25 +13,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.settings.SearchSettingsScreen
+import helium314.keyboard.settings.SettingsAvailability
 import helium314.keyboard.settings.SettingsWithoutKey
 
 @Composable
 fun AIIntegrationScreen(
     onClickBack: () -> Unit,
+    availability: SettingsAvailability = SettingsAvailability(),
 ) {
-    // OfflineLite intentionally ships without AI; bundled offline AI requires Android 8.0.
-    if (BuildConfig.FLAVOR == "offlinelite"
-        || (BuildConfig.FLAVOR == "offline"
-            && android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O)
-    ) {
-        onClickBack()
+    if (!availability.ai) {
+        LaunchedEffect(Unit) { onClickBack() }
         return
     }
 
-    if (BuildConfig.FLAVOR == "standard" || BuildConfig.FLAVOR == "standardfull") {
+    if (availability.cloudAi) {
         StandardAIIntegrationScreen(onClickBack)
     } else {
         OfflineAIIntegrationScreen(onClickBack)
@@ -70,11 +68,13 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
                 add(SettingsWithoutKey.GROQ_TOKEN)
                 add(SettingsWithoutKey.GROQ_MODEL)
                 add(SettingsWithoutKey.TRANSLATE_GROQ_MODEL)
+                add(SettingsWithoutKey.CLOUD_AI_MAX_TOKENS)
             }
             "GEMINI" -> {
                 add(SettingsWithoutKey.GEMINI_API_KEY)
                 add(SettingsWithoutKey.GEMINI_MODEL)
                 add(SettingsWithoutKey.TRANSLATE_GEMINI_MODEL)
+                add(SettingsWithoutKey.CLOUD_AI_MAX_TOKENS)
             }
             "OPENAI" -> {
                 add(SettingsWithoutKey.HUGGINGFACE_TOKEN)
@@ -82,6 +82,7 @@ private fun StandardAIIntegrationScreen(onClickBack: () -> Unit) {
                 add(SettingsWithoutKey.HUGGINGFACE_ENDPOINT)
                 add(SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS)
                 add(SettingsWithoutKey.TRANSLATE_HUGGINGFACE_MODEL)
+                add(SettingsWithoutKey.CLOUD_AI_MAX_TOKENS)
             }
         }
     }

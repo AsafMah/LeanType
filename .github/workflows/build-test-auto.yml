@@ -17,6 +17,8 @@ on:
       - '.github/workflows/release.yml'
       - 'tools/check_fork_invariants.py'
       - 'tools/check_apk_invariants.py'
+      - 'tools/check_test_results.py'
+      - 'tools/test_baselines/**'
       - 'tools/tests/**'
       - 'fastlane/metadata/android/en-US/changelogs/**'
   push:
@@ -30,6 +32,8 @@ on:
       - '.github/workflows/release.yml'
       - 'tools/check_fork_invariants.py'
       - 'tools/check_apk_invariants.py'
+      - 'tools/check_test_results.py'
+      - 'tools/test_baselines/**'
       - 'tools/tests/**'
       - 'fastlane/metadata/android/en-US/changelogs/**'
   workflow_dispatch:

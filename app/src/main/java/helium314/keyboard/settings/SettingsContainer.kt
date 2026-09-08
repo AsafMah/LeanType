@@ -17,13 +17,18 @@ import helium314.keyboard.settings.screens.createCorrectionSettings
 import helium314.keyboard.settings.screens.createGestureTypingSettings
 import helium314.keyboard.settings.screens.createLanguageSettings
 import helium314.keyboard.settings.screens.createLayoutSettings
+import helium314.keyboard.settings.screens.createOcrSettings
+import helium314.keyboard.settings.screens.createSoundSettings
 import helium314.keyboard.settings.screens.createPreferencesSettings
 import helium314.keyboard.settings.screens.createTextExpanderSettings
 import helium314.keyboard.settings.screens.createToolbarSettings
 import helium314.keyboard.settings.screens.createTwoThumbTypingSettings
 
-class SettingsContainer(context: Context) {
-    private val list = createSettings(context)
+class SettingsContainer(
+    context: Context,
+    availability: SettingsAvailability = SettingsAvailability(),
+) {
+    private val list = createSettings(context).filter { availability.isAvailable(it.key) }
     private val map: Map<String, Setting> = HashMap<String, Setting>(list.size).apply {
         list.forEach {
             putIfAbsent(it.key, it)
@@ -33,7 +38,8 @@ class SettingsContainer(context: Context) {
     operator fun get(key: Any): Setting? = map[key]
 
     // filtering could be more elaborate, but should be good enough for a start
-    // always have all settings in search, because:
+    // Keep preference-dependent settings searchable (unsupported build/API features are excluded
+    // at registration), because:
     //  don't show disabled settings -> users confused
     //  show as disabled (i.e. no interaction possible) -> users confused
     //  show, but change will not do anything because another setting needs to be enabled first -> probably best
@@ -133,6 +139,8 @@ private val modules = listOf(
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_TEXT_EXPANDER, SettingsDestination.TextExpander, titleString = "Text Expander", iconRes = R.drawable.ic_edit, provider = ::createTextExpanderSettings),
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_ADVANCED, SettingsDestination.Advanced, R.string.settings_screen_advanced, iconRes = R.drawable.ic_settings_advanced, provider = ::createAdvancedSettings),
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_ABOUT, SettingsDestination.About, R.string.settings_screen_about, iconRes = R.drawable.ic_settings_about, provider = ::createAboutSettings),
+    SettingsModule(SettingsWithoutKey.SCREEN_NAV_OCR, SettingsDestination.OCR, R.string.ocr_settings_title, iconRes = R.drawable.ic_ocr, provider = ::createOcrSettings),
+    SettingsModule(SettingsWithoutKey.SCREEN_NAV_SOUND, SettingsDestination.Sound, R.string.sound_packs_title, iconRes = R.drawable.ic_play_arrow, provider = ::createSoundSettings),
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_LIBRARIES, SettingsDestination.Libraries, R.string.libraries_hub_title, iconRes = R.drawable.ic_emoji_objects),
     SettingsModule(SettingsWithoutKey.SCREEN_NAV_BACKGROUND_SERVICES, SettingsDestination.BackgroundServices, titleString = "Background Services", provider = ::createBackgroundServicesSettings)
 )
@@ -184,6 +192,7 @@ object SettingsWithoutKey {
     const val TRANSLATION_ENGINE = "pref_translation_method"
     const val LOAD_OFFLINE_AI_PLUGIN = "load_offline_ai_plugin"
     const val BACKGROUND_SERVICES = "background_services"
+    const val CLOUD_AI_MAX_TOKENS = "cloud_ai_max_tokens"
 
     // Screen Navigation Keys for Settings Search:
     const val SCREEN_NAV_SECONDARY_LAYOUTS = "screen_nav_secondary_layouts"
@@ -200,6 +209,8 @@ object SettingsWithoutKey {
     const val SCREEN_NAV_ADVANCED = "screen_nav_advanced"
     const val SCREEN_NAV_ABOUT = "screen_nav_about"
     const val SCREEN_NAV_LIBRARIES = "screen_nav_libraries"
+    const val SCREEN_NAV_OCR = "screen_nav_ocr"
+    const val SCREEN_NAV_SOUND = "screen_nav_sound"
     const val SCREEN_NAV_DICTIONARIES = "screen_nav_dictionaries"
     const val SCREEN_NAV_BACKGROUND_SERVICES = "screen_nav_background_services"
 }

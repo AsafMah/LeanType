@@ -119,6 +119,11 @@ public interface DictionaryFacilitator {
 
     boolean isBlacklisted(String word);
 
+    /** Monotonic revision of dictionary content visible to suggestion consumers. */
+    default long getDictionaryRevision() {
+        return 0L;
+    }
+
     void closeDictionaries();
 
     /** main dictionaries are loaded asynchronously after resetDictionaries */

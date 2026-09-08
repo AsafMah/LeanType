@@ -10,8 +10,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
-EXPECTED_FLAVORS = {"standard", "standardfull", "offline", "offlinelite"}
-LEGACY_SIGNATURE_FLAVORS = {"standard", "standardfull", "offlinelite"}
+EXPECTED_FLAVORS = {"standard", "standardfull", "offline"}
+LEGACY_SIGNATURE_FLAVORS = {"standard", "standardfull", "offline"}
 ANDROID_NAME = "{http://schemas.android.com/apk/res/android}name"
 VERSION_CODE_FLOOR = 4300
 
@@ -198,8 +198,7 @@ def _check_identity_and_flavors(root: Path, problems: list[str]) -> None:
     default_min_sdks = _integer_assignments(default, "minSdk")
     if not _expect_one(default_min_sdks, 21):
         problems.append(
-            "[flavors/offlinelite] defaultConfig.minSdk must be 21 so offlinelite "
-            "inherits API 21 support"
+            "[flavors/offline] defaultConfig.minSdk must retain upstream API 21 support"
         )
 
     version_names = _string_assignments(default, "versionName")
@@ -261,8 +260,7 @@ def _check_identity_and_flavors(root: Path, problems: list[str]) -> None:
         expected_details = {
             "standard": (23, None),
             "standardfull": (23, None),
-            "offline": (26, ".offline"),
-            "offlinelite": (None, ".offlinelite"),
+            "offline": (21, ".offline"),
         }
         for name, (min_sdk, suffix) in expected_details.items():
             if len(blocks.get(name, [])) != 1:
@@ -291,38 +289,18 @@ def _check_dictionary_packaging(source: str, problems: list[str]) -> None:
         )
     else:
         clean = _without_comments(variants)
-        structure = _structure(variants)
-        guards: list[tuple[int, int]] = []
-        for match in re.finditer(r"\bif\s*\(([^)]*)\)\s*\{", clean):
-            condition = re.sub(r"\s+", "", match.group(1))
-            accepted = {
-                'variant.flavorName=="standard"||variant.flavorName=="standardfull"',
-                'variant.flavorName=="standardfull"||variant.flavorName=="standard"',
-            }
-            if condition not in accepted:
-                continue
-            opening = match.end() - 1
-            closing = _matching_delimiter(structure, opening, "{", "}")
-            if closing >= 0:
-                guards.append((opening + 1, closing))
-
         markers = [
             'project.file("src/main/assets/dicts")',
             'file.name.endsWith(".dict")',
             "patterns.add(file.name)",
         ]
-        guard_ok = False
-        if len(guards) == 1:
-            start, end = guards[0]
-            guarded = re.sub(r"\s+", "", clean[start:end])
-            guard_ok = all(re.sub(r"\s+", "", marker) in guarded for marker in markers)
-            dict_scans = [m.start() for m in re.finditer(r'endsWith\s*\(\s*"\.dict"\s*\)', clean)]
-            guard_ok = guard_ok and len(dict_scans) == 1 and start <= dict_scans[0] < end
-        if not guard_ok:
+        compact = re.sub(r"\s+", "", clean)
+        if not all(re.sub(r"\s+", "", marker) in compact for marker in markers) or re.search(
+            r"variant\.flavorName\b", clean
+        ):
             problems.append(
-                "[dictionary-assets] bulk .dict exclusion must be guarded by exactly "
-                'variant.flavorName == "standard" || variant.flavorName == "standardfull"; '
-                "offline flavors must retain bundled dictionaries"
+                "[dictionary-assets] all flavors must exclude bundled .dict assets; "
+                "dictionary packaging must not depend on variant.flavorName"
             )
         assignments = re.findall(
             r"variant\.androidResources\.ignoreAssetsPatterns\s*=\s*patterns\b",
@@ -330,19 +308,20 @@ def _check_dictionary_packaging(source: str, problems: list[str]) -> None:
         )
         if len(assignments) != 1:
             problems.append(
-                "[dictionary-assets] the guarded dictionary patterns must be applied "
+                "[dictionary-assets] dictionary patterns must be applied "
                 "exactly once via variant.androidResources.ignoreAssetsPatterns"
             )
 
     clean_source = _without_comments(source)
-    dependency = re.compile(
-        r'"offlineImplementation"\s*\(\s*'
-        r'"io\.github\.ljcamargo:llamacpp-kotlin:0\.4\.0"\s*\)'
-    )
-    if len(dependency.findall(clean_source)) != 1:
+    if "llamacpp-kotlin" in clean_source:
         problems.append(
-            "[offline-ai] app/build.gradle.kts must retain exactly one "
-            'offlineImplementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")'
+            "[offline-ai] use the upstream offline AI plugin, not a bundled "
+            "llamacpp-kotlin dependency"
+        )
+    if "com.google.mlkit:digital-ink-recognition:" in clean_source:
+        problems.append(
+            "[handwriting-plugin] use the upstream self-contained handwriting plugin, "
+            "not the retired host runtime dependency"
         )
 
 
@@ -415,70 +394,13 @@ def _check_manifests(root: Path, problems: list[str]) -> None:
         )
 
 
-def _class_level_method(source: str, class_name: str, method_name: str) -> str | None:
-    class_body = _extract_block(
-        source, rf"\bpublic\s+(?:final\s+)?class\s+{re.escape(class_name)}\b[^{{}}]*"
-    )
-    if class_body is None:
-        return None
-    clean = _without_comments(class_body)
-    structure = _structure(class_body)
-    pattern = re.compile(
-        rf"\bpublic\s+void\s+{re.escape(method_name)}\s*\(\s*\)\s*\{{"
-    )
-    methods = []
-    for match in pattern.finditer(clean):
-        opening = match.end() - 1
-        if _brace_depth_before(structure, opening) != 0:
-            continue
-        closing = _matching_delimiter(structure, opening, "{", "}")
-        if closing >= 0:
-            methods.append(class_body[opening + 1:closing])
-    return methods[0] if len(methods) == 1 else None
-
-
-def _has_direct_call(method_body: str, call_pattern: str) -> bool:
-    clean = _without_comments(method_body)
-    structure = _structure(method_body)
-    matches = list(re.finditer(call_pattern, clean))
-    return (
-        len(matches) == 1
-        and _brace_depth_before(structure, matches[0].start()) == 0
-    )
-
-
 def _check_sources(root: Path, problems: list[str]) -> None:
-    proofread_base = Path(
-        "app/src/offlinelite/java/helium314/keyboard/latin/utils"
-    )
-    for filename in ("ProofreadHelper.kt", "ProofreadService.kt"):
-        relative = proofread_base / filename
-        if not (root / relative).is_file():
-            problems.append(f"[offlinelite-sources] required source is missing: {relative}")
-
-    latin_relative = "app/src/main/java/helium314/keyboard/latin/LatinIME.java"
-    latin = _read(root, latin_relative, "latin-ime", problems)
-    if latin is not None:
-        on_create = _class_level_method(latin, "LatinIME", "onCreate")
-        initialize = (
-            r"(?:helium314\.keyboard\.latin\.gesture\.)?"
-            r"SwipeGestureEngine\.initialize\s*\(\s*this\s*\)\s*;"
-        )
-        if on_create is None or not _has_direct_call(on_create, initialize):
-            problems.append(
-                "[latin-ime/on-create] LatinIME.onCreate must directly call "
-                "SwipeGestureEngine.initialize(this) exactly once"
-            )
-        on_destroy = _class_level_method(latin, "LatinIME", "onDestroy")
-        cancel = (
-            r"(?:helium314\.keyboard\.latin\.gesture\.)?"
-            r"SwipeGestureEngine\.cancelIndexing\s*\(\s*\)\s*;"
-        )
-        if on_destroy is None or not _has_direct_call(on_destroy, cancel):
-            problems.append(
-                "[latin-ime/on-destroy] LatinIME.onDestroy must directly call "
-                "SwipeGestureEngine.cancelIndexing() exactly once"
-            )
+    fallback = root / "app/src/main/java/helium314/keyboard/latin/gesture/SwipeGestureEngine.java"
+    if fallback.exists():
+        problems.append("[gesture-backend] the retired Java gesture engine must not be restored")
+    lite = root / "app/src/offlinelite"
+    if any(path.is_file() for path in lite.rglob("*")):
+        problems.append("[offlinelite-sources] retired OfflineLite sources must not be restored")
 
     settings_relative = (
         "app/src/main/java/helium314/keyboard/settings/SettingsContainer.kt"
@@ -639,7 +561,7 @@ def _check_release_workflow(root: Path, problems: list[str]) -> None:
             ):
                 low_api_ok = True
                 break
-    count_ok = re.search(r'test\s+["\']?\$count["\']?\s+-eq\s+4\b', verify)
+    count_ok = re.search(r'test\s+["\']?\$count["\']?\s+-eq\s+3\b', verify)
     legacy_count_ok = re.search(
         r'test\s+["\']?\$legacy_count["\']?\s+-eq\s+3\b', verify
     )
@@ -648,9 +570,9 @@ def _check_release_workflow(root: Path, problems: list[str]) -> None:
     )
     if not (low_api_ok and count_ok and legacy_count_ok and loop_ok):
         problems.append(
-            "[release/legacy-signatures] signature step must inspect exactly four "
+            "[release/legacy-signatures] signature step must inspect exactly three "
             "release APKs and run apksigner with min SDK 21 / max SDK 23 for exactly "
-            "standard, standardfull, and offlinelite (the v1/JAR-signature variants)"
+            "standard, standardfull, and offline (the v1/JAR-signature variants)"
         )
 
     packaged = _workflow_step_run(

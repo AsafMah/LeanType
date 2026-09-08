@@ -23,6 +23,19 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 
 ## Summary of New Features
 
+### Upstream v4.2 additions
+
+- **Camera and screenshot OCR:** On Android 8.0+, load the optional OCR plugin from
+  `Plugins > OCR` and use the OCR toolbar key after granting camera access. Screenshot
+  extraction additionally requires screenshot suggestions and media access. Formatting
+  settings control casing, line joining, dehyphenation, punctuation, and whitespace.
+  Recognition runs on-device; offline tiers can import a locally obtained plugin.
+- **Inline math:** `Text correction > Inline math calculation` offers a result after
+  an arithmetic expression ending in `=`; tapping the suggestion replaces the expression.
+- **Sound packs:** `Plugins > Keypress Audio` provides volume, pitch, pan, per-key
+  controls, and ZIP import. Packs are no longer bundled in the APK. Standard/Full can
+  download them in-app; Offline uses browser download and local import.
+
 | Feature | Function | Settings Location |
 | :--- | :--- | :--- |
 | **Multi-Provider AI** | Uses Gemini, Groq, or OpenAI to proofread/rewrite text. Fetch latest models dynamically. | `AI Integration > Set AI Provider` |
@@ -33,7 +46,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | **Floating Keyboard** | Detach the keyboard into a draggable window with a persistent mode option. | Toolbar > Floating Keyboard |
 | **Touchpad Mode** | Swipe up on Spacebar to control cursor, including full-screen laptop-style touchpad. | `Gesture typing > Vertical spacebar swipe` |
 | **Split Suggestions** | Separates suggestions from toolbar for quicker access. | `Appearance > Split toolbar & suggestions` |
-| **Build Variants** | Choose Standard, Offline, or Offline Lite versions. | GitHub Releases |
+| **Build Variants** | Choose Standard, Standard Full, or Offline. Offline Lite is retired. | GitHub Releases |
 | **Clear Incognito** | Shows a clear "Hat & Glasses" icon when Incognito is active. | *Automatic (when Incognito)* |
 | **Clipboard Search** | Search history, undo swipe-delete, and optionally fold pinned items by default. | Clipboard Toolbar > Search Icon |
 | **Dictionary Import** | Import personal words from Google Gboard/other keyboards. | `Text correction > Dictionary > Import` |
@@ -240,7 +253,7 @@ Add these to your prompt to enforce a specific role.
 
 ## Two-thumb Typing (experimental)
 
-LeanType ships a set of opt-in tweaks for typing with two thumbs at once — mixing taps and swipes naturally, getting fewer dropped letters when one thumb taps while the other glides, and Nintype-style "manual spacing" where the word doesn't auto-commit until you tap space. All options live under **Settings → Two-thumb typing (experimental)** and default to **off** (or 0 for the sliders), so you only get the behaviour you opt into.
+LeanTypeDual supports composing words from taps and gesture fragments. Options live under **Settings → Two-thumb typing**; the screen currently requires gesture typing and a loaded native gesture library. Normal spacing is the default. Timed and manual composition are opt-in, and recognition experiments are separately default-off.
 
 > ⚠️ These features change how gestures and taps interact. Try them one at a time so you can tell what's helping vs. hurting your typing.
 
@@ -248,41 +261,32 @@ LeanType ships a set of opt-in tweaks for typing with two thumbs at once — mix
 
 | Pref | Behaviour |
 | :--- | :--- |
-| **Manual spacing** (`gesture_manual_spacing`) | When ON, lifting all fingers after a gesture **does not** auto-commit or insert an autospace. The gesture's result becomes/extends a composing word. Multiple gestures and taps chain into one logical word until you explicitly tap space, punctuation, or Enter. Best paired with the next option. |
-| **Backspace removes last fragment** (`gesture_fragment_backspace`) | Only visible when Manual spacing is on. Backspace pops the entire previous fragment (one swipe's output, or one tap's letter) in a single keystroke instead of one character at a time. |
-| **Autospace grace period** (`gesture_autospace_grace_ms`, 0–500 ms) | Only visible when Manual spacing is off (mutually exclusive). A middle ground: keep the autospace, but delay it by N ms after the last finger lifts. If a new finger goes **down** within that window, the deferred commit is dropped and the gesture continues into the same word — no matter how long that next gesture itself takes. Set to 0 to disable. While the timer is pending, the floating preview text shows a trailing ellipsis (`…`) so you can see the system is waiting. |
+| **Spacing mode** | Normal, timed auto-spacing, or manual. Manual mode keeps a composing word open across taps and gestures until an explicit commit. Timed mode uses `combining_grace_ms` plus optional extra tap time; a new fragment restarts the timer. |
+| **Backspace behavior** | In non-normal spacing modes, choose character, last-fragment, or whole-word deletion. Fragment boundaries are stored as lengths; this is not a full undo history of prior recognition results. |
+| **Timed auto-spacing options** | Control autocorrection, gesture-only spacing/timer gates, suggestion-strip behavior after commit, and optional deferred spacing. `InputLogic` owns this timer; the pointer aggregator finishes a gesture immediately when its last finger lifts. |
 
 > Side effect: when Manual spacing is on, the **Autospace before/after gesture typing** toggles under **Settings → Text correction → Space** are hidden — they become runtime no-ops.
 
 ### Combining taps and swipes
 
-| Pref | Behaviour |
-| :--- | :--- |
-| **Tap-then-swipe window** (`gesture_tap_promotion_ms`, 0–200 ms) | When > 0, lets you **tap one or more letters** then immediately **swipe** the rest, getting one merged word. Example: tap `p`, tap `a`, swipe `ul` → `paul`. Set to 0 to disable. The window is measured against the *last letter input* — chains grow naturally as long as each new tap arrives within the window of the previous one. |
+Manual/timed composition keeps the typed prefix in the same composing word. Full-word suggestions use the retained `WordComposer` connector. Optional tap re-recognition is an experiment, not a promise that the recognizer will preserve every tapped letter.
 
 ### Visual feedback
 
-| Pref | Behaviour |
-| :--- | :--- |
-| **Flash space key on auto-space** (`autospace_visual_hint`, on by default) | When ON, the space bar briefly highlights every time an automatic space is silently inserted. Most useful when grace-period auto-spacing is on, since the actual insertion is decoupled from any visible keystroke. |
-
-### Layout extras
-
-| Pref | Behaviour |
-| :--- | :--- |
-| **Apostrophe key for gestures** (`gesture_apostrophe_key`) | When ON, surfaces a swipeable apostrophe key so contractions like `it's` or `don't` can be glided in one stroke. Toggle is visible; actual layout integration depends on whether the active layout exposes the apostrophe — see [layouts.md](../layouts.md) if you maintain a custom layout. |
+The spacebar countdown reflects a pending combining-mode auto-space, subject to the active editor and spacing gates. There is no separate legacy auto-space flash or deferred-pointer ellipsis.
 
 ### Recognition & debug
 
 | Pref | Behaviour |
 | :--- | :--- |
-| **Two-thumb point hinting (experimental)** (`gesture_dual_thumb_hinting`) | When ON, the keyboard post-processes the gesture's raw points before feeding them to the recognizer: tap-bursts that overlap an active stroke get reinforced with synthetic on-stroke waypoints at the tap's centre so the library doesn't under-weight them. Includes a proximity guard so a stray opposite-hand tap doesn't get amplified into a recognition-deforming detour. Most useful for words like `firetruck` (`fretrc` swipe + `iuk` taps). |
-| **Left/right hand split** (`gesture_dual_thumb_midline_pct`, 30–70 %) | Only visible when Point hinting is on. Where the keyboard splits between your left and right hand. Currently used only by the (forthcoming) stray-tap dampener; the proximity guard above is independent of this slider. |
+| **Two-thumb point hinting (experimental)** (`gesture_dual_thumb_hinting`) | Default-off. Inserts synthetic waypoints for nearby tap-bursts overlapping a stroke. A proximity guard leaves distant taps unchanged. Recognition quality depends on the runtime library and needs device evidence; this is not a proven accuracy improvement. |
 | **Draw gesture points (debug)** (`gesture_debug_draw_points`) | When ON, overlays the raw gesture samples (small red dots) and any synthetic points injected by Point hinting (larger blue dots) on the keyboard. Useful when iterating on hinting or filing bug reports — turn off for daily typing. |
 
 ### Why these exist
 
 These features all started from [HeliBoard issue #291](https://github.com/Helium314/HeliBoard/issues/291) ("Improving simultaneous/two-finger swiping") and Nintype's old "autospace off" + "tap during swipe" behaviours. They're shipped as experimental opt-ins so you can A/B them on your own typing style without risk to the existing single-thumb gesture experience.
+
+The obsolete pointer-grace timer, tap-seed settings, hand-split slider, apostrophe preference and flash setting were removed because they were unreachable or had no implementation. Old stored preferences are ignored; current composition settings and user data are retained.
 
 | `#generate` | **Content Generator** | "You are a creative content generator. Output ONLY content." |
 
@@ -325,7 +329,7 @@ Control how the result is inserted.
 
 **Note**: This feature is only available in the "Offline" build flavor of LeanType.
 
-Offline proofreading runs entirely on your device using the `llama.cpp` runtime. No data leaves your device.
+Offline proofreading uses the optional upstream Offline AI plugin and a local GGUF model on Android 8.0+. The keyboard no longer embeds the old `llama.cpp` backend. The Offline app has no INTERNET permission; obtain plugins and models separately in a browser and import them locally.
 
 > [!NOTE]
 > **Status: Beta / Experimental**
@@ -333,8 +337,9 @@ Offline proofreading runs entirely on your device using the `llama.cpp` runtime.
 
 ### Setup Instructions
 
-1.  **Download a GGUF Model**: Download a compatible `.gguf` model file (see Recommended Models below).
-2.  **Configure App**:
+1.  **Import the Offline AI Plugin**: Download the compatible [LeanType Offline AI plugin](https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin), then import it through **Settings > Libraries Hub > Offline AI Plugin**.
+2.  **Download a GGUF Model**: Download a compatible `.gguf` model file (see Recommended Models below).
+3.  **Configure App**:
     *   Go to **Settings > Advanced**.
     *   **GGUF Model**: Select the downloaded `.gguf` model file.
     *   **System Instruction**: (Optional) Customize the prompt used to guide the model when proofreading text.
@@ -406,7 +411,7 @@ Touchpad Mode replaces the keyboard with a laptop-style touchpad overlay to cont
 ## 8. Handwriting Input
 
 > [!NOTE]
-> **Availability**: This feature is only available in the **Standard** (`-standard-release.apk`) and **Standard Optimised** build flavors. It is excluded from the **Offline** and **Offline Lite** variants.
+> **Availability**: Requires Android 8.0+ and a compatible handwriting plugin. Standard/Full can download the plugin in-app; Offline uses local import.
 
 LeanType integrates a handwriting recognition canvas that allows you to write characters directly on the keyboard using your finger or a stylus.
 
@@ -433,12 +438,12 @@ LeanType integrates a handwriting recognition canvas that allows you to write ch
 
 ## 9. Gesture Typing
 
-*   **Functionality**: Gesture typing (swipe/glide typing) supports either the built-in Java fallback engine or a compatible native C++ gesture library.
-*   **Engine choice**: The Java fallback works without an external library; the native method uses `libjni_latinimegoogle.so` when installed and compatible.
+*   **Functionality**: Gesture typing (swipe/glide typing), including dual-thumb composition, requires a compatible native gesture library.
+*   **Native routing**: The older Java fallback has been removed. A previously saved fallback-engine preference does not prevent an installed native library from being used. The bundled dictionary-only library cannot recognize gestures.
 *   **Library Loading**: Native gesture libraries can be loaded on demand via **Settings > Gesture typing** or **Settings > Libraries Hub**.
 *   **Settings Configuration**:
     1. Go to **Settings > Gesture typing**.
-    2. Enable gesture typing and choose **Fallback engine** or **Native library**.
+    2. Install a compatible native gesture library, then enable gesture typing. Offline builds require browser download and local import.
     3. Configure visual options (preview trail, floating preview text, trail fadeout) and behavior options (space-aware gesture, autospace, fast typing cooldown).
 
 ---

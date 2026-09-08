@@ -156,6 +156,7 @@ object Defaults {
     const val PREF_COMPRESS_SCREENSHOTS = true
     const val PREF_AUTO_READ_OTP = false
     const val PREF_OTP_ALLOWED_SMS_PACKAGE = ""
+    const val PREF_INLINE_MATH_CALCULATION = true
     const val PREF_GESTURE_INPUT = true
     // ponytail: gesture method default value
     const val PREF_GESTURE_METHOD = "fallback"
@@ -163,6 +164,16 @@ object Defaults {
     const val PREF_VIBRATION_AMPLITUDE_SETTINGS = -1
     const val PREF_KEYPRESS_SOUND_VOLUME = -0.01f
     const val PREF_KEYPRESS_SOUND_STYLE = "system"
+    const val PREF_SOUND_PITCH_SCALE = 1.0f
+    const val PREF_SOUND_RANDOM_PITCH = true
+    const val PREF_SOUND_STEREO_PAN = true
+    const val PREF_SOUND_DYNAMIC_VELOCITY = false
+    const val PREF_SOUND_MUTE_IN_SILENT = true
+    const val PREF_SOUND_MUTE_IN_DND = true
+    const val PREF_SOUND_VOL_SPACE = 1.0f
+    const val PREF_SOUND_VOL_DELETE = 1.0f
+    const val PREF_SOUND_VOL_ENTER = 1.0f
+    const val PREF_SOUND_VOL_MODIFIERS = 1.0f
     const val PREF_KEY_LONGPRESS_TIMEOUT = 300
     const val PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = true
     const val PREF_GESTURE_PREVIEW_TRAIL = true
@@ -173,17 +184,12 @@ object Defaults {
     const val PREF_GESTURE_SPACE_AWARE = false
     const val PREF_GESTURE_FAST_TYPING_COOLDOWN = 500
     const val PREF_GESTURE_TRAIL_FADEOUT_DURATION = 800
-    // Two-thumb typing defaults — every default preserves current behaviour (off / 0).
+    // Two-thumb typing defaults.
     const val PREF_GESTURE_MANUAL_SPACING = false
     const val PREF_GESTURE_FRAGMENT_BACKSPACE = true
-    const val PREF_GESTURE_AUTOSPACE_GRACE_MS = 0
-    const val PREF_GESTURE_TAP_PROMOTION_MS = 0
     const val PREF_GESTURE_DUAL_THUMB_HINTING = false
-    const val PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT = 50
     const val PREF_GESTURE_DEBUG_DRAW_POINTS = false
     const val PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS = true
-    const val PREF_GESTURE_APOSTROPHE_KEY = false
-    const val PREF_AUTOSPACE_VISUAL_HINT = true
     // Unified combining-mode model (default 0 = off; 500 ms is a comfortable starting point).
     const val PREF_COMBINING_GRACE_MS = 0
     const val PREF_COMBINING_LAST_AUTOSPACE_GRACE_MS = 500
@@ -195,10 +201,9 @@ object Defaults {
     const val PREF_COMBINING_AUTOSPACE_SUGGESTIONS = "alternatives_then_next_word"
     const val PREF_COMBINING_BACKSPACE_DELETES_GESTURE_WORD = true
     const val PREF_COMBINING_BACKSPACE_DELETES_COMPOSING_TEXT = true
-    // Multi-part word composition (this branch). All default-on except the explicit join key.
+    // Multi-part word composition; tap re-recognition stays opt-in.
     const val PREF_MULTIPART_AUTO_EXTEND_IN_COMBINING = true
     const val PREF_MULTIPART_FULL_WORD_SUGGESTIONS = true
-    const val PREF_MULTIPART_TAP_SEED_GESTURE = true
     const val PREF_MULTIPART_RERECOGNIZE_TAPS = false
     const val PREF_SHOW_SETUP_WIZARD_ICON = true
     const val PREF_USE_CONTACTS = false
@@ -238,6 +243,7 @@ object Defaults {
     const val PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE = "French"
     const val PREF_OFFLINE_KEEP_MODEL_LOADED = false
     const val PREF_AI_ALLOW_INSECURE_CONNECTIONS = false
+    const val PREF_CLOUD_AI_MAX_TOKENS = 4096
     const val PREF_ENABLE_CLIPBOARD_HISTORY = true
     const val PREF_CLIPBOARD_HISTORY_RETENTION_TIME = 15 // minutes
     const val PREF_CLIPBOARD_HISTORY_PINNED_FIRST = true

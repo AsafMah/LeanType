@@ -5,8 +5,6 @@
 package helium314.keyboard.latin.utils
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.RichInputConnection
@@ -22,16 +20,16 @@ import kotlinx.coroutines.launch
  * This avoids the complexity of Java-Kotlin coroutine interop.
  */
 object ProofreadHelper {
-    private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(Dispatchers.IO)
     
     // Track current operation for cancellation
     private var currentJob: Job? = null
+    private val operationOwner = AiOperationOwner()
     
     // Check if an operation is in progress
     @JvmStatic
     val isOperationInProgress: Boolean
-        get() = currentJob?.isActive == true
+        get() = operationOwner.active
     
     // Store original text for potential undo
     @JvmStatic
@@ -51,13 +49,11 @@ object ProofreadHelper {
      */
     @JvmStatic
     fun cancelCurrentOperation() {
-        if (currentJob?.isActive == true) {
-            currentJob?.cancel()
-            currentJob = null
-            mainHandler.post {
-                KeyboardSwitcher.getInstance().hideLoadingAnimation()
-                // Toast removed as visual feedback (stopping animation) is sufficient
-            }
+        val id = operationOwner.invalidate()
+        currentJob?.cancel()
+        currentJob = null
+        operationOwner.postIfIdle(id) {
+            KeyboardSwitcher.getInstance().hideLoadingAnimation()
         }
     }
     
@@ -72,6 +68,11 @@ object ProofreadHelper {
         allowEmptyInput: Boolean = false,
         skipApiKeyCheck: Boolean = false
     ) {
+        currentJob?.cancel()
+        val ticket = operationOwner.begin(context) {
+            currentJob = null
+            KeyboardSwitcher.getInstance().hideLoadingAnimation()
+        }
         val service = ProofreadService(context)
 
         // Check if API key/token is configured based on provider (unless plugin handles operation)
@@ -80,7 +81,7 @@ object ProofreadHelper {
             when (provider) {
                 ProofreadService.AIProvider.GEMINI -> {
                     if (!service.hasApiKey()) {
-                        mainHandler.post {
+                        ticket.post(complete = true) {
                             KeyboardSwitcher.getInstance().showToast(
                                 context.getString(R.string.proofread_no_api_key),
                                 true
@@ -91,7 +92,7 @@ object ProofreadHelper {
                 }
                 ProofreadService.AIProvider.GROQ -> {
                     if (service.getGroqToken() == null) {
-                        mainHandler.post {
+                        ticket.post(complete = true) {
                             KeyboardSwitcher.getInstance().showToast(
                                 context.getString(R.string.huggingface_no_token),
                                 true
@@ -102,7 +103,7 @@ object ProofreadHelper {
                 }
                 ProofreadService.AIProvider.OPENAI -> {
                     if (service.getHuggingFaceToken() == null) {
-                        mainHandler.post {
+                        ticket.post(complete = true) {
                             KeyboardSwitcher.getInstance().showToast(
                                 context.getString(R.string.huggingface_no_token),
                                 true
@@ -115,7 +116,7 @@ object ProofreadHelper {
         }
 
         if (!allowEmptyInput && text.isBlank()) {
-            mainHandler.post {
+            ticket.post(complete = true) {
                 KeyboardSwitcher.getInstance().showToast(
                     context.getString(noTextErrorResId),
                     true
@@ -128,29 +129,30 @@ object ProofreadHelper {
         lastOriginalText = text
 
         // Show loading animation on suggestion strip
-        mainHandler.post {
+        ticket.post {
             KeyboardSwitcher.getInstance().showLoadingAnimation()
         }
 
         // Launch coroutine for API call and track it for cancellation
-        currentJob = scope.launch {
-            val result = apiCall(service)
+        currentJob = scope.launch(ticket) {
+            val result = try {
+                apiCall(service)
+            } catch (error: Exception) {
+                Result.failure(error)
+            }
 
-            mainHandler.post {
-                currentJob = null
-                // Hide loading animation
-                KeyboardSwitcher.getInstance().hideLoadingAnimation()
-
+            ticket.post(complete = true) {
                 result.fold(
                     onSuccess = { resultText ->
                         onSuccess(resultText)
                     },
                     onFailure = { error ->
-                        onError(error.message ?: "Unknown error")
-                        KeyboardSwitcher.getInstance().showToast(
-                            context.getString(errorResId, error.message ?: "Unknown error"),
-                            false
-                        )
+                        if (error !is kotlinx.coroutines.CancellationException) {
+                            onError(error.message ?: "Unknown error")
+                            KeyboardSwitcher.getInstance().showToast(
+                                context.getString(errorResId, error.message ?: "Unknown error"), false
+                            )
+                        }
                     }
                 )
             }
@@ -420,12 +422,12 @@ object ProofreadHelper {
                         val missingNames = missingModels.joinToString(", ") { getLanguageDisplayName(context, it) }
                         val errorMsg = context.getString(R.string.translation_specific_model_not_downloaded, missingNames)
                         if (isOfflineOnly || !hasAiConfigured) {
-                            mainHandler.post {
+                            postAiFeedback {
                                 KeyboardSwitcher.getInstance().showToast(errorMsg, true)
                             }
                             return@performAsyncOperation Result.failure(Exception(errorMsg))
                         } else {
-                            mainHandler.post {
+                            postAiFeedback {
                                 KeyboardSwitcher.getInstance().showToast(
                                     context.getString(R.string.translation_switching_to_ai, missingNames),
                                     false
@@ -444,7 +446,7 @@ object ProofreadHelper {
                         } else if (isOfflineOnly || !hasAiConfigured) {
                             Result.failure(Exception("Plugin translation returned empty result"))
                         } else {
-                            mainHandler.post {
+                            postAiFeedback {
                                 KeyboardSwitcher.getInstance().showToast(
                                     context.getString(R.string.translation_plugin_fallback_to_ai),
                                     false
@@ -454,10 +456,11 @@ object ProofreadHelper {
                             service.translate(text)
                         }
                     } catch (e: Throwable) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         if (isOfflineOnly || !hasAiConfigured) {
                             Result.failure(e)
                         } else {
-                            mainHandler.post {
+                            postAiFeedback {
                                 KeyboardSwitcher.getInstance().showToast(
                                     context.getString(R.string.translation_plugin_fallback_to_ai),
                                     false
@@ -468,7 +471,7 @@ object ProofreadHelper {
                         }
                     }
                 } else if (isOfflineOnly || !hasAiConfigured) {
-                    mainHandler.post {
+                    postAiFeedback {
                         KeyboardSwitcher.getInstance().showToast(
                             context.getString(R.string.translation_model_not_downloaded),
                             true
@@ -477,7 +480,7 @@ object ProofreadHelper {
                     Result.failure(Exception("Translation plugin not available"))
                 } else {
                     if (!isOnlineOnly) {
-                        mainHandler.post {
+                        postAiFeedback {
                             KeyboardSwitcher.getInstance().showToast(
                                 context.getString(R.string.translation_plugin_fallback_to_ai),
                                 false

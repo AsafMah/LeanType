@@ -1,6 +1,13 @@
 # Spacing Policy
 
-**Status:** design spec. Epic [#14]; implementation tracked in [#23] (B6b), [#24] (B6a), [#25] (B6c/C1), [#26] (tuning panel).
+**Status:** historical design proposal, not a current implementation description. Epic [#14]; implementation tracked in [#23] (B6b), [#24] (B6a), [#25] (B6c/C1), [#26] (tuning panel).
+
+**2026-09-06 implementation note:** deferred combining spaces are already available behind
+`PREF_SPACING_DEFER_GRACE_SPACE` in `InputLogic.onCombiningGraceExpired`; the default eager
+path remains. The assisted/adaptive policy below is not implemented. Its unused
+`complete`/`prefixRichScore` calculation has been removed instead of running on each
+suggestion update without a consumer. The live combining timer is unchanged. Line numbers,
+sequencing and the native replay-harness claim below are historical, not current evidence.
 
 Goal: rethink autospace/grace as a **per-word spacing *policy*** driven by word-state signals already computed every keystroke — not a fixed timer — with an opt-in "Assisted" tier, decoupled commit-from-space, and adaptive per-posture cadence. Feel-driven: every knob is a live, on-device-tunable experimental setting; **never hardcode a feel decision**.
 

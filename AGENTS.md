@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Overview
-LeanType is an Android keyboard (an `InputMethodService` app), forked from HeliBoard/OpenBoard/AOSP LatinIME. On top of the upstream keyboard it adds AI proofreading & translation (cloud and on-device ONNX), Nintype-style two-thumb typing, custom AI toolbar keys, and a floating keyboard. The legacy input engine is **Java**; newer logic, settings, and AI code are **Kotlin**. Settings UI is **Jetpack Compose**. A native **C++** engine (under `app/src/main/jni/`) does dictionary lookup and gesture/glide scoring.
+LeanTypeDual is an Android keyboard (an `InputMethodService` app), forked from LeanBitLab/LeanType and ultimately HeliBoard/OpenBoard/AOSP LatinIME. Its main fork addition is Nintype-style two-thumb typing. AI, OCR, handwriting and the floating keyboard are inherited upstream features, not evidence of fork authorship. The legacy input engine is **Java**; newer logic, settings, and AI code are **Kotlin**. Settings UI is **Jetpack Compose**. The bundled native **C++** engine (under `app/src/main/jni/`) handles dictionaries; gesture recognition requires a separately supplied compatible native library.
 
 **Fork lineage & "upstream":** the chain is HeliBoard (`Helium314/HeliBoard`, the original) → **`LeanBitLab/LeanType`** (a fork of HeliBoard) → **this repo, `AsafMah/LeanType`** (a fork of LeanBitLab/LeanType). When the maintainer says **"upstream" they mean `LeanBitLab/LeanType`** (`upstream/main`) — NOT HeliBoard. This fork ships as its own distinct, installable app, **"LeanTypeDual"** (its own `applicationId`, so it installs *alongside* the upstream LeanType instead of colliding with it). "Make it distinct" therefore means distinct from `LeanBitLab/LeanType`, not from HeliBoard.
 
@@ -24,7 +24,7 @@ Strict **view → logic → engine** split.
 - `app/src/main/jni/` — native C++ dictionary/suggestion engine (`Android.mk`, `ndkBuild`)
 - `app/src/main/assets/layouts/` — layout files (subfolders are `LayoutType`: `main/`, `symbols/`, `functional/`)
 - `app/src/main/assets/locale_key_texts/` — per-locale popup keys (`en.txt`, …)
-- `app/src/{standard,offline,offlinelite}/` — flavor-only sources (e.g. three `ProofreadService.kt` impls)
+- `app/src/{standard,offline}/` — cloud and plugin-based offline sources; `standardfull` reuses standard sources. The retired offlinelite source set is forbidden by the product gate.
 - `app/src/test/` — JVM unit tests · `docs/` · `tools/`
 
 ## Development Commands
@@ -32,12 +32,12 @@ Requires **JDK 17 or 21** and the Android SDK. On Windows use `gradlew.bat` and 
 
 ```bash
 # Build an APK (per flavor)
-./gradlew :app:assembleStandardDebug        # also assembleOfflineDebug, assembleOfflineliteDebug
+./gradlew :app:assembleStandardDebug        # also assembleStandardfullDebug, assembleOfflineDebug
 # Fast CI compile check (no APK) — what PR CI runs
 ./gradlew compileOfflineRunTestsKotlin
 # Fast fork-identity/product gate (run before and after upstream merges)
 python tools/check_fork_invariants.py
-# Packaged release gate (after all four release APKs are assembled)
+# Packaged release gate (after all three release APKs are assembled)
 python tools/check_apk_invariants.py --apk-dir app/build/outputs/apk
 # Unit tests for one flavor
 ./gradlew :app:testOfflineDebugUnitTest
@@ -62,7 +62,7 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.7-hotspot"
   5. `settings/screens/<Screen>.kt` — a `Setting{…}` entry added to the screen list
   `SettingsContainer` auto-aggregates the per-screen lists.
 - **State / config access:** `Settings.getValues()` returns a cached `SettingsValues` (read once, not per keystroke). Some cross-pointer state is `static` in `PointerTracker` (`sInGesture`, aggregated pointers).
-- **Flavor isolation:** prefer **source-set separation** (`app/src/standard` vs `offline` vs `offlinelite`) over `BuildConfig.FLAVOR` checks. **Never** add the `INTERNET` permission to the `offline`/`offlinelite` manifests — all network activity is `standard`-only and opt-in.
+- **Flavor isolation:** prefer **source-set separation** (`app/src/standard` vs `offline`) over `BuildConfig.FLAVOR` checks. **Never** add the `INTERNET` permission to the `offline` manifest. Network features are opt-in and standard/standardfull-only; Offline retains manual plugin/dictionary import.
 - **Performance:** the key-input and suggestion paths run on the main thread; avoid allocations in hot paths.
 - **IME dialogs:** an `AlertDialog` `EditText` cannot reliably receive typed input inside the IME process — intercept `onCodeInput`/`onTextInput` into a `TextView` instead (see clipboard/emoji search modes).
 
@@ -71,7 +71,7 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.7-hotspot"
 - Input core: `latin/inputlogic/InputLogic.java`, `keyboard/PointerTracker.java`, `latin/RichInputConnection.java`
 - Dictionaries / suggestions: `latin/DictionaryFacilitatorImpl.kt`, `latin/Suggest.kt`, `app/src/main/jni/`
 - Settings: `latin/settings/Settings.java`, `Defaults.kt`, `SettingsValues.java`, `settings/screens/*.kt`
-- Flavor AI: `app/src/standard/.../ProofreadService.kt` (Gemini), `app/src/offline/.../ProofreadService.kt` (ONNX)
+- Flavor AI: `app/src/standard/.../ProofreadService.kt` (cloud providers), `app/src/offline/.../ProofreadService.kt` (upstream Offline AI plugin)
 - Build: `app/build.gradle.kts`, `build.gradle.kts`, `gradle.properties`, `app/proguard-rules.pro`
 - Docs: `docs/FEATURES.md`, `docs/TWO_THUMB_TYPING_INTERNALS.md`, `docs/IMPROVEMENT_PLAN.md`, `layouts.md`, `CONTRIBUTING.md`
 
@@ -81,16 +81,16 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.7-hotspot"
 - **Native:** ABIs `armeabi-v7a`, `arm64-v8a`; built via `ndkBuild` (`app/src/main/jni/Android.mk`).
 - **Flavors** (dimension `privacy`, appId base `com.asafmah.leantypedual`):
   - `standard` — cloud AI (Gemini, `generativeai`), has `INTERNET`.
-  - `standardfull` — cloud AI plus handwriting, has `INTERNET`.
-  - `offline` — on-device llama.cpp / GGUF, **no** `INTERNET`; appId `+.offline`, minSdk 26.
-  - `offlinelite` — no AI, smallest; **no** `INTERNET`; appId `+.offlinelite`.
+  - `standardfull` — upstream Full flavor, standard sources and plugin architecture, has `INTERNET`.
+  - `offline` — optional upstream Offline AI plugin / GGUF, **no** `INTERNET`; appId `+.offline`, minSdk 21 (AI requires API 26).
+  All three exclude packaged dictionaries and use upstream's optional plugins. No bundled llama backend, retained Java gesture fallback, or separate offlinelite distribution remains. Existing imported dictionaries, models and preferences are not deleted.
 - **Build types:** `debug` (no minify, `+.debug`), `release` (minify + shrink + signed via `keystore.properties`), `runTests` (CI variant that skips known-failing tests), `debugNoMinify` (fast IDE builds).
 - **CI:** `.github/workflows/build-test-auto.yml` runs `compileOfflineRunTestsKotlin` on PRs touching `app/src/main/java**`; `build-debug-apk.yml` runs `assembleDebug` on manual dispatch. Release chores live in `tools/release.py`.
 
 ## Testing & QA
 - **JVM-only** (no `androidTest`/device): JUnit4 + **Robolectric 4.14.1** (simulates `LatinIME`/`Context`/prefs/key events on the JVM) + **Mockito 5.17.0**. Tests live in `app/src/test/java/helium314/keyboard/`. `testOptions.unitTests.isIncludeAndroidResources = true`.
 - **Run:** `./gradlew :app:testOfflineDebugUnitTest` (add `--tests "*ClassName"` for one class).
-- **Upstream-merge gates:** run `python tools/check_fork_invariants.py` before and after resolving an upstream merge. Unit-test CI uses it as a fast source/configuration prefilter and fails with the specific LeanTypeDual invariant that was lost. Release CI also runs `tools/check_apk_invariants.py` after assembling all four APKs to verify the effective package IDs, minSdk values, INTERNET permissions, recursive dictionary contents, and exact artifact set. Their fixture/mutation tests run via `python -m unittest discover -s tools/tests`.
+- **Upstream-merge gates:** run `python tools/check_fork_invariants.py` before and after resolving an upstream merge. The gate protects identity, privacy and dual-thumb integration while rejecting retired backends/distributions. Release CI runs `tools/check_apk_invariants.py` after assembling all three APKs to verify effective package IDs, minSdk values, INTERNET permissions, absence of bundled dictionaries, and the exact artifact set. Their fixture/mutation tests run via `python -m unittest discover -s tools/tests`.
 - **Key tests:** `InputLogicTest.kt` (typing/autocorrect/combining-mode/Hangul), `SuggestTest.kt`, `WordComposerTest.java`, `DictionaryGroupTest.kt` (reflection + Mockito on the package-internal `DictionaryGroup`), `SettingsContainerTest.kt` (settings wiring), `KeyboardParserTest.kt`, `ClipboardDaoTest.kt`.
 - **Conventions:** `@Test`; method names use camelCase or backtick form; obtain `Context` via Robolectric; package-internal classes are exercised via reflection (`Class.forName(...).declaredConstructors`).
 - **Known failures:** the full debug unit suite has ~11 pre-existing failures (in `KeyboardParserTest`, `XLinkTest`, `StringUtilsTest` emoji, and `InputLogicTest` Hangul/autocorrect-revert/autospace-indicator) that are environment/data-dependent and usually unrelated to a change. The `runTests` build type exists to skip these on CI. **Verify a change by diffing failures against an `origin/main` baseline run, not by absolute pass count.**

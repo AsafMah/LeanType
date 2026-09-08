@@ -110,12 +110,27 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
         else  ContextCompat.getColor(context, android.R.color.system_neutral1_0)
     private fun getFunctionalKey(context: Context) = if (isNight(context)) ContextCompat.getColor(context, android.R.color.system_accent2_300)
         else ContextCompat.getColor(context, android.R.color.system_accent2_200)
-    private fun getKeyText(context: Context) = if (isNight(context)) ContextCompat.getColor(context, android.R.color.system_neutral1_50)
-        else ContextCompat.getColor(context, android.R.color.system_accent3_900)
-    private fun getKeyHintText(context: Context) = if (isNight(context)) getKeyText(context)
-        else ContextCompat.getColor(context, android.R.color.system_accent3_700)
+    private fun getKeyText(context: Context): Int {
+        val keyBg = getKeyBackground(context)
+        if (isNight(context)) {
+            val color = ContextCompat.getColor(context, android.R.color.system_neutral1_50)
+            return if (ColorUtils.calculateContrast(color, keyBg) < 4.5) Color.WHITE else color
+        } else {
+            val color = ContextCompat.getColor(context, android.R.color.system_accent3_900)
+            return if (ColorUtils.calculateContrast(color, keyBg) < 4.5) ContextCompat.getColor(context, android.R.color.system_neutral1_900) else color
+        }
+    }
+    private fun getKeyHintText(context: Context): Int {
+        val keyBg = getKeyBackground(context)
+        if (isNight(context)) {
+            return getKeyText(context)
+        } else {
+            val color = ContextCompat.getColor(context, android.R.color.system_accent3_700)
+            return if (ColorUtils.calculateContrast(color, keyBg) < 3.0) ContextCompat.getColor(context, android.R.color.system_neutral1_700) else color
+        }
+    }
     private fun getSpaceBarText(context: Context) = if (isNight(context)) ColorUtils.setAlphaComponent(ContextCompat.getColor(context, android.R.color.system_neutral1_50), 127)
-        else ColorUtils.setAlphaComponent(ContextCompat.getColor(context, android.R.color.system_accent3_700), 127)
+        else ColorUtils.setAlphaComponent(getKeyText(context), 127)
 
     override fun haveColorsChanged(context: Context) =
         accent != getAccent(context)

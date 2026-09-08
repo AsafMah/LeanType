@@ -156,6 +156,16 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_VIBRATION_AMPLITUDE_SETTINGS = "vibration_amplitude_settings";
     public static final String PREF_KEYPRESS_SOUND_VOLUME = "keypress_sound_volume";
     public static final String PREF_KEYPRESS_SOUND_STYLE = "keypress_sound_style";
+    public static final String PREF_SOUND_PITCH_SCALE = "sound_pitch_scale";
+    public static final String PREF_SOUND_RANDOM_PITCH = "sound_random_pitch";
+    public static final String PREF_SOUND_STEREO_PAN = "sound_stereo_pan";
+    public static final String PREF_SOUND_DYNAMIC_VELOCITY = "sound_dynamic_velocity";
+    public static final String PREF_SOUND_MUTE_IN_SILENT = "sound_mute_in_silent";
+    public static final String PREF_SOUND_MUTE_IN_DND = "sound_mute_in_dnd";
+    public static final String PREF_SOUND_VOL_SPACE = "sound_vol_space";
+    public static final String PREF_SOUND_VOL_DELETE = "sound_vol_delete";
+    public static final String PREF_SOUND_VOL_ENTER = "sound_vol_enter";
+    public static final String PREF_SOUND_VOL_MODIFIERS = "sound_vol_modifiers";
     public static final String PREF_KEY_LONGPRESS_TIMEOUT = "key_longpress_timeout";
     public static final String PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = "enable_emoji_alt_physical_key";
     public static final String PREF_GESTURE_PREVIEW_TRAIL = "gesture_preview_trail";
@@ -165,17 +175,12 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GESTURE_SPACE_AWARE = "gesture_space_aware";
     public static final String PREF_GESTURE_FAST_TYPING_COOLDOWN = "gesture_fast_typing_cooldown";
     public static final String PREF_GESTURE_TRAIL_FADEOUT_DURATION = "gesture_trail_fadeout_duration";
-    // Two-thumb typing prefs (behaviour is wired in follow-up changes; defaults preserve current behaviour).
+    // Two-thumb typing preferences.
     public static final String PREF_GESTURE_MANUAL_SPACING = "gesture_manual_spacing";
     public static final String PREF_GESTURE_FRAGMENT_BACKSPACE = "gesture_fragment_backspace";
-    public static final String PREF_GESTURE_AUTOSPACE_GRACE_MS = "gesture_autospace_grace_ms";
-    public static final String PREF_GESTURE_TAP_PROMOTION_MS = "gesture_tap_promotion_ms";
     public static final String PREF_GESTURE_DUAL_THUMB_HINTING = "gesture_dual_thumb_hinting";
-    public static final String PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT = "gesture_dual_thumb_midline_pct";
     public static final String PREF_GESTURE_DEBUG_DRAW_POINTS = "gesture_debug_draw_points";
     public static final String PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS = "gesture_debug_accumulate_fragments";
-    public static final String PREF_GESTURE_APOSTROPHE_KEY = "gesture_apostrophe_key";
-    public static final String PREF_AUTOSPACE_VISUAL_HINT = "autospace_visual_hint";
     // Unified "combining-mode" model: after every composing-word-extending event (tap OR
     // gesture), wait this many milliseconds; any new tap/gesture within the window EXTENDS
     // the same composing word, anything else (or expiry) commits + autospaces. 0 disables.
@@ -212,7 +217,6 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // When a swipe starts while combining mode is armed AND a composing word already exists,
     // prepend a synthetic input point at the tail of the composing word so the gesture
     // recognizer treats it as a continuation. Helps tap-then-swipe joins land sensibly.
-    public static final String PREF_MULTIPART_TAP_SEED_GESTURE = "multipart_tap_seed_gesture";
     // Live-converge (opt-in): while building a word that already contains a swipe, route a
     // tapped letter through the gesture recognizer together with the accumulated stroke and
     // re-recognize the whole word, instead of literally appending it to a (possibly
@@ -264,12 +268,14 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_OFFLINE_MAX_TOKENS = "offline_max_tokens";
     public static final String PREF_OFFLINE_KEEP_MODEL_LOADED = "offline_keep_model_loaded";
     public static final String PREF_AI_ALLOW_INSECURE_CONNECTIONS = "ai_allow_insecure_connections";
+    public static final String PREF_CLOUD_AI_MAX_TOKENS = "cloud_ai_max_tokens";
 
     public static final String PREF_ENABLE_CLIPBOARD_HISTORY = "enable_clipboard_history";
     public static final String PREF_SUGGEST_SCREENSHOTS = "suggest_screenshots";
     public static final String PREF_COMPRESS_SCREENSHOTS = "compress_screenshots";
     public static final String PREF_AUTO_READ_OTP = "auto_read_otp";
     public static final String PREF_OTP_ALLOWED_SMS_PACKAGE = "otp_allowed_sms_package";
+    public static final String PREF_INLINE_MATH_CALCULATION = "pref_inline_calculator_suggestions";
     public static final String PREF_CLIPBOARD_HISTORY_RETENTION_TIME = "clipboard_history_retention_time";
     public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
     public static final String PREF_CLIPBOARD_FOLD_PINNED = "clipboard_fold_pinned";
@@ -443,6 +449,24 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     public void stopListener() {
         mPrefs.unregisterOnSharedPreferenceChangeListener(this);
+    }
+
+    /** Refresh a bulk import without losing the current editor, locale, or keyboard script. */
+    public void reloadSettings() {
+        mSettingsValuesLock.lock();
+        try {
+            ToolbarUtilsKt.clearCustomToolbarKeyCodes();
+            if (mSettingsValues == null) {
+                loadSettings(mContext);
+            } else {
+                loadSettings(mContext, mSettingsValues.mLocale, mSettingsValues.mInputAttributes,
+                        mSettingsValues.mCurrentKeyboardScript);
+            }
+            StatsUtils.onLoadSettings(mSettingsValues);
+            helium314.keyboard.latin.LatinIME.sSettingsDirty = true;
+        } finally {
+            mSettingsValuesLock.unlock();
+        }
     }
 
     public void startListener() {

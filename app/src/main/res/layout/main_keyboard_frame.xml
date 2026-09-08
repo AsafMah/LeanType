@@ -38,6 +38,12 @@
         <include
             android:id="@+id/handwriting_view"
             layout="@layout/handwriting_view" />
+        <include
+            android:id="@+id/ocr_camera_view"
+            layout="@layout/ocr_camera_view" />
+        <include
+            android:id="@+id/ocr_result_view"
+            layout="@layout/ocr_result_view" />
         <helium314.keyboard.keyboard.TouchpadView
             android:id="@+id/touchpad_view"
             android:layout_width="match_parent"

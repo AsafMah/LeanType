@@ -126,14 +126,6 @@
     <string name="add_to_dictionary">Add to dictionary</string>
     <!-- Action: permanently block the long-pressed word from suggestions -->
     <string name="block_word">Block word</string>
-    <!-- Title of the blocklist settings screen, listing words blocked from suggestions -->
-    <string name="blocklist">Blocklist</string>
-    <!-- Description for the blocklist settings entry -->
-    <string name="blocklist_summary">View and remove words you have blocked from suggestions</string>
-    <!-- Shown when a locale has no blocked words -->
-    <string name="blocklist_empty">No blocked words</string>
-    <!-- Content description for the button that removes a word from the blocklist -->
-    <string name="blocklist_remove">Remove from blocklist</string>
     <!-- Option name for threshold before adding words to personal dictionary -->
     <string name="add_to_personal_dict_threshold">Learning threshold</string>
     <string name="add_to_personal_dict_threshold_times_1">Add after typing 1 time</string>
@@ -315,32 +307,16 @@
     <string name="gesture_fragment_backspace">Backspace removes last fragment</string>
     <!-- Description for "gesture_fragment_backspace". -->
     <string name="gesture_fragment_backspace_summary">In manual-spacing mode, backspace removes the most recent swipe instead of one character</string>
-    <!-- Title of the setting that adds a small grace period after the last finger lifts during which a new touch is treated as a continuation of the same gesture. -->
-    <string name="gesture_autospace_grace">Autospace grace period</string>
     <!-- Text shown when the autospace grace period is zero (disabled). -->
     <string name="gesture_autospace_grace_off">Off</string>
-    <!-- Title of the setting that lets a tap on a letter, immediately followed by a swipe, become a single combined gesture. -->
-    <string name="gesture_tap_promotion">Tap-then-swipe window</string>
-    <!-- Description for "gesture_tap_promotion". -->
-    <string name="gesture_tap_promotion_summary">Allow a tap followed by a quick swipe to combine into one word</string>
     <!-- Title of the experimental setting that reweights tap points from one thumb when the other thumb is actively swiping. -->
     <string name="gesture_dual_thumb_hinting">Two-thumb point hinting (experimental)</string>
     <!-- Description for "gesture_dual_thumb_hinting". -->
     <string name="gesture_dual_thumb_hinting_summary">Improve recognition when one thumb taps while the other swipes</string>
-    <!-- Title of the slider that picks where the keyboard is split between left and right hand. -->
-    <string name="gesture_dual_thumb_midline">Left/right hand split</string>
     <!-- Title of the setting that overlays, on the keyboard, what the gesture recognizer saw and chose. -->
     <string name="gesture_debug_draw_points">Typing insight</string>
     <!-- Description for "gesture_debug_draw_points". -->
     <string name="gesture_debug_draw_points_summary">Show what the keyboard saw and chose as you type: the gesture trail, where taps landed, a tick when a tap joins a swipe, and the word it picked.</string>
-    <!-- Title of the setting that enables an apostrophe key dedicated for gesture typing of contractions. -->
-    <string name="gesture_apostrophe_key">Apostrophe key for gestures</string>
-    <!-- Description for "gesture_apostrophe_key". -->
-    <string name="gesture_apostrophe_key_summary">Show a swipeable apostrophe key so contractions like "it\'s" can be glided in one stroke</string>
-    <!-- Title of the setting that enables a brief visual flash on the space key whenever an automatic space is inserted. -->
-    <string name="autospace_visual_hint">Flash space key on auto-space</string>
-    <!-- Description for "autospace_visual_hint". -->
-    <string name="autospace_visual_hint_summary">Briefly highlight the space bar each time an automatic space is inserted</string>
     <!-- Title of the unified combining-mode grace setting. -->
     <string name="combining_grace">Combining grace period</string>
     <!-- Description of the unified combining-mode grace setting. -->
@@ -381,8 +357,6 @@
     <string name="two_thumb_multi_part_words_summary">During the countdown, the next tap or swipe extends the current word instead of starting a new one (tech + nology → technology).</string>
     <string name="multipart_full_word_suggestions">Suggestions for full composing word</string>
     <string name="multipart_full_word_suggestions_summary">During multi-part composition, the suggestion strip shows alternatives for the entire word so far, not just the most recent fragment.</string>
-    <string name="multipart_tap_seed_gesture">Seed swipe from typed prefix</string>
-    <string name="multipart_tap_seed_gesture_summary">When you type some letters and then swipe while combining mode is armed, treat the swipe as a continuation of the typed prefix.</string>
     <!-- Title of the experimental setting that re-recognizes a whole swiped+tapped word when a tap follows a swipe. -->
     <string name="multipart_rerecognize_taps">Re-recognize taps within swiped words</string>
     <!-- Description for "multipart_rerecognize_taps". -->
@@ -529,6 +503,80 @@
     <string name="load_offline_ai_plugin_button_delete">Delete plugin</string>
     <string name="load_offline_ai_plugin_success">Offline AI plugin imported successfully</string>
     <string name="load_offline_ai_plugin_failed">Failed to load Offline AI plugin APK</string>
+    <!-- Preferences item for loading an external OCR plugin -->
+    <string name="ocr">Text Recognition (OCR)</string>
+    <string name="ocr_title">Text Recognition (OCR)</string>
+    <string name="ocr_settings_title">Text Recognition Settings</string>
+    <string name="ocr_settings_summary">Extract text from camera and screenshots offline</string>
+    <string name="load_ocr_plugin">Load OCR plugin</string>
+    <string name="load_ocr_plugin_summary">Provide an APK plugin to enable on-device text recognition</string>
+    <string name="load_ocr_plugin_button_delete">Delete plugin</string>
+    <string name="load_ocr_plugin_success">OCR plugin imported successfully</string>
+    <string name="load_ocr_plugin_failed">Failed to load OCR plugin APK</string>
+    <string name="ocr_plugin_required_title">OCR Plugin Required</string>
+    <string name="ocr_plugin_required_summary">Install the Text Recognition plugin APK to enable camera and screenshot OCR.</string>
+    <string name="ocr_plugin_open_settings">Open OCR Settings</string>
+    <string name="ocr_result_title">Extracted Text</string>
+    <string name="ocr_insert_button">Insert Text</string>
+    <string name="ocr_retake_button">Retake</string>
+    <string name="ocr_screenshot_button_desc">Extract text from latest screenshot</string>
+    <string name="ocr_flash_button_desc">Toggle camera flash</string>
+    <string name="ocr_shutter_button_desc">Capture text from camera</string>
+    <string name="ocr_camera_permission_required">Camera permission is required for OCR viewfinder</string>
+    <string name="ocr_camera_start_error">Unable to start camera viewfinder</string>
+    <string name="ocr_no_screenshot_found">No recent screenshot found</string>
+    <string name="ocr_screenshot_load_failed">Failed to load screenshot image</string>
+    <string name="ocr_no_text_detected">No text detected</string>
+    <string name="ocr_processing_text">Recognizing text…</string>
+    <string name="ocr_keep_line_breaks">Preserve line breaks</string>
+    <string name="ocr_keep_line_breaks_summary">Keep line breaks in recognized text blocks</string>
+    <string name="ocr_suggest_screenshot_text">Suggest text extraction from screenshots</string>
+    <string name="ocr_suggest_screenshot_text_summary">Show OCR text extraction option alongside screenshot suggestions (requires \"Suggest recent screenshots\" to be enabled)</string>
+    <string name="ocr_trim_whitespace">Trim extra whitespace</string>
+    <string name="ocr_trim_whitespace_summary">Strip leading and trailing spaces from recognized text lines</string>
+    <string name="ocr_casing_title">Text capitalization</string>
+    <string name="ocr_casing_as_is">As recognized (Original)</string>
+    <string name="ocr_casing_sentence">Sentence case</string>
+    <string name="ocr_casing_lower">lowercase</string>
+    <string name="ocr_casing_upper">UPPERCASE</string>
+    <string name="ocr_casing_title_case">Title Case (Capitalize Words)</string>
+    <string name="ocr_line_join_title">Line join format</string>
+    <string name="ocr_line_join_newline">Line breaks (Default)</string>
+    <string name="ocr_line_join_space">Single space</string>
+    <string name="ocr_line_join_comma">Comma &amp; space (, )</string>
+    <string name="ocr_line_join_bullet">Bullet points (• )</string>
+    <string name="ocr_line_join_numbered">Numbered list (1. 2. 3.)</string>
+    <string name="ocr_dehyphenate">De-hyphenate broken words</string>
+    <string name="ocr_dehyphenate_summary">Rejoin words split across line breaks by hyphens</string>
+    <string name="ocr_normalize_punctuation">Normalize punctuation &amp; quotes</string>
+    <string name="ocr_normalize_punctuation_summary">Convert smart quotes to standard quotes and fix punctuation spacing</string>
+    <string name="ocr_strip_bullets">Strip list bullets &amp; markers</string>
+    <string name="ocr_strip_bullets_summary">Remove leading bullets, checkboxes, dashes, and numbers from extracted lines</string>
+    <string name="ocr_remove_noise">Filter stray noise characters</string>
+    <string name="ocr_remove_noise_summary">Discard isolated punctuation marks or single non-letter artifacts</string>
+    <string name="ocr_auto_copy">Auto-copy to clipboard</string>
+    <string name="ocr_auto_copy_summary">Automatically copy recognized text to system clipboard upon extraction</string>
+    <string name="ocr_auto_insert">Auto-insert into input field</string>
+    <string name="ocr_auto_insert_summary">Automatically insert extracted text directly into the active text field</string>
+    <string name="ocr_persist_flash">Remember flash state</string>
+    <string name="ocr_persist_flash_summary">Keep flashlight torch on or off across viewfinder sessions</string>
+    <string name="ocr_script_title">Recognition script</string>
+    <string name="ocr_script_all">Universal (All scripts: Devanagari, Asian &amp; Latin)</string>
+    <string name="ocr_script_devanagari">Devanagari (Hindi, Marathi, Sanskrit, Nepali)</string>
+    <string name="ocr_script_latin">Latin (English, Spanish, French, etc.)</string>
+    <string name="ocr_script_chinese">Chinese</string>
+    <string name="ocr_script_japanese">Japanese</string>
+    <string name="ocr_script_korean">Korean</string>
+    <string name="ocr_plugin_category">Plugin management</string>
+    <string name="ocr_permissions_category">Permissions</string>
+    <string name="ocr_camera_permission">Camera permission</string>
+    <string name="ocr_camera_permission_granted">Permission granted</string>
+    <string name="ocr_camera_permission_desc">Tap to grant camera permission for in-keyboard viewfinder</string>
+    <string name="ocr_text_options_category">Text extraction &amp; formatting</string>
+    <string name="ocr_workflow_category">Workflow &amp; automation</string>
+    <string name="ocr_camera_category">Camera &amp; viewfinder</string>
+    <string name="screenshot">Screenshot</string>
+    <string name="ocr_extract_text_button">Extract Text</string>
     <string name="handwriting">Handwriting</string>
     <string name="delete_handwriting_model">Delete downloaded model</string>
     <string name="handwriting_model_deleted">Handwriting model deleted</string>
@@ -582,6 +630,8 @@
     <string name="undo_word">Undo word</string>
     <string name="text_edit">Text editing</string>
     <string name="select_mode">Select mode</string>
+    <string name="pref_inline_calculator_suggestions">Inline math calculation</string>
+    <string name="pref_inline_calculator_suggestions_summary">Suggest calculated results as you type (e.g. 25*4=)</string>
     <string name="touchpad_fullscreen">Full-screen touchpad</string>
     <string name="touchpad_fullscreen_summary">Hide suggestion strip and toolbar when touchpad mode is active</string>
     <!-- Description for "prefs_force_incognito_mode" option. -->
@@ -703,6 +753,8 @@
     <string name="proofread_error">Proofreading failed: %s</string>
     <string name="proofread_no_text">No text to proofread</string>
     <string name="proofread_no_api_key">Gemini API key not set. Go to Settings → AI integration.</string>
+    <string name="ai_output_truncated">AI output was cut off before completion. Original text kept.</string>
+    <string name="ai_editor_unavailable">Could not read or select text in this app. No text was changed.</string>
     <string name="gemini_api_key_title">Gemini API Key</string>
     <string name="gemini_api_key_summary">Enter your Google Gemini API key for proofreading</string>
     <string name="gemini_api_key_hint">Enter API key</string>
@@ -913,10 +965,10 @@
     <string name="quick_pin_toolbar_keys">Pin toolbar key on long press</string>
     <!-- Description of the setting to quick-pin toolbar keys -->
     <string name="quick_pin_toolbar_keys_summary">This will disable other long press actions for toolbar keys that are not pinned</string>
-    <!-- Title of the setting to show long-press hint dots on toolbar keys -->
-    <string name="toolbar_long_press_hint">Show long-press hint dots</string>
-    <!-- Description of the setting to show long-press hint dots on toolbar keys -->
-    <string name="toolbar_long_press_hint_summary">Show dots on toolbar keys that have a long-press action</string>
+    <!-- Title of the setting to show long-press hint pills on toolbar keys -->
+    <string name="toolbar_long_press_hint">Show long-press hint pills</string>
+    <!-- Description of the setting to show long-press hint pills on toolbar keys -->
+    <string name="toolbar_long_press_hint_summary">Show pills on toolbar keys that have a long-press action</string>
     <!-- Title of the setting to show "..." as hints for more functionality on long-press -->
     <string name="show_popup_hints">Show functional hints</string>
     <!-- Description of the show_popup_hints setting -->
@@ -1137,7 +1189,26 @@ language, hence "No language". -->
     <string name="prefs_keypress_sound_style_settings">Keypress sound style</string>
     <string name="prefs_keypress_sound_style_system">System default</string>
     <string name="prefs_keypress_sound_style_dialog_title">Keypress Sound Style</string>
+    <string name="sound_packs_title">Keypress Audio</string>
     <string name="sound_pack_import_button">Import Sound Pack</string>
+    <string name="prefs_sound_acoustics_category">Acoustics &amp; Playback</string>
+    <string name="prefs_sound_pitch_scale">Pitch Shift</string>
+    <string name="prefs_sound_random_pitch">Random pitch variation</string>
+    <string name="prefs_sound_random_pitch_summary">Subtle micro-pitch variations per keystroke to prevent repetitive audio fatigue</string>
+    <string name="prefs_sound_stereo_pan">Spatial stereo panning</string>
+    <string name="prefs_sound_stereo_pan_summary">Pans audio left or right based on key position across the keyboard</string>
+    <string name="prefs_sound_dynamic_velocity">Dynamic typing velocity</string>
+    <string name="prefs_sound_dynamic_velocity_summary">Subtly accentuates volume during fast typing bursts</string>
+    <string name="prefs_sound_system_category">System &amp; Profiles</string>
+    <string name="prefs_sound_mute_in_silent">Mute in silent/vibrate mode</string>
+    <string name="prefs_sound_mute_in_silent_summary">Suppress keypress sound when device ringer is set to silent or vibrate</string>
+    <string name="prefs_sound_mute_in_dnd">Mute in Do Not Disturb</string>
+    <string name="prefs_sound_mute_in_dnd_summary">Suppress keypress sound when Do Not Disturb is active</string>
+    <string name="prefs_sound_balance_category">Key Sound Balance</string>
+    <string name="prefs_sound_vol_space">Spacebar volume</string>
+    <string name="prefs_sound_vol_delete">Backspace volume</string>
+    <string name="prefs_sound_vol_enter">Enter key volume</string>
+    <string name="prefs_sound_vol_modifiers">Modifiers volume (Shift &amp; Symbols)</string>
     <!-- Title of the setting for key long press delay -->
     <string name="prefs_key_longpress_timeout_settings">Key long press delay</string>
     <!-- Title of the setting for overriding Android SDK level for showing emojis -->
@@ -1628,6 +1699,22 @@ New dictionary:
         <item>32</item>
         <item>64</item>
         <item>128</item>
+    </string-array>
+    <string name="cloud_ai_max_tokens_title">Cloud AI Max Tokens</string>
+    <string name="cloud_ai_max_tokens_summary">Maximum length of AI generated responses</string>
+    <string name="cloud_ai_max_tokens_custom_option">Custom…</string>
+    <string name="cloud_ai_max_tokens_custom_desc">Custom (%1$d tokens)</string>
+    <string-array name="cloud_ai_max_tokens_entries">
+        <item>Compact (1024 tokens)</item>
+        <item>Standard (2048 tokens)</item>
+        <item>Large (4096 tokens)</item>
+        <item>Extra Large (8192 tokens)</item>
+    </string-array>
+    <string-array name="cloud_ai_max_tokens_values" translatable="false">
+        <item>1024</item>
+        <item>2048</item>
+        <item>4096</item>
+        <item>8192</item>
     </string-array>
     <!-- Toast message shown when image pasting is not supported by the app -->
     <string name="image_pasting_not_supported">This app does not support image pasting</string>

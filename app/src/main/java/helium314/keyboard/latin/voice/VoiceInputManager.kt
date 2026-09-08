@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
@@ -155,9 +156,7 @@ class VoiceInputManager(
     }
 
     private fun initiateSessionHandshake(sessionId: String) {
-        if (state == VoiceState.CONNECTING_PLUGIN) {
-            updateState(VoiceState.STARTING_SESSION)
-        }
+        updateState(VoiceState.STARTING_SESSION)
 
         val pipe: Array<ParcelFileDescriptor>
         try {
@@ -278,7 +277,16 @@ class VoiceInputManager(
         }
 
         // Start hardware audio capture IMMEDIATELY so the green mic privacy dot appears without IPC delay
-        startAudioRecordingThread()
+        if (!startAudioRecordingThread()) {
+            val audioManager = ims.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+            notifyError(if (audioManager?.isMicrophoneMute == true)
+                "Microphone is muted in system settings"
+            else
+                "Failed to start microphone recording")
+            cleanupSession()
+            updateState(VoiceState.ERROR)
+            return
+        }
 
         try {
             val pfdForPlugin = audioPipeReadSide
@@ -304,6 +312,12 @@ class VoiceInputManager(
             return false
         }
 
+        val audioManager = ims.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+        if (audioManager?.isMicrophoneMute == true) {
+            Log.w(TAG, "startAudioRecordingThread: Microphone is muted in system settings")
+            return false
+        }
+
         val minBufSize = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
@@ -317,38 +331,52 @@ class VoiceInputManager(
         // Multiply by 4 (at least 8192) to prevent hardware buffer overruns during Whisper inference blocks
         val bufferSize = maxOf(minBufSize * 4, FRAME_SIZE_BYTES * 8, 8192)
 
+        val sources = intArrayOf(
+            MediaRecorder.AudioSource.MIC,
+            MediaRecorder.AudioSource.DEFAULT,
+            MediaRecorder.AudioSource.VOICE_RECOGNITION
+        )
         var record: AudioRecord? = null
-        try {
-            record = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSize
-            )
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to create AudioRecord with VOICE_RECOGNITION, trying MIC", e)
-        }
-
-        if (record == null || record.state != AudioRecord.STATE_INITIALIZED) {
+        for (source in sources) {
             try {
-                record?.release()
-                record = AudioRecord(
-                    MediaRecorder.AudioSource.MIC,
-                    SAMPLE_RATE,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    bufferSize
-                )
+                val candidate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val audioFormat = AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(SAMPLE_RATE)
+                        .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+                        .build()
+                    val builder = AudioRecord.Builder()
+                        .setAudioSource(source)
+                        .setAudioFormat(audioFormat)
+                        .setBufferSizeInBytes(bufferSize)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        builder.setContext(ims)
+                    }
+                    builder.build()
+                } else {
+                    AudioRecord(
+                        source,
+                        SAMPLE_RATE,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        bufferSize
+                    )
+                }
+                if (candidate.state == AudioRecord.STATE_INITIALIZED) {
+                    Log.i(TAG, "AudioRecord initialized successfully with source: $source")
+                    record = candidate
+                    break
+                } else {
+                    candidate.release()
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to create AudioRecord with MIC fallback", e)
-                return false
+                Log.w(TAG, "Failed to create AudioRecord with source $source", e)
             }
         }
 
-        if (record.state != AudioRecord.STATE_INITIALIZED) {
-            Log.e(TAG, "AudioRecord failed to initialize (state=${record.state})")
-            record.release()
+        if (record == null || record.state != AudioRecord.STATE_INITIALIZED) {
+            Log.e(TAG, "AudioRecord failed to initialize (state=${record?.state})")
+            record?.release()
             return false
         }
 

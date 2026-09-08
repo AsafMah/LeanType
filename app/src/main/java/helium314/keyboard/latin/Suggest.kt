@@ -11,6 +11,7 @@ import com.android.inputmethod.latin.utils.BinaryDictionaryUtils
 import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
+import helium314.keyboard.latin.calculator.MathEvaluator
 import helium314.keyboard.latin.common.ComposedData
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.InputPointers
@@ -19,7 +20,6 @@ import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_AUTO_CORRECT_USING_NON_WHITE_LISTED_SUGGESTION
 import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_REMOVE_PREVIOUSLY_REJECTED_SUGGESTION
 import helium314.keyboard.latin.dictionary.Dictionary
-import helium314.keyboard.latin.gesture.SwipeGestureEngine
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.suggestions.SuggestionStripView
@@ -27,8 +27,6 @@ import helium314.keyboard.latin.utils.AutoCorrectionUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.SuggestionResults
-import helium314.keyboard.latin.utils.ExecutorUtils
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.Locale
 import kotlin.math.min
 
@@ -41,43 +39,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     private val mPlausibilityThreshold = 0f
     // Use LRU cache with size limit instead of HashMap to avoid clearing and preserve frequently used entries
     // Cache size of 50 should cover most typing scenarios while limiting memory usage
-    private val nextWordSuggestionsCache = object : LruCache<NgramContext, SuggestionResults>(50) {
-        override fun entryRemoved(evicted: Boolean, key: NgramContext, oldValue: SuggestionResults, newValue: SuggestionResults?) {
-            // Optionally log evicted entries for debugging
-        }
-    }
-    // Java fallback index, rebuilt only when keyboard geometry changes.
-    @Volatile private var gestureIndex: SwipeGestureEngine.GestureIndex? = null
-    @Volatile private var gestureIndexFingerprint: Int = 0
-    private val buildingFingerprint = AtomicInteger(0)
-
-    fun buildGestureIndexAsync(keyboard: Keyboard) {
-        if (!Settings.getValues().mGestureInputEnabled) return
-        val fingerprint = SwipeGestureEngine.layoutFingerprint(keyboard)
-        if (fingerprint == 0) return
-        if ((gestureIndex != null && gestureIndexFingerprint == fingerprint)
-            || buildingFingerprint.get() == fingerprint
-        ) return
-        if (!buildingFingerprint.compareAndSet(0, fingerprint)) return
-
-        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
-            try {
-                val index = SwipeGestureEngine.buildIndex(mDictionaryFacilitator, keyboard)
-                gestureIndex = index
-                gestureIndexFingerprint = fingerprint
-            } catch (t: Throwable) {
-                Log.e(TAG, "Failed to build Java gesture index", t)
-                gestureIndex = null
-            } finally {
-                buildingFingerprint.compareAndSet(fingerprint, 0)
-            }
-        }
-    }
-
-    fun recordAccepted(word: String, pointers: InputPointers, keyboard: Keyboard) {
-        SwipeGestureEngine.recordAccepted(word, pointers, keyboard, gestureIndex)
-    }
-
+    private data class CachedNextWords(val revision: Long, val results: SuggestionResults)
+    private val nextWordSuggestionsCache = LruCache<NgramContext, CachedNextWords>(50)
     // Cached scoreLimit to avoid repeated Settings lookups in hot path
     // The read-then-write of (mLastScoreLimitUpdateTime, mCachedScoreLimitForAutocorrect)
     // is guarded by `synchronized(this)` in shouldBeAutoCorrected() to make the update atomic
@@ -88,8 +51,6 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     // cache cleared whenever LatinIME.loadSettings is called, notably on changing layout and switching input fields
     fun clearNextWordSuggestionsCache() {
         nextWordSuggestionsCache.evictAll()
-        gestureIndex = null
-        buildingFingerprint.set(0)
         // Also reset scoreLimit cache to force refresh on next use
         synchronized(this) {
             mLastScoreLimitUpdateTime = 0
@@ -172,6 +133,24 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         if (!TextUtils.isEmpty(capitalizedTypedWord)) {
             suggestionsContainer.add(0, typedWordInfo)
         }
+
+        // Inline math calculation: offer calculated result chip if typing an arithmetic expression ending in '='
+        val mathMatch = if (Settings.getValues().mInlineMathCalculation)
+            MathEvaluator.evaluateInline(typedWordString) else null
+        if (mathMatch != null) {
+            val mathSuggestion = SuggestedWordInfo(
+                mathMatch.resultFormatted,
+                "",
+                SuggestedWordInfo.MAX_SCORE,
+                SuggestedWordInfo.KIND_CORRECTION,
+                Dictionary.DICTIONARY_USER_TYPED,
+                SuggestedWordInfo.NOT_AN_INDEX,
+                SuggestedWordInfo.NOT_A_CONFIDENCE
+            )
+            val insertIdx = if (suggestionsContainer.isNotEmpty()) 1 else 0
+            suggestionsContainer.add(insertIdx, mathSuggestion)
+        }
+
         val suggestionsList = if (SuggestionStripView.DEBUG_SUGGESTIONS && suggestionsContainer.isNotEmpty())
                 getSuggestionsInfoListWithDebugInfo(capitalizedTypedWord, suggestionsContainer)
             else suggestionsContainer
@@ -275,6 +254,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             // certainly intentional (and careful input)
             || (wordComposer.isMostlyCaps && !wordComposer.isAllUpperCase) // We never auto-correct when suggestions are resumed because it would be unexpected
             || wordComposer.isResumed // If we don't have a main dictionary, we never want to auto-correct. The reason
+            || isDeveloperTokenOrSpecialSyntax(consideredWord)
             // for this is, the user may have a contact whose name happens to match a valid
             // word in their language, and it will unexpectedly auto-correct. For example, if
             // the user types in English with no dictionary and has a "Will" in their contact
@@ -290,6 +270,29 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 // mFirstSuggestionExceedsConfidenceThreshold is always set to false, so currently this branch is useless
                 return true to true
             }
+
+            val lowerConsidered = consideredWord.lowercase(Locale.ROOT)
+            val expectedContraction = COMMON_CONTRACTIONS[lowerConsidered]
+            if (expectedContraction != null && typedWordInfo == null) {
+                // If typed word matches a missing-apostrophe contraction (e.g. dont -> don't), promote it
+                val contractionMatch = suggestionResults.firstOrNull { it.mWord.equals(expectedContraction, ignoreCase = true) }
+                if (contractionMatch != null || firstSuggestion.mWord.equals(expectedContraction, ignoreCase = true)) {
+                    return true to true
+                }
+            }
+
+            // For short words (<= 3 chars) not in the dictionary (e.g. Ab, yt, tg, db),
+            // prevent single-letter substitution by common dictionary unigrams unless it's a known user history word or contraction.
+            if (typedWordInfo == null && consideredWord.length <= 3) {
+                val isExactOrCaseMatch = firstSuggestion.mWord.equals(consideredWord, ignoreCase = true)
+                val isUserHistory = firstSuggestion.mSourceDict?.mDictType == Dictionary.TYPE_USER_HISTORY
+                val isWhitelist = firstSuggestion.isKindOf(SuggestedWordInfo.KIND_WHITELIST)
+                val isShortcut = firstSuggestion.isKindOf(SuggestedWordInfo.KIND_SHORTCUT)
+                if (!isExactOrCaseMatch && !isUserHistory && !isWhitelist && !isShortcut && expectedContraction == null) {
+                    return true to false
+                }
+            }
+
             if (!AutoCorrectionUtils.suggestionExceedsThreshold(firstSuggestion, consideredWord, mAutoCorrectionThreshold)) {
                 // Score is too low for autocorrect — but for long words, the normalized score
                 // formula penalizes proportionally (weight = 1 - editDist/len), so a single typo
@@ -402,31 +405,13 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         inputStyle: Int, sequenceNumber: Int
     ): SuggestedWords {
         val pointers = wordComposer.composedDataSnapshot.mInputPointers
-        val method = settingsValuesForSuggestion.mGestureMethod
-        val useFallback = "fallback" == method || !JniUtils.sHaveNativeGestureLib
-        val suggestionResults = if (useFallback) {
-            val fingerprint = SwipeGestureEngine.layoutFingerprint(keyboard)
-            val index = gestureIndex
-            if (index == null || gestureIndexFingerprint != fingerprint) {
-                buildGestureIndexAsync(keyboard)
-                SuggestionResults(1, false, false)
-            } else {
-                val predictionSet = if (ngramContext.isValid) {
-                    mDictionaryFacilitator.getSuggestionResults(
-                        ComposedData(InputPointers(32), false, ""), ngramContext, keyboard,
-                        settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
-                    ).map { it.mWord.lowercase(Locale.ROOT) }.toSet()
-                } else {
-                    emptySet()
-                }
-                SwipeGestureEngine.rankByIndex(index, pointers, keyboard, SuggestedWords.MAX_SUGGESTIONS, predictionSet)
-            }
-        } else {
-            mDictionaryFacilitator.getSuggestionResults(
-                wordComposer.composedDataSnapshot, ngramContext, keyboard,
-                settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
-            )
+        if (!JniUtils.sHaveNativeGestureLib) {
+            return SuggestedWords.getEmptyInstance()
         }
+        val suggestionResults = mDictionaryFacilitator.getSuggestionResults(
+            wordComposer.composedDataSnapshot, ngramContext, keyboard,
+            settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
+        )
         filterMultiWordSuggestions(suggestionResults, Settings.getValues().mDisableMultiWordSuggestions)
         if (!Settings.getValues().mSuggestEmojis) {
             suggestionResults.removeAll { it.isEmoji || it.mSourceDict?.mDictType == Dictionary.TYPE_EMOJI }
@@ -506,12 +491,13 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     /** get suggestions based on the current ngram context, with an empty typed word (that's what next word suggestions do)  */
     private fun getNextWordSuggestions(ngramContext: NgramContext, keyboard: Keyboard, inputStyle: Int,
                                        settingsValuesForSuggestion: SettingsValuesForSuggestion): SuggestionResults {
+        val revision = mDictionaryFacilitator.dictionaryRevision
         val cachedResults = nextWordSuggestionsCache.get(ngramContext)
-        if (cachedResults != null) {
+        if (cachedResults != null && cachedResults.revision == revision) {
             if (BuildConfig.DEBUG && DebugFlags.SCORE_AUDIT) {
-                Log.i("ScoreAudit", "nextWord: cacheHit=true prevCount=${ngramContext.prevWordCount} isBOS=${ngramContext.isBeginningOfSentenceContext} count=${cachedResults.size}")
+                Log.i("ScoreAudit", "nextWord: cacheHit=true prevCount=${ngramContext.prevWordCount} isBOS=${ngramContext.isBeginningOfSentenceContext} count=${cachedResults.results.size}")
             }
-            return cachedResults.copy()
+            return cachedResults.results.copy()
         }
         val newResults = mDictionaryFacilitator.getSuggestionResults(ComposedData(InputPointers(1),
             false, ""), ngramContext, keyboard, settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyle)
@@ -523,7 +509,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         val mainLoadPending = mDictionaryFacilitator.isMainDictionaryLoadPending()
         val shouldCache = newResults.isNotEmpty() || mainReady || !mainLoadPending
         if (shouldCache) {
-            nextWordSuggestionsCache.put(ngramContext, newResults.copy())
+            nextWordSuggestionsCache.put(ngramContext, CachedNextWords(revision, newResults.copy()))
         }
         return newResults
     }
@@ -576,8 +562,35 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         private const val SUPPRESS_SUGGEST_THRESHOLD = -2000000000
 
         private const val MAXIMUM_AUTO_CORRECT_LENGTH_FOR_GERMAN = 12
-        // TODO: should we add Finnish here?
         private val sLanguageToMaximumAutoCorrectionWithSpaceLength = hashMapOf(Locale.GERMAN.language to MAXIMUM_AUTO_CORRECT_LENGTH_FOR_GERMAN)
+
+        private val COMMON_CONTRACTIONS = mapOf(
+            "dont" to "don't", "cant" to "can't", "wont" to "won't",
+            "im" to "I'm", "ive" to "I've", "id" to "I'd",
+            "theyre" to "they're", "youre" to "you're", "weve" to "we've", "theyve" to "they've",
+            "isnt" to "isn't", "arent" to "aren't", "wasnt" to "wasn't", "werent" to "weren't",
+            "couldnt" to "couldn't", "shouldnt" to "shouldn't", "wouldnt" to "wouldn't",
+            "didnt" to "didn't", "doesnt" to "doesn't", "hadnt" to "hadn't",
+            "havent" to "haven't", "hasnt" to "hasn't", "whats" to "what's", "thats" to "that's",
+            "theres" to "there's", "heres" to "here's", "wheres" to "where's", "whos" to "who's",
+            "lets" to "let's", "itll" to "it'll", "youll" to "you'll", "theyll" to "they'll"
+        )
+
+        private fun isDeveloperTokenOrSpecialSyntax(word: String): Boolean {
+            if (word.isEmpty()) return false
+            if (word.startsWith('#') || word.startsWith('@') || word.startsWith('/') || word.startsWith('.')) return true
+            if (word.contains('/') || word.contains('\\') || word.contains('.') || word.contains('_') || word.contains('-')) return true
+            var hasLower = false
+            for (i in 0 until word.length) {
+                val c = word[i]
+                if (c.isLowerCase()) {
+                    hasLower = true
+                } else if (hasLower && c.isUpperCase()) {
+                    return true
+                }
+            }
+            return false
+        }
 
         private fun getTransformedSuggestedWordInfoList(
             wordComposer: WordComposer, results: SuggestionResults,

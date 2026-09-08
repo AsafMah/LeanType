@@ -41,6 +41,7 @@ import helium314.keyboard.latin.dictionary.DictionaryFactory;
 import helium314.keyboard.latin.LastComposedWord;
 import helium314.keyboard.latin.LatinIME;
 import helium314.keyboard.latin.NgramContext;
+import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputConnection;
 import helium314.keyboard.latin.SingleDictionaryFacilitator;
 import helium314.keyboard.latin.Suggest;
@@ -102,11 +103,6 @@ public final class InputLogic {
     private int mSpaceState;
     // Never null
     private SuggestedWords mSuggestedWords = SuggestedWords.getEmptyInstance();
-    // #14 spacing-policy signals — recomputed every keystroke from the suggestion results at zero
-    // extra native cost (see computeSpacingSignals / setSuggestedWords). Consumed by the upcoming
-    // signal-driven grace + two-gate Assisted-tier logic.
-    private boolean mSpacingComplete;        // typed word is a real dictionary word
-    private float mSpacingPrefixRichScore;   // fraction of candidates that are completions [0..1]
     private final Suggest mSuggest;
     private final DictionaryFacilitator mDictionaryFacilitator;
     private SingleDictionaryFacilitator mEmojiDictionaryFacilitator;
@@ -119,12 +115,8 @@ public final class InputLogic {
     private int mDeleteCount;
     private long mLastKeyTime;
 
-    // Two-thumb typing (#1.4): when {@code mGestureTapPromotionMs > 0} AND the user starts a
-    // gesture within that window of their last letter tap, the gesture extends the existing
-    // composing word instead of replacing it (the manual-spacing-extend path). Flag is set in
-    // {@link #onStartBatchInput} and consumed at the end of {@link #onUpdateTailBatchInputCompleted}.
-    // This lets us make the "extend or not" decision based on the timing AT THE MOMENT OF
-    // GESTURE-START, not gesture-end (so a long gesture doesn't lose the promotion).
+    // Capture whether the gesture extends the current composition at gesture start,
+    // so a long gesture does not lose that decision before its result arrives.
     private boolean mGestureExtendsByTapPromotion;
 
     // Snapshot of {@code keyboardSwitcher.getKeyboardShiftMode()} captured at the start of
@@ -155,8 +147,7 @@ public final class InputLogic {
     // an autospace because the timer fires once the user pauses.
     //
     // Visual: while a commit is pending, the spacebar shows a countdown progress bar
-    // (the {@link MainKeyboardView#setCombiningMode} call) — replaces the older
-    // PREF_AUTOSPACE_VISUAL_HINT flash, which was decoupled from the state that caused it.
+    // (the {@link MainKeyboardView#setCombiningMode} call).
     //
     // All access on the main thread (touch events + Handler posts to main looper).
     private final Handler mCombiningHandler = new Handler(Looper.getMainLooper());
@@ -921,9 +912,6 @@ public final class InputLogic {
         // Combining mode: cancelled gesture wipes the would-be-fragment from the composing
         // word — drop the timer so we don't fire an autospace based on stale state.
         cancelCombiningMode();
-        // Drop any seed codepoint stashed by PointerTracker so the next gesture doesn't
-        // strip its first letter against a stale seed.
-        helium314.keyboard.keyboard.PointerTracker.consumeGestureSeedCodepoint();
         // Two-thumb typing: a cancelled gesture never reaches onUpdateTailBatchInputCompleted,
         // which is the only routine site that clears the merged-trail extend-base. Drop it here
         // so this cancelled gesture's trail can't leak into the next one.
@@ -1168,16 +1156,6 @@ public final class InputLogic {
             mCombiningHandler.removeCallbacks(mPendingCombiningCommit);
             mPendingCombiningCommit = null;
         }
-    }
-
-    /** Combining-mode seeding helper: last codepoint of the current composing word, or 0
-     *  if no composing word. Currently unused but kept available for future seeding work. */
-    @SuppressWarnings("unused")
-    private int lastCodepointOfTypedWord() {
-        if (!mWordComposer.isComposingWord()) return 0;
-        final String w = mWordComposer.getTypedWord();
-        if (w.isEmpty()) return 0;
-        return w.codePointBefore(w.length());
     }
 
     /** Public accessor so PointerTracker / KeyboardActionListenerImpl can ask "are we extending right now?". */
@@ -1426,9 +1404,6 @@ public final class InputLogic {
             mWordComposer.setAutoCorrection(suggestedWordInfo);
         }
         mSuggestedWords = suggestedWords;
-        final SpacingSignals spacingSignals = computeSpacingSignals(suggestedWords);
-        mSpacingComplete = spacingSignals.complete;
-        mSpacingPrefixRichScore = spacingSignals.prefixRichScore;
         final boolean newAutoCorrectionIndicator = suggestedWords.mWillAutoCorrect;
 
         // Put a blue underline to a word in TextView which will be auto-corrected.
@@ -1444,43 +1419,6 @@ public final class InputLogic {
             // the practice.
             setComposingTextInternal(textWithUnderline, 1);
         }
-    }
-
-    /**
-     * #14 spacing-policy signals derived from the current suggestion results, computed every
-     * keystroke at zero extra native cost.
-     * <ul>
-     *   <li>{@code complete} — the typed word is a real dictionary word (valid AND not just
-     *       user-typed). A confident "this is a finished word".</li>
-     *   <li>{@code prefixRichScore} — fraction of candidates that are completions (longer words
-     *       sharing this stem), in [0..1]. High = lots left to extend to (keep the word open);
-     *       low = little left (safe to auto-commit).</li>
-     * </ul>
-     * Static + pure so it can be unit-tested without a live InputLogic.
-     */
-    static final class SpacingSignals {
-        final boolean complete;
-        final float prefixRichScore;
-        SpacingSignals(final boolean complete, final float prefixRichScore) {
-            this.complete = complete;
-            this.prefixRichScore = prefixRichScore;
-        }
-    }
-
-    static SpacingSignals computeSpacingSignals(final SuggestedWords suggestedWords) {
-        final int n = suggestedWords.size();
-        if (n == 0) return new SpacingSignals(false, 0f);
-        final SuggestedWordInfo typed = suggestedWords.mTypedWordInfo;
-        final boolean complete = suggestedWords.mTypedWordValid
-                && typed != null && typed.mSourceDict != null
-                && !Dictionary.TYPE_USER_TYPED.equals(typed.mSourceDict.mDictType);
-        int completions = 0;
-        for (int i = 0; i < n; i++) {
-            if (suggestedWords.getInfo(i).getKind() == SuggestedWordInfo.KIND_COMPLETION) {
-                completions++;
-            }
-        }
-        return new SpacingSignals(complete, (float) completions / n);
     }
 
     /**
@@ -1537,10 +1475,18 @@ public final class InputLogic {
         }
     }
 
-    // Store last text before proofreading for undo functionality
-    private String mTextBeforeProofread = null;
+    private long mAiRequestId;
+
+    private helium314.keyboard.latin.utils.AiEditorRequest prepareAiRequest(final boolean append) {
+        final var request = helium314.keyboard.latin.utils.AiEditorRequest.prepare(mLatinIME, mConnection, append);
+        if (request == null) {
+            KeyboardSwitcher.getInstance().showToast(mLatinIME.getString(R.string.ai_editor_unavailable), true);
+        }
+        return request;
+    }
 
     private void handleProofread() {
+        final long requestId = ++mAiRequestId;
         Log.i(TAG, "handleProofread() called");
 
         // If an operation is in progress, cancel it
@@ -1549,47 +1495,10 @@ public final class InputLogic {
             helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
             return;
         }
-        String textToProofread;
-        final boolean hasSelection = mConnection.hasSelection();
-
-        if (hasSelection) {
-            final CharSequence selectedText = mConnection.getSelectedText(0);
-            textToProofread = selectedText != null ? selectedText.toString() : "";
-            Log.i(TAG, "Proofreading selected text: " + textToProofread.length() + " chars");
-        } else {
-            // Get entire text field content FIRST to ensure we capture everything relative
-            // to cursor
-            final int maxChars = 60000;
-            CharSequence textBefore = null;
-            CharSequence textAfter = null;
-            try {
-                textBefore = mConnection.getTextBeforeCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text before cursor: " + e);
-            }
-
-            try {
-                textAfter = mConnection.getTextAfterCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text after cursor: " + e);
-                // Try with smaller amount if large amount failed
-                try {
-                    textAfter = mConnection.getTextAfterCursor(2048, 0);
-                } catch (Exception e2) {
-                    Log.e(TAG, "Failed to get text after cursor (retry): " + e2);
-                }
-            }
-
-            final String before = textBefore != null ? textBefore.toString() : "";
-            final String after = textAfter != null ? textAfter.toString() : "";
-            textToProofread = before + after;
-
-            // Select all text NOW so user sees what will be proofread
-            mConnection.selectAll();
-        }
-
-        // Store original text for undo (via standard undo mechanism)
-        mTextBeforeProofread = textToProofread;
+        final var request = prepareAiRequest(false);
+        if (request == null) return;
+        final String textToProofread = request.getOriginalText();
+        final boolean hasSelection = request.getHasSelection();
 
         // Use the Kotlin helper for async proofreading
         helium314.keyboard.latin.utils.ProofreadHelper.proofreadAsync(
@@ -1599,9 +1508,19 @@ public final class InputLogic {
                 new helium314.keyboard.latin.utils.ProofreadHelper.ProofreadCallback() {
                     @Override
                     public void onSuccess(String proofreadText) {
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
 
-                        if (proofreadText != null && !proofreadText.equals(mTextBeforeProofread)) {
-
+                        if (proofreadText != null && !proofreadText.isEmpty() && !proofreadText.equals(textToProofread)) {
+                            // Truncation safeguard: if original input was substantial (> 20 chars) and proofreadText is less than 30% of original text length, abort to prevent accidental data loss
+                            if (textToProofread.length() > 20 && proofreadText.length() < textToProofread.length() * 0.3) {
+                                Log.w(TAG, "Proofread result suspiciously short; replacement aborted");
+                                helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().showToast("Proofread output truncated by model; replacement aborted.", false);
+                                if (!hasSelection) {
+                                    int len = textToProofread.length();
+                                    mConnection.setSelection(len, len);
+                                }
+                                return;
+                            }
                             // Text should already be selected (either user selection or selectAll before
                             // API call)
                             // Just commit the new text to replace selection
@@ -1611,7 +1530,7 @@ public final class InputLogic {
 
                             // Deselect the text since no changes were made
                             if (!hasSelection) {
-                                int len = mTextBeforeProofread != null ? mTextBeforeProofread.length() : 0;
+                                int len = textToProofread.length();
                                 mConnection.setSelection(len, len);
                             }
                         }
@@ -1619,57 +1538,19 @@ public final class InputLogic {
 
                     @Override
                     public void onError(String errorMessage) {
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
                         // Error toast is already shown by ProofreadHelper
-                        Log.e(TAG, "Proofreading error: " + errorMessage);
+                        Log.e(TAG, "Proofreading failed");
                     }
                 });
     }
 
-    // Store last text before translation for undo functionality
-    private String mTextBeforeTranslate = null;
-
     private void handleTranslate() {
-
-        // Get selected text or entire text field content
-        String textToTranslate;
-        final boolean hasSelection = mConnection.hasSelection();
-
-        if (hasSelection) {
-            final CharSequence selectedText = mConnection.getSelectedText(0);
-            textToTranslate = selectedText != null ? selectedText.toString() : "";
-
-        } else {
-            // Get entire text field content FIRST
-            final int maxChars = 60000;
-            CharSequence textBefore = null;
-            CharSequence textAfter = null;
-            try {
-                textBefore = mConnection.getTextBeforeCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text before cursor: " + e);
-            }
-
-            try {
-                textAfter = mConnection.getTextAfterCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text after cursor: " + e);
-                try {
-                    textAfter = mConnection.getTextAfterCursor(2048, 0);
-                } catch (Exception e2) {
-                    Log.e(TAG, "Failed to get text after cursor (retry): " + e2);
-                }
-            }
-
-            final String before = textBefore != null ? textBefore.toString() : "";
-            final String after = textAfter != null ? textAfter.toString() : "";
-            textToTranslate = before + after;
-
-            // Select all text NOW
-            mConnection.selectAll();
-        }
-
-        // Store original text for undo
-        mTextBeforeTranslate = textToTranslate;
+        final long requestId = ++mAiRequestId;
+        final var request = prepareAiRequest(false);
+        if (request == null) return;
+        final String textToTranslate = request.getOriginalText();
+        final boolean hasSelection = request.getHasSelection();
 
         // Use the Kotlin helper for async translation
         helium314.keyboard.latin.utils.ProofreadHelper.translateAsync(
@@ -1679,14 +1560,24 @@ public final class InputLogic {
                 new helium314.keyboard.latin.utils.ProofreadHelper.ProofreadCallback() {
                     @Override
                     public void onSuccess(String translatedText) {
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
 
-                        if (translatedText != null && !translatedText.equals(mTextBeforeTranslate)) {
-
+                        if (translatedText != null && !translatedText.equals(textToTranslate)) {
+                            // Truncation safeguard: if original input was substantial (> 20 chars) and translatedText is less than 30% of original text length, abort to prevent accidental data loss
+                            if (textToTranslate.length() > 20 && translatedText.length() < textToTranslate.length() * 0.3) {
+                                Log.w(TAG, "Translation result suspiciously short; replacement aborted");
+                                helium314.keyboard.keyboard.KeyboardSwitcher.getInstance().showToast("Translation output truncated by model; replacement aborted.", false);
+                                if (!hasSelection) {
+                                    int len = textToTranslate.length();
+                                    mConnection.setSelection(len, len);
+                                }
+                                return;
+                            }
                             mConnection.commitText(translatedText, 1);
 
                         } else {
                             if (!hasSelection) {
-                                int len = mTextBeforeTranslate != null ? mTextBeforeTranslate.length() : 0;
+                                int len = textToTranslate.length();
                                 mConnection.setSelection(len, len);
                             }
                         }
@@ -1694,7 +1585,8 @@ public final class InputLogic {
 
                     @Override
                     public void onError(String errorMessage) {
-                        Log.e(TAG, "Translation error: " + errorMessage);
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
+                        Log.e(TAG, "Translation failed");
                     }
                 });
     }
@@ -2758,7 +2650,27 @@ public final class InputLogic {
                 StatsUtils.onBackspacePressed(1);
             }
             if (mWordComposer.isComposingWord()) {
-                setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
+                final String typedWord = mWordComposer.getTypedWord();
+                setComposingTextInternal(getTextWithUnderline(typedWord), 1);
+                if (helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isEnabled(mLatinIME)
+                        && helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.isImmediateEnabled(mLatinIME)) {
+                    final CharSequence textBefore = mConnection.getTextBeforeCursor(50, 0);
+                    if (textBefore != null) {
+                        final helium314.keyboard.latin.utils.TextExpanderUtils.ExpandedResult result =
+                                helium314.keyboard.latin.utils.TextExpanderUtils.INSTANCE.getExpandedWordForTyped(typedWord, textBefore.toString(), mLatinIME);
+                        if (result != null) {
+                            if (mJustRevertedExpandedShortcut == null
+                                    || !result.getMatchedString().equalsIgnoreCase(mJustRevertedExpandedShortcut)) {
+                                if (result.getPrefixLength() > 0) {
+                                    mConnection.commitText("", 1);
+                                    mConnection.deleteTextBeforeCursor(result.getPrefixLength());
+                                }
+                                commitExpandedText(result.getMatchedString(), result.getExpandedText());
+                                resetComposingState(true);
+                            }
+                        }
+                    }
+                }
             } else {
                 if (wasBatchMode || wholeWordDeleted) {
                     // Composing word gone (whole-word/batch delete): clear the composing span in
@@ -3738,11 +3650,14 @@ public final class InputLogic {
                     || InputTypeUtils.isVisiblePasswordInputType(inputType)) {
                 return Constants.TextUtils.CAP_MODE_OFF;
             }
-            inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
         }
-        if (settingsValues.mForceAutoCaps && !InputTypeUtils.isPasswordInputType(inputType)
-                && !InputTypeUtils.isVisiblePasswordInputType(inputType)) {
-            inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
+        if (!InputTypeUtils.isAnyPasswordInputType(inputType)
+                && !InputTypeUtils.isUriOrEmailType(inputType)
+                && (inputType & InputType.TYPE_MASK_CLASS) == InputType.TYPE_CLASS_TEXT) {
+            if (settingsValues.mForceAutoCaps
+                    || (inputType & (InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | InputType.TYPE_TEXT_FLAG_CAP_WORDS | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)) == 0) {
+                inputType |= InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;
+            }
         }
         // Warning: this depends on mSpaceState, which may not be the most current
         // value. If
@@ -3816,20 +3731,15 @@ public final class InputLogic {
             final LatinIME.UIHandler handler) {
         clearOneShotSpaceActionAndNotifyIfChanged();
         if (mWordComposer.isComposingWord()) {
-            final SuggestedWordInfo autoCorrection = mWordComposer.getAutoCorrectionOrNull();
             final String typedWord = mWordComposer.getTypedWord();
-            if (autoCorrection != null && !typedWord.equals(autoCorrection.mWord)) {
-                commitCurrentAutoCorrection(settingsValues, LastComposedWord.NOT_A_SEPARATOR, handler);
-            } else {
-                final NgramContext ngramContext = mConnection.getNgramContextFromNthPreviousWord(
-                        settingsValues.mSpacingAndPunctuations, 1);
-                performAdditionToUserHistoryDictionary(settingsValues, typedWord, ngramContext);
-                mLastComposedWord = mWordComposer.commitWord(
-                        LastComposedWord.COMMIT_TYPE_USER_TYPED_WORD, typedWord,
-                        LastComposedWord.NOT_A_SEPARATOR, ngramContext);
-                mConnection.finishComposingText();
-                StatsUtils.onWordCommitUserTyped(typedWord, mWordComposer.isBatchMode());
-            }
+            final NgramContext ngramContext = mConnection.getNgramContextFromNthPreviousWord(
+                    settingsValues.mSpacingAndPunctuations, 1);
+            performAdditionToUserHistoryDictionary(settingsValues, typedWord, ngramContext);
+            mLastComposedWord = mWordComposer.commitWord(
+                    LastComposedWord.COMMIT_TYPE_USER_TYPED_WORD, typedWord,
+                    LastComposedWord.NOT_A_SEPARATOR, ngramContext);
+            mConnection.finishComposingText();
+            StatsUtils.onWordCommitUserTyped(typedWord, mWordComposer.isBatchMode());
         }
         mConnection.performEditorAction(actionId);
     }
@@ -4164,32 +4074,8 @@ public final class InputLogic {
             }
         }
         if (TextUtils.isEmpty(batchInputText)) {
-            // Still need to clear the seed slot so it doesn't leak into the next gesture.
-            helium314.keyboard.keyboard.PointerTracker.consumeGestureSeedCodepoint();
             return;
         }
-        // Combining-mode seeding: if PointerTracker seeded this gesture with a prior tap's
-        // coords, the recognizer typically includes that letter as the first char of the
-        // result. We strip it (case-insensitive) so the existing concat below doesn't
-        // double-count it. See PointerTracker for the full rationale.
-        //
-        // Multi-part word composition (#1.6): the top suggestion isn't always the seeded
-        // continuation — e.g. swiping "nology" after "tech" might recognize as "biology"
-        // because the second swipe's path can match both. When a seed is set, prefer any
-        // suggestion (in score order) whose first letter matches the seed; only fall back
-        // to the top suggestion if none match.
-        // Combining-mode seeding: if PointerTracker seeded this gesture with a prior tap's
-        // coords, the recognizer typically includes that letter as the first char of the
-        // result. We strip it (case-insensitive) so the existing concat below doesn't
-        // double-count it. See PointerTracker for the full rationale.
-        final int seedCp = helium314.keyboard.keyboard.PointerTracker.consumeGestureSeedCodepoint();
-        if (seedCp > 0 && batchInputText.length() > 0) {
-            final int firstCp = batchInputText.codePointAt(0);
-            if (Character.toLowerCase(firstCp) == Character.toLowerCase(seedCp)) {
-                batchInputText = batchInputText.substring(Character.charCount(firstCp));
-            }
-        }
-        if (batchInputText.isEmpty()) return;
         mCombiningWordHasGestureFragment = true;
         mConnection.beginBatchEdit();
         // Two-thumb typing (#1.1 + #1.4): when either manual spacing OR tap-promotion-extend
@@ -4230,8 +4116,7 @@ public final class InputLogic {
         final String prevTypedWord = (extendExistingCompose && !usedMergedTrail)
                 ? mWordComposer.getTypedWord() : "";
         if (settingsValues.mGestureDebugDrawPoints) {
-            Log.d(TAG, "batch merge seed=" + seedCp
-                    + " extendExisting=" + extendExistingCompose
+            Log.d(TAG, "batch merge extendExisting=" + extendExistingCompose
                     + " combiningExtends=" + combiningExtendsSwipe
                     + " usedMergedTrail=" + usedMergedTrail
                     + " prevTyped='" + prevTypedWord + "'"
@@ -4936,6 +4821,7 @@ public final class InputLogic {
     }
 
     private void handleCustomAIKey(int index) {
+        final long requestId = ++mAiRequestId;
         final android.content.SharedPreferences prefs = helium314.keyboard.latin.utils.DeviceProtectedUtils
                 .getSharedPreferences(mLatinIME);
         String prompt = prefs.getString("pref_custom_ai_prompt_" + index, "");
@@ -5001,96 +4887,24 @@ public final class InputLogic {
         // it.
         prompt = prompt + systemInstruction;
 
-        // Get selected text or entire text field content
-        String textToProcess;
-        final boolean hasSelection = mConnection.hasSelection();
-
-        if (hasSelection) {
-            final CharSequence selectedText = mConnection.getSelectedText(0);
-            textToProcess = selectedText != null ? selectedText.toString() : "";
-            // If appending on a selection, we unselect (move cursor to end of selection) so
-            // we don't overwrite?
-            // User requested "generate wish after 'see you'", which implies keeping 'see
-            // you'.
-            if (shouldAppend) {
-                mConnection.setSelection(mConnection.getExpectedSelectionEnd(), mConnection.getExpectedSelectionEnd());
-                // Insert a separator?
-                // For now, let's just append. The AI result might need leading space/newline.
-                // We can inject a newline into the prompt request implicitly or ask the AI to
-                // include it?
-                // Better: "Output result. Start with a newline if appropriate." - simplistic
-                // but maybe enough.
-            }
-        } else {
-            // Get entire text field content FIRST
-            final int maxChars = 60000;
-            CharSequence textBefore = null;
-            CharSequence textAfter = null;
-            try {
-                textBefore = mConnection.getTextBeforeCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text before cursor: " + e);
-            }
-
-            try {
-                textAfter = mConnection.getTextAfterCursor(maxChars, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get text after cursor: " + e);
-                try {
-                    textAfter = mConnection.getTextAfterCursor(2048, 0);
-                } catch (Exception e2) {
-                    Log.e(TAG, "Failed to get text after cursor (retry): " + e2);
-                }
-            }
-
-            final String before = textBefore != null ? textBefore.toString() : "";
-            final String after = textAfter != null ? textAfter.toString() : "";
-            textToProcess = before + after;
-
-            if (!shouldAppend) {
-                // Select all text NOW so user sees what will be processed
-                mConnection.selectAll();
-            } else {
-                // If appending, we probably want to move cursor to the end so we append at the
-                // end of the current text?
-                // Or just leave cursor where it is? "generate good night wash" context is whole
-                // text.
-                // Usually "append" means add to the end of the document.
-                // But if cursor is in middle, maybe insert there?
-                // Let's assume append means "add to end of context".
-                // But context is "before + after".
-                // Let's safe bet: Move cursor to end of text.
-                // Because onTextInput inserts at cursor.
-                if (textToProcess.length() > 0) {
-                    // We don't have absolute position easily unless we assume 0 is start.
-                    // beginBatchEdit/endBatchEdit might be needed if we move cursor?
-                    // Actually, we can just delete nothing and insert.
-                    // But we need to be at the end.
-                    // We can try: mConnection.setSelection(textToProcess.length(),
-                    // textToProcess.length())?
-                    // But we don't know the absolute offset of 'textBefore'.
-                    // Wait, textBefore + textAfter = whole text.
-                    // But we are at cursor.
-                    // To go to end: move cursor by textAfter.length().
-                    if (after.length() > 0 && mConnection.getExpectedSelectionEnd() >= 0) {
-                        int newPos = mConnection.getExpectedSelectionEnd() + after.length();
-                        mConnection.setSelection(newPos, newPos);
-                    }
-                }
-            }
-        }
+        final var request = prepareAiRequest(shouldAppend);
+        if (request == null) return;
+        final String textToProcess = request.getOriginalText();
+        final boolean hasSelection = request.getHasSelection();
 
         helium314.keyboard.latin.utils.ProofreadHelper.INSTANCE.customAsync(mLatinIME,
                 textToProcess, prompt, hasSelection, showThinking,
                 new helium314.keyboard.latin.utils.ProofreadHelper.ProofreadCallback() {
                     @Override
                     public void onSuccess(String resultText) {
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
                         mLatinIME.onTextInput(resultText);
                     }
 
                     @Override
                     public void onError(String errorMessage) {
-                        Log.e(TAG, "Custom AI Error: " + errorMessage);
+                        if (requestId != mAiRequestId || !request.isCurrent()) return;
+                        Log.e(TAG, "Custom AI failed");
                         KeyboardSwitcher.getInstance().showToast("AI Error: " + errorMessage, true);
                     }
                 });

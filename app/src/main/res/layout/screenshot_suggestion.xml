@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:background="@drawable/clipboard_suggestion_background"
+    android:layout_marginVertical="3dp"
+    android:layout_marginHorizontal="4dp"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp"
+    tools:ignore="RtlSymmetry">
+
+    <!-- Extract Text OCR Button (Left of Screenshot) -->
+    <ImageButton
+        android:id="@+id/screenshot_extract_text_button"
+        android:layout_width="32dp"
+        android:layout_height="match_parent"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_ocr_extract"
+        android:scaleType="centerInside"
+        android:padding="4dp"
+        android:contentDescription="@string/ocr_extract_text_button" />
+
+    <!-- Screenshot Image Preview -->
+    <FrameLayout
+        android:id="@+id/screenshot_paste_button"
+        android:layout_width="48dp"
+        android:layout_height="match_parent"
+        android:layout_marginVertical="2dp"
+        android:layout_marginHorizontal="2dp"
+        android:clipToOutline="true">
+
+        <ImageView
+            android:id="@+id/screenshot_thumbnail_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/screenshot" />
+    </FrameLayout>
+
+    <!-- Dismiss Close Button -->
+    <ImageView
+        android:id="@+id/screenshot_suggestion_close"
+        android:contentDescription="@string/dialog_close"
+        android:src="@drawable/ic_close"
+        android:layout_width="28dp"
+        android:layout_height="match_parent"
+        android:padding="6dp"
+        android:gravity="center" />
+
+</LinearLayout>

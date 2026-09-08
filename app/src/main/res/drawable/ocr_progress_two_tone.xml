@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<animated-rotate xmlns:android="http://schemas.android.com/apk/res/android"
+    android:pivotX="50%"
+    android:pivotY="50%"
+    android:fromDegrees="0"
+    android:toDegrees="1080">
+
+    <shape
+        android:shape="ring"
+        android:innerRadiusRatio="3.2"
+        android:thicknessRatio="10"
+        android:useLevel="false">
+
+        <size
+            android:width="52dp"
+            android:height="52dp" />
+
+        <gradient
+            android:type="sweep"
+            android:useLevel="false"
+            android:startColor="#FFFFFFFF"
+            android:centerColor="#FF000000"
+            android:endColor="#00000000" />
+    </shape>
+</animated-rotate>

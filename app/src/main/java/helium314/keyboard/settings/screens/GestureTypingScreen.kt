@@ -37,7 +37,7 @@ fun GestureTypingScreen(
     val b = (LocalContext.current.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
     if ((b?.value ?: 0) < 0)
         Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
-    val hasGestureLib = JniUtils.sHaveGestureLib
+    val hasGestureLib = JniUtils.sHaveNativeGestureLib
     val gestureFloatingPreviewEnabled = prefs.getBoolean(Settings.PREF_GESTURE_FLOATING_PREVIEW_TEXT, Defaults.PREF_GESTURE_FLOATING_PREVIEW_TEXT)
     val gestureEnabled = prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
     val manualGestureSpacing = prefs.getBoolean(
@@ -53,7 +53,6 @@ fun GestureTypingScreen(
         }
 
         if (hasGestureLib && gestureEnabled) {
-            add(Settings.PREF_GESTURE_METHOD)
             add(R.string.settings_category_visuals)
             add(Settings.PREF_GESTURE_PREVIEW_TRAIL)
             add(Settings.PREF_GESTURE_FLOATING_PREVIEW_TEXT)
@@ -97,13 +96,6 @@ fun GestureTypingScreen(
 fun createGestureTypingSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_GESTURE_INPUT, R.string.gesture_input, R.string.gesture_input_summary) {
         SwitchPreference(it, Defaults.PREF_GESTURE_INPUT)
-    },
-    Setting(context, Settings.PREF_GESTURE_METHOD, R.string.gesture_method, R.string.gesture_method_summary) {
-        val items = listOf(
-            stringResource(R.string.gesture_method_native) to "native",
-            stringResource(R.string.gesture_method_fallback) to "fallback",
-        )
-        ListPreference(it, items, Defaults.PREF_GESTURE_METHOD)
     },
     Setting(context, Settings.PREF_GESTURE_PREVIEW_TRAIL, R.string.gesture_preview_trail) {
         SwitchPreference(it, Defaults.PREF_GESTURE_PREVIEW_TRAIL)
@@ -213,7 +205,7 @@ fun createGestureTypingSettings(context: Context) = listOf(
 @Preview
 @Composable
 private fun Preview() {
-    JniUtils.sHaveGestureLib = true
+    JniUtils.sHaveNativeGestureLib = true
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {

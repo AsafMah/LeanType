@@ -158,6 +158,14 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
                 }
                 return
             }
+            KeyCode.OCR -> {
+                if (keyboardSwitcher.isOcrShowing) {
+                    keyboardSwitcher.hideOcrPanels()
+                } else {
+                    keyboardSwitcher.showOcrCamera()
+                }
+                return
+            }
             KeyCode.TOGGLE_AUTOCORRECT -> {
                 settings.toggleAutoCorrect()
                 latinIME.onOneShotSpaceActionStateChanged()

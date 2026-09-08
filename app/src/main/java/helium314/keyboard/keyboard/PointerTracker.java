@@ -142,38 +142,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     private boolean mIsDetectingGesture = false; // per PointerTracker.
     private static boolean sInGesture = false;
-    // ---- Combining-mode tap seeding ------------------------------------------------------
-    // When the user taps a letter and within the combining-grace window starts a swipe, the
-    // pure concat path ("s" + recognizer-of-"ilo") produces unreliable results because the
-    // recognizer gets too few points to pin a word. So we SEED the next gesture's first
-    // pointer event with the prior tap's (x, y, time). The recognizer then sees a full
-    // s→i→l→o stroke and reliably produces "silo".
-    //
-    // To avoid double-counting the seed letter at commit time, InputLogic peeks at
-    // {@link #consumeGestureSeedCodepoint()} when the gesture commits; if the seed letter
-    // matches the first codepoint of the recognized word (case-insensitive), it strips it
-    // before the existing concat/replace logic runs. Net result:
-    //   composing="s",   seed='s', batch="silo"    → strip → "ilo"    → concat → "silo"
-    //   composing="tech",seed='h', batch="hnology" → strip → "nology" → concat → "technology"
-    //   composing="s",   seed='s', batch="ilver"   → no strip          → concat → "silver"
-    //
-    // All static / globally-scoped: the prior tap can be on any tracker, and the gesture
-    // start can be on any tracker. UI thread only.
-    private static int sLastLetterTapX;
-    private static int sLastLetterTapY;
-    private static long sLastLetterTapTime;
-    private static int sLastLetterTapCodepoint; // 0 = none
-    private static int sCurrentGestureSeedCodepoint; // 0 = no seed for current gesture
-
-    /** Called by InputLogic at the moment of consuming a gesture's batch result. Returns the
-     *  codepoint that seeded the gesture (or 0), and clears the slot so the next gesture
-     *  starts fresh. */
-    public static int consumeGestureSeedCodepoint() {
-        final int seed = sCurrentGestureSeedCodepoint;
-        sCurrentGestureSeedCodepoint = 0;
-        return seed;
-    }
-
     private static TypingTimeRecorder sTypingTimeRecorder;
 
     // The position and time at which first down event occurred.
@@ -318,53 +286,13 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     public static void cancelAllPointerTrackers() {
         sPointerTrackerQueue.cancelAllPointerTrackers();
         sInShortcutRowSwipe = false;
-        // Two-thumb typing (#1.2): drop any pending grace-period commit during teardown so
-        // the deferred runnable doesn't fire against a possibly-disposed view. If a commit
-        // was indeed pending, the only thing keeping {@code sInGesture} true was the grace
-        // window itself — clear it now so post-teardown touches don't see stale state.
-        if (BatchInputArbiter.cancelGrace()) {
-            sInGesture = false;
-        }
-        // Two-thumb typing (#1.2 visual): also clear the pending-commit indicator.
-        if (sDrawingProxy != null) {
-            sDrawingProxy.setGestureCommitPending(false);
-        }
-    }
-
-    /**
-     * Static commit path used by the autospace grace period (#1.2). Called from
-     * {@link BatchInputArbiter} when a deferred commit fires (timer expired or
-     * {@link BatchInputArbiter#flushGrace} was invoked). Mirrors the body of the per-instance
-     * {@link #onEndBatchInput(InputPointers, long)} but skips the {@code mIsTrackingForActionDisabled}
-     * check because the original tracker may have been reused for a different finger by now —
-     * the per-instance flag is no longer meaningful for the previously-committed gesture.
-     * Always invoked on the main looper.
-     *
-     * @param keyboardSnapshot the {@link Keyboard} captured at scheduling time, used by the
-     *     dual-thumb hinter (#2.1) for geometry; may be {@code null} (hinter no-ops). Using a
-     *     captured snapshot rather than a live static avoids problems if the keyboard layout
-     *     swapped during the grace window.
-     */
-    private static void commitDeferredBatchInput(
-            final InputPointers aggregatedPointers, final long upEventTime,
-            final Keyboard keyboardSnapshot) {
-        sTypingTimeRecorder.onEndBatchInput(upEventTime);
-        sTimerProxy.cancelAllUpdateBatchInputTimers();
-        final DualThumbHinter.Result result =
-                applyDualThumbHinting(aggregatedPointers, keyboardSnapshot);
-        pushGestureDebugSnapshot(aggregatedPointers, result.syntheticOnly);
-        sListener.onEndBatchInput(result.hinted);
-        sInGesture = false;
-        // Two-thumb typing (#1.2 visual): the pending-commit indicator is no longer relevant
-        // — the commit just fired. Clear unconditionally; it's a cheap no-op when not pending.
-        sDrawingProxy.setGestureCommitPending(false);
     }
 
     /**
      * Apply the dual-thumb point hinter (#2.1) to the aggregated pointers if the user has
      * enabled it. Returns an "identity" {@link DualThumbHinter.Result} (hinted == raw,
      * empty synthetic-only) when the pref is off OR no keyboard geometry is available — we
-     * don't have the key-width / midline needed by the hinter.
+     * don't have the key width needed by the hinter.
      */
     private static DualThumbHinter.Result applyDualThumbHinting(
             final InputPointers raw, final Keyboard keyboard) {
@@ -373,9 +301,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return DualThumbHinter.identity(raw);
         }
         final int keyWidth = keyboard.mMostCommonKeyWidth;
-        final int midlineX = (int)(keyboard.mOccupiedWidth
-                * (sv.mGestureDualThumbMidlinePct / 100f));
-        return DualThumbHinter.postProcess(raw, keyWidth, midlineX);
+        return DualThumbHinter.postProcess(raw, keyWidth);
     }
 
     /**
@@ -811,8 +737,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         // Two-thumb typing (#2.1): drop any leftover debug overlay so it doesn't linger over
         // a cancelled gesture's input.
         sDrawingProxy.clearGestureDebugPoints();
-        // Two-thumb typing (#1.2 visual): also clear the pending-commit indicator if it was on.
-        sDrawingProxy.setGestureCommitPending(false);
     }
 
     public void processMotionEvent(final MotionEvent me, final KeyDetector keyDetector) {
@@ -880,40 +804,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 sPointerTrackerQueue.releaseAllPointers(eventTime);
             }
         }
-        // Two-thumb typing (#1.2): if we're inside the autospace grace window of a previous
-        // gesture, this new pointer is either a continuation of that same composing word
-        // (letter on the alphabet keyboard, gesture handling still enabled) or a terminator
-        // (anything else). Decide BEFORE the rest of the down-event flow runs so the arbiter
-        // state is consistent by the time addDownEventPoint() below queries
-        // {@code sNextDownContinuesPendingGesture}. No-op when the user hasn't enabled the
-        // grace period — {@code isGracePending} is only ever true when
-        // {@code PREF_GESTURE_AUTOSPACE_GRACE_MS > 0}.
-        if (BatchInputArbiter.isGracePending()) {
-            // Gate on {@code shouldHandleGesture} too: if gesture typing was disabled (e.g.
-            // the user toggled the pref mid-grace, or we're on a layout where gestures aren't
-            // handled), {@link BatchInputArbiter#continuePendingGesture} would set a flag
-            // that never gets consumed by {@code addDownEventPoint} — leaking it into the
-            // next gesture. Flushing is the safe choice here.
-            final boolean isLetterContinuation = sGestureEnabler.shouldHandleGesture()
-                    && key != null
-                    && !key.isModifier()
-                    && Character.isLetter(key.getCode())
-                    && mKeyboard != null && mKeyboard.mId.isAlphabetKeyboard();
-            if (isLetterContinuation) {
-                // Drop the deferred commit and tell the arbiter to keep sGestureFirstDownTime
-                // intact, so this pointer's elapsed-time stamps line up with the existing
-                // aggregate. {@code sInGesture} stays true throughout.
-                BatchInputArbiter.continuePendingGesture();
-            } else {
-                // Non-letter tap (space, punctuation, gestures off, …): commit the pending
-                // gesture word synchronously so this keystroke lands AFTER it. Clears
-                // {@code sInGesture} via the DeferredCommit callback before we proceed.
-                BatchInputArbiter.flushGrace();
-            }
-            // Two-thumb typing (#1.2 visual): grace just resolved (continued or flushed) — the
-            // pending-commit indicator on the floating preview is no longer relevant.
-            sDrawingProxy.setGestureCommitPending(false);
-        }
         sPointerTrackerQueue.add(this);
         onDownEventInternal(x, y, eventTime);
         if (!sGestureEnabler.shouldHandleGesture()) {
@@ -926,56 +816,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
                 && key != null && !key.isModifier() && !mKeySwipeAllowed && !sInKeySwipe
                 && !sInShortcutRowSwipe;
         if (mIsDetectingGesture) {
-            // Combining-mode tap seeding: if the user just tapped a letter within the
-            // (base + tap-extra) combining grace window, prepend that tap's position+time as
-            // the down-event for this gesture. The recognizer sees a continuous stroke from
-            // the tapped letter to the swiped letters and produces a multi-letter word
-            // reliably; without seeding "i→l→o" alone often doesn't recognize as "ilo".
-            // InputLogic.onUpdateTailBatchInputCompleted reads consumeGestureSeedCodepoint()
-            // and strips the leading seed letter from the recognized word before concat, so
-            // we don't double-count it.
-            //
-            // We tried also seeding from the composing-tail (for gesture-then-gesture: swipe
-            // "tech" + swipe "nology" → seed nology-swipe from h's key center). It made
-            // recognition WORSE: the synthetic h→n→o→l→o→g→y trajectory has the recognizer
-            // find a word starting with h that traces that shape, "colony" (h dropped), so
-            // we got "techcolony". Tap-seed has accurate real coords; tail-seed has only the
-            // key center, and the resulting stroke geometry is unrealistic.
-            int seedX = x;
-            int seedY = y;
-            long seedTime = eventTime;
-            sCurrentGestureSeedCodepoint = 0;
-            final SettingsValues sv = Settings.getValues();
-            // Multi-part composition (#1.6): when the WordComposer extend-base path is
-            // active, it already feeds the lib the full prior-fragment trail with proper
-            // re-timed pointers. The single-point seed here would duplicate context and,
-            // worse, introduce a stale-time point at the merge boundary that breaks the
-            // recognizer's continuity assumptions (regressed 'silo' in earlier testing).
-            // Disable the PointerTracker seed entirely when multipart auto-extend is on.
-            // Shares one definition with InputLogic (covers grace-timer mode AND manual
-            // spacing) so the seed and the merged-trail path can never both fire.
-            final boolean multipartExtendActive = sv.isMultipartComposeActive();
-            if (!multipartExtendActive
-                    && sv.mCombiningGraceMs > 0
-                    && sLastLetterTapCodepoint > 0
-                    && key != null
-                    && !key.isModifier()
-                    && Character.isLetter(key.getCode())
-                    && mKeyboard != null && mKeyboard.mId.isAlphabetKeyboard()
-                    && !sInGesture) {
-                final long timeSinceTap = eventTime - sLastLetterTapTime;
-                final long effectiveWindow = sv.mCombiningGraceMs + Math.max(0, sv.mCombiningTapExtraMs);
-                if (timeSinceTap >= 0 && timeSinceTap <= effectiveWindow) {
-                    seedX = sLastLetterTapX;
-                    seedY = sLastLetterTapY;
-                    seedTime = sLastLetterTapTime;
-                    sCurrentGestureSeedCodepoint = sLastLetterTapCodepoint;
-                }
-            }
-            mBatchInputArbiter.addDownEventPoint(seedX, seedY, seedTime,
+            mBatchInputArbiter.addDownEventPoint(x, y, eventTime,
                     sTypingTimeRecorder.getLastLetterTypingTime(), getActivePointerTrackerCount());
             mGestureStrokeDrawingPoints.onDownEvent(
-                    seedX, seedY, mBatchInputArbiter.getElapsedTimeSinceFirstDown(seedTime));
+                    x, y, mBatchInputArbiter.getElapsedTimeSinceFirstDown(eventTime));
         }
     }
 
@@ -1572,36 +1416,10 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             if (currentKey != null) {
                 callListenerOnRelease(currentKey, currentKey.getCode(), true);
             }
-            // The unified combining-mode timer lives in InputLogic now and handles the
-            // commit-vs-extend decision at end-of-gesture (it sees the result, not the raw
-            // pointer events). So we always end the gesture immediately here: graceMs = 0.
-            // The old BatchInputArbiter grace path stays in place for backwards-compat with
-            // PREF_GESTURE_AUTOSPACE_GRACE_MS, but it's now dormant by default.
-            final int graceMs = 0;
-            // Two-thumb typing (#2.1): capture the current keyboard so the deferred commit
-            // path can apply the dual-thumb hinter with the geometry that was live at the
-            // moment of lift.
-            final Keyboard keyboardSnapshotForCommit = mKeyboard;
+            // InputLogic owns combining after the completed gesture has been recognized.
             if (mBatchInputArbiter.mayEndBatchInput(
-                    eventTime, getActivePointerTrackerCount(), graceMs, this,
-                    (pts, ts) -> commitDeferredBatchInput(pts, ts, keyboardSnapshotForCommit))) {
+                    eventTime, getActivePointerTrackerCount(), this)) {
                 sInGesture = false;
-            }
-            // Multi-part word composition: record the gesture's lift position as a "letter
-            // tap" so the NEXT gesture's onDownEvent seeding code (sLastLetterTap*) treats
-            // it as a continuation point. Without this, swipe+swipe gives un-seeded second
-            // strokes that the recognizer interprets as standalone words (e.g. tech+nology
-            // -> "techbiology"). Only record if the lift was on a real letter key.
-            if (Settings.getValues().mMultipartTapSeedGesture
-                    && Settings.getValues().mCombiningGraceMs > 0
-                    && currentKey != null) {
-                final int code = currentKey.getCode();
-                if (code > 0 && Character.isLetter(code)) {
-                    sLastLetterTapX = mKeyX;
-                    sLastLetterTapY = mKeyY;
-                    sLastLetterTapTime = eventTime;
-                    sLastLetterTapCodepoint = code;
-                }
             }
             showGestureTrail();
             return;
@@ -1615,17 +1433,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return;
         }
         detectAndSendKey(currentKey, mKeyX, mKeyY, eventTime);
-        // Combining-mode seeding: remember the last letter tap so a follow-up gesture can
-        // seed its first pointer event with this position and time. Only letter taps qualify
-        // (modifiers / numbers / symbols shouldn't seed). The actual seeding decision lives
-        // on the next onDownEvent path, gated on combining grace > 0 and time-since-tap.
         if (currentKey != null) {
             final int code = currentKey.getCode();
             if (code > 0 && Character.isLetter(code)) {
-                sLastLetterTapX = mKeyX;
-                sLastLetterTapY = mKeyY;
-                sLastLetterTapTime = eventTime;
-                sLastLetterTapCodepoint = code;
                 pushTapDebugPoint(mKeyX, mKeyY, mPointerId, eventTime);
             }
         }

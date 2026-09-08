@@ -4,6 +4,7 @@ package helium314.keyboard.latin
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.Build
 import android.text.InputType
 import android.text.TextUtils
@@ -19,18 +20,27 @@ import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.isValidNumber
 import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.databinding.ClipboardSuggestionBinding
+import helium314.keyboard.latin.databinding.ScreenshotSuggestionBinding
+import helium314.keyboard.latin.ocr.OcrPluginLoader
+import helium314.keyboard.latin.ocr.OcrPipeline
+import helium314.keyboard.latin.ocr.ScreenshotHelper
 import helium314.keyboard.latin.utils.InputTypeUtils
 import helium314.keyboard.latin.utils.ToolbarKey
 import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.widget.Toast
 import kotlin.concurrent.thread
 import helium314.keyboard.latin.utils.ExecutorUtils
 import helium314.keyboard.latin.utils.prefs
+import java.util.concurrent.Executor
 
-class ClipboardHistoryManager(
-        private val latinIME: LatinIME
+class ClipboardHistoryManager @JvmOverloads constructor(
+        private val latinIME: LatinIME,
+        private val screenshotExecutor: Executor = ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD),
+        private val loadScreenshot: (Uri) -> Bitmap? = { ScreenshotHelper.loadScaledBitmap(latinIME, it) },
+        private val createOcrPipeline: () -> OcrPipeline = { OcrPipeline(latinIME) }
 ) : ClipboardManager.OnPrimaryClipChangedListener {
 
     private lateinit var clipboardManager: ClipboardManager
@@ -39,6 +49,8 @@ class ClipboardHistoryManager(
     // to the main Looper is fine for the whole process. This avoids
     // allocating a fresh Handler on every postDelayed().
     private val mainHandler = Handler(Looper.getMainLooper())
+    // Bitmap deliveries must still run their stale-request cleanup after ordinary UI posts are removed.
+    private val ocrHandler = Handler(Looper.getMainLooper())
     private var clipboardSuggestionView: View? = null
     private var _clipboardDao: ClipboardDao? = null
     private var clipboardDao: ClipboardDao?
@@ -68,6 +80,12 @@ class ClipboardHistoryManager(
     private var cachedScreenshotInfo: ScreenshotInfo? = null
 
     private var screenshotObserver: ContentObserver? = null
+    private var inputGeneration = 0L
+    private var ocrGeneration = 0L
+    private var screenshotPipeline: OcrPipeline? = null
+
+    private fun isKeyboardVisible(): Boolean = latinIME.isInputViewShown ||
+        latinIME.floatingKeyboardManager?.let { it.isFloating && it.overlayRoot?.isShown == true } == true
 
     private fun registerScreenshotObserver() {
         if (screenshotObserver != null) return
@@ -81,6 +99,7 @@ class ClipboardHistoryManager(
             screenshotObserver = object : ContentObserver(mainHandler) {
                 override fun onChange(selfChange: Boolean, uri: Uri?) {
                     super.onChange(selfChange, uri)
+                    if (!isKeyboardVisible()) return
                     if (latinIME.mSettings.current.mSuggestScreenshots) {
                         updateLatestScreenshotCache {
                             latinIME.tryShowClipboardSuggestion()
@@ -110,6 +129,7 @@ class ClipboardHistoryManager(
     }
 
     private fun updateLatestScreenshotCache(onComplete: (() -> Unit)? = null) {
+        val session = inputGeneration
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             android.Manifest.permission.READ_MEDIA_IMAGES
         } else {
@@ -117,11 +137,11 @@ class ClipboardHistoryManager(
         }
         if (latinIME.checkCallingOrSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             cachedScreenshotInfo = null
-            onComplete?.invoke()
+            if (session == inputGeneration && isKeyboardVisible()) onComplete?.invoke()
             return
         }
 
-        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
+        screenshotExecutor.execute {
             val projection = mutableListOf(
                 android.provider.MediaStore.Images.Media._ID,
                 android.provider.MediaStore.Images.Media.DISPLAY_NAME,
@@ -199,8 +219,9 @@ class ClipboardHistoryManager(
                                 }
 
                                 mainHandler.post {
-                                    onComplete?.invoke()
-                                    latinIME.tryShowClipboardSuggestion()
+                                    if (session == inputGeneration && isKeyboardVisible()) {
+                                        if (onComplete != null) onComplete() else latinIME.tryShowClipboardSuggestion()
+                                    }
                                 }
                                 return@execute
                             }
@@ -214,7 +235,7 @@ class ClipboardHistoryManager(
             }
             cachedScreenshotInfo = null
             mainHandler.post {
-                onComplete?.invoke()
+                if (session == inputGeneration && isKeyboardVisible()) onComplete?.invoke()
             }
         }
     }
@@ -256,6 +277,7 @@ class ClipboardHistoryManager(
     }
 
     fun onStartInputView() {
+        onStartInput()
         val prefs = latinIME.prefs()
         val lastDismissed = prefs.getString("last_dismissed_screenshot_uri", "")
         if (cachedScreenshotInfo != null && cachedScreenshotInfo?.uri?.toString() != lastDismissed) {
@@ -267,7 +289,24 @@ class ClipboardHistoryManager(
     }
 
     fun onFinishInputView() {
+        onFinishInput()
         mainHandler.removeCallbacksAndMessages(null)
+    }
+
+    fun onStartInput() {
+        inputGeneration++
+        cancelScreenshotOcr()
+    }
+
+    fun onFinishInput() {
+        inputGeneration++
+        cancelScreenshotOcr()
+    }
+
+    fun cancelScreenshotOcr() {
+        ocrGeneration++
+        screenshotPipeline?.release()
+        screenshotPipeline = null
     }
 
     private fun cleanUpImageCache() {
@@ -288,6 +327,7 @@ class ClipboardHistoryManager(
     }
 
     fun onDestroy() {
+        onFinishInput()
         unregisterScreenshotObserver()
         clipboardManager.removePrimaryClipChangedListener(this)
         mainHandler.removeCallbacksAndMessages(null)
@@ -633,36 +673,47 @@ class ClipboardHistoryManager(
             lastSuggestedScreenshotUri = contentUri.toString()
         }
 
-        val binding = ClipboardSuggestionBinding.inflate(LayoutInflater.from(latinIME), parent, false)
-        val textView = binding.clipboardSuggestionText
-        textView.text = "Screenshot"
-        
+        val ocrEnabled = OcrPluginLoader.hasPlugin(latinIME) && latinIME.prefs().getBoolean(OcrPluginLoader.PREF_OCR_SUGGEST_SCREENSHOT_TEXT, true)
+        val binding = ScreenshotSuggestionBinding.inflate(LayoutInflater.from(latinIME), parent, false)
+        val pasteButton = binding.screenshotPasteButton
+        val thumbnailImage = binding.screenshotThumbnailImage
+        val extractButton = binding.screenshotExtractTextButton
+        val closeButton = binding.screenshotSuggestionClose
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                val thumb = latinIME.contentResolver.loadThumbnail(contentUri, android.util.Size(120, 120), null)
-                
-                val size = Math.min(thumb.width, thumb.height)
-                val x = (thumb.width - size) / 2
-                val y = (thumb.height - size) / 2
-                val croppedThumb = android.graphics.Bitmap.createBitmap(thumb, x, y, size, size)
-                
-                val drawable = android.graphics.drawable.BitmapDrawable(latinIME.resources, croppedThumb)
-                textView.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
+                val thumb = latinIME.contentResolver.loadThumbnail(contentUri, android.util.Size(160, 160), null)
+                thumbnailImage.setImageBitmap(thumb)
             } catch (e: Exception) {
                 val clipIcon = latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.PASTE.name.lowercase())
-                textView.setCompoundDrawablesRelativeWithIntrinsicBounds(clipIcon, null, null, null)
+                thumbnailImage.setImageDrawable(clipIcon)
             }
         }
 
-        textView.setOnClickListener {
+        if (ocrEnabled) {
+            extractButton.visibility = View.VISIBLE
+            extractButton.setImageResource(R.drawable.ic_ocr_extract)
+
+            extractButton.setOnClickListener {
+                dontShowCurrentSuggestion = true
+                lastSuggestedScreenshotUri = contentUri.toString()
+                AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
+                binding.root.isGone = true
+
+                extractScreenshot(contentUri)
+            }
+        } else {
+            extractButton.visibility = View.GONE
+        }
+
+        pasteButton.setOnClickListener {
             dontShowCurrentSuggestion = true
             lastSuggestedScreenshotUri = contentUri.toString()
             latinIME.onImageSelected(contentUri.toString())
             AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
             binding.root.isGone = true
         }
-        
-        val closeButton = binding.clipboardSuggestionClose
+
         closeButton.setImageDrawable(latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase()))
         closeButton.setOnClickListener { 
             val prefs = latinIME.prefs()
@@ -678,11 +729,51 @@ class ClipboardHistoryManager(
         }
 
         val colors = latinIME.mSettings.current.mColors
-        textView.setTextColor(colors.get(ColorType.KEY_TEXT))
-        colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)
         colors.setBackground(binding.root, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
-        
+        colors.setColor(extractButton, ColorType.REMOVE_SUGGESTION_ICON)
+        colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)
+
         return binding.root
+    }
+
+    internal fun extractScreenshot(contentUri: Uri) {
+        cancelScreenshotOcr()
+        val request = ocrGeneration
+        val session = inputGeneration
+        val inputSession = latinIME.inputSessionGeneration
+        val editor = latinIME.currentInputEditorInfo
+        val isCurrent = {
+            request == ocrGeneration && session == inputGeneration &&
+                inputSession == latinIME.inputSessionGeneration &&
+                editor === latinIME.currentInputEditorInfo && latinIME.currentInputStarted &&
+                isKeyboardVisible()
+        }
+        if (!isCurrent()) return
+        screenshotExecutor.execute {
+            val bitmap = loadScreenshot(contentUri)
+            ocrHandler.post {
+                if (!isCurrent()) {
+                    bitmap?.recycle()
+                    return@post
+                }
+                if (bitmap != null) {
+                    val pipeline = createOcrPipeline()
+                    screenshotPipeline = pipeline
+                    pipeline.processImage(
+                        bitmap = bitmap,
+                        onSuccess = { lines -> latinIME.mKeyboardSwitcher.showOcrResult(lines) },
+                        onError = { err -> Toast.makeText(latinIME, err, Toast.LENGTH_SHORT).show() },
+                        isRequestCurrent = isCurrent,
+                        onInsertText = { text ->
+                            latinIME.onTextInput(text)
+                            latinIME.mKeyboardSwitcher.hideOcrPanels()
+                        }
+                    )
+                } else {
+                    Toast.makeText(latinIME, R.string.ocr_screenshot_load_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun removeClipboardSuggestion() {

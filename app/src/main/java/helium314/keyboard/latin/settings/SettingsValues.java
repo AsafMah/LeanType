@@ -130,18 +130,12 @@ public class SettingsValues {
         public final boolean mGestureFloatingPreviewDynamicEnabled;
         public final int mGestureFastTypingCooldown;
         public final int mGestureTrailFadeoutDuration;
-        // Two-thumb typing settings (see plan in PR #improve-two-thumb-typing).
-        // Wired into preferences here; behaviour for each is implemented in follow-up changes.
+        // Two-thumb typing settings.
         public final boolean mGestureManualSpacing;
         public final boolean mGestureFragmentBackspace;
-        public final int mGestureAutospaceGraceMs;
-        public final int mGestureTapPromotionMs;
         public final boolean mGestureDualThumbHinting;
-        public final int mGestureDualThumbMidlinePct;
         public final boolean mGestureDebugDrawPoints;
         public final boolean mGestureDebugAccumulateFragments;
-        public final boolean mGestureApostropheKey;
-        public final boolean mAutospaceVisualHint;
         // Unified combining-mode (replaces gesture-only grace + tap-promotion). Default 0 = off.
         public final int mCombiningGraceMs;
         public final boolean mCombiningAutocorrectOnAutospace;
@@ -156,7 +150,6 @@ public class SettingsValues {
         // Multi-part word composition (this branch).
         public final boolean mMultipartAutoExtendInCombining;
         public final boolean mMultipartFullWordSuggestions;
-        public final boolean mMultipartTapSeedGesture;
         public final boolean mMultipartRerecognizeTaps;
         public final boolean mSlidingKeyInputPreviewEnabled;
         public final boolean mRecordInputTraces;
@@ -196,7 +189,6 @@ public class SettingsValues {
         public final boolean mAutoHidePinnedKeys;
         public final boolean mRememberToolbarState;
         public final boolean mToolbarSwipeDownToHide;
-        public final boolean mShowOnlyToolbarWithHardwareKeyboard;
         public final boolean mAlphaAfterEmojiInEmojiView;
         public final boolean mAlphaAfterClipHistoryEntry;
         public final boolean mAlphaAfterSymbolAndSpace;
@@ -218,6 +210,16 @@ public class SettingsValues {
         public final int mKeypressVibrationAmplitude;
         public final float mKeypressSoundVolume;
         public final String mKeypressSoundStyle;
+        public final float mSoundPitchScale;
+        public final boolean mSoundRandomPitch;
+        public final boolean mSoundStereoPan;
+        public final boolean mSoundDynamicVelocity;
+        public final boolean mSoundMuteInSilent;
+        public final boolean mSoundMuteInDnd;
+        public final float mSoundVolSpace;
+        public final float mSoundVolDelete;
+        public final float mSoundVolEnter;
+        public final float mSoundVolModifiers;
         public final boolean mAutoCorrectionEnabledPerUserSettings;
         public final String mAutoCorrectTrigger;
         public final boolean mAutoCorrectEnabled;
@@ -238,6 +240,7 @@ public class SettingsValues {
         private final boolean mOverrideShowingSuggestions;
         public final boolean mSuggestClipboardContent;
         public final boolean mSuggestScreenshots;
+        public final boolean mInlineMathCalculation;
         public final boolean mCompressScreenshots;
         public final boolean mAutoReadOtp;
         public final SettingsValuesForSuggestion mSettingsValuesForSuggestion;
@@ -390,6 +393,8 @@ public class SettingsValues {
                                 Defaults.PREF_SUGGEST_SCREENSHOTS);
                 mAutoReadOtp = prefs.getBoolean(Settings.PREF_AUTO_READ_OTP,
                                 Defaults.PREF_AUTO_READ_OTP);
+                mInlineMathCalculation = prefs.getBoolean(Settings.PREF_INLINE_MATH_CALCULATION,
+                                Defaults.PREF_INLINE_MATH_CALCULATION);
                 mCompressScreenshots = prefs.getBoolean(Settings.PREF_COMPRESS_SCREENSHOTS,
                                 Defaults.PREF_COMPRESS_SCREENSHOTS);
                 mDoubleSpacePeriodTimeout = 1100; // ms
@@ -420,6 +425,26 @@ public class SettingsValues {
                                 Defaults.PREF_KEYPRESS_SOUND_VOLUME);
                 mKeypressSoundStyle = prefs.getString(Settings.PREF_KEYPRESS_SOUND_STYLE,
                                 Defaults.PREF_KEYPRESS_SOUND_STYLE);
+                mSoundPitchScale = prefs.getFloat(Settings.PREF_SOUND_PITCH_SCALE,
+                                Defaults.PREF_SOUND_PITCH_SCALE);
+                mSoundRandomPitch = prefs.getBoolean(Settings.PREF_SOUND_RANDOM_PITCH,
+                                Defaults.PREF_SOUND_RANDOM_PITCH);
+                mSoundStereoPan = prefs.getBoolean(Settings.PREF_SOUND_STEREO_PAN,
+                                Defaults.PREF_SOUND_STEREO_PAN);
+                mSoundDynamicVelocity = prefs.getBoolean(Settings.PREF_SOUND_DYNAMIC_VELOCITY,
+                                Defaults.PREF_SOUND_DYNAMIC_VELOCITY);
+                mSoundMuteInSilent = prefs.getBoolean(Settings.PREF_SOUND_MUTE_IN_SILENT,
+                                Defaults.PREF_SOUND_MUTE_IN_SILENT);
+                mSoundMuteInDnd = prefs.getBoolean(Settings.PREF_SOUND_MUTE_IN_DND,
+                                Defaults.PREF_SOUND_MUTE_IN_DND);
+                mSoundVolSpace = prefs.getFloat(Settings.PREF_SOUND_VOL_SPACE,
+                                Defaults.PREF_SOUND_VOL_SPACE);
+                mSoundVolDelete = prefs.getFloat(Settings.PREF_SOUND_VOL_DELETE,
+                                Defaults.PREF_SOUND_VOL_DELETE);
+                mSoundVolEnter = prefs.getFloat(Settings.PREF_SOUND_VOL_ENTER,
+                                Defaults.PREF_SOUND_VOL_ENTER);
+                mSoundVolModifiers = prefs.getFloat(Settings.PREF_SOUND_VOL_MODIFIERS,
+                                Defaults.PREF_SOUND_VOL_MODIFIERS);
                 mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
                                 Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY);
                 mGestureMethod = prefs.getString(Settings.PREF_GESTURE_METHOD, "fallback");
@@ -440,23 +465,13 @@ public class SettingsValues {
                                 Defaults.PREF_GESTURE_MANUAL_SPACING);
                 mGestureFragmentBackspace = prefs.getBoolean(Settings.PREF_GESTURE_FRAGMENT_BACKSPACE,
                                 Defaults.PREF_GESTURE_FRAGMENT_BACKSPACE);
-                mGestureAutospaceGraceMs = prefs.getInt(Settings.PREF_GESTURE_AUTOSPACE_GRACE_MS,
-                                Defaults.PREF_GESTURE_AUTOSPACE_GRACE_MS);
-                mGestureTapPromotionMs = prefs.getInt(Settings.PREF_GESTURE_TAP_PROMOTION_MS,
-                                Defaults.PREF_GESTURE_TAP_PROMOTION_MS);
                 mGestureDualThumbHinting = prefs.getBoolean(Settings.PREF_GESTURE_DUAL_THUMB_HINTING,
                                 Defaults.PREF_GESTURE_DUAL_THUMB_HINTING);
-                mGestureDualThumbMidlinePct = prefs.getInt(Settings.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT,
-                                Defaults.PREF_GESTURE_DUAL_THUMB_MIDLINE_PCT);
                 mGestureDebugDrawPoints = prefs.getBoolean(Settings.PREF_GESTURE_DEBUG_DRAW_POINTS,
                                 Defaults.PREF_GESTURE_DEBUG_DRAW_POINTS);
                 mGestureDebugAccumulateFragments = prefs.getBoolean(
                                 Settings.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS,
                                 Defaults.PREF_GESTURE_DEBUG_ACCUMULATE_FRAGMENTS);
-                mGestureApostropheKey = prefs.getBoolean(Settings.PREF_GESTURE_APOSTROPHE_KEY,
-                                Defaults.PREF_GESTURE_APOSTROPHE_KEY);
-                mAutospaceVisualHint = prefs.getBoolean(Settings.PREF_AUTOSPACE_VISUAL_HINT,
-                                Defaults.PREF_AUTOSPACE_VISUAL_HINT);
                 mCombiningGraceMs = prefs.getInt(Settings.PREF_COMBINING_GRACE_MS,
                                 Defaults.PREF_COMBINING_GRACE_MS);
                 mCombiningAutocorrectOnAutospace = prefs.getBoolean(
@@ -488,9 +503,6 @@ public class SettingsValues {
                 mMultipartFullWordSuggestions = prefs.getBoolean(
                                 Settings.PREF_MULTIPART_FULL_WORD_SUGGESTIONS,
                                 Defaults.PREF_MULTIPART_FULL_WORD_SUGGESTIONS);
-                mMultipartTapSeedGesture = nonNormalTwoThumbSpacing || prefs.getBoolean(
-                                Settings.PREF_MULTIPART_TAP_SEED_GESTURE,
-                                Defaults.PREF_MULTIPART_TAP_SEED_GESTURE);
                 mMultipartRerecognizeTaps = prefs.getBoolean(
                                 Settings.PREF_MULTIPART_RERECOGNIZE_TAPS,
                                 Defaults.PREF_MULTIPART_RERECOGNIZE_TAPS);
@@ -620,9 +632,6 @@ public class SettingsValues {
                                 Defaults.PREF_REMEMBER_TOOLBAR_STATE);
                 mToolbarSwipeDownToHide = prefs.getBoolean(Settings.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE,
                                 Defaults.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE);
-                mShowOnlyToolbarWithHardwareKeyboard = prefs.getBoolean(
-                                Settings.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD,
-                                Defaults.PREF_SHOW_ONLY_TOOLBAR_WITH_HARDWARE_KEYBOARD);
                 // Migration: clear any old saved value and reset to default
                 if (!prefs.contains(Settings.PREF_AUTO_HIDE_PINNED_KEYS)) {
                     prefs.edit().putBoolean(Settings.PREF_AUTO_HIDE_PINNED_KEYS, Defaults.PREF_AUTO_HIDE_PINNED_KEYS).apply();

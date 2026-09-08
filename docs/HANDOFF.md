@@ -1,15 +1,202 @@
-# LeanTypeDual — Session Handoff (updated 2026-09-03)
+# LeanTypeDual — Session Handoff (updated 2026-09-08)
 
 This document lets a new agent/session resume without re-deriving context. It records
 **what shipped, exactly where everything sits, what is still open, and the traps that cost
-time**. Everything here was verified against the repo, GitHub, and a physical device during
-the session — no assumptions.
+time**. Older release/device receipts are historical. The cleanup comparison candidate is
+installed as recorded below; installation is not verification of its behavior on a phone.
 
 Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 
-> **Current-state refresh 2026-09-03:** §1, §5, §6, §11 and §12 now reflect v0.3.0,
-> LeanBitLab v4.1.8, the Shift fix, the fork-invariant gates, and removal of the falsified
-> gesture experiments. Sections 2, 3 and 7 remain historical context.
+## Current task: latest upstream, minimal retained delta
+
+The user corrected the earlier plan: **dual-thumb typing is the main fork feature**.
+Do not treat older upstream code retained by earlier merges as intentional fork features.
+The current authorization is to adopt latest upstream and remove those retentions, not
+maintain a private AI backend or continue a broad upstream bug hunt.
+
+- Latest LeanBitLab/LeanType `52567c0f1e52335583e4abfeb312eb6af0d7f70f` is integrated
+  in merge commit `f1c0fb71d`, following an independent cross-model critique.
+- Current alignment removes the Java fallback recognizer, bundled llama backend,
+  retained host handwriting runtime, Offline Lite flavor and bundled dictionary packaging.
+  Three flavors remain: standard, standardfull, offline. Offline's minSdk returns to 21;
+  optional AI/plugins still require API 26. No INTERNET permission is added to Offline.
+- Keep the existing app IDs, version 4300, stored preferences/models/dictionaries and
+  live manual/timed dual-thumb composition, connector, fragment backspace and pointer
+  normalization. Unrelated optional fork additions are not being removed in this task.
+- Native gesture setup is required. Upstream's bundled library is dictionary-only.
+  `sHaveGestureLib` is NOT proof of native recognition; `sHaveNativeGestureLib` must be
+  true. A stored `"fallback"` preference is ignored by native routing, not destructively
+  migrated. Upstream's unused preference carrier fields remain to avoid needless divergence.
+- Standard EXP from the current upstream-aligned worktree was installed on September 8
+  at 07:21 +03:00, by explicit user request, without switching the selected keyboard.
+  Receipt and initial user feedback are below; no agent-driven swipe test was performed.
+- Latest merge coverage: 35 cases, including OCR camera relayout. Subsequent native
+  routing/composition/settings run: 187 cases across nine suites, no failures, fresh
+  result gate. These fixtures do not execute the closed native recognizer on a phone.
+- Offline plugin/language/editor-ownership coverage: 59 cases across five suites,
+  no failures, fresh result gate. The service follows pinned upstream apart from the
+  Kotlin `prefs` accessor and preserving suppression of host input/output logging.
+  The local-test manifest mirrors the app's existing graphics-path SDK override;
+  no production minSdk or dependency downgrade was needed to run these tests.
+- All three EXP variants build; their package IDs, minimum SDKs, permissions and
+  unbundled dictionary/runtime contents were inspected. All 40 existing tooling tests
+  and the updated product source gate pass. No release/signing workflow was dispatched.
+
+**Implementation and installation are complete.** The user chose installation without
+switching keyboards: do not change their selected IME to run a swipe test. Detailed
+native/dual-thumb behavior has not been separately characterized. No private native-backend rebuild is pending.
+The original Notes/Word paragraph-deletion report is still unresolved.
+
+**Initial user feedback, September 8 at 21:03 +03:00:** "feels ok".
+This is positive initial feedback for the installed upstream-aligned EXP baseline
+(`b0398220a`), not a claim that every gesture case or the paragraph-backspace report is fixed.
+
+**Integration:** #155 is the new PR into `dev`, not the historical merged #134.
+The PR and issues #152/#153/#154 are In Progress on project #3; parent epic #16 is
+also In Progress. Scope updates on those issues explicitly supersede old four-flavor,
+Java-index and bundled-native retention requirements. Do not self-merge.
+
+CI follow-through is test-only: a bounded worker heap fixes the missing-result OOM,
+and shared Robolectric input-method configuration prevents app-startup subtype
+queries from reaching incomplete framework stubs. The apparent `MiscTest` width
+failure was an uncaught asynchronous shortcut-query exception before its test body.
+Per-class shadow configuration and a restore-teardown join were insufficient and
+were not retained. A service-loaded fixture reset hook clears mutable shadow state;
+test-local Kotlin shadows do not get a generated reset provider merely by adding
+`@Resetter`. Both SDK 33 and 35 reproduce the original query NPE without the shared
+configuration, and lifecycle regressions fail without the reset hook. The full
+Windows run now contains 610 cases and only the four existing Parser baseline
+failures. Baselines and exclusions are unchanged. No production probe remains;
+the phone APK has not changed. Check the exact PR head's CI before merging.
+
+### Remaining fork inventory
+
+Frozen comparison: `b1694d8df` versus integrated upstream `52567c0f`. It contains 282
+paths (+22,920/-2,567 text lines): 103 Java/Kotlin production, 21 resources/data,
+7 native diagnostic scaffolding, 57 JVM tests/fixtures, 29 build/tooling and 65
+docs/branding/history. About 65% of added text is tests, tooling or documentation.
+This is not the PR-vs-dev diff and is not 282 features; mixed-file tags are not ownership.
+The later CI-only follow-ups do not change the installed keyboard's production behavior.
+
+| Group | Disposition |
+|---|---|
+| Dual-thumb composition, spacing/deletion support and pointer normalization | Keep as the core. |
+| Old recognizer, bundled AI/handwriting runtimes and Lite distribution | Already retired; no private backend maintenance remains. |
+| Shortcut rows, clipboard editor/actions, general toolbar extras, power/HCESAR layouts | Independent optional extras, still present; decide before removing. |
+| Dictionary curation/trust/ranking | Separate, larger product decision; preserve stored data and avoid a new redesign. |
+| Tap reinterpretation/point hinting and trace/native replay scaffolding | Optional, live diagnostic/experimental paths; defaults are off, not proof of dead code. |
+| Later AI/OCR/math/import/state corrections | Existing carried repairs, not original fork features or permission for more broad repair work. |
+
+First isolated upstream candidates: accelerated-emoji deletion (LeanBitLab/LeanType#423),
+null IME-token guards, and preserving the selected custom layout across a symbol round-trip.
+Service-identity reuse and dictionary-query snapshot/private-weight fixes need a focused
+lifecycle/concurrency case before submission. Fast Shift, direct IME switching, broad AI
+functionality and five custom-layout slots already exist upstream; propose only residual fixes.
+No additional upstream PR or optional-feature removal has been performed.
+
+Detailed current inventory: session artifact `MINIMAL_FORK_INVENTORY.md`, with
+`remaining-fork-paths.csv`, `remaining-fork-coverage.json` and
+`refresh-remaining-fork-ledger.ps1`. All 282 paths are enumerated; unmapped paths fail
+generation. The older `minimal-fork-*` CSV/JSON retain the historical 229/289 comparison.
+Neither inventory is a fresh whole-codebase correctness audit.
+
+**Current phone receipt:** `LeanTypeDual-EXP-upstream-52567c0-8291f4fc.apk`, saved
+immutably in the session artifact directory, is Standard EXP `0.3.0-exp` / `4300`,
+package `com.asafmah.leantypedual.exp`, 28,584,477 bytes, SHA-256
+`8291f4fca9fd4bffea57c497d7cfedc2046c1d670245f091c1b80a404c78fe2f`.
+Installed with `adb install -r` on SM-S936B; the installed base APK hash matches.
+Selected IME before/after:
+`com.asafmah.leantypedual/helium314.keyboard.latin.LatinIME`.
+The existing user gesture library remains byte-identical (SHA-256
+`b1049983e6ac5cfc6d1c66e38959751044fad213dff0637a6cf1d2a2703e754f`);
+the existing 2,500,520-byte English main dictionary is still in app data.
+The package has no bundled dictionaries or retired runtimes, retains ARM32/ARM64,
+minSdk 23 / targetSdk 35, and matches the prior EXP debug signing certificate.
+This is not a release, a version bump, or a claim that native swiping was exercised.
+
+The older receipts below are historical. Their four-flavor/bundled-backend decisions
+have been superseded by the explicit user authorization above.
+
+> **Current-state refresh 2026-09-06:** completed integration, runtime and state corrections
+> have been combined locally at `938997b7635ad43ff95215d1a206b2a28db8e682`, preserving all three
+> source heads (`3e2ce8612`, `9b006c82a`, `fefbafa92`). Only CHANGELOG required conflict
+> resolution; the Suggest math gate and generation-aware caches coexist. The local cleanup
+> following that base removes dead pointer-grace/seed machinery, unused spacing work,
+> inactive settings, an unreachable blocked-words screen and a duplicate toolbar preference
+> snapshot, preserving live composition, the connector and stored user data. None of this is released.
+> The comparison candidate was installed on request (receipt below). Correct issue ownership is #152 runtime, #153 restore/dictionary state and
+> #154 remaining AI. Stabilized remote `dev` remains `07ef7536f`.
+>
+> **First candidate receipt (superseded on the phone):** cleanup is committed at `b5760728b414763171fe29bd0db77b45419c0bb9`.
+> `:app:assembleStandardExperimental` produced
+> `app\build\outputs\apk\standard\experimental\1-LeanTypeDual_0.3.0-standard-experimental.apk`
+> (25,377,250 bytes; SHA-256
+> `1e61a30d41aae0445edeaae3885600395091fcc15d77e399d17072a767f65fc9`).
+> This is the cloud-capable standard flavor, debug-signed as `com.asafmah.leantypedual.exp`,
+> label **LeanTypeDual EXP**, version `0.3.0-exp` / `4300`, minSdk 23, targetSdk 35,
+> ARM32/ARM64. APK manifest and signature inspection passed. No version bump, release or
+> push was performed. On 2026-09-06 at 20:49 +03:00 the user requested installation:
+> `adb install -r` updated the existing EXP app on Samsung SM-S936B, preserving its data.
+> The installed `base.apk` hash matches the candidate above. EXP was already enabled;
+> the selected daily keyboard remains `com.asafmah.leantypedual/helium314.keyboard.latin.LatinIME`.
+> Installation is not phone-behavior acceptance. An immutable copy is retained in the session
+> artifacts as `LeanTypeDual-EXP-b5760728b.apk`; the ordinary Gradle output path is reused below.
+>
+> **AI follow-up (now included in installed EXP):** `0e528460b` binds callbacks to
+> editor/request/source snapshots; `790cd7e2f` reconciles offline language preferences;
+> `79d659f3b` serializes native generation, model loading and unloading and removes application
+> content logs. Offline and standard actual-path receipts enumerate 58 executions with no
+> skips in `app\build\test-results\ai-154-receipts\executed-methods.txt`. A bounded handoff
+> review found two additional UX gaps, corrected in `38fe4ab2b`: unavailable editor snapshots
+> now produce localized feedback, and changed text in the same editor no longer strands the
+> loading indicator. Its follow-up receipts cover 70 executions (35 each offline/standard),
+> zero skips; 14 failures per flavor were reproduced before correction. See
+> `app\build\test-results\ai-154-receipts\integration-followup\`.
+> Cancellation rejects delivery immediately; a blocking native call drains before the
+> shared engine lock is released for another request. This does not promise instant native
+> interruption or establish native generation quality on a phone.
+>
+> **Previous phone candidate (superseded September 8):** `:app:assembleStandardExperimental` at source
+> `0304f22c849020426b97187fa072a39f80e6b223` produced the updated APK at the Gradle path above
+> (28,679,741 bytes; SHA-256
+> `5dd3e65e1cf98e78d7d2a989ff7a5bf1715c1d66588ab032d6698edf46930b15`).
+> Saved separately as `LeanTypeDual-EXP-0304f22c8.apk` in session artifacts. On September 6
+> at 21:38 +03:00, `adb install -r` updated EXP on the same Samsung; installed APK hash
+> matches. The selected normal keyboard was unchanged. This remains standard/cloud-capable,
+> EXP `0.3.0-exp` / `4300`, not an offline-AI release. The integrated AI/curation/input run
+> executed 215 cases with fresh results and zero failures; inherited ignored/early-returned
+> InputLogic cases still do not establish phone behavior.
+>
+> **Historical native privacy boundary (backend now being retired):** the cached `io.github.ljcamargo:llamacpp-kotlin:0.4.0`
+> contains JNI prompt diagnostics. Public dependency source at
+> `ljcamargo/kotlinllamacpp@c292c068bdd258203dd41fc6d0f08578eddd59f3`,
+> `llamaCpp/src/main/cpp/jni.cpp`, defines `LOGI` directly as `__android_log_print` and logs
+> `doCompletion: prompt='%s'`. This supports the binary finding but is not a reproducible
+> provenance match for the published AAR. Application/JVM-map redaction does not suppress
+> native logs. This finding belongs to the retired implementation, not a mandate to rebuild
+> it. The current task adopts upstream's plugin backend; external plugin privacy and
+> native behavior remain separate device/runtime boundaries.
+>
+> **Curation follow-up:** `1839c4c62` uses the canonical suggestion word for Add/Block dialog
+> actions, not the rendered label containing physical-keyboard shortcut superscripts.
+> Both real rendering/dialog callback regressions failed before the change and passed after.
+> This does not change legacy regex blacklist storage or trust/provenance behavior.
+>
+> **Cleanup evidence:** 190 targeted JVM/Robolectric cases, zero failures, fresh result gate;
+> three inherited ignored tests remain. `InputLogicTest` also retains three `runTests`
+> early returns (Hangul insertion, dictionary-dependent tap-only indicator and autocorrect
+> revert), so these are not claimed as executed coverage. The new arbiter tests execute
+> the real aggregation/down-event path; hardware visibility invokes `setMainKeyboardFrame`
+> on inflated views for hardware/preference/state combinations; Compose navigates from
+> Dictionaries to the surviving blocked-words editor. These do not exercise closed native
+> recognition or the original Notes/Word paragraph report. AI #154 and the remaining
+> dictionary/curation/workflow packages are still open; this candidate is not a claim that
+> the whole quality plan is finished.
+>
+> **Previous refresh 2026-09-05:** §1 and §2.5 distinguish stabilized `dev` from
+> the pending LeanBitLab v4.2.0 integration. §5, §6, §11 and §12 reflect v0.3.0,
+> LeanBitLab v4.1.8, the Shift fix, the fork-invariant gates, and experiment cleanup.
+> Sections 2.1–2.4, 3 and 7 remain historical context.
 
 ---
 
@@ -18,18 +205,20 @@ Read alongside `AGENTS.md` (repo conventions, which remain authoritative).
 | Thing | State |
 |---|---|
 | `main` | `b90d79de1` — released LeanTypeDual 0.3.0 |
-| `dev` | `deaa782dd` — Shift fix (#150), after LeanBitLab v4.1.8 (#149); this cleanup lands next |
+| `dev` integration base | `07ef7536f` — v4.1.8 (#149), Shift fix (#150), and experiment cleanup (#151), including the fork-invariant gates (#148) |
 | Current version | `0.3.0` / versionCode `4300` on both `main` and `dev` |
 | Tag `v0.1.0` | Pushed **and published** with 4 signed APKs |
 | Tag `v0.3.0` | **Published and latest** with 4 signed APKs, all verified after download |
-| Upstream integrated | LeanBitLab/LeanType **v4.1.8** (`cbfaf21a`), covering v4.1.3–v4.1.8 |
-| Phone (SM-S936B) | Last verified with signed **0.3.0/4300**, debug, and EXP packages; wireless ADB is currently unavailable |
+| Upstream on stabilized `dev` | LeanBitLab/LeanType **v4.1.8**; current local branch integrates latest `52567c0f` via `f1c0fb71d` |
+| Phone (SM-S936B) | EXP **0.3.0/4300** updated to the latest-upstream/native-only candidate September 8 at 07:21 +03:00; the normal keyboard was left selected |
 | Tablet | Never verified — still outstanding, low risk |
-| Open PRs | After this cleanup lands, only **#106** (`issue37-slide-target-actions`, unrelated/pre-existing) |
+| Current upstream alignment | Latest `52567c0f`; old Java fallback, bundled AI/handwriting runtimes and separate Lite distribution removed in the local branch, preserving dual-thumb typing |
 
-**No release work is outstanding.** Open work is device verification of the Shift fix and
-v4.1.8 merge, issue #106, and deliberate triage of the backed-up old branches/worktrees.
-The two-track/ideal-prefix experiment was falsified on device and is removed by this cleanup;
+**Current priority is stabilization and a candidate build, not another broad review.**
+No release has been performed. The upstream-aligned EXP candidate is installed as recorded above;
+device verification of the unreleased changes remains outstanding,
+as do unrelated #106 and deliberate triage of backed-up old branches/worktrees.
+The two-track/ideal-prefix experiment was falsified on device and was removed by #151;
 the proven pointer-id normalization remains. See §12.
 
 ---
@@ -72,7 +261,44 @@ fixes, and many emoji/clipboard layout fixes.
 - Fixed fast Shift double-tap/Caps Lock in #150. The fix replaces an arbitrary 100 ms minimum
   with the real invariant: two presses must have an intervening release boundary.
 - Removed the falsified DUAL_POINTER, ideal-prefix and re-timing experiment machinery while
-  retaining the proven pointer-id normalization and side-by-side EXP packaging (#147).
+  retaining the proven pointer-id normalization and side-by-side EXP packaging (#151).
+
+### 2.5 Upstream v4.2.0 integration (not released)
+
+- The provisional merge is `0ab4172f3727d3821eeb34f3e91f91230286380a`, with parents
+  `07ef7536f5fa93e7ec729dd5dd5aeba5bb195807` and
+  `1383390cb9c48b859f56b6499210cbccbd91996f`. The prior upstream ancestor is
+  `cbfaf21a16194ce934c048affac563446f8cebbf`.
+- Shared-file audit includes the semantic auto-resolutions in `InputLogic.java` and
+  `KeyboardActionListenerImpl.kt`, not just Git conflicts. The build delta is CameraX
+  dependencies only: identity, version, four flavors, bundled offline llama/dictionaries,
+  release signing, and EXP packaging stay fork-owned.
+- Keep upstream OCR/camera, math, sound, and voice functionality. Offline tiers can import
+  local addons; new sound/OCR in-app downloads are cloud-only. OCR respects `nouserlib`.
+- The Shift state machine remains identical to stabilized dev and retains all eight
+  release-boundary tests. Explicit short dictionary shortcuts remain eligible for
+  autocorrection without weakening upstream's protection for unknown short tokens.
+- Forced auto-capitalization now reaches the unified input-type guard before adding
+  sentence capitalization, preserving URI/email/password exclusions with either toggle.
+- Cloud responses marked as token-truncated fail before text replacement; Gemini also
+  honors the new cloud max-token setting for both proofreading and translation.
+- Inline math candidates honor the existing enable/disable preference. Build/API
+  availability now gates both settings lookup and search, the plugin hub, and direct
+  OCR/AI routes. Offline/lite no longer expose cloud controls; unsupported OCR does not
+  offer camera-permission actions. Supported local OCR imports remain available.
+- Unit-test workflow triggers include the result checker and baseline paths; native-test
+  triggers include their own workflow. Existing tooling tests enforce these trigger paths.
+- Completed OCR/camera lifecycle, sound-pack containment, math privacy/replacement, voice,
+  clipboard/touchpad and restore/dictionary-state corrections are now combined at `938997b76`.
+  The combined 232-case targeted integration run passed with fresh result-gate output.
+  Dead-code cleanup follows in a separate commit; device evidence is still outstanding.
+- Remaining inherited AI risks are tracked in #154: stale-editor callbacks, shared offline
+  inference-flow races, the offline target-language stub, and input logging. Token-limit
+  handling does not resolve these or constitute AI-wide safety approval. Offline setup
+  also still advertises a disconnected external AI plugin despite bundled llama/GGUF;
+  that baseline setup mismatch is deferred, not disguised as a working optional backend.
+- The four known Windows `ParserTest` failures remain the baseline; do not add new skips
+  or baseline entries to conceal integration regressions.
 
 ---
 
@@ -94,13 +320,13 @@ the latest release, 0.3.0, uses `4300`, so the next release must be above it.
 
 | Invariant | Expected |
 |---|---|
-| `applicationId` | `com.asafmah.leantypedual` (+ `.offline`, `.offlinelite`, `.debug`) |
+| `applicationId` | `com.asafmah.leantypedual` (+ `.offline`, `.debug`, `.exp` as appropriate). Do not uninstall or migrate existing Lite installations |
 | Version | Fork's own (`0.3.0`/`4300` currently) — **never** take upstream's `4.x`/`410x` |
-| Flavors | Keep `standard`, `standardfull`, bundled-llama `offline` (minSdk 26), and no-AI `offlinelite` (minSdk 21). Upstream v4.1.7 deletes `offlinelite`; reject that product change |
-| `INTERNET` permission | Only `app/src/standard/` and `app/src/standardfull/` manifests. `offline`/`offlinelite` have **no manifest at all** and inherit the network-free main one |
-| Offline assets | `offline`/`offlinelite` bundle dictionaries; standard/full exclude them. Keep `offlineImplementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")` |
+| Flavors | Exactly `standard`, `standardfull`, `offline`; offline minSdk 21, optional AI API 26+. Retired offlinelite is rejected |
+| `INTERNET` permission | Only standard and standardfull. Offline inherits the network-free main manifest |
+| Optional assets/backends | All flavors exclude packaged dictionaries; preserve imported app data. Offline AI and handwriting runtimes come from upstream plugins, not bundled host dependencies |
 | Floating overlay | `SYSTEM_ALERT_WINDOW` in main is accepted for floating mode, but access remains user-granted via system settings and normal docked operation works without it |
-| Java fallback gesture engine | `SwipeGestureEngine.initialize(this)` in `LatinIME.onCreate`; fallback/native selector in `GestureTypingScreen` + `WelcomeWizard` |
+| Gesture recognition | No retained Java engine or selector. Require a compatible native gesture library and expose upstream library setup |
 | Two-thumb typing | Own screen + settings; **must** be registered in the `modules` list in `SettingsContainer.kt` (upstream's new registry drives settings search) |
 | AndroidX Startup | Exactly **one** `InitializationProvider` in the main manifest, containing all initializer removals |
 | Badges | `docs/badges/*.svg` — keep ours, never upstream's generated ones |
@@ -109,7 +335,7 @@ Mechanical checks (these replace hand-written greps):
 
 ```bash
 python tools/check_fork_invariants.py
-# after all four release APKs are assembled:
+# after all three release APKs are assembled:
 python tools/check_apk_invariants.py --apk-dir app/build/outputs/apk
 ```
 
@@ -144,7 +370,7 @@ gh workflow run release.yml --repo AsafMah/LeanType --ref vX.Y.Z
 gh run list --repo AsafMah/LeanType --workflow release.yml --limit 3
 ```
 
-The workflow builds all four signed flavors, runs `tools/check_apk_invariants.py` against the
+The current workflow builds all three signed flavors, runs `tools/check_apk_invariants.py` against the
 packaged app IDs/minSdk/permissions/dictionary contents, verifies signatures (including explicit
 API 21–23 v1/JAR checks), and — because `github.ref` is a tag — creates a **draft** GitHub Release
 with the APKs attached.
@@ -158,13 +384,12 @@ gh release download vX.Y.Z --repo AsafMah/LeanType --pattern "*.apk" --dir build
 #   apksigner verify --print-certs
 ```
 
-Expected for every APK (all four **verified passing** through 0.3.0):
+Expected for the next release (historical 0.3.0 shipped four different artifacts):
 - signer SHA-256 `c032eafcd7ce9197fd9e636f2c86b1590f0a84f8f73016c66d63c1382af81554`
 - matching version name / versionCode (`0.3.0` / `4300` for the current release)
 - `INTERNET` only in standard + standardfull
-- bundled dictionaries in offline + offlinelite, and none in standard + standardfull
-- v1/JAR `true` for standard (minSdk 23), standardfull (23), offlinelite (21); offline is
-  minSdk 26 and legitimately reports `v1=false` by default
+- no bundled dictionaries in any flavor
+- v1/JAR `true` for standard (minSdk 23), standardfull (23), and offline (21)
 
 Publish:
 
@@ -395,10 +620,11 @@ git merge --no-ff --no-commit <tag-sha>
 
 Conflict decisions taken this round (useful precedent):
 
-- `app/build.gradle.kts` → **ours** (fork version) always.
+- `app/build.gradle.kts` → preserve fork identity/version/signing, but adopt upstream
+  distribution and plugin architecture; do not resolve the entire file as ours.
 - `docs/badges/*.svg` → **ours**.
 - `LatinIME.onCreate` → upstream deleted `updateWrappedContext()` entirely (app language now
-  applied in `attachBaseContext`); keep only the fork's `SwipeGestureEngine.initialize(this)`.
+  applied in `attachBaseContext`). The retired fallback initialization must not return.
 - `InputLogic` manual-pick `mLastComposedWord.deactivate()` → **theirs** (upstream added it
   in `dee0db75` then reverted it in `d6850b5c2`; the revert is intentional).
 - `Suggest.kt` → keep the fork's `filterMultiWordSuggestions(...)` helper **and** add
@@ -496,24 +722,13 @@ background trim level on a foreground process") and refuses to *raise* a level t
 
 ---
 
-## 12. Suggested next steps
+## 12. Next steps
 
-1. **Device-verify the Shift fix (#150)** when SM-S936B wireless debugging is available:
-   single tap gives temporary Shift; fast double-tap locks with the lock icon; several letters
-   stay uppercase; a later Shift tap unlocks; duplicate press without release does not lock.
-2. **Device-smoke the v4.1.8 sync (#149):** normal typing/suggestions, all four flavor identities,
-   floating mode both without and with the user-granted overlay permission, custom sounds,
-   text edit layout, dictionary availability in network-free builds, and no offlinelite AI/network
-   UI leakage.
-3. **The falsified gesture experiment is removed (#147).** `PointerIdNormalizer` remains because
-   it fixes the real no-id-0/zero-suggestions path; DUAL_POINTER, ideal-prefix synthesis,
-   re-timing controls and the misleading host harness are gone. Do not reintroduce them without
-   measuring the actual closed gesture library loaded on device.
-4. **Tablet smoke** — the only never-executed release gate.
-5. **Issue #131 — "Java gesture not working with custom layouts"** is an open bug filed
-   against the fork's own fallback gesture engine; likely the highest-value functional work.
-6. Triage the six unfinished worktrees in §11. Their branches are backed up on `origin` now, so
-   there's no deadline — but `LeanType-b7a` and `LeanType-swipe` still hold uncommitted changes
-   that the backup does not cover.
-7. Track upstream Shift report `LeanBitLab/LeanType#475` and accelerated-delete report
-   `LeanBitLab/LeanType#423`; avoid permanent fork-only drift once upstream fixes land.
+The current task at the top is authoritative: deliver the upstream-aligned keyboard first,
+including native-library setup and actual dual-thumb use. Do not resume the superseded
+keep-and-repair plan, a custom llama rebuild, or work on the removed Java engine (#131).
+
+After delivery, categorize the remaining fork delta against LeanBitLab/LeanType by
+provenance and user value. Small standalone fixes can be proposed upstream as isolated
+hunks, not mixed historical commits. The paragraph-backspace report, tablet smoke and
+old-worktree triage remain separate work; none is claimed completed here.

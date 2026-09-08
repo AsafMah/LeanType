@@ -98,6 +98,7 @@ import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LeakGuardHandlerWrapper;
 import helium314.keyboard.latin.utils.Log;
 import helium314.keyboard.latin.utils.RecapitalizeMode;
+import helium314.keyboard.latin.utils.ResourceUtils;
 import helium314.keyboard.latin.utils.ScreenProfileProvider;
 import helium314.keyboard.latin.utils.StatsUtils;
 import helium314.keyboard.latin.utils.StatsUtilsManager;
@@ -156,6 +157,8 @@ public class LatinIME extends InputMethodService implements
     final InputLogic mInputLogic = new InputLogic(this, this, mDictionaryFacilitator);
     private boolean mLastMainDictionaryAvailable = false;
 
+    private long mInputSessionGeneration;
+
     // TODO: Move these {@link View}s to {@link KeyboardSwitcher}.
     View mInputView;
     private InsetsOutlineProvider mInsetsUpdater;
@@ -210,6 +213,7 @@ public class LatinIME extends InputMethodService implements
 
     private final ClipboardHistoryManager mClipboardHistoryManager = new ClipboardHistoryManager(this);
     private final OtpSuggestionManager mOtpSuggestionManager = new OtpSuggestionManager(this);
+    private final MathSuggestionManager mMathSuggestionManager = new MathSuggestionManager(this);
 
     private FloatingKeyboardManager mFloatingKeyboardManager;
 
@@ -601,7 +605,6 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onCreate() {
         sInstance = this;
-        helium314.keyboard.latin.gesture.SwipeGestureEngine.initialize(this);
         mSettings.startListener();
         KeyboardIconsSet.Companion.getInstance().loadIcons(this);
         mRichImm = RichInputMethodManager.getInstance();
@@ -717,12 +720,6 @@ public class LatinIME extends InputMethodService implements
             mainKeyboardView.setMainDictionaryAvailability(isMainDictionaryAvailable);
         }
         mHandler.post(() -> {
-            if (isMainDictionaryAvailable) {
-                final Keyboard keyboard = mKeyboardSwitcher.getKeyboard();
-                if (keyboard != null) {
-                    mInputLogic.getSuggest().buildGestureIndexAsync(keyboard);
-                }
-            }
             if (mLastMainDictionaryAvailable != isMainDictionaryAvailable) {
                 if (mInputLogic != null) {
                     mInputLogic.getSuggest().clearNextWordSuggestionsCache();
@@ -814,7 +811,9 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
-        helium314.keyboard.latin.gesture.SwipeGestureEngine.cancelIndexing();
+        mInputSessionGeneration++;
+        helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
+        mKeyboardSwitcher.cancelOcrWork();
         if (sInstance == this) {
             sInstance = null;
         }
@@ -841,6 +840,7 @@ public class LatinIME extends InputMethodService implements
         try { unregisterReceiver(mDictionaryDumpBroadcastReceiver); } catch (Exception e) {}
         try { unregisterReceiver(mRestartAfterDeviceUnlockReceiver); } catch (Exception e) {}
         mStatsUtilsManager.onDestroy(this /* context */);
+        AudioAndHapticFeedbackManager.getInstance().onDestroy();
         super.onDestroy();
         deallocateMemory();
     }
@@ -1025,6 +1025,11 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onStartInput(final EditorInfo editorInfo, final boolean restarting) {
+        // Invalidate before UIHandler can defer this callback, even when EditorInfo is reused.
+        mInputSessionGeneration++;
+        helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
+        mClipboardHistoryManager.onStartInput();
+        mKeyboardSwitcher.cancelOcrWork();
         mHandler.onStartInput(editorInfo, restarting);
     }
 
@@ -1036,6 +1041,8 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onFinishInputView(final boolean finishingInput) {
+        helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
+        mKeyboardSwitcher.cancelOcrWork();
         StatsUtils.onFinishInputView();
         mHandler.onFinishInputView(finishingInput);
         mStatsUtilsManager.onFinishInputView();
@@ -1053,6 +1060,10 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onFinishInput() {
+        mInputSessionGeneration++;
+        helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
+        mClipboardHistoryManager.onFinishInput();
+        mKeyboardSwitcher.cancelOcrWork();
         mHandler.onFinishInput();
         // Auto-dismiss floating keyboard when the input session ends
         // (user navigated away from text input)
@@ -1144,6 +1155,7 @@ public class LatinIME extends InputMethodService implements
         }
 
         mClipboardHistoryManager.onStartInputView();
+        AudioAndHapticFeedbackManager.getInstance().onStartInputView();
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for
         // which we
@@ -1270,10 +1282,6 @@ public class LatinIME extends InputMethodService implements
             mainKeyboardView.closing();
             suggest.setAutoCorrectionThreshold(currentSettingsValues.mAutoCorrectionThreshold);
             switcher.reloadMainKeyboard();
-            final Keyboard keyboard = switcher.getKeyboard();
-            if (keyboard != null) {
-                suggest.buildGestureIndexAsync(keyboard);
-            }
             if (needToCallLoadKeyboardLater) {
                 // If we need to call loadKeyboard again later, we need to save its state now.
                 // The
@@ -1355,6 +1363,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onWindowHidden() {
+        mKeyboardSwitcher.cancelOcrWork();
         super.onWindowHidden();
         Log.i(TAG, "onWindowHidden");
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
@@ -1390,6 +1399,7 @@ public class LatinIME extends InputMethodService implements
         }
         mOtpSuggestionManager.stop();
         mClipboardHistoryManager.onFinishInputView();
+        AudioAndHapticFeedbackManager.getInstance().onFinishInputView();
         cleanupInternalStateForFinishInput();
     }
 
@@ -1550,6 +1560,24 @@ public class LatinIME extends InputMethodService implements
         // This method may be called before {@link #setInputView(View)}.
         if (mInputView == null) {
             return;
+        }
+        if (mKeyboardSwitcher != null && mKeyboardSwitcher.isOcrCameraShowing()) {
+            final int inputWidth = mInputView.getWidth();
+            final int inputHeight = mInputView.getHeight();
+            if (inputWidth > 0 && inputHeight > 0) {
+                final View wrapperView = mKeyboardSwitcher.getWrapperView();
+                int ocrHeight = (wrapperView != null && (wrapperView.isShown() || wrapperView.getVisibility() == View.VISIBLE)) ? wrapperView.getHeight() : 0;
+                if (ocrHeight <= 0) {
+                    ocrHeight = ResourceUtils.getOcrCameraHeight(mDisplayContext.getResources(), Settings.getValues());
+                }
+                final int visibleTopY = Math.max(0, inputHeight - ocrHeight);
+                outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_REGION;
+                outInsets.touchableRegion.set(0, visibleTopY, inputWidth, inputHeight + EXTENDED_TOUCHABLE_REGION_HEIGHT);
+                outInsets.contentTopInsets = visibleTopY;
+                outInsets.visibleTopInsets = visibleTopY;
+                mInsetsUpdater.setInsets(outInsets);
+                return;
+            }
         }
         final View visibleKeyboardView = mKeyboardSwitcher.getWrapperView();
         if (visibleKeyboardView == null) {
@@ -2013,6 +2041,9 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void setSuggestions(final SuggestedWords suggestedWords) {
+        if (tryShowMathSuggestion()) {
+            return;
+        }
         if (suggestedWords.isEmpty()) {
             // avoids showing clipboard suggestion when starting gesture typing
             // should be fine, as there will be another suggestion in a few ms
@@ -2062,15 +2093,6 @@ public class LatinIME extends InputMethodService implements
             }
         }
 
-        if (suggestionInfo.isKindOf(helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo.KIND_CORRECTION)
-                && helium314.keyboard.latin.dictionary.Dictionary.DICTIONARY_USER_TYPED.equals(
-                        suggestionInfo.mSourceDict != null ? suggestionInfo.mSourceDict.mDictType : "")) {
-            mInputLogic.getSuggest().recordAccepted(
-                    suggestionInfo.mWord,
-                    mInputLogic.getWordComposer().getComposedDataSnapshot().mInputPointers,
-                    mKeyboardSwitcher.getKeyboard()
-            );
-        }
     }
 
     /**
@@ -2088,6 +2110,16 @@ public class LatinIME extends InputMethodService implements
         if (otpView != null) {
             // false: the OTP chip layout already has its own close button (wired in the manager)
             mSuggestionStripView.setExternalSuggestionView(otpView, false);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean tryShowMathSuggestion() {
+        if (!hasSuggestionStripView()) return false;
+        final View mathView = mMathSuggestionManager.getMathSuggestionView(mSuggestionStripView);
+        if (mathView != null) {
+            mSuggestionStripView.setExternalSuggestionView(mathView, false);
             return true;
         }
         return false;
@@ -2121,8 +2153,8 @@ public class LatinIME extends InputMethodService implements
             return;
         }
         final SettingsValues currentSettings = mSettings.getCurrent();
-        if (tryShowOtpSuggestion() || tryShowClipboardSuggestion()) {
-            // an external (OTP or clipboard) suggestion has been set
+        if (tryShowOtpSuggestion() || tryShowMathSuggestion() || tryShowClipboardSuggestion()) {
+            // an external (OTP, Math, or clipboard) suggestion has been set
             if (hasSuggestionStripView() && currentSettings.mAutoHideToolbar)
                 mSuggestionStripView.setToolbarVisibility(false);
             return;
@@ -2327,12 +2359,20 @@ public class LatinIME extends InputMethodService implements
                 return;
             }
         }
-        final AudioAndHapticFeedbackManager feedbackManager = AudioAndHapticFeedbackManager.getInstance();
-        if (repeatCount == 0) {
-            // TODO: Reconsider how to perform haptic feedback when repeating key.
-            feedbackManager.performHapticFeedback(keyboardView, hapticEvent);
+        float keyXRatio = 0.5f;
+        if (keyboardView != null) {
+            final helium314.keyboard.keyboard.Keyboard keyboard = keyboardView.getKeyboard();
+            if (keyboard != null) {
+                final helium314.keyboard.keyboard.Key key = keyboard.getKey(code);
+                if (key != null && keyboard.mOccupiedWidth > 0) {
+                    keyXRatio = (key.getX() + key.getWidth() / 2f) / (float) keyboard.mOccupiedWidth;
+                    keyXRatio = Math.max(0f, Math.min(1f, keyXRatio));
+                }
+            }
         }
-        feedbackManager.performAudioFeedback(code, hapticEvent);
+        final AudioAndHapticFeedbackManager feedbackManager = AudioAndHapticFeedbackManager.getInstance();
+        feedbackManager.performHapticFeedback(keyboardView, hapticEvent);
+        feedbackManager.performAudioFeedback(code, hapticEvent, keyXRatio);
     }
 
     // Hooks for hardware keyboard
@@ -2379,6 +2419,10 @@ public class LatinIME extends InputMethodService implements
 
     public ClipboardHistoryManager getClipboardHistoryManager() {
         return mClipboardHistoryManager;
+    }
+
+    public long getInputSessionGeneration() {
+        return mInputSessionGeneration;
     }
 
     void launchSettings() {

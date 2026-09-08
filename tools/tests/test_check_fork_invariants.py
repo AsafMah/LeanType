@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import sys
 import tempfile
@@ -16,6 +17,27 @@ import check_fork_invariants as gate  # noqa: E402
 
 FIXTURE = Path(__file__).parent / "fixtures" / "fork_invariants"
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+class WorkflowPathTests(unittest.TestCase):
+    def test_gate_and_workflow_changes_trigger_their_tests(self):
+        workflows = {
+            "build-test-auto.yml": (
+                "tools/check_test_results.py",
+                "tools/test_baselines/**",
+            ),
+            "native-tests.yml": (".github/workflows/native-tests.yml",),
+        }
+        for workflow, paths in workflows.items():
+            source = (REPO_ROOT / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
+            for event in ("push", "pull_request"):
+                with self.subTest(workflow=workflow, event=event):
+                    block = re.search(rf"(?ms)^  {event}:\n(.*?)(?=^ {{0,2}}\S|\Z)", source)
+                    self.assertIsNotNone(block, f"missing {event} trigger")
+                    paths_block = re.search(r"(?ms)^    paths:(.*?)(?=^    \S|\Z)", block[1])
+                    self.assertIsNotNone(paths_block, f"missing {event} paths")
+                    for path in paths:
+                        self.assertIn(f"'{path}'", paths_block[1])
 
 
 class ForkInvariantTests(unittest.TestCase):
@@ -46,21 +68,29 @@ class ForkInvariantTests(unittest.TestCase):
     def test_real_repository_passes(self):
         self.assertEqual(gate.check_repo(REPO_ROOT), [])
 
-    def test_missing_offlinelite_flavor_fails(self):
+    def test_missing_offline_flavor_fails(self):
         self.mutate(
             "app/build.gradle.kts",
-            '''        create("offlinelite") {
+            '''        create("offline") {
             dimension = "privacy"
-            applicationIdSuffix = ".offlinelite"
+            applicationIdSuffix = ".offline"
+            minSdk = 21
         }
 ''',
             "",
         )
         self.assert_violation("flavors")
 
-    def test_offline_min_sdk_21_fails(self):
-        self.mutate("app/build.gradle.kts", "            minSdk = 26", "            minSdk = 21")
+    def test_offline_min_sdk_26_fails(self):
+        self.mutate("app/build.gradle.kts", "            minSdk = 21", "            minSdk = 26")
         self.assert_violation("flavors/offline")
+
+    def test_retired_offlinelite_flavor_fails(self):
+        self.mutate(
+            "app/build.gradle.kts", "    productFlavors {",
+            '    productFlavors {\n        create("offlinelite") { dimension = "privacy" }',
+        )
+        self.assert_violation("flavors")
 
     def test_version_cannot_regress_below_released_metadata(self):
         released = self.root / "fastlane/metadata/android/en-US/changelogs/4400.txt"
@@ -117,7 +147,7 @@ class ForkInvariantTests(unittest.TestCase):
     def test_release_build_missing_flavor_fails(self):
         self.mutate(
             ".github/workflows/release.yml",
-            " :app:assembleOfflineliteRelease",
+            " :app:assembleOfflineRelease",
             "",
         )
         self.assert_violation("release/build-flavors")
@@ -135,11 +165,11 @@ class ForkInvariantTests(unittest.TestCase):
         )
         self.assert_violation("release/packaged-invariants")
 
-    def test_unscoped_dictionary_exclusion_fails(self):
+    def test_flavor_scoped_dictionary_exclusion_fails(self):
         self.mutate(
             "app/build.gradle.kts",
-            '        if (variant.flavorName == "standard" || variant.flavorName == "standardfull") {',
-            "        if (true) {",
+            "        if (dictsDir.exists() && dictsDir.isDirectory) {",
+            '        if (variant.flavorName == "standard") {',
         )
         self.assert_violation("dictionary-assets")
 
@@ -151,13 +181,33 @@ class ForkInvariantTests(unittest.TestCase):
         )
         self.assert_violation("dictionary-assets")
 
-    def test_missing_offline_llama_dependency_fails(self):
+    def test_bundled_offline_llama_dependency_fails(self):
         self.mutate(
             "app/build.gradle.kts",
-            '    "offlineImplementation"("io.github.ljcamargo:llamacpp-kotlin:0.4.0")\n',
-            "",
+            "dependencies {\n",
+            'dependencies {\n    "offlineImplementation"("io.github.ljcamargo:llamacpp-kotlin:0.4.0")\n',
         )
         self.assert_violation("offline-ai")
+
+    def test_retained_java_gesture_engine_fails(self):
+        path = self.root / "app/src/main/java/helium314/keyboard/latin/gesture/SwipeGestureEngine.java"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("class SwipeGestureEngine {}", encoding="utf-8")
+        self.assert_violation("gesture-backend")
+
+    def test_retained_host_handwriting_runtime_fails(self):
+        self.mutate(
+            "app/build.gradle.kts",
+            "dependencies {\n",
+            'dependencies {\n    "standardfullImplementation"("com.google.mlkit:digital-ink-recognition:19.0.0")\n',
+        )
+        self.assert_violation("handwriting-plugin")
+
+    def test_retired_lite_sources_fail(self):
+        path = self.root / "app/src/offlinelite/java/ProofreadService.kt"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("class ProofreadService", encoding="utf-8")
+        self.assert_violation("offlinelite-sources")
 
 
 if __name__ == "__main__":

@@ -74,10 +74,8 @@ public final class NgramContextUtils {
             return new NgramContext(WordInfo.BEGINNING_OF_SENTENCE_WORD_INFO);
         }
         final String[] w = SPACE_REGEX.split(lines[lines.length - 1]);
-        final WordInfo[] prevWordsInfo =
-                new WordInfo[DecoderSpecificConstants.MAX_PREV_WORD_COUNT_FOR_N_GRAM];
-        Arrays.fill(prevWordsInfo, WordInfo.EMPTY_WORD_INFO);
-        for (int i = 0; i < prevWordsInfo.length; i++) {
+        final java.util.ArrayList<WordInfo> list = new java.util.ArrayList<>();
+        for (int i = 0; i < DecoderSpecificConstants.MAX_PREV_WORD_COUNT_FOR_N_GRAM; i++) {
             final int focusedWordIndex = w.length - n - i;
             // Referring to the word after the focused word.
             if ((focusedWordIndex + 1) >= 0 && (focusedWordIndex + 1) < w.length) {
@@ -93,7 +91,7 @@ public final class NgramContextUtils {
             }
             // If we can't find (n + i) words, the context is beginning-of-sentence.
             if (focusedWordIndex < 0) {
-                prevWordsInfo[i] = WordInfo.BEGINNING_OF_SENTENCE_WORD_INFO;
+                list.add(WordInfo.BEGINNING_OF_SENTENCE_WORD_INFO);
                 break;
             }
 
@@ -101,13 +99,13 @@ public final class NgramContextUtils {
             // If the word is empty, the context is beginning-of-sentence.
             final int length = focusedWord.length();
             if (length <= 0) {
-                prevWordsInfo[i] = WordInfo.BEGINNING_OF_SENTENCE_WORD_INFO;
+                list.add(WordInfo.BEGINNING_OF_SENTENCE_WORD_INFO);
                 break;
             }
             // If the word ends in a sentence terminator, the context is beginning-of-sentence.
             final char lastChar = focusedWord.charAt(length - 1);
             if (spacingAndPunctuations.isSentenceTerminator(lastChar)) {
-                prevWordsInfo[i] = WordInfo.BEGINNING_OF_SENTENCE_WORD_INFO;
+                list.add(WordInfo.BEGINNING_OF_SENTENCE_WORD_INFO);
                 break;
             }
             // If ends in a word separator or connector, the context is unclear.
@@ -116,8 +114,9 @@ public final class NgramContextUtils {
                     || spacingAndPunctuations.isWordConnector(lastChar)) {
                 break;
             }
-            prevWordsInfo[i] = new WordInfo(focusedWord);
+            list.add(new WordInfo(focusedWord));
         }
-        return new NgramContext(prevWordsInfo);
+        return list.isEmpty() ? NgramContext.EMPTY_PREV_WORDS_INFO
+                : new NgramContext(list.toArray(new WordInfo[0]));
     }
 }
