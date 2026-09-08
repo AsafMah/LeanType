@@ -199,6 +199,12 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all {
+                // Robolectric's multi-SDK suite outgrows Gradle's default 512 MB test heap.
+                it.maxHeapSize = "2g"
+                it.maxParallelForks = 1
+                it.jvmArgs("-XX:+ExitOnOutOfMemoryError")
+            }
         }
     }
 

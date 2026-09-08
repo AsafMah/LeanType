@@ -45,6 +45,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Reframed the two-thumb decoder research as a historical record that distinguishes in-tree preprocessing facts from claims falsified against the closed runtime recognizer. (#147)
 
 ### Reliability & testing
+- Bound Robolectric to one 2 GiB test worker and fail promptly on JVM memory exhaustion; preserve every test and the strict fresh-result/baseline gate. The CI failure was a worker crash with no result XML, not a reason to accept missing reports. (#155)
 - AI regressions cover editor/range ownership, queued plugin feedback and the actual upstream offline provider load/generate path. Host proofreading input/output logging remains suppressed. The retired bundled-native backend and its private rebuild work are no longer part of this fork; optional external plugins retain their own runtime/privacy boundary. (#154)
 - Added reproducible JVM/Robolectric regressions for unsafe imports, private/stale math acceptance, camera and OCR cancellation, screenshot visibility, microphone mute, touchpad tap sequences, and clipboard draft restoration. Camera hardware and native plugin behavior still require device validation. (#152)
 - Added deterministic backup/restore regressions for slow providers, lifecycle disposal, rejected archives, and immediate two-thumb settings refresh. (#153)
