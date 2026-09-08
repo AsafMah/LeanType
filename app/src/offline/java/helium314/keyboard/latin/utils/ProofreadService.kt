@@ -10,6 +10,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
 import helium314.keyboard.latin.RichInputMethodManager
+import helium314.keyboard.latin.ai.OfflineAiLoader
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import kotlinx.coroutines.Dispatchers
@@ -18,198 +19,116 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.nehuatl.llamacpp.LlamaHelper
 import java.io.File
 
 /**
- * Offline proofreading service using llamacpp-kotlin with GGUF models.
- *
- * Uses LlamaHelper for on-device inference with llama.cpp backend.
- * Supports any GGUF model for text correction/generation.
- *
- * Expected model files:
- * - Any GGUF format model file
+ * Offline proofreading service using modular LeanType-Offline-AI-Plugin with GGUF models.
  */
-class ProofreadService @JvmOverloads constructor(
-    private val context: Context,
-    private val inferenceDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
-) {
+class ProofreadService(private val context: Context) {
 
-     val sharedPrefs: SharedPreferences by lazy {
+    private val sharedPrefs: SharedPreferences by lazy {
         context.prefs()
     }
 
     val prefs: SharedPreferences get() = sharedPrefs
 
     // Singleton holder for model state to prevent reloading on every request
-object ModelHolder {
-var llamaHelper: LlamaHelper? = null
-var currentModelPath: String? = null
-var isModelAvailable: Boolean = true
-var isModelLoaded: Boolean = false
+    object ModelHolder {
+        var currentModelPath: String? = null
+        var isModelAvailable: Boolean = true
+        var isModelLoaded: Boolean = false
 
-// Smart Unload Logic
-private var unloadJob: Job? = null
-private val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
-private const val UNLOAD_DELAY_MS = 10 * 60 * 1000L // 10 minutes
-internal val engineMutex = Mutex()
-private class Prediction(val helper: LlamaHelper) {
-    val text = StringBuilder()
-}
-private val prediction = java.util.concurrent.atomic.AtomicReference<Prediction?>()
+        // Smart Unload Logic
+        private var unloadJob: Job? = null
+        private val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+        private const val UNLOAD_DELAY_MS = 10 * 60 * 1000L // 10 minutes
+        private val loadMutex = Mutex()
 
-@Synchronized
-fun scheduleUnload(context: Context) {
-    unloadJob?.cancel()
+        @Synchronized
+        fun scheduleUnload(context: Context) {
+            unloadJob?.cancel()
 
-    val prefs = context.prefs()
-    val keepLoaded = prefs.getBoolean(Settings.PREF_OFFLINE_KEEP_MODEL_LOADED, Defaults.PREF_OFFLINE_KEEP_MODEL_LOADED)
+            val prefs = context.prefs()
+            val keepLoaded = prefs.getBoolean(Settings.PREF_OFFLINE_KEEP_MODEL_LOADED, Defaults.PREF_OFFLINE_KEEP_MODEL_LOADED)
 
-    if (keepLoaded) {
-         Log.i(TAG, "Model unload skipped (Keep Model Loaded enabled)")
-         return
+            if (keepLoaded) {
+                 Log.i(TAG, "Model unload skipped (Keep Model Loaded enabled)")
+                 return
+            }
+
+            unloadJob = scope.launch {
+                delay(UNLOAD_DELAY_MS)
+                unloadModel(context)
+                Log.i(TAG, "Offline AI model unloaded due to inactivity")
+            }
+        }
+
+        @Synchronized
+        fun cancelUnload() {
+            unloadJob?.cancel()
+            unloadJob = null
+        }
+
+        @Synchronized
+        fun unloadModel(context: Context? = null) {
+            try {
+                if (context != null) {
+                    OfflineAiLoader.getProvider(context)?.unloadModel()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error unloading llama model", e)
+            }
+            currentModelPath = null
+            isModelLoaded = false
+            isModelAvailable = true
+        }
+
+        suspend fun loadModel(
+            context: Context,
+            modelPath: String
+        ): Boolean = loadMutex.withLock {
+            cancelUnload()
+
+            val provider = OfflineAiLoader.getProvider(context)
+            if (provider == null) {
+                Log.w(TAG, "Offline AI Plugin not installed/available")
+                isModelAvailable = false
+                return false
+            }
+
+            // Check if already loaded with same path
+            if (isModelLoaded && currentModelPath == modelPath && provider.isModelLoaded()) {
+                return true
+            }
+
+            unloadModel(context) // Ensure clean slate if path changed
+
+            return try {
+                val cores = Runtime.getRuntime().availableProcessors()
+                val threads = if (cores <= 4) cores else 4
+
+                Log.i(TAG, "Loading GGUF model via AI Plugin: path=$modelPath threads=$threads")
+                val success = provider.loadModel(context, modelPath, threads, 2048)
+                if (success) {
+                    currentModelPath = modelPath
+                    isModelLoaded = true
+                    isModelAvailable = true
+                } else {
+                    isModelLoaded = false
+                    isModelAvailable = false
+                }
+                success
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to load GGUF model via plugin", e)
+                isModelAvailable = false
+                false
+            }
+        }
+
+        private const val TAG = "LlamaProofreadService"
     }
-
-    unloadJob = scope.launch {
-        delay(UNLOAD_DELAY_MS)
-        engineMutex.withLock { unloadModelLocked() }
-        Log.i(TAG, "Offline AI model unloaded due to inactivity")
-    }
-}
-
-@Synchronized
-fun cancelUnload() {
-    unloadJob?.cancel()
-    unloadJob = null
-}
-
-fun unloadModel(): Job = scope.launch {
-    unloadModelAndWait()
-}
-
-internal suspend fun unloadModelAndWait() = engineMutex.withLock { unloadModelLocked() }
-
-private fun unloadModelLocked() {
-    try {
-        llamaHelper?.release()
-    } catch (e: Exception) {
-        Log.w(TAG, "Error unloading llama model")
-    }
-    llamaHelper = null
-    currentModelPath = null
-    isModelLoaded = false
-    isModelAvailable = true
-}
-
-suspend fun loadModel(
-    context: Context,
-    modelPath: String
-): Boolean = engineMutex.withLock { loadModelLocked(context, modelPath) }
-
-internal fun loadModelLocked(context: Context, modelPath: String): Boolean {
-    cancelUnload()
-
-    // Check if already loaded with same path
-    if (isModelLoaded && currentModelPath == modelPath && llamaHelper != null) {
-        return true
-    }
-
-    unloadModelLocked()
-
-    return try {
-        val contentResolver = context.contentResolver
-        val helper = LlamaHelper(
-            contentResolver,
-            scope,
-            MutableSharedFlow()
-        )
-
-        // Get llama via reflection
-        val llamaField = LlamaHelper::class.java.getDeclaredField("llama\$delegate").apply { isAccessible = true }
-        val llamaLazy = llamaField.get(helper) as Lazy<org.nehuatl.llamacpp.LlamaAndroid>
-        val llama = llamaLazy.value
-
-        // Detach model file descriptor
-        val uri = android.net.Uri.parse(modelPath)
-        val pfd = contentResolver.openFileDescriptor(uri, "r")
-            ?: throw IllegalArgumentException("Failed to open model file descriptor")
-        val modelFd = pfd.detachFd()
-
-        // Calculate optimal threads count (4 threads is the sweet spot for mobile CPUs)
-        val cores = Runtime.getRuntime().availableProcessors()
-        val threads = if (cores <= 4) cores else 4
-
-        Log.i(TAG, "Loading GGUF model: threads=$threads (cores=$cores), use_mmap=false")
-
-        // Construct parameters map
-        val params = PrivateGenerationParameters(mapOf<String, Any>(
-            "model" to modelPath,
-            "model_fd" to modelFd,
-            "use_mmap" to false,
-            "use_mlock" to false,
-            "n_ctx" to 2048,
-            "embedding" to false,
-            "n_batch" to 512,
-            "n_threads" to threads,
-            "n_gpu_layers" to 0,
-            "vocab_only" to false,
-            "lora" to "",
-            "lora_scaled" to 1.0,
-            "rope_freq_base" to 0.0,
-            "rope_freq_scale" to 0.0
-        ))
-
-        // JNI callback called by native code for each token
-        val callback: (String) -> Unit = { word -> onNativeToken(helper, word) }
-
-        // Start the engine
-        val result = llama.startEngine(params, callback)
-
-        val contextId = result?.get("contextId") as? Int
-            ?: throw IllegalStateException("contextId not found in result map")
-
-        // Set currentContext via reflection
-        val currentContextField = LlamaHelper::class.java.getDeclaredField("currentContext").apply { isAccessible = true }
-        currentContextField.set(helper, contextId)
-
-        llamaHelper = helper
-        currentModelPath = modelPath
-        isModelLoaded = true
-        isModelAvailable = true
-        true
-    } catch (e: Throwable) {
-        Log.e(TAG, "Failed to load GGUF model")
-        isModelAvailable = false
-        false
-    }
-}
-
-internal fun onNativeToken(helper: LlamaHelper, word: String) {
-    val owner = prediction.get() ?: return
-    if (owner.helper === helper) synchronized(owner) {
-        if (prediction.get() === owner) owner.text.append(word)
-    }
-}
-
-internal fun collectPrediction(helper: LlamaHelper, complete: () -> Unit): String {
-    val owner = Prediction(helper)
-    check(prediction.compareAndSet(null, owner))
-    try {
-        complete()
-        return synchronized(owner) { owner.text.toString() }
-    } finally {
-        prediction.compareAndSet(owner, null)
-    }
-}
-
-private const val TAG = "LlamaProofreadService"
-}
 
     // AI Provider support (API compatibility)
     enum class AIProvider {
@@ -321,37 +240,19 @@ private const val TAG = "LlamaProofreadService"
     fun setModelName(name: String) { /* No-op */ }
 
     fun getTargetLanguage(): String {
-        val stored = sharedPrefs.getString("gemini_target_language", null)?.takeIf { it.isNotBlank() }
-            ?: sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE,
-                Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE)
-            ?: Defaults.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE
-        return languageCode(stored)
+        val lang = sharedPrefs.getString(
+            helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE,
+            sharedPrefs.getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "en")
+        ) ?: "en"
+        return if (lang.equals("English", ignoreCase = true)) "en" else lang
     }
 
     fun setTargetLanguage(language: String) {
-        val code = languageCode(language)
-        sharedPrefs.edit().putString("gemini_target_language", code)
-            .putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, languageName(code)).apply()
+        sharedPrefs.edit()
+            .putString(helium314.keyboard.settings.SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, language)
+            .putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, language)
+            .apply()
     }
-
-    private fun languageCode(value: String): String {
-        val trimmed = value.trim()
-        if (trimmed.matches(Regex("[a-zA-Z]{2,3}([-_][a-zA-Z0-9]{2,8})*"))) {
-            return java.util.Locale.forLanguageTag(trimmed.replace('_', '-')).toLanguageTag()
-        }
-        val names = context.resources.getStringArray(helium314.keyboard.latin.R.array.translate_language_names)
-        val codes = context.resources.getStringArray(helium314.keyboard.latin.R.array.translate_language_codes)
-        val index = names.indexOfFirst { it.equals(trimmed, ignoreCase = true) }
-        if (index in codes.indices) return codes[index]
-        return java.util.Locale.getAvailableLocales().firstOrNull {
-            it.getDisplayName(java.util.Locale.ENGLISH).equals(trimmed, ignoreCase = true)
-        }?.toLanguageTag() ?: trimmed
-    }
-
-    private fun languageName(code: String): String =
-        if (code.matches(Regex("[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*")))
-            java.util.Locale.forLanguageTag(code).getDisplayName(java.util.Locale.ENGLISH)
-        else code
 
     fun getTranslateModelName(): String = ""
     fun setTranslateModelName(modelName: String) { /* No-op */ }
@@ -370,7 +271,7 @@ private const val TAG = "LlamaProofreadService"
      * Run llamacpp inference for translation.
      */
     suspend fun translate(text: String): Result<String> {
-        val target = languageName(getTargetLanguage())
+        val target = getTargetLanguage()
         val systemPromptTemplate = getTranslateSystemPrompt().takeIf { it.isNotBlank() } ?: Defaults.PREF_OFFLINE_TRANSLATE_SYSTEM_PROMPT
         val prompt = systemPromptTemplate.replace("{lang}", target)
         return proofread(text, overridePrompt = prompt, targetLanguage = target)
@@ -384,17 +285,19 @@ private const val TAG = "LlamaProofreadService"
         overridePrompt: String? = null,
         showThinking: Boolean? = null,
         targetLanguage: String? = null
-    ): Result<String> = withContext(inferenceDispatcher) {
-        ModelHolder.engineMutex.withLock {
+    ): Result<String> = withContext(Dispatchers.IO) {
         val modelPath = getModelPath()
         if (modelPath.isNullOrBlank()) {
             return@withContext Result.failure(ProofreadException("Model not loaded. Please select a GGUF model file."))
         }
 
+        val provider = OfflineAiLoader.getProvider(context)
+            ?: return@withContext Result.failure(ProofreadException("Offline AI plugin not installed. Please install the plugin in Settings."))
+
         // Load model (or get cached)
-        if (!ModelHolder.loadModelLocked(context, modelPath)) {
+        if (!ModelHolder.loadModel(context, modelPath)) {
              Log.e(TAG, "Model load failed")
-             return@withContext Result.failure(ProofreadException("Failed to load model."))
+             return@withContext Result.failure(ProofreadException("Failed to load model in AI plugin."))
         }
 
         // Cancel unload timer while working
@@ -443,24 +346,17 @@ private const val TAG = "LlamaProofreadService"
                 builder.toString()
             }
 
-            val helper = ModelHolder.llamaHelper
-                ?: return@withContext Result.failure(ProofreadException("Model not available"))
+            // Use provider to generate completion
+            val output = provider.generate(fullPrompt, mapOf(
+                "temperature" to temp.toDouble(),
+                "top_p" to topP.toDouble(),
+                "top_k" to topK,
+                "min_p" to minP.toDouble(),
+                "max_tokens" to maxTokens
+            ))
 
-            // Use predict with custom parameters
-            val generatedText = predictWithParams(
-                helper = helper,
-                prompt = fullPrompt,
-                temp = temp,
-                topP = topP,
-                topK = topK,
-                minP = minP,
-                maxTokens = maxTokens,
-                showThinking = showThinkingVal
-            )
-
-            currentCoroutineContext().ensureActive()
-
-            val output = generatedText.trim()
+            // Schedule unload after work is done
+            ModelHolder.scheduleUnload(context)
 
             // Robust cleaning of the generated output
             var cleanedOutput = output
@@ -525,55 +421,9 @@ private const val TAG = "LlamaProofreadService"
             }
 
         } catch (e: Throwable) {
-            if (e is kotlinx.coroutines.CancellationException) {
-                throw e
-            }
-            Log.e(TAG, "Proofread failed")
-            Result.failure(ProofreadException("Local generation failed."))
-        } finally {
-            ModelHolder.scheduleUnload(context)
-        }
-        }
-    }
-
-    private suspend fun predictWithParams(
-        helper: LlamaHelper,
-        prompt: String,
-        temp: Float,
-        topP: Float,
-        topK: Int,
-        minP: Float,
-        maxTokens: Int,
-        showThinking: Boolean
-    ): String {
-        currentCoroutineContext().ensureActive()
-        // launchCompletion is blocking JNI. Keep its owner and the engine lock until it returns,
-        // even when cancelled, so a later request can neither inherit tokens nor be stopped by it.
-        return withContext(NonCancellable) {
-            // Get currentContext via reflection
-            val currentContextField = LlamaHelper::class.java.getDeclaredField("currentContext").apply { isAccessible = true }
-            val currentContext = currentContextField.get(helper) as? Int ?: throw IllegalStateException("Model not loaded yet")
-
-            // Get llama via reflection
-            val llamaField = LlamaHelper::class.java.getDeclaredField("llama\$delegate").apply { isAccessible = true }
-            val llamaLazy = llamaField.get(helper) as Lazy<org.nehuatl.llamacpp.LlamaAndroid>
-            val llama = llamaLazy.value
-
-            // Build parameters map
-            val params = PrivateGenerationParameters(mapOf<String, Any>(
-                "prompt" to prompt,
-                "emit_partial_completion" to true,
-                "temperature" to temp.toDouble(),
-                "top_p" to topP.toDouble(),
-                "top_k" to topK,
-                "min_p" to minP.toDouble(),
-                "n_predict" to maxTokens,
-                "stop" to listOf("\nInput:", "\nInstruction:", "\nOutput:", "\nCorrected:")
-            ))
-
-            ModelHolder.collectPrediction(helper) {
-                checkNotNull(llama.launchCompletion(currentContext, params)) { "Local generation failed" }
-            }
+            Log.e(TAG, "Proofread failed", e)
+            ModelHolder.scheduleUnload(context) // Ensure we still schedule unload on error
+            Result.failure(ProofreadException(e.message ?: "Unknown error"))
         }
     }
 
@@ -584,12 +434,6 @@ private const val TAG = "LlamaProofreadService"
             .replace(Regex("<reasoning>[\\s\\S]*?</reasoning>", RegexOption.IGNORE_CASE), "")
             .replace(Regex("<details>[\\s\\S]*?</details>", RegexOption.IGNORE_CASE), "")
             .trim()
-    }
-
-    // LlamaAndroid 0.4.0 logs the parameter map before JNI. Values still reach the engine,
-    // but its Java-side diagnostic must not stringify the user's prompt.
-    private class PrivateGenerationParameters(values: Map<String, Any>) : LinkedHashMap<String, Any>(values) {
-        override fun toString() = "[redacted generation parameters]"
     }
 
     private fun cleanTranslationOutput(text: String): String {

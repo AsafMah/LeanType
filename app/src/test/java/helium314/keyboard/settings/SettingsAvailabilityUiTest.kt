@@ -31,10 +31,10 @@ class SettingsAvailabilityUiTest {
     private val context get() = ApplicationProvider.getApplicationContext<Context>()
 
     @Test
-    fun liteHubDoesNotOfferAnAiDestination() {
+    fun offlineBeforeOreoHubDoesNotOfferAnAiDestination() {
         compose.setContent {
             MaterialTheme {
-                LibrariesHubScreen({}, availability = SettingsAvailability(flavor = "offlinelite"))
+                LibrariesHubScreen({}, availability = SettingsAvailability(flavor = "offline", sdk = 25))
             }
         }
         compose.onAllNodesWithText(context.getString(R.string.settings_screen_ai_integration))
@@ -83,22 +83,22 @@ class SettingsAvailabilityUiTest {
     }
 
     @Test
-    fun offlineHubDescribesBundledModelConfigurationNotPluginInstallation() {
+    fun offlineHubDescribesTheRequiredAiPlugin() {
         compose.setContent {
             MaterialTheme {
                 LibrariesHubScreen({}, availability = SettingsAvailability(flavor = "offline"))
             }
         }
-        compose.onNodeWithText(context.getString(R.string.offline_model_summary)).assertExists()
+        compose.onNodeWithText(context.getString(R.string.load_offline_ai_plugin_summary)).assertExists()
     }
 
     @Test
-    fun liteAiRouteReturnsWithoutRenderingConfiguration() {
+    fun offlineBeforeOreoAiRouteReturnsWithoutRenderingConfiguration() {
         var backCalls = 0
         compose.setContent {
             MaterialTheme {
                 AIIntegrationScreen(
-                    { backCalls++ }, availability = SettingsAvailability(flavor = "offlinelite"),
+                    { backCalls++ }, availability = SettingsAvailability(flavor = "offline", sdk = 25),
                 )
             }
         }
@@ -122,9 +122,9 @@ class SettingsAvailabilityUiTest {
     }
 
     @Test
-    fun liteSearchDoesNotExposeCloudTokenControl() {
+    fun offlineSearchDoesNotExposeCloudTokenControl() {
         SettingsActivity.settingsContainer = SettingsContainer(
-            context, SettingsAvailability(flavor = "offlinelite"),
+            context, SettingsAvailability(flavor = "offline"),
         )
         compose.setContent {
             MaterialTheme { SearchSettingsScreen({}, "Settings", emptyList()) }

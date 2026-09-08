@@ -19,7 +19,6 @@ import helium314.keyboard.latin.NgramContext
 import helium314.keyboard.latin.Suggest
 import helium314.keyboard.latin.SuggestedWords
 import helium314.keyboard.latin.WordComposer
-import helium314.keyboard.latin.common.InputPointers
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.utils.ExecutorUtils
@@ -42,7 +41,6 @@ import java.util.ArrayDeque
 import java.util.Locale
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.RejectedExecutionException
-import java.util.function.BiConsumer
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowInputMethodManager2::class, ShadowProximityInfo::class])
@@ -336,65 +334,6 @@ class UserDictionaryPublicationTest {
     }
 
     @Test
-    fun realFacilitatorBlockAndPromotionChangeSuggestRankOutputAfterPublication() {
-        val main = Mockito.mock(Dictionary::class.java)
-        Mockito.`when`(main.isValidWord("hello")).thenReturn(true)
-        Mockito.doAnswer {
-            it.getArgument<BiConsumer<String, Int>>(0).accept("hello", 100)
-            null
-        }.`when`(main).forEachWord(Mockito.any())
-        group.javaClass.getDeclaredMethod("setMainDict", Dictionary::class.java)
-            .apply { isAccessible = true }.invoke(group, main)
-        val keyboard = keyboardFor("helpo")
-        val suggest = Suggest(facilitator)
-        suggest.buildGestureIndexAsync(keyboard)
-        runAll()
-        assertEquals("hello", suggestions(suggest, keyboard).getWord(0))
-        assertTrue(facilitator.isValidSpellingWord("hello"))
-        assertFalse(facilitator.isValidSpellingWord("help"))
-
-        facilitator.blockWord("hello")
-
-        assertFalse(facilitator.isValidSpellingWord("hello"))
-        assertEquals("stale index must not return the blocked word", 0, suggestions(suggest, keyboard).size())
-        runAll()
-        assertEquals(0, suggestions(suggest, keyboard).size())
-        provider.onInsert = {
-            assertFalse(facilitator.isValidSpellingWord("help"))
-            assertEquals("provider insertion is not native publication", 0, suggestions(suggest, keyboard).size())
-        }
-
-        facilitator.addToUserDictionary("help")
-        assertEquals(0, suggestions(suggest, keyboard).size())
-        runAll()
-        assertTrue(facilitator.isValidSpellingWord("help"))
-        assertEquals("old completed index is rejected before rebuilding", 0, suggestions(suggest, keyboard).size())
-        runAll()
-
-        assertEquals("help", suggestions(suggest, keyboard).getWord(0))
-    }
-
-    @Test
-    fun blockedPersonalWordDisappearsFromActualRanksBeforeNativeRemovalCompletes() {
-        facilitator.addToUserDictionary("help")
-        runAll()
-        val keyboard = keyboardFor("helpo")
-        val suggest = Suggest(facilitator)
-        suggest.buildGestureIndexAsync(keyboard)
-        runAll()
-        assertEquals("help", suggestions(suggest, keyboard).getWord(0))
-        assertTrue(facilitator.isValidSpellingWord("help"))
-
-        facilitator.blockWord("help")
-
-        assertTrue("native removal remains queued", userDictionary.isInDictionary("help"))
-        assertFalse(facilitator.isValidSpellingWord("help"))
-        assertEquals(0, suggestions(suggest, keyboard).size())
-        runAll()
-        assertEquals(0, suggestions(suggest, keyboard).size())
-    }
-
-    @Test
     fun realFacilitatorMutationInvalidatesPublicNextWordPredictions() {
         userDictionary.mReturnPredictions = true
         facilitator.addToUserDictionary("hello")
@@ -425,21 +364,6 @@ class UserDictionaryPublicationTest {
             false, SuggestedWords.INPUT_STYLE_TYPING, 1,
         )
         return List(result.size()) { result.getWord(it) }
-    }
-
-    private fun suggestions(suggest: Suggest, keyboard: Keyboard): SuggestedWords {
-        val pointers = InputPointers(4).apply {
-            addPointer(50, 50, 0, 0)
-            addPointer(150, 50, 0, 10)
-            addPointer(250, 50, 0, 20)
-            addPointer(350, 50, 0, 30)
-        }
-        return suggest.getSuggestedWords(
-            WordComposer().apply { setBatchInputPointers(pointers) },
-            NgramContext.EMPTY_PREV_WORDS_INFO, keyboard,
-            SettingsValuesForSuggestion(false, false, "fallback"),
-            false, SuggestedWords.INPUT_STYLE_TAIL_BATCH, 1,
-        )
     }
 
     private fun keyboardFor(letters: String): Keyboard {

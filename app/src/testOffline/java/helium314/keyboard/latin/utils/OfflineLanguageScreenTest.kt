@@ -21,9 +21,10 @@ import org.robolectric.annotation.Config
 class OfflineLanguageScreenTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun targetLanguagePreferenceShowsLegacyFrenchAfterRecreation() {
+    @Test fun targetLanguagePreferenceUsesCanonicalKeyAfterRecreation() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         context.prefs().edit().clear()
+            .putString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, "fr")
             .putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "French").commit()
         val setting = createAdvancedSettings(context).single { it.key == SettingsWithoutKey.GEMINI_TARGET_LANGUAGE }
         val restoration = StateRestorationTester(compose)

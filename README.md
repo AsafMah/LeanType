@@ -17,7 +17,7 @@ The **"Dual"** is **dual-thumb gesture typing**: glide with both thumbs at once 
 ## What makes LeanTypeDual different
 
 ### ✌️ Two-thumb (dual-thumb) typing — the namesake feature
-Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates multiple simultaneous gesture trails into a single word (a Nintype-style flow) instead of forcing one-finger-at-a-time swipes. It has a dedicated tuning screen — combining-mode grace timing, tap-promotion, fragment backspace (pop the last swiped fragment), multi-part word recognition, customizable autospace, and an opt-in typing-insight overlay that visualizes the gesture join. *(Gesture typing requires the gesture library — see Download.)*
+Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates multiple simultaneous gesture trails into a single word (a Nintype-style flow) instead of forcing one-finger-at-a-time swipes. It has a dedicated tuning screen — combining-mode grace timing, tap/swipe composition, fragment backspace (pop the last swiped fragment), multi-part word recognition, customizable autospace, and an opt-in typing-insight overlay that visualizes the gesture join. *(Gesture typing requires the gesture library — see Download.)*
 
 ### On top of that — LeanType's AI layer and quality-of-life features
 
@@ -25,10 +25,10 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 - **Inline math** - Type an arithmetic expression followed by `=` to offer its result in the suggestion strip.
 - **Custom sound packs** - Import sound-pack ZIPs and tune keypress audio; Standard/Full can download packs in-app, while offline tiers use browser downloads and local import.
 - **[🤖 Multi-Provider AI](docs/FEATURES.md#supported-ai-providers)** - Proofread using **Gemini**, **Groq** (Llama 3, Mixtral), or **OpenAI-compatible** providers, with dynamic fetching of the latest models.
-- **[🛡️ Offline AI (GGUF)](docs/FEATURES.md#5-offline-proofreading-privacy-focused)** - Private, on-device proofreading and translation using local **GGUF models** powered by `llama.cpp` (Offline build only).
+- **[🛡️ Offline AI (GGUF)](docs/FEATURES.md#5-offline-proofreading-privacy-focused)** - On-device proofreading and translation using local **GGUF models** and the optional upstream Offline AI plugin (Offline build, Android 8.0+). The keyboard no longer bundles its own AI runtime.
 - **🌐 AI Translation** - Translate selected text using your chosen provider, with a separate model selector.
 - **[✍️ Handwriting Input](docs/FEATURES.md#8-handwriting-input)** - Draw characters directly on a handwriting recognition canvas (Standard version, requires [Leantype-Handwriting-Plugin](https://github.com/LeanBitLab/Leantype-Handwriting-Plugin)).
-- **[👆 Built-in Gesture Typing](docs/FEATURES.md#9-built-in-gesture-typing)** - Gesture typing works out of the box using our new built-in pure-Java fallback engine, removing the strict dependency on native Google libraries.
+- **[👆 Gesture Typing](docs/FEATURES.md#9-gesture-typing)** - Single- and dual-thumb gestures use a compatible native gesture library. Install it through Settings before swiping; the older Java fallback engine has been removed.
 - **[🧠 Custom AI Keys](docs/FEATURES.md#4-custom-ai-keys--keywords)** - Assign custom prompts, personas (#editor, #proofread), and labels/tags (themed capsules) to 10 customizable toolbar keys.
 - **📝 Text Expander** - Shortcut → expansion with dynamic placeholders (`%clipboard%`, `%day%`, `%time12%`, `%cursor%`, lists), regex shortcuts, backspace-to-revert, and a guide.
 - **🧠 Smarter learned words** - *graduated trust* keeps a just-learned word below real-dictionary suggestions until you've used it a few times (no premature autocorrect to half-typed words); flag unknown words to **Add** or **Block** them via a Blocklist screen.
@@ -49,7 +49,7 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 - **💾 Selective Backup & Restore** - Backup and restore settings, dictionaries, and AI prompt configuration selectively.
 - **🔎 Emoji Search** - Search emojis by name. *Requires loading an Emoji Dictionary.*
 - **⚙️ Enhanced Customization** - Force auto-capitalization, fine-grained haptics, distinct incognito icon, reorganized settings, and more.
-- **🔒 Privacy Choices** - Choose **Standard** (opt-in AI, handwriting), **Offline** (network hard-disabled, offline GGUF model), or **Offline Lite** (no AI, ~20 MB).
+- **🔒 Privacy Choices** - Choose **Standard / Standard Full** (opt-in network features) or **Offline** (no INTERNET permission, optional local plugins). Dictionaries are acquired separately in every build.
 
 
 
@@ -94,19 +94,20 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
 *   **Setup:** Use the built-in downloader for Gesture Typing and Handwriting Input. Configure AI keys in Settings.
 
 #### 2. Offline Version (`-offline-release.apk`)
-*   **Features:** All UI/UX enhancements and **Offline Neural Proofreading** (via `llama.cpp` using local **GGUF models**).
+*   **Features:** The keyboard supports Android 5.0+. Optional **Offline Neural Proofreading** requires Android 8.0+, the upstream Offline AI plugin, and local **GGUF models**.
 *   **Permissions:** **NO INTERNET PERMISSION**. Guaranteed at OS level.
 *   **Best For:** Privacy purists.
 *   **Manual Setup Required:**
     *   **Gesture Typing:** [Download library manually](https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs) and load via *Settings > Gesture typing*.
-    *   **Offline AI:** Download GGUF models and load via *Settings > Advanced > GGUF Model (.gguf)*. 👉 **[See Offline Setup Instructions](docs/FEATURES.md#5-offline-proofreading-privacy-focused)**
+    *   **Offline AI:** Import the upstream Offline AI plugin through *Settings > Libraries Hub*, then load a GGUF model through AI settings. 👉 **[See Offline Setup Instructions](docs/FEATURES.md#5-offline-proofreading-privacy-focused)**
+    *   **Dictionaries:** Download dictionaries in a browser and import them through dictionary settings. Existing imported dictionaries are preserved.
 
-#### 3. Offline Lite Version (`-offlinelite-release.apk`)
-*   **Features:** All UI/UX enhancements but **NO AI FEATURES**.
-*   **Permissions:** **NO INTERNET PERMISSION**. Guaranteed at OS level.
-*   **Best For:** Minimalists who want a modern keyboard without any AI components (~20MB size).
-*   **Manual Setup Required:**
-    *   **Gesture Typing:** [Download library manually](https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs) and load via *Settings > Gesture typing*.
+#### 3. Standard Full Version (`-standardfull-release.apk`)
+*   **Features and permissions:** Uses the same current upstream plugin architecture and opt-in network features as Standard. Optional handwriting, translation and OCR runtimes are supplied by their plugins, not retained copies in the keyboard.
+
+**Offline Lite is retired**, following upstream's unified Offline distribution. Existing Lite installations are not removed or silently migrated to a different app package. Back up settings and dictionaries before moving to Offline.
+
+All three builds use on-demand dictionaries. Standard/Full can download them in-app; Offline uses browser downloads and local import. Removing bundled assets does not delete dictionaries already stored in app data.
 
 ## Original HeliBoard Features
 
@@ -115,7 +116,7 @@ Type with **both thumbs gliding at the same time**: LeanTypeDual aggregates mult
   <li>Customize keyboard themes (style, colors and background image)</li>
   <li>Customize keyboard layouts</li>
   <li>Multilingual typing</li>
-  <li>Glide typing (works out of the box with built-in pure-Java fallback engine, or use native library)</li>
+  <li>Glide typing (requires a compatible native gesture library)</li>
   <li>Clipboard history</li>
   <li>One-handed mode</li>
   <li>Split keyboard</li>

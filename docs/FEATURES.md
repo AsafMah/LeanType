@@ -34,7 +34,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
   an arithmetic expression ending in `=`; tapping the suggestion replaces the expression.
 - **Sound packs:** `Plugins > Keypress Audio` provides volume, pitch, pan, per-key
   controls, and ZIP import. Packs are no longer bundled in the APK. Standard/Full can
-  download them in-app; Offline and Offline Lite use browser download and local import.
+  download them in-app; Offline uses browser download and local import.
 
 | Feature | Function | Settings Location |
 | :--- | :--- | :--- |
@@ -46,7 +46,7 @@ LeanType integrates with AI providers to offer advanced proofreading and transla
 | **Floating Keyboard** | Detach the keyboard into a draggable window with a persistent mode option. | Toolbar > Floating Keyboard |
 | **Touchpad Mode** | Swipe up on Spacebar to control cursor, including full-screen laptop-style touchpad. | `Gesture typing > Vertical spacebar swipe` |
 | **Split Suggestions** | Separates suggestions from toolbar for quicker access. | `Appearance > Split toolbar & suggestions` |
-| **Build Variants** | Choose Standard, Offline, or Offline Lite versions. | GitHub Releases |
+| **Build Variants** | Choose Standard, Standard Full, or Offline. Offline Lite is retired. | GitHub Releases |
 | **Clear Incognito** | Shows a clear "Hat & Glasses" icon when Incognito is active. | *Automatic (when Incognito)* |
 | **Clipboard Search** | Search history, undo swipe-delete, and optionally fold pinned items by default. | Clipboard Toolbar > Search Icon |
 | **Dictionary Import** | Import personal words from Google Gboard/other keyboards. | `Text correction > Dictionary > Import` |
@@ -329,7 +329,7 @@ Control how the result is inserted.
 
 **Note**: This feature is only available in the "Offline" build flavor of LeanType.
 
-Offline proofreading runs entirely on your device using the `llama.cpp` runtime. No data leaves your device.
+Offline proofreading uses the optional upstream Offline AI plugin and a local GGUF model on Android 8.0+. The keyboard no longer embeds the old `llama.cpp` backend. The Offline app has no INTERNET permission; obtain plugins and models separately in a browser and import them locally.
 
 > [!NOTE]
 > **Status: Beta / Experimental**
@@ -337,8 +337,9 @@ Offline proofreading runs entirely on your device using the `llama.cpp` runtime.
 
 ### Setup Instructions
 
-1.  **Download a GGUF Model**: Download a compatible `.gguf` model file (see Recommended Models below).
-2.  **Configure App**:
+1.  **Import the Offline AI Plugin**: Download the compatible [LeanType Offline AI plugin](https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin), then import it through **Settings > Libraries Hub > Offline AI Plugin**.
+2.  **Download a GGUF Model**: Download a compatible `.gguf` model file (see Recommended Models below).
+3.  **Configure App**:
     *   Go to **Settings > Advanced**.
     *   **GGUF Model**: Select the downloaded `.gguf` model file.
     *   **System Instruction**: (Optional) Customize the prompt used to guide the model when proofreading text.
@@ -410,7 +411,7 @@ Touchpad Mode replaces the keyboard with a laptop-style touchpad overlay to cont
 ## 8. Handwriting Input
 
 > [!NOTE]
-> **Availability**: This feature is only available in the **Standard** (`-standard-release.apk`) and **Standard Optimised** build flavors. It is excluded from the **Offline** and **Offline Lite** variants.
+> **Availability**: Requires Android 8.0+ and a compatible handwriting plugin. Standard/Full can download the plugin in-app; Offline uses local import.
 
 LeanType integrates a handwriting recognition canvas that allows you to write characters directly on the keyboard using your finger or a stylus.
 
@@ -437,12 +438,12 @@ LeanType integrates a handwriting recognition canvas that allows you to write ch
 
 ## 9. Gesture Typing
 
-*   **Functionality**: Gesture typing (swipe/glide typing) supports either the built-in Java fallback engine or a compatible native C++ gesture library.
-*   **Engine choice**: The Java fallback works without an external library; the native method uses `libjni_latinimegoogle.so` when installed and compatible.
+*   **Functionality**: Gesture typing (swipe/glide typing), including dual-thumb composition, requires a compatible native gesture library.
+*   **Native routing**: The older Java fallback has been removed. A previously saved fallback-engine preference does not prevent an installed native library from being used. The bundled dictionary-only library cannot recognize gestures.
 *   **Library Loading**: Native gesture libraries can be loaded on demand via **Settings > Gesture typing** or **Settings > Libraries Hub**.
 *   **Settings Configuration**:
     1. Go to **Settings > Gesture typing**.
-    2. Enable gesture typing and choose **Fallback engine** or **Native library**.
+    2. Install a compatible native gesture library, then enable gesture typing. Offline builds require browser download and local import.
     3. Configure visual options (preview trail, floating preview text, trail fadeout) and behavior options (space-aware gesture, autospace, fast typing cooldown).
 
 ---

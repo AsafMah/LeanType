@@ -605,7 +605,6 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onCreate() {
         sInstance = this;
-        helium314.keyboard.latin.gesture.SwipeGestureEngine.initialize(this);
         mSettings.startListener();
         KeyboardIconsSet.Companion.getInstance().loadIcons(this);
         mRichImm = RichInputMethodManager.getInstance();
@@ -721,12 +720,6 @@ public class LatinIME extends InputMethodService implements
             mainKeyboardView.setMainDictionaryAvailability(isMainDictionaryAvailable);
         }
         mHandler.post(() -> {
-            if (isMainDictionaryAvailable) {
-                final Keyboard keyboard = mKeyboardSwitcher.getKeyboard();
-                if (keyboard != null) {
-                    mInputLogic.getSuggest().buildGestureIndexAsync(keyboard);
-                }
-            }
             if (mLastMainDictionaryAvailable != isMainDictionaryAvailable) {
                 if (mInputLogic != null) {
                     mInputLogic.getSuggest().clearNextWordSuggestionsCache();
@@ -821,7 +814,6 @@ public class LatinIME extends InputMethodService implements
         mInputSessionGeneration++;
         helium314.keyboard.latin.utils.ProofreadHelper.cancelCurrentOperation();
         mKeyboardSwitcher.cancelOcrWork();
-        helium314.keyboard.latin.gesture.SwipeGestureEngine.cancelIndexing();
         if (sInstance == this) {
             sInstance = null;
         }
@@ -1290,10 +1282,6 @@ public class LatinIME extends InputMethodService implements
             mainKeyboardView.closing();
             suggest.setAutoCorrectionThreshold(currentSettingsValues.mAutoCorrectionThreshold);
             switcher.reloadMainKeyboard();
-            final Keyboard keyboard = switcher.getKeyboard();
-            if (keyboard != null) {
-                suggest.buildGestureIndexAsync(keyboard);
-            }
             if (needToCallLoadKeyboardLater) {
                 // If we need to call loadKeyboard again later, we need to save its state now.
                 // The
@@ -2105,15 +2093,6 @@ public class LatinIME extends InputMethodService implements
             }
         }
 
-        if (suggestionInfo.isKindOf(helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo.KIND_CORRECTION)
-                && helium314.keyboard.latin.dictionary.Dictionary.DICTIONARY_USER_TYPED.equals(
-                        suggestionInfo.mSourceDict != null ? suggestionInfo.mSourceDict.mDictType : "")) {
-            mInputLogic.getSuggest().recordAccepted(
-                    suggestionInfo.mWord,
-                    mInputLogic.getWordComposer().getComposedDataSnapshot().mInputPointers,
-                    mKeyboardSwitcher.getKeyboard()
-            );
-        }
     }
 
     /**

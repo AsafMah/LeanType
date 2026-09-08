@@ -15,13 +15,12 @@ from pathlib import Path
 
 
 EXPECTED = {
-    "standard": ("com.asafmah.leantypedual", 23, True, False),
-    "standardfull": ("com.asafmah.leantypedual", 23, True, False),
-    "offline": ("com.asafmah.leantypedual.offline", 26, False, True),
-    "offlinelite": ("com.asafmah.leantypedual.offlinelite", 21, False, True),
+    "standard": ("com.asafmah.leantypedual", 23, True),
+    "standardfull": ("com.asafmah.leantypedual", 23, True),
+    "offline": ("com.asafmah.leantypedual.offline", 21, False),
 }
 APK_NAME = re.compile(
-    r"-(standard|standardfull|offline|offlinelite)-release\.apk$", re.IGNORECASE
+    r"-(standard|standardfull|offline)-release\.apk$", re.IGNORECASE
 )
 INTERNET = "android.permission.INTERNET"
 Analyzer = Callable[[str, Path], str]
@@ -101,8 +100,8 @@ def _discover(apk_dir: Path, problems: list[str]) -> dict[str, Path]:
         if unmatched:
             details += f"; unrecognized={','.join(unmatched)}"
         problems.append(
-            "[apk/set] expected exactly four release APKs, one per flavor "
-            f"(standard, standardfull, offline, offlinelite); found {details}"
+            "[apk/set] expected exactly three release APKs, one per flavor "
+            f"(standard, standardfull, offline); found {details}"
         )
     return {
         flavor: paths[0]
@@ -126,7 +125,7 @@ def _permissions(output: str) -> set[str]:
 def check_apks(apk_dir: Path, analyzer: Analyzer) -> list[str]:
     problems: list[str] = []
     apks = _discover(apk_dir, problems)
-    for flavor, (expected_id, expected_min_sdk, needs_internet, needs_dict) in EXPECTED.items():
+    for flavor, (expected_id, expected_min_sdk, needs_internet) in EXPECTED.items():
         apk = apks.get(flavor)
         if apk is None:
             continue
@@ -140,12 +139,7 @@ def check_apks(apk_dir: Path, analyzer: Analyzer) -> list[str]:
             for entry in entries
             if entry.startswith("assets/dicts/") and entry.endswith(".dict")
         }
-        if needs_dict and "assets/dicts/main_en-US.dict" not in dictionaries:
-            problems.append(
-                f"[apk/{flavor}/dictionaries] {apk.name} must contain "
-                "assets/dicts/main_en-US.dict"
-            )
-        if not needs_dict and dictionaries:
+        if dictionaries:
             sample = ", ".join(sorted(dictionaries)[:3])
             problems.append(
                 f"[apk/{flavor}/dictionaries] {apk.name} must not package .dict files "

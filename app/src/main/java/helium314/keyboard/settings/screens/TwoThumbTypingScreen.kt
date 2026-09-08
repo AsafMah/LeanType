@@ -50,7 +50,7 @@ fun TwoThumbTypingScreen(
     if ((b?.value ?: 0) < 0)
         Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
 
-    val hasGestureLib = JniUtils.sHaveGestureLib
+    val hasGestureLib = JniUtils.sHaveNativeGestureLib
     val gesturePrefEnabled = prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
     val gestureEnabled = hasGestureLib && gesturePrefEnabled
     val spacingMode = currentSpacingMode(prefs)
@@ -327,7 +327,7 @@ private fun TwoThumbBackspaceBehaviorPreference(setting: Setting) {
 @Preview
 @Composable
 private fun Preview() {
-    JniUtils.sHaveGestureLib = true
+    JniUtils.sHaveNativeGestureLib = true
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {

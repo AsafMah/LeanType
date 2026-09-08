@@ -92,6 +92,7 @@ class SettingsContainerTest {
     @Test
     fun obsoleteTwoThumbSettingsAreAbsentFromRegistryAndSearch() {
         val retiredKeys = listOf(
+            "gesture_method",
             "gesture_autospace_grace_ms",
             "gesture_tap_promotion_ms",
             "multipart_tap_seed_gesture",
@@ -179,7 +180,7 @@ class SettingsContainerTest {
     fun ocrRegistryAndSearchRespectBuildAndApiAvailability() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val keys = createOcrSettings(context).map { it.key } + SettingsWithoutKey.SCREEN_NAV_OCR
-        for (flavor in listOf("standard", "standardfull", "offline", "offlinelite")) {
+        for (flavor in listOf("standard", "standardfull", "offline")) {
             for (buildType in listOf("debug", "nouserlib")) {
                 for (sdk in listOf(25, 26, 33)) {
                     val candidate = SettingsContainer(context, SettingsAvailability(flavor, buildType, sdk))
@@ -208,7 +209,7 @@ class SettingsContainerTest {
             SettingsWithoutKey.TRANSLATE_HUGGINGFACE_MODEL,
             SettingsWithoutKey.AI_ALLOW_INSECURE_CONNECTIONS, SettingsWithoutKey.CLOUD_AI_MAX_TOKENS,
         )
-        for (flavor in listOf("standard", "standardfull", "offline", "offlinelite")) {
+        for (flavor in listOf("standard", "standardfull", "offline")) {
             val candidate = SettingsContainer(context, SettingsAvailability(flavor = flavor))
             for (key in keys) {
                 val expected = flavor == "standard" || flavor == "standardfull"
@@ -220,9 +221,9 @@ class SettingsContainerTest {
     }
 
     @Test
-    fun liteHasNoAiNavigationOrSharedAiControls() {
+    fun offlineBeforeOreoHasNoAiNavigationOrSharedAiControls() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val candidate = SettingsContainer(context, SettingsAvailability(flavor = "offlinelite"))
+        val candidate = SettingsContainer(context, SettingsAvailability(flavor = "offline", sdk = 25))
         val keys = listOf(
             SettingsWithoutKey.SCREEN_NAV_AI_INTEGRATION, SettingsWithoutKey.CUSTOM_AI_KEYS,
             SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, SettingsWithoutKey.TRANSLATION_ENGINE,

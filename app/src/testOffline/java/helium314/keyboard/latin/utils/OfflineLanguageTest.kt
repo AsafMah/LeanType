@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.settings.SettingsWithoutKey
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -28,21 +29,41 @@ class OfflineLanguageTest {
 
     @Test fun legacyFrenchSurvivesServiceRecreation() {
         context.prefs().edit().putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "French").commit()
-        assertEquals("fr", ProofreadService(context).getTargetLanguage())
-        assertEquals("fr", ProofreadService(context).getTargetLanguage())
+        assertEquals("French", ProofreadService(context).getTargetLanguage())
+        assertEquals("French", ProofreadService(context).getTargetLanguage())
         assertEquals("French", context.prefs().getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, null))
     }
 
-    @Test fun toolbarCodeAndLocalPromptLanguageStayTogether() {
+    @Test fun targetSetterWritesTheUpstreamCodeToBothPreferenceKeys() {
         ProofreadService(context).setTargetLanguage("de")
         assertEquals("de", ProofreadService(context).getTargetLanguage())
-        assertEquals("German", context.prefs().getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, null))
+        assertEquals("de", context.prefs().getString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, null))
+        assertEquals("de", context.prefs().getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, null))
     }
 
     @Test fun legacyToolbarCodeWinsOverLegacyOfflineName() {
-        context.prefs().edit().putString("gemini_target_language", "es")
+        context.prefs().edit().putString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, "es")
             .putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "French").commit()
         assertEquals("es", ProofreadService(context).getTargetLanguage())
+    }
+
+    @Test fun unsetTargetUsesUpstreamEnglishDefaultWithoutWritingPreferences() {
+        val before = context.prefs().all.toMap()
+        assertEquals("en", ProofreadService(context).getTargetLanguage())
+        assertEquals(before, context.prefs().all)
+    }
+
+    @Test fun legacyEnglishNameUsesUpstreamCodeAlias() {
+        context.prefs().edit().putString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, "English").commit()
+        assertEquals("en", ProofreadService(context).getTargetLanguage())
+        assertEquals("English", context.prefs().getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, null))
+    }
+
+    @Test fun customTargetNameIsStoredWithoutForkSpecificNormalization() {
+        ProofreadService(context).setTargetLanguage("Klingon")
+        assertEquals("Klingon", ProofreadService(context).getTargetLanguage())
+        assertEquals("Klingon", context.prefs().getString(SettingsWithoutKey.GEMINI_TARGET_LANGUAGE, null))
+        assertEquals("Klingon", context.prefs().getString(Settings.PREF_OFFLINE_TRANSLATE_TARGET_LANGUAGE, null))
     }
 
     @Test fun legacyFrenchIsPassedAsCodeToActualPluginTranslationPath() {

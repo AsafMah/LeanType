@@ -62,7 +62,7 @@ class ApkInvariantTests(unittest.TestCase):
         self.assertEqual(gate.check_apks(self.apk_dir, self._analyzer), [])
 
     def test_missing_flavor_fails(self):
-        next(self.apk_dir.glob("*-offlinelite-release.apk")).unlink()
+        next(self.apk_dir.glob("*-offline-release.apk")).unlink()
         self.assert_violation("apk/set")
 
     def test_extra_debug_apk_is_ignored(self):
@@ -81,8 +81,8 @@ class ApkInvariantTests(unittest.TestCase):
             archive.writestr("assets/dicts/nested/should-not-ship.dict", b"dictionary")
         self.assert_violation("apk/standard/dictionaries")
 
-    def test_offline_requires_main_english_dictionary(self):
-        self.metadata["offline"]["files"] = ["assets/dicts/main_de.dict"]
+    def test_offline_excludes_bundled_dictionaries(self):
+        self.metadata["offline"]["files"] = ["assets/dicts/main_en-US.dict"]
         self._write_apks()
         self.assert_violation("apk/offline/dictionaries")
 
@@ -91,17 +91,22 @@ class ApkInvariantTests(unittest.TestCase):
             self.metadata["standard"]["permissions"] = []
             self.assert_violation("apk/standard/internet")
         self.metadata = json.loads(FIXTURE.read_text(encoding="utf-8"))
-        with self.subTest(flavor="offlinelite"):
-            self.metadata["offlinelite"]["permissions"] = ["android.permission.INTERNET"]
-            self.assert_violation("apk/offlinelite/internet")
+        with self.subTest(flavor="offline"):
+            self.metadata["offline"]["permissions"] = ["android.permission.INTERNET"]
+            self.assert_violation("apk/offline/internet")
 
     def test_application_id_is_effective_packaged_id(self):
         self.metadata["offline"]["applicationId"] = "com.asafmah.leantypedual"
         self.assert_violation("apk/offline/application-id")
 
     def test_min_sdk_is_effective_packaged_value(self):
-        self.metadata["offline"]["minSdk"] = 21
+        self.metadata["offline"]["minSdk"] = 26
         self.assert_violation("apk/offline/min-sdk")
+
+    def test_retired_lite_release_is_rejected(self):
+        with zipfile.ZipFile(self.apk_dir / "LeanTypeDual-offlinelite-release.apk", "w") as archive:
+            archive.writestr("AndroidManifest.xml", b"retired")
+        self.assert_violation("apk/set")
 
 
 if __name__ == "__main__":

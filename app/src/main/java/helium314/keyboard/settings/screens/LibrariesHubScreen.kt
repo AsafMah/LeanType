@@ -92,7 +92,7 @@ fun LibrariesHubScreen(
                                 name = stringResource(R.string.settings_screen_ai_integration),
                                 description = stringResource(
                                     if (availability.cloudAi) R.string.ai_provider_summary
-                                    else R.string.offline_model_summary
+                                    else R.string.load_offline_ai_plugin_summary
                                 ),
                                 onClick = onClickAIIntegration,
                                 icon = R.drawable.ic_proofread
@@ -149,22 +149,20 @@ fun LibrariesHubScreen(
                             icon = R.drawable.sym_keyboard_voice_holo
                         ) { NextScreenIcon() }
 
-                        if (BuildConfig.FLAVOR != "offlinelite") {
-                            val isTranslationSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N
-                            val translationInstalled = isTranslationSupported && TranslationLoader.hasPlugin(context)
-                            val translationSummary = when {
-                                !isTranslationSupported -> "Requires Android 7.0+"
-                                translationInstalled -> stringResource(R.string.libraries_status_active)
-                                else -> stringResource(R.string.libraries_status_not_installed)
-                            }
-                            Preference(
-                                name = stringResource(R.string.translation_settings_title),
-                                description = translationSummary,
-                                onClick = if (isTranslationSupported) onClickTranslation else ({}),
-                                enabled = isTranslationSupported,
-                                icon = R.drawable.ic_translate
-                            ) { if (isTranslationSupported) NextScreenIcon() }
+                        val isTranslationSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N
+                        val translationInstalled = isTranslationSupported && TranslationLoader.hasPlugin(context)
+                        val translationSummary = when {
+                            !isTranslationSupported -> "Requires Android 7.0+"
+                            translationInstalled -> stringResource(R.string.libraries_status_active)
+                            else -> stringResource(R.string.libraries_status_not_installed)
                         }
+                        Preference(
+                            name = stringResource(R.string.translation_settings_title),
+                            description = translationSummary,
+                            onClick = if (isTranslationSupported) onClickTranslation else ({}),
+                            enabled = isTranslationSupported,
+                            icon = R.drawable.ic_translate
+                        ) { if (isTranslationSupported) NextScreenIcon() }
                         // Keypress Audio & Sound Packs Plugin
                         val currentSoundStyle = prefs.getString(Settings.PREF_KEYPRESS_SOUND_STYLE, Defaults.PREF_KEYPRESS_SOUND_STYLE) ?: Defaults.PREF_KEYPRESS_SOUND_STYLE
                         val soundStyleName = when {

@@ -20,7 +20,6 @@ import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_AUTO_CORRECT_USING_NON_WHITE_LISTED_SUGGESTION
 import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_REMOVE_PREVIOUSLY_REJECTED_SUGGESTION
 import helium314.keyboard.latin.dictionary.Dictionary
-import helium314.keyboard.latin.gesture.SwipeGestureEngine
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.suggestions.SuggestionStripView
@@ -28,9 +27,6 @@ import helium314.keyboard.latin.utils.AutoCorrectionUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.SuggestionResults
-import helium314.keyboard.latin.utils.ExecutorUtils
-import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.atomic.AtomicReference
 import java.util.Locale
 import kotlin.math.min
 
@@ -45,55 +41,6 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     // Cache size of 50 should cover most typing scenarios while limiting memory usage
     private data class CachedNextWords(val revision: Long, val results: SuggestionResults)
     private val nextWordSuggestionsCache = LruCache<NgramContext, CachedNextWords>(50)
-    private data class GestureIndexState(
-        val fingerprint: Int,
-        val dictionaryRevision: Long,
-        val index: SwipeGestureEngine.GestureIndex? = null,
-    )
-    // The pending state itself owns publication, even across clears of the same layout.
-    private val gestureIndexState = AtomicReference<GestureIndexState?>()
-
-    fun buildGestureIndexAsync(keyboard: Keyboard) {
-        if (!Settings.getValues().mGestureInputEnabled) return
-        val fingerprint = SwipeGestureEngine.layoutFingerprint(keyboard)
-        if (fingerprint == 0) return
-        val revision = mDictionaryFacilitator.dictionaryRevision
-        val previous = gestureIndexState.get()
-        if (previous?.fingerprint == fingerprint && previous.dictionaryRevision == revision) return
-        val request = GestureIndexState(fingerprint, revision)
-        if (!gestureIndexState.compareAndSet(previous, request)) return
-
-        try {
-            ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
-                try {
-                    val index = SwipeGestureEngine.buildIndex(mDictionaryFacilitator, keyboard)
-                    if (mDictionaryFacilitator.dictionaryRevision == revision) {
-                        gestureIndexState.compareAndSet(request, request.copy(index = index))
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to build Java gesture index", e)
-                } finally {
-                    gestureIndexState.compareAndSet(request, null)
-                }
-            }
-        } catch (e: RejectedExecutionException) {
-            gestureIndexState.compareAndSet(request, null)
-            Log.e(TAG, "Could not schedule Java gesture index", e)
-        }
-    }
-
-    fun recordAccepted(word: String, pointers: InputPointers, keyboard: Keyboard) {
-        SwipeGestureEngine.recordAccepted(word, pointers, keyboard, gestureIndexFor(keyboard))
-    }
-
-    private fun gestureIndexFor(keyboard: Keyboard): SwipeGestureEngine.GestureIndex? {
-        val state = gestureIndexState.get() ?: return null
-        return state.index.takeIf {
-            state.dictionaryRevision == mDictionaryFacilitator.dictionaryRevision
-                && state.fingerprint == SwipeGestureEngine.layoutFingerprint(keyboard)
-        }
-    }
-
     // Cached scoreLimit to avoid repeated Settings lookups in hot path
     // The read-then-write of (mLastScoreLimitUpdateTime, mCachedScoreLimitForAutocorrect)
     // is guarded by `synchronized(this)` in shouldBeAutoCorrected() to make the update atomic
@@ -104,7 +51,6 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     // cache cleared whenever LatinIME.loadSettings is called, notably on changing layout and switching input fields
     fun clearNextWordSuggestionsCache() {
         nextWordSuggestionsCache.evictAll()
-        gestureIndexState.set(null)
         // Also reset scoreLimit cache to force refresh on next use
         synchronized(this) {
             mLastScoreLimitUpdateTime = 0
@@ -459,30 +405,13 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         inputStyle: Int, sequenceNumber: Int
     ): SuggestedWords {
         val pointers = wordComposer.composedDataSnapshot.mInputPointers
-        val method = settingsValuesForSuggestion.mGestureMethod
-        val useFallback = "fallback" == method || !JniUtils.sHaveNativeGestureLib
-        val suggestionResults = if (useFallback) {
-            val index = gestureIndexFor(keyboard)
-            if (index == null) {
-                buildGestureIndexAsync(keyboard)
-                SuggestionResults(1, false, false)
-            } else {
-                val predictionSet = if (ngramContext.isValid) {
-                    mDictionaryFacilitator.getSuggestionResults(
-                        ComposedData(InputPointers(32), false, ""), ngramContext, keyboard,
-                        settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
-                    ).map { it.mWord.lowercase(Locale.ROOT) }.toSet()
-                } else {
-                    emptySet()
-                }
-                SwipeGestureEngine.rankByIndex(index, pointers, keyboard, SuggestedWords.MAX_SUGGESTIONS, predictionSet)
-            }
-        } else {
-            mDictionaryFacilitator.getSuggestionResults(
-                wordComposer.composedDataSnapshot, ngramContext, keyboard,
-                settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
-            )
+        if (!JniUtils.sHaveNativeGestureLib) {
+            return SuggestedWords.getEmptyInstance()
         }
+        val suggestionResults = mDictionaryFacilitator.getSuggestionResults(
+            wordComposer.composedDataSnapshot, ngramContext, keyboard,
+            settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
+        )
         filterMultiWordSuggestions(suggestionResults, Settings.getValues().mDisableMultiWordSuggestions)
         if (!Settings.getValues().mSuggestEmojis) {
             suggestionResults.removeAll { it.isEmoji || it.mSourceDict?.mDictType == Dictionary.TYPE_EMOJI }
