@@ -29,7 +29,7 @@ maintain a private AI backend or continue a broad upstream bug hunt.
   migrated. Upstream's unused preference carrier fields remain to avoid needless divergence.
 - Standard EXP from the current upstream-aligned worktree was installed on September 8
   at 07:21 +03:00, by explicit user request, without switching the selected keyboard.
-  Receipt is below; actual native/dual-thumb behavior remains unverified on the phone.
+  Receipt and initial user feedback are below; no agent-driven swipe test was performed.
 - Latest merge coverage: 35 cases, including OCR camera relayout. Subsequent native
   routing/composition/settings run: 187 cases across nine suites, no failures, fresh
   result gate. These fixtures do not execute the closed native recognizer on a phone.
@@ -43,9 +43,13 @@ maintain a private AI backend or continue a broad upstream bug hunt.
   and the updated product source gate pass. No release/signing workflow was dispatched.
 
 **Implementation and installation are complete.** The user chose installation without
-switching keyboards: do not change their selected IME to run a swipe test. Actual phone
-swiping remains unverified. No private native-backend rebuild is pending.
+switching keyboards: do not change their selected IME to run a swipe test. Detailed
+native/dual-thumb behavior has not been separately characterized. No private native-backend rebuild is pending.
 The original Notes/Word paragraph-deletion report is still unresolved.
+
+**Initial user feedback, September 8 at 21:03 +03:00:** "feels ok".
+This is positive initial feedback for the installed upstream-aligned EXP baseline
+(`b0398220a`), not a claim that every gesture case or the paragraph-backspace report is fixed.
 
 **Current phone receipt:** `LeanTypeDual-EXP-upstream-52567c0-8291f4fc.apk`, saved
 immutably in the session artifact directory, is Standard EXP `0.3.0-exp` / `4300`,
