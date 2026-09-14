@@ -15,6 +15,43 @@ If you use an external glide typing library, you likely will have issues if your
 
 If the layout has exactly 2 keys in the bottom row, these keys will replace comma and period keys. More exactly: the first key will replace the first functional key with `"groupId": 1` in the bottom row, and the second key with replace the first key with `"groupId": 2`.
 
+## Swipe shortcut menus
+
+Enable **Swipe up for shortcuts** and/or **Swipe down for shortcuts** in the gesture
+settings. These work on the alphabet keyboard: up starts on its top character row
+(the number row when visible); down starts on its bottom character row, above the
+space/punctuation row. Space/delete gestures and ordinary long-press popups are
+unchanged. Both menus are off by default.
+Menus are unavailable while the device is locked, because editable entries can
+contain private text or open clipboard history.
+
+Swipe outward, slide sideways to highlight an item, and release to activate it.
+Returning to the starting height, sliding outside the menu horizontally, or adding
+a second finger cancels the menu without typing the source key.
+
+Edit **Swipe-up shortcuts** or **Swipe-down shortcuts** in **Secondary layouts**,
+using the same edit/import/select controls as other layouts. Both simple text and
+JSON are supported. The menu reads every entry in file order into one horizontal
+row; key widths are determined by the source row rather than the layout's `width`
+properties. Labels, action codes, text output and selectors use the normal layout
+parser. Nested long-press popups are not opened inside the menu.
+
+With seven items on QWERTY, the lower menu aligns with `z x c v b n m`. It stays in
+the same place whichever key starts the swipe. With a different number of items,
+the first and last stay at the row's first and last key centers and intermediate
+items are distributed between them; a single item is centered.
+
+For example, a three-action menu:
+
+```json
+[[{ "label": "undo" }, { "label": "copy" }, { "label": "paste" }]]
+```
+
+The built-in upper menu contains undo, redo, cut, copy, paste, select all and
+clipboard. The lower menu contains left, right, word left, word right, clipboard,
+numpad and emoji. Defaults live in `assets/layouts/swipe_up` and
+`assets/layouts/swipe_down`.
+
 ## Simple format
 * One key per line
   * Key format: [label] [popup keys], all separated by space, e.g. `a 0 + *` will create a key with text `a`, and the keys `0`, `+`, and `*` on long press

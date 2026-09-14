@@ -1,6 +1,8 @@
 package helium314.keyboard.settings
 
 import android.content.Context
+import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.LayoutType
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -28,6 +30,20 @@ class SettingsContainerTest {
         // Just verify it doesn't crash and returns some results for empty or common strings
         val res = container.filter("a")
         assertTrue(res.isNotEmpty())
+    }
+
+    @Test
+    fun swipeMenusHaveOneSettingAndOneSecondaryLayoutEach() {
+        val keys = listOf(
+            Settings.PREF_SWIPE_UP_MENU, Settings.PREF_SWIPE_DOWN_MENU,
+            Settings.PREF_LAYOUT_PREFIX + LayoutType.SWIPE_UP.name,
+            Settings.PREF_LAYOUT_PREFIX + LayoutType.SWIPE_DOWN.name
+        )
+        val settings = container.filter("")
+        keys.forEach { key ->
+            assertEquals(1, settings.count { it.key == key })
+            assertTrue(container[key] != null)
+        }
     }
 
     @Test
