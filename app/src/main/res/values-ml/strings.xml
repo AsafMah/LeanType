@@ -99,13 +99,13 @@
     <string name="number_row_summary">എല്ലായ്പ്പോഴും നമ്പർ വരി കാണിക്കുക</string>
     <string name="number_row">നമ്പർ വരി</string>
     <string name="show_hints">കീ സൂചനകൾ കാണിക്കുക</string>
-    <string name="android_spell_checker_settings">LeanType സ്പെൽ ചെക്കർ ക്രമീകരണങ്ങൾ</string>
+    <string name="android_spell_checker_settings">LeanTypeDual സ്പെൽ ചെക്കർ ക്രമീകരണങ്ങൾ</string>
     <string name="delete_swipe">ഡിലീറ്റ് സ്വൈപ്പ്</string>
     <string name="show_emoji_key">ഇമോജി കീ</string>
     <string name="prefs_force_incognito_mode_summary">പുതിയ വാക്കുകൾ പഠിക്കുന്നത് അപ്രാപ്തമാക്കുക</string>
     <string name="settings_category_suggestions">നിർദ്ദേശങ്ങൾ</string>
-    <string name="spell_checker_service_name">LeanType സ്പെൽ ചെക്കർ</string>
-    <string name="ime_settings">LeanType ക്രമീകരണങ്ങൾ</string>
+    <string name="spell_checker_service_name">LeanTypeDual സ്പെൽ ചെക്കർ</string>
+    <string name="ime_settings">LeanTypeDual ക്രമീകരണങ്ങൾ</string>
     <string name="settings_category_clipboard_history">ക്ലിപ്പ്ബോർഡ് ഹിസ്റ്ററി</string>
     <string name="enable_clipboard_history_summary">പ്രവർത്തനരഹിതമാക്കിയാൽ, ക്ലിപ്പ്ബോർഡ് ഉള്ളടക്കം എന്തെങ്കിലും ഉണ്ടെങ്കിൽ ക്ലിപ്പ്ബോർഡ് കീ പേസ്റ്റ് ചെയ്യും</string>
     <string name="enable_clipboard_history">ക്ലിപ്പ്ബോർഡ് ചരിത്രം എനേബിൾ ചെയ്യുക</string>
@@ -139,7 +139,7 @@
     <string name="label_pause_key">"താൽക്കാലികമായി നിർത്തുക"</string>
     <string name="label_wait_key">"കാത്തിരിക്കുക"</string>
 
-    <string name="ime_name">LeanType</string>
+    <string name="ime_name">LeanTypeDual</string>
     <string name="vibrate_in_dnd_mode">ശല്യം ചെയ്യാതിരിക്കുക മോഡിൽ വൈബ്രേറ്റ് ചെയ്യുക</string>
     <string name="suggest_emojis">ഇമോജികൾ നിർദ്ദേശിക്കുക</string>
     <string name="suggest_emojis_summary">സാധാരണ നിർദ്ദേശങ്ങളിൽ ഇമോജി നിഘണ്ടു ഉപയോഗിക്കുക</string>
@@ -374,7 +374,7 @@
     <string name="disable_network_summary">ആന്തരിക ലോക്ക്: ഈ ആപ്പിൽ നിന്നുള്ള എല്ലാ നെറ്റ്വർക്ക് അഭ്യർത്ഥനകളും തടയുന്നു. അനുമതി പൂർണ്ണമായും റദ്ദാക്കാൻ, സിസ്റ്റം ആപ്പ് വിവര ക്രമീകരണങ്ങൾ ഉപയോഗിക്കുക.</string>
     <string name="open_app_info">സിസ്റ്റം ആപ്പ് വിവരം തുറക്കുക</string>
     <string name="open_app_info_summary">Android ക്രമീകരണങ്ങളിൽ അനുമതികളും ബാറ്ററി ഉപയോഗവും നിയന്ത്രിക്കുക</string>
-    <string name="gemini_network_disabled">LeanType ക്രമീകരണങ്ങളിൽ നെറ്റ്വർക്ക് ആക്സസ് പ്രവർത്തനരഹിതമാക്കിയിരിക്കുന്നു</string>
+    <string name="gemini_network_disabled">LeanTypeDual ക്രമീകരണങ്ങളിൽ നെറ്റ്വർക്ക് ആക്സസ് പ്രവർത്തനരഹിതമാക്കിയിരിക്കുന്നു</string>
     <string name="ai_provider_title">AI ദാതാവ്</string>
     <string name="ai_provider_summary">പ്രൂഫ് റീഡിംഗിനായി AI സേവനം തിരഞ്ഞെടുക്കുക</string>
     <string name="ai_provider_gemini">Google Gemini</string>

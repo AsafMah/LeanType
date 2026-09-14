@@ -20,12 +20,12 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.leanbitlab.leantype"
+        applicationId = "com.asafmah.leantypedual"
         minSdk = 21
         targetSdk = 35
-        // ponytail: release version 4.2.7
-        versionCode = 4207
-        versionName = "4.2.7"
+        // LeanTypeDual: 4000 + major * 1000 + minor * 100 + patch * 10.
+        versionCode = 6000
+        versionName = "2.0.0"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
@@ -108,7 +108,7 @@ android {
             if (number.isNotEmpty()) {
                 outputs.all {
                     val output = this as? com.android.build.gradle.api.ApkVariantOutput
-                    output?.outputFileName = "$number-LeanType_${defaultConfig.versionName}-${flavor}-${buildType.name}.apk"
+                    output?.outputFileName = "$number-LeanTypeDual_${defaultConfig.versionName}-${flavor}-${buildType.name}.apk"
                 }
             }
 

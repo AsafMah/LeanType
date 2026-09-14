@@ -94,8 +94,8 @@
     <string name="user_dict_settings_more_languages">"更多語言…"</string>
     <string name="settings_category_experimental">實驗功能</string>
     <string name="abbreviation_unit_minutes">%s分鐘</string>
-    <string name="spell_checker_service_name">拼字檢查</string>
-    <string name="android_spell_checker_settings">拼字檢查設定</string>
+    <string name="spell_checker_service_name">LeanTypeDual 拼字檢查</string>
+    <string name="android_spell_checker_settings">LeanTypeDual 拼字檢查設定</string>
     <string name="show_emoji_key">Emoji</string>
     <string name="incognito">強制無痕模式</string>
     <string name="settings_category_clipboard_history">剪貼板記錄</string>
@@ -104,7 +104,7 @@
     <string name="enable_clipboard_history">啟用剪貼板記錄</string>
     <string name="autospace_after_punctuation">在標點符號後自動插入空格</string>
     <string name="autospace_after_punctuation_summary">在輸入字串後自動插入空格</string>
-    <string name="ime_settings">設定</string>
+    <string name="ime_settings">LeanTypeDual 設定</string>
     <string name="settings_category_input">輸入</string>
     <string name="settings_category_correction">文字改正</string>
     <string name="select_input_method">"選擇輸入法"</string>

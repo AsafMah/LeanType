@@ -1,4 +1,10 @@
-# LeanType
+# LeanTypeDual
+
+LeanTypeDual is [AsafMah/LeanType](https://github.com/AsafMah/LeanType), a fork of
+[LeanBitLab/LeanType](https://github.com/LeanBitLab/LeanType), which is based on HeliBoard / OpenBoard / AOSP LatinIME.
+It installs alongside upstream LeanType as `com.asafmah.leantypedual` (with `.offline` for the offline flavor).
+LeanTypeDual releases are available from [this fork](https://github.com/AsafMah/LeanType/releases);
+the upstream artwork, documentation, community links, and plugin ecosystem below retain their original provenance.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/leantype_banner_dark.svg">
@@ -16,7 +22,7 @@
 [![Donate on Open Collective](https://img.shields.io/badge/Donate-Open_Collective-1f6feb?style=flat-square&logo=opencollective&logoColor=white)](https://opencollective.com/leanbitlab-org)
 
 **A private, smart, and deeply customizable open-source Android keyboard.**  
-*Forked from [HeliBoard](https://github.com/Helium314/HeliBoard) / OpenBoard / AOSP LatinIME.*
+*Forked from [LeanType](https://github.com/LeanBitLab/LeanType), based on [HeliBoard](https://github.com/Helium314/HeliBoard) / OpenBoard / AOSP LatinIME.*
 
 [Screenshots](#-screenshots) • [Download APKs](#-download) • [Flavor Comparison](#-flavor-comparison) • [Features](#-features) • [Setup Guide](#-setup-guide) • [Ecosystem](#-ecosystem--plugins) • [Other Projects](https://github.com/LeanBitLab#-android-projects)
 
@@ -26,7 +32,7 @@
 
 ## 🚀 Overview
 
-**LeanType** combines the trusted, lightweight, privacy-focused foundation of HeliBoard with modern productivity features: Multi-Provider Cloud, Self-Hosted & Offline AI proofreading, On-Device Whisper Voice Typing, Handwriting Recognition, In-Keyboard Offline Camera & Screenshot OCR, Real-time Inline Math Calculations, Zero-Latency Custom Sound Packs, Smart Toolbar Auto-Spanning, Built-in Self-Updater, and Rich Text Tools, while keeping you in complete control over your data.
+**LeanTypeDual** combines the trusted, lightweight, privacy-focused foundation of HeliBoard with modern productivity features: Multi-Provider Cloud, Self-Hosted & Offline AI proofreading, On-Device Whisper Voice Typing, Handwriting Recognition, In-Keyboard Offline Camera & Screenshot OCR, Real-time Inline Math Calculations, Zero-Latency Custom Sound Packs, Smart Toolbar Auto-Spanning, Built-in Self-Updater, and Rich Text Tools, while keeping you in complete control over your data.
 
 ---
 
@@ -47,7 +53,7 @@
 
 ## 📦 Flavor Comparison
 
-LeanType is available in two purpose-built flavors designed to match your exact privacy preferences, hardware specifications, and feature requirements:
+LeanTypeDual is available in two purpose-built flavors designed to match your exact privacy preferences, hardware specifications, and feature requirements:
 
 > [!NOTE]
 > **Flavor Consolidation (v4.2.6)**:  
@@ -65,7 +71,7 @@ LeanType is available in two purpose-built flavors designed to match your exact 
 | **Release Update Checker** | ✅ **Yes** *(GitHub Releases / View Release)* | ❌ No |
 | **Plugins & Models Setup** | In-app download or File import | Browser download + File import |
 | **Internet Permission** | 🌐 Optional *(Cloud AI / Updates)* | 🚫 **None** *(OS-level blocked)* |
-| **Package ID** | `com.leanbitlab.leantype` | `com.leanbitlab.leantype.offline` |
+| **Package ID** | `com.asafmah.leantypedual` | `com.asafmah.leantypedual.offline` |
 | **Min Android Version** | Android 6.0+ *(SDK 23)* | Android 5.0+ *(SDK 21)* |
 | **Approximate APK Size** | **~10.8 MB** | **~9.8 MB** |
 
@@ -164,7 +170,7 @@ LeanType is available in two purpose-built flavors designed to match your exact 
 ### 2. Voice Input Setup (On-Device Whisper AI)
 1. Download and install the [LeanType Voice Plugin APK](https://github.com/LeanBitLab/LeanType-Voice-Plugin/releases/latest) on your Android device (installed as a background IPC service).
 2. Grant **Microphone permission** to the LeanType Voice Plugin.
-3. In LeanType, open **Settings → Voice typing** (or **Settings → Plugins → Voice**) and tap **Whisper Speech Models**.
+3. In LeanTypeDual, open **Settings → Voice typing** (or **Settings → Plugins → Voice**) and tap **Whisper Speech Models**.
 4. Download or import your preferred Whisper model (e.g. *Base* ~74 MB recommended).
 5. Tap the microphone icon on the keyboard toolbar to start speech-to-text!
 
@@ -182,9 +188,9 @@ LeanType is available in two purpose-built flavors designed to match your exact 
 
 ### 5. Offline AI Setup (Local GGUF Models)
 1. Download `ai_plugin-arm64-v8a.apk` (or `ai_plugin-x86_64.apk`) from the [LeanType Offline AI Plugin Releases](https://github.com/LeanBitLab/LeanType-Offline-AI-Plugin/releases/latest).
-2. In LeanType (`offline` build), navigate to **Settings → Plugins → Offline AI** and tap **Load Offline AI plugin** to load the `.apk`.
+2. In LeanTypeDual (`offline` build), navigate to **Settings → Plugins → Offline AI** and tap **Load Offline AI plugin** to load the `.apk`.
 3. Download a compatible GGUF model (e.g. `Qwen2.5-0.5B-Instruct-Q4_K_M.gguf` or `Llama-3.2-1B-Instruct-Q4_K_M.gguf`).
-4. In LeanType, navigate to **Settings → Advanced → GGUF Model (.gguf)** and select the model file from storage.
+4. In LeanTypeDual, navigate to **Settings → Advanced → GGUF Model (.gguf)** and select the model file from storage.
 
 ### 6. Dictionaries & Gesture Typing Setup
 1. **Dictionaries**: With unbundled dictionaries in v4.1.6, open **Settings → Dictionaries** (or tap the dictionary icon on the toolbar when missing) to download or import your language dictionary (`.dict`).
@@ -199,7 +205,7 @@ LeanType is available in two purpose-built flavors designed to match your exact 
 
 ## 🧩 Ecosystem & Plugins
 
-Expand LeanType with official companion plugins:
+Expand LeanTypeDual with upstream LeanType companion plugins:
 
 | Plugin | Repository | Description |
 | :--- | :--- | :--- |
@@ -259,5 +265,5 @@ If LeanType improves your daily typing workflow, please consider sponsoring our 
 
 ## ⚖️ License
 
-LeanType is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.  
+LeanTypeDual is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
 See the [LICENSE](LICENSE) file for details.

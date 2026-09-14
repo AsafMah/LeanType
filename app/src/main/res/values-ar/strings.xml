@@ -93,7 +93,7 @@
     <string name="user_dict_settings_more_languages">"مزيد من اللغات…"</string>
     <string name="show_emoji_key">مفتاح الرموز التعبيرية</string>
     <string name="settings_no_limit">بلا حدود</string>
-    <string name="ime_settings">إعدادات LeanType</string>
+    <string name="ime_settings">إعدادات LeanTypeDual</string>
     <string name="settings_category_input">الإدخال</string>
     <string name="prefs_force_incognito_mode_summary">تعطيل تعلم الكلمات الجديدة</string>
     <string name="more_keys_strip_description">المزيد من المفاتيح</string>
@@ -103,8 +103,8 @@
     <string name="settings_category_suggestions">الاقتراحات</string>
     <string name="settings_category_experimental">تجريبي</string>
     <string name="settings_category_miscellaneous">متنوعة</string>
-    <string name="spell_checker_service_name">المدقق الإملائي لـ LeanType</string>
-    <string name="android_spell_checker_settings">إعدادات المدقق الإملائي لـ LeanType</string>
+    <string name="spell_checker_service_name">المدقق الإملائي لـ LeanTypeDual</string>
+    <string name="android_spell_checker_settings">إعدادات المدقق الإملائي لـ LeanTypeDual</string>
     <string name="number_row">صف الأرقام</string>
     <string name="number_row_summary">أظهِر صف الأرقام دائما</string>
     <string name="day_night_mode_summary">سيتبع المظهر إعدادات النظام</string>
@@ -498,7 +498,7 @@
     <string name="gesture_data_please_switch_keyboard">يُرجى التبديل إلى %s</string>
     <string name="gesture_data_share_limit">لتجنب تجاوز حدود الحجم، سيتم تصدير أول %s كلمة فقط</string>
 
-    <string name="ime_name">LeanType</string>
+    <string name="ime_name">LeanTypeDual</string>
     <string name="settings_category_configuration">الإعدادات</string>
     <string name="settings_category_visuals">المرئيات والمعاينة</string>
     <string name="settings_category_behavior">السلوك</string>
@@ -621,7 +621,7 @@
     <string name="disable_network_summary">قفل داخلي: يمنع جميع طلبات الشبكة من هذا التطبيق. لإلغاء الإذن تمامًا، استخدم إعدادات معلومات التطبيق في النظام.</string>
     <string name="open_app_info">فتح معلومات تطبيق النظام</string>
     <string name="open_app_info_summary">إدارة الأذونات واستخدام البطارية في إعدادات Android</string>
-    <string name="gemini_network_disabled">تم تعطيل الوصول إلى الشبكة في إعدادات LeanType</string>
+    <string name="gemini_network_disabled">تم تعطيل الوصول إلى الشبكة في إعدادات LeanTypeDual</string>
     <string name="ai_provider_title">مزوّد AI</string>
     <string name="ai_provider_summary">اختيار خدمة AI للتدقيق</string>
     <string name="ai_provider_gemini">Google Gemini</string>

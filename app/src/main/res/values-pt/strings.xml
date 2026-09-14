@@ -91,8 +91,8 @@
     <string name="user_dict_settings_edit_dialog_title">"Editar palavra"</string>
     <string name="user_dict_settings_all_languages">"Para todos os idiomas"</string>
     <string name="user_dict_settings_more_languages">"Mais idiomas…"</string>
-    <string name="spell_checker_service_name">Verificação ortográfica LeanType</string>
-    <string name="android_spell_checker_settings">Definições de verificação ortográfica LeanType</string>
+    <string name="spell_checker_service_name">Verificação ortográfica LeanTypeDual</string>
+    <string name="android_spell_checker_settings">Definições de verificação ortográfica LeanTypeDual</string>
     <string name="number_row">Número de linha</string>
     <string name="number_row_summary">Mostrar sempre n.º de linha</string>
     <string name="prefs_force_incognito_mode_summary">Desativar aprendizagem de palavras</string>
@@ -102,7 +102,7 @@
     <string name="settings_category_experimental">Experimental</string>
     <string name="settings_category_input">Introdução</string>
     <string name="settings_category_miscellaneous">Outras</string>
-    <string name="ime_settings">Definições LeanType</string>
+    <string name="ime_settings">Definições LeanTypeDual</string>
     <string name="settings_category_suggestions">Sugestões</string>
     <string name="delete_swipe">Deslize para eliminar</string>
     <string name="more_keys_strip_description">Mais teclas</string>
@@ -443,7 +443,7 @@
     <string name="custom_emoji_font">Definir fonte de emojis personalizada de ficheiro</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Teclas funcionais (Khipro)</string>
 
-    <string name="ime_name">LeanType</string>
+    <string name="ime_name">LeanTypeDual</string>
     <string name="settings_category_configuration">Configuração</string>
     <string name="settings_category_visuals">Visuais e pré-visualização</string>
     <string name="settings_category_behavior">Comportamento</string>
@@ -567,7 +567,7 @@
     <string name="disable_network_summary">Bloqueio interno: Bloqueia todas as solicitações de rede desta app. Para revogar totalmente a permissão, use as definições de Informação da App do sistema.</string>
     <string name="open_app_info">Abrir Informação da App do Sistema</string>
     <string name="open_app_info_summary">Gerir permissões e uso da bateria nas definições do Android</string>
-    <string name="gemini_network_disabled">O acesso à rede está desativado nas definições do LeanType</string>
+    <string name="gemini_network_disabled">O acesso à rede está desativado nas definições do LeanTypeDual</string>
     <string name="ai_provider_title">Fornecedor de AI</string>
     <string name="ai_provider_summary">Selecionar serviço de AI para revisão</string>
     <string name="ai_provider_gemini">Google Gemini</string>
