@@ -45,6 +45,8 @@ object Defaults {
         LayoutType.CUSTOM3 -> "symbols"
         LayoutType.CUSTOM4 -> "symbols"
         LayoutType.CUSTOM5 -> "symbols"
+        LayoutType.SWIPE_UP -> "swipe_up"
+        LayoutType.SWIPE_DOWN -> "swipe_down"
     }
     
     const val PREF_SPLIT_TOOLBAR = false
@@ -132,6 +134,8 @@ object Defaults {
     const val PREF_VERTICAL_SWIPE_THRESHOLD = 24
     const val PREF_DELETE_SWIPE = true
     const val PREF_DELETE_SWIPE_WORD_BY_WORD = false
+    const val PREF_SWIPE_UP_MENU = false
+    const val PREF_SWIPE_DOWN_MENU = false
     const val PREF_AUTOSPACE_AFTER_PUNCTUATION = false
     const val PREF_AUTOSPACE_AFTER_EMOJI = false
     const val PREF_AUTOSPACE_AFTER_SUGGESTION = true

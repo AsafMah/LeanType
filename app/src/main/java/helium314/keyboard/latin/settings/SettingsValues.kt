@@ -103,6 +103,8 @@ open class SettingsValues(
     val mForceAutoCaps: Boolean
     val mDeleteSwipeEnabled: Boolean
     val mDeleteSwipeWordByWord: Boolean
+    val mSwipeUpMenuEnabled: Boolean
+    val mSwipeDownMenuEnabled: Boolean
     val mAutospaceAfterPunctuation: Boolean
     val mAutospaceAfterEmoji: Boolean
     val mAutospaceAfterSuggestion: Boolean
@@ -410,6 +412,8 @@ open class SettingsValues(
         mForceAutoCaps = prefs.getBoolean(Settings.PREF_FORCE_AUTO_CAPS, Defaults.PREF_FORCE_AUTO_CAPS)
         mDeleteSwipeEnabled = prefs.getBoolean(Settings.PREF_DELETE_SWIPE, Defaults.PREF_DELETE_SWIPE)
         mDeleteSwipeWordByWord = prefs.getBoolean(Settings.PREF_DELETE_SWIPE_WORD_BY_WORD, Defaults.PREF_DELETE_SWIPE_WORD_BY_WORD)
+        mSwipeUpMenuEnabled = prefs.getBoolean(Settings.PREF_SWIPE_UP_MENU, Defaults.PREF_SWIPE_UP_MENU)
+        mSwipeDownMenuEnabled = prefs.getBoolean(Settings.PREF_SWIPE_DOWN_MENU, Defaults.PREF_SWIPE_DOWN_MENU)
         mAutospaceAfterPunctuation = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, Defaults.PREF_AUTOSPACE_AFTER_PUNCTUATION)
         mAutospaceAfterEmoji = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_EMOJI, Defaults.PREF_AUTOSPACE_AFTER_EMOJI)
         mAutospaceAfterSuggestion = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_SUGGESTION, Defaults.PREF_AUTOSPACE_AFTER_SUGGESTION)

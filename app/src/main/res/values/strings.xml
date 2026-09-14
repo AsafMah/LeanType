@@ -2210,4 +2210,10 @@ New dictionary:
     <string name="handwriting_models_management_desc">Download and manage offline recognition models</string>
     <string name="ocr_plugin_title">OCR Plugin APK</string>
     <string name="plugin_active_version_format">Plugin active (version %s)</string>
+    <string name="swipe_up_menu">Swipe up for shortcuts</string>
+    <string name="swipe_up_menu_summary">Swipe up from the top row, including the number row when shown. Edit the menu in Secondary layouts.</string>
+    <string name="swipe_down_menu">Swipe down for shortcuts</string>
+    <string name="swipe_down_menu_summary">Swipe down from the bottom letter row. Edit the menu in Secondary layouts.</string>
+    <string name="layout_swipe_up">Swipe-up shortcuts</string>
+    <string name="layout_swipe_down">Swipe-down shortcuts</string>
 </resources>
