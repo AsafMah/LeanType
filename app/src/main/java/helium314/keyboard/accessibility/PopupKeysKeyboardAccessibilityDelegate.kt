@@ -87,13 +87,13 @@ class PopupKeysKeyboardAccessibilityDelegate(
             mKeyboardView.onUpEvent(x, y, pointerId, eventTime)
             // TODO: Should fix this reference. This is a hack to clear the state of
             // {@link PointerTracker}.
-            PointerTracker.dismissAllPopupKeysPanels()
+            PointerTracker.finishAllPopupKeysInput()
             return
         }
         // Close the popup keys keyboard.
         // TODO: Should fix this reference. This is a hack to clear the state of
         // {@link PointerTracker}.
-        PointerTracker.dismissAllPopupKeysPanels()
+        PointerTracker.finishAllPopupKeysInput()
     }
 
     companion object {
