@@ -686,6 +686,7 @@ class PointerTracker private constructor(
         if (source !in row.keys) return false
         val panel = sDrawingProxy?.showSwipeShortcutMenu(this, direction) ?: return false
         getTimerProxy().cancelKeyTimersOf(this)
+        getTimerProxy().cancelUpdateBatchInputTimer(this)
         mIsDetectingGesture = false
         setReleasedKeyGraphics(mCurrentKey, true)
         mCurrentKey = null

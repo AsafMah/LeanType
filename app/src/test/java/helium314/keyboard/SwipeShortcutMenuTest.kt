@@ -4,6 +4,7 @@ package helium314.keyboard
 import android.content.Context
 import android.content.res.AssetManager
 import android.app.KeyguardManager
+import android.os.Looper
 import android.view.ContextThemeWrapper
 import android.view.MotionEvent
 import android.view.View
@@ -28,6 +29,7 @@ import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.RichInputMethodSubtype
+import helium314.keyboard.latin.common.InputPointers
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.DebugSettings
 import helium314.keyboard.latin.utils.LayoutType
@@ -40,19 +42,26 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.*
 import org.robolectric.Robolectric
-import org.robolectric.RobolectricTestRunner
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-@RunWith(RobolectricTestRunner::class)
+@RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(sdk = [33], shadows = [ShadowInputMethodManager2::class, ShadowProximityInfo::class])
-class SwipeShortcutMenuTest {
+class SwipeShortcutMenuTest(private val glideEnabled: Boolean) {
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "glide={0}")
+        fun gestureModes() = listOf(arrayOf(false), arrayOf(true))
+    }
+
     private lateinit var context: Context
     private lateinit var keyboard: Keyboard
     private lateinit var view: MainKeyboardView
@@ -92,7 +101,7 @@ class SwipeShortcutMenuTest {
         view.layout(0, 0, 700, 400)
         listener = mock(KeyboardActionListener::class.java)
         view.setKeyboardActionListener(listener)
-        view.setGestureHandlingEnabledByUser(false, false, false)
+        configureGlide()
     }
 
     @After
@@ -297,7 +306,7 @@ class SwipeShortcutMenuTest {
         view.measure(exact(700), exact(400))
         view.layout(0, 0, 700, 400)
         view.setKeyboardActionListener(listener)
-        view.setGestureHandlingEnabledByUser(false, false, false)
+        configureGlide()
         useTouchEvent = true
         val source = keyboard.getKey('z'.code)!!
         val x = center(source)
@@ -353,6 +362,45 @@ class SwipeShortcutMenuTest {
         event(MotionEvent.ACTION_UP, center(source), source.y + source.height * 2)
         verify(listener).onCodeInput(eq(KeyCode.ARROW_LEFT), anyInt(), anyInt(), eq(false))
         verify(listener, times(1)).onCodeInput(anyInt(), anyInt(), anyInt(), anyBoolean())
+    }
+
+    @Test
+    fun `horizontal glide keeps its path when it later moves outward`() {
+        for (direction in listOf(UP, DOWN)) assertGlideSurvivesOutwardMove(direction)
+    }
+
+    @Test
+    fun `holding shortcut menu cannot deliver a pending glide update`() {
+        val source = keyboard.getKey('z'.code)!!
+        val x = center(source)
+        val y = source.y + source.height / 2
+        event(MotionEvent.ACTION_DOWN, x, y)
+        // Sampled by the gesture arbiter but still below the shortcut activation threshold.
+        event(MotionEvent.ACTION_MOVE, x, y + source.width / 4)
+        event(MotionEvent.ACTION_MOVE, x, y + source.height)
+        assertTrue(view.isShowingPopupKeysPanel())
+        shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS)
+        assertTrue(view.isShowingPopupKeysPanel())
+        assertFalse(mockingDetails(listener).invocations.any { it.method.name == "onUpdateBatchInput" },
+            "A pending glide update must not run after a shortcut menu takes ownership")
+        verify(listener, never()).onStartBatchInput()
+        event(MotionEvent.ACTION_UP, x, y + source.height)
+        verify(listener).onCodeInput(eq(KeyCode.ARROW_LEFT), anyInt(), anyInt(), eq(false))
+    }
+
+    @Test
+    fun `cancelled shortcut does not disable the next glide`() {
+        val source = keyboard.getKey('z'.code)!!
+        val x = center(source)
+        val y = source.y + source.height / 2
+        event(MotionEvent.ACTION_DOWN, x, y)
+        event(MotionEvent.ACTION_MOVE, x, y + source.height)
+        assertTrue(view.isShowingPopupKeysPanel())
+        event(MotionEvent.ACTION_MOVE, x, y)
+        event(MotionEvent.ACTION_UP, x, y)
+        assertFalse(view.isShowingPopupKeysPanel())
+        verify(listener, never()).onCodeInput(anyInt(), anyInt(), anyInt(), anyBoolean())
+        assertGlideSurvivesOutwardMove(UP)
     }
 
     @Test
@@ -476,6 +524,40 @@ class SwipeShortcutMenuTest {
         event(MotionEvent.ACTION_MOVE, x, endY)
         assertTrue(view.isShowingPopupKeysPanel())
         event(MotionEvent.ACTION_UP, x, endY)
+    }
+
+    private fun configureGlide() {
+        view.setMainDictionaryAvailability(true)
+        PointerTracker.setClipboardInlineInputActive(false)
+        view.setGestureHandlingEnabledByUser(glideEnabled, false, false)
+    }
+
+    private fun assertGlideSurvivesOutwardMove(direction: SwipeShortcutMenu.Direction) {
+        val row = keyboard.swipeShortcutRows.getValue(direction)
+        val source = row.keys.first()
+        val y = source.y + source.height / 2
+        clearInvocations(listener)
+        event(MotionEvent.ACTION_DOWN, center(source), y)
+        for (key in row.keys.drop(1).take(3)) {
+            event(MotionEvent.ACTION_MOVE, center(key), y)
+        }
+        if (glideEnabled) verify(listener).onStartBatchInput()
+        else verify(listener, never()).onStartBatchInput()
+        val x = center(row.keys[3])
+        val outwardY = y + if (direction == UP) -source.height else source.height
+        event(MotionEvent.ACTION_MOVE, x, outwardY)
+        assertFalse(view.isShowingPopupKeysPanel())
+        event(MotionEvent.ACTION_UP, x, outwardY)
+        val completions = mockingDetails(listener).invocations.filter { it.method.name == "onEndBatchInput" }
+        assertEquals(if (glideEnabled) 1 else 0, completions.size)
+        if (glideEnabled) {
+            val points = completions.single().arguments.single() as InputPointers
+            assertEquals(5, points.pointerSize)
+            assertEquals(center(source), points.xCoordinates[0])
+            assertEquals(x, points.xCoordinates[4])
+            assertEquals(outwardY, points.yCoordinates[4])
+            verify(listener, never()).onCodeInput(anyInt(), anyInt(), anyInt(), anyBoolean())
+        }
     }
 
     private fun event(action: Int, x: Int, y: Int) {
