@@ -31,8 +31,8 @@ class ShadowInputMethodManager2 : ShadowInputMethodManager() {
     @Implementation
     override fun getInputMethodList() = listOf(
         if (BuildConfig.BUILD_TYPE == "debug" || BuildConfig.BUILD_TYPE == "debugNoMinify")
-            InputMethodInfo("helium314.keyboard.debug", "LatinIME", "LeanType debug", null)
-        else InputMethodInfo("helium314.keyboard", "LatinIME", "LeanType", null),
+            InputMethodInfo(BuildConfig.APPLICATION_ID, "helium314.keyboard.latin.LatinIME", "LeanTypeDual debug", null)
+        else InputMethodInfo(BuildConfig.APPLICATION_ID, "helium314.keyboard.latin.LatinIME", "LeanTypeDual", null),
     )
     @Implementation
     fun getShortcutInputMethodsAndSubtypes() = emptyMap<InputMethodInfo, List<InputMethodSubtype>>()

@@ -104,10 +104,10 @@
     <string name="label_pause_key">"موقوف"</string>
     <string name="label_wait_key">"انتظار"</string>
 
-    <string name="spell_checker_service_name">LeanType اسپیل چیکر</string>
-    <string name="ime_name">LeanType</string>
-    <string name="ime_settings">LeanType ترتیبات</string>
-    <string name="android_spell_checker_settings">LeanType اسپیل چیکر کی ترتیبات</string>
+    <string name="spell_checker_service_name">LeanTypeDual اسپیل چیکر</string>
+    <string name="ime_name">LeanTypeDual</string>
+    <string name="ime_settings">LeanTypeDual ترتیبات</string>
+    <string name="android_spell_checker_settings">LeanTypeDual اسپیل چیکر کی ترتیبات</string>
     <string name="vibrate_in_dnd_mode">پریشان نہ کریں موڈ میں وائبریٹ کریں</string>
     <string name="suggest_emojis">ایموجیز تجویز کریں</string>
     <string name="suggest_emojis_summary">عام تجاویز میں ایموجی لغت استعمال کریں</string>
@@ -367,7 +367,7 @@
     <string name="disable_network_summary">اندرونی تالا: اس ایپ سے نیٹ ورک کی تمام درخواستوں کو روکتا ہے۔ اجازت مکمل طور پر منسوخ کرنے کے لیے، سسٹم ایپ کی معلومات کی ترتیبات استعمال کریں۔</string>
     <string name="open_app_info">سسٹم ایپ کی معلومات کھولیں</string>
     <string name="open_app_info_summary">Android ترتیبات میں اجازتوں اور بیٹری کے استعمال کا نظم کریں</string>
-    <string name="gemini_network_disabled">LeanType ترتیبات میں نیٹ ورک رسائی غیر فعال ہے</string>
+    <string name="gemini_network_disabled">LeanTypeDual ترتیبات میں نیٹ ورک رسائی غیر فعال ہے</string>
     <string name="ai_provider_title">AI فراہم کنندہ</string>
     <string name="ai_provider_summary">پروف ریڈنگ کے لیے AI سروس منتخب کریں</string>
     <string name="ai_provider_gemini">Google Gemini</string>
