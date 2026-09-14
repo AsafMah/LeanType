@@ -103,9 +103,9 @@
     <string name="label_search_key">"ရှာဖွေရန်"</string>
     <string name="label_pause_key">"ဆိုင်းငံ့ရန်"</string>
     <string name="label_wait_key">"စောင့်ဆိုင်းရန်"</string>
-    <string name="ime_settings">ဟေလီဘုတ်ချိန်ညှိခြင်းများ</string>
-    <string name="spell_checker_service_name">ဟေလီဘုတ်သတ်ပုံစစ်</string>
-    <string name="android_spell_checker_settings">ဟေလီဘုတ်သတ်ပုံစစ်ကို ချိန်ညှိရန်</string>
+    <string name="ime_settings">LeanTypeDual ချိန်ညှိခြင်းများ</string>
+    <string name="spell_checker_service_name">LeanTypeDual သတ်ပုံစစ်</string>
+    <string name="android_spell_checker_settings">LeanTypeDual သတ်ပုံစစ်ကို ချိန်ညှိရန်</string>
     <string name="vibrate_in_dnd_mode">မနှောင့်ယှက်ရစနစ်ဖွင့်ထားချိန်တွင် တုန်ခါပါ</string>
     <string name="suggest_emojis">အီမိုဂျီအကြံပေး</string>
     <string name="suggest_emojis_summary">အီမိုဂျီအဘိဓာန်ကို သာမန်အကြံပေးစနစ်တွင် အသုံးပြုပါ</string>

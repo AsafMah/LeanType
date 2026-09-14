@@ -110,8 +110,8 @@
     <string name="enable_clipboard_history_summary">如果禁用，剪贴板键将粘贴剪贴板内容（如果有的话）</string>
     <string name="autospace_after_punctuation">标点后面自动插入空格</string>
     <string name="autospace_after_punctuation_summary">输入新字词时自动在标点后插入空格</string>
-    <string name="spell_checker_service_name">拼写检查</string>
-    <string name="android_spell_checker_settings">拼写检查设置</string>
+    <string name="spell_checker_service_name">LeanTypeDual 拼写检查</string>
+    <string name="android_spell_checker_settings">LeanTypeDual 拼写检查设置</string>
     <string name="subtype_akkhor_bn_BD">%s (Akkhor)</string>
     <string name="prefs_force_incognito_mode_summary">禁用新字词学习</string>
     <string name="more_keys_strip_description">更多键</string>
@@ -120,7 +120,7 @@
     <string name="day_night_mode">自动日间/夜间模式</string>
     <string name="day_night_mode_summary">外观将遵循系统设置</string>
     <string name="settings_category_input">输入</string>
-    <string name="ime_settings">设置</string>
+    <string name="ime_settings">LeanTypeDual 设置</string>
     <string name="settings_category_additional_keys">额外键</string>
     <string name="prefs_long_press_keyboard_to_change_lang_summary">长按空格键将提示输入法选择菜单</string>
     <string name="prefs_long_press_keyboard_to_change_lang">使用空格键更改输入法</string>

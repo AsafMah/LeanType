@@ -101,8 +101,8 @@
     <string name="enable_clipboard_history">Attiva la cronologia appunti</string>
     <string name="enable_clipboard_history_summary">Se disattivata, il tasto \'Appunti\' incolla direttamente l\'ultimo contenuto</string>
     <string name="clipboard_history_retention_time">Durata dei contenuti nella cronologia</string>
-    <string name="spell_checker_service_name">Controllo ortografico LeanType</string>
-    <string name="android_spell_checker_settings">Impostazioni del controllo ortografico LeanType</string>
+    <string name="spell_checker_service_name">Controllo ortografico LeanTypeDual</string>
+    <string name="android_spell_checker_settings">Impostazioni del controllo ortografico LeanTypeDual</string>
     <string name="number_row">Riga dei numeri</string>
     <string name="delete_swipe">Scorri per cancellare</string>
     <string name="delete_swipe_summary">Scorri indietro partendo da \'Backspace\' per rimuovere più caratteri o parole in una sola volta</string>
@@ -121,7 +121,7 @@
     <string name="settings_category_experimental">Opzioni sperimentali</string>
     <string name="settings_category_miscellaneous">Varie</string>
     <string name="settings_category_input">Input</string>
-    <string name="ime_settings">Impostazioni di LeanType</string>
+    <string name="ime_settings">Impostazioni di LeanTypeDual</string>
     <string name="prefs_force_incognito_mode_summary">Disattiva l\'apprendimento di nuove parole</string>
     <string name="key_borders">Bordi dei tasti</string>
     <string name="day_night_mode">Tema chiaro/scuro automatico</string>
@@ -497,7 +497,7 @@
     <string name="gesture_data_please_switch_keyboard">Prego cambiare a %s</string>
     <string name="gesture_data_share_limit">Per non superare i limiti di dimensione, verranno esportate solo le prime %s parole</string>
 
-    <string name="ime_name">LeanType</string>
+    <string name="ime_name">LeanTypeDual</string>
     <string name="settings_category_configuration">Configurazione</string>
     <string name="settings_category_visuals">Aspetto e anteprima</string>
     <string name="settings_category_behavior">Comportamento</string>
@@ -621,7 +621,7 @@
     <string name="disable_network_summary">Blocco interno: blocca tutte le richieste di rete da questa app. Per revocare completamente il permesso, usa le impostazioni di sistema Info app.</string>
     <string name="open_app_info">Apri Info app di sistema</string>
     <string name="open_app_info_summary">Gestisci permessi e utilizzo batteria nelle impostazioni Android</string>
-    <string name="gemini_network_disabled">L\'accesso alla rete è disabilitato nelle impostazioni di LeanType</string>
+    <string name="gemini_network_disabled">L\'accesso alla rete è disabilitato nelle impostazioni di LeanTypeDual</string>
     <string name="ai_provider_title">Provider AI</string>
     <string name="ai_provider_summary">Seleziona il servizio AI per la correzione bozze</string>
     <string name="ai_provider_gemini">Google Gemini</string>

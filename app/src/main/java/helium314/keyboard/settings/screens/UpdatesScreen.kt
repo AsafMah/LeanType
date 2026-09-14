@@ -104,7 +104,7 @@ fun UpdatesScreen(
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!context.packageManager.canRequestPackageInstalls()) {
-                    Toast.makeText(context, "Please allow LeanType to install unknown apps", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Please allow LeanTypeDual to install unknown apps", Toast.LENGTH_LONG).show()
                     val permissionIntent = Intent(
                         AndroidSettings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                         Uri.parse("package:${context.packageName}")
@@ -139,7 +139,7 @@ fun UpdatesScreen(
             try {
                 val updatesDir = File(context.cacheDir, "updates")
                 if (!updatesDir.exists()) updatesDir.mkdirs()
-                val targetFile = File(updatesDir, "LeanType_${versionTag}.apk")
+                val targetFile = File(updatesDir, "LeanTypeDual_${versionTag}.apk")
 
                 var url = URL(apkUrl)
                 var conn = url.openConnection() as HttpURLConnection

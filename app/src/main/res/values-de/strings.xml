@@ -95,12 +95,12 @@
     <string name="settings_category_clipboard_history">Zwischenablage-Verlauf</string>
     <string name="settings_category_correction">Korrekturen</string>
     <string name="settings_category_suggestions">Vorschläge</string>
-    <string name="android_spell_checker_settings">LeanType-Rechtschreibprüfungs-Einstellungen</string>
-    <string name="ime_settings">LeanType-Einstellungen</string>
+    <string name="android_spell_checker_settings">LeanTypeDual-Rechtschreibprüfungs-Einstellungen</string>
+    <string name="ime_settings">LeanTypeDual-Einstellungen</string>
     <string name="settings_category_experimental">Experimentell</string>
     <string name="settings_no_limit">Keine Begrenzung</string>
     <string name="abbreviation_unit_minutes">%s Min.</string>
-    <string name="spell_checker_service_name">LeanType-Rechtschreibprüfung</string>
+    <string name="spell_checker_service_name">LeanTypeDual-Rechtschreibprüfung</string>
     <string name="show_emoji_key">Emoji-Taste</string>
     <string name="settings_category_input">Eingabe</string>
     <string name="settings_category_additional_keys">Zusätzliche Tasten</string>
@@ -443,7 +443,7 @@
     <string name="subtype_khipro_bn">%s (Khipro)</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Funktionale Tasten (Khipro)</string>
 
-    <string name="ime_name">LeanType</string>
+    <string name="ime_name">LeanTypeDual</string>
     <string name="settings_category_configuration">Konfiguration</string>
     <string name="settings_category_visuals">Optik &amp; Vorschau</string>
     <string name="settings_category_behavior">Verhalten</string>
@@ -567,7 +567,7 @@
     <string name="disable_network_summary">Interne Sperre: Blockiert alle Netzwerkanfragen dieser App. Um die Berechtigung vollständig zu entziehen, nutzen Sie die System-App-Info-Einstellungen.</string>
     <string name="open_app_info">System-App-Info öffnen</string>
     <string name="open_app_info_summary">Berechtigungen und Akkunutzung in den Android-Einstellungen verwalten</string>
-    <string name="gemini_network_disabled">Netzwerkzugriff ist in den LeanType-Einstellungen deaktiviert</string>
+    <string name="gemini_network_disabled">Netzwerkzugriff ist in den LeanTypeDual-Einstellungen deaktiviert</string>
     <string name="ai_provider_title">AI-Anbieter</string>
     <string name="ai_provider_summary">Wählen Sie den AI-Dienst zum Korrekturlesen</string>
     <string name="ai_provider_gemini">Google Gemini</string>
