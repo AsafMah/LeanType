@@ -57,6 +57,8 @@ open class Keyboard {
     val mAltCodeKeysWhileTyping: List<Key>
     val mIconsSet: KeyboardIconsSet
 
+    internal val swipeShortcutRows by lazy { SwipeShortcutMenu.findRows(this) }
+
     private val mKeyCache = SparseArray<Key?>()
 
     private val mProximityInfo: ProximityInfo

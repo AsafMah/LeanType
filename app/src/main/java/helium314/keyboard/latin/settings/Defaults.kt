@@ -45,6 +45,8 @@ object Defaults {
         LayoutType.CUSTOM3 -> "symbols"
         LayoutType.CUSTOM4 -> "symbols"
         LayoutType.CUSTOM5 -> "symbols"
+        LayoutType.SWIPE_UP -> "swipe_up"
+        LayoutType.SWIPE_DOWN -> "swipe_down"
     }
     
     const val PREF_SPLIT_TOOLBAR = false
@@ -130,6 +132,8 @@ object Defaults {
     const val PREF_SPACE_VERTICAL_SWIPE = "touchpad_mode"
     const val PREF_SPACE_VERTICAL_DOWN_SWIPE = "none"
     const val PREF_DELETE_SWIPE = true
+    const val PREF_SWIPE_UP_MENU = false
+    const val PREF_SWIPE_DOWN_MENU = false
     const val PREF_AUTOSPACE_AFTER_PUNCTUATION = false
     const val PREF_AUTOSPACE_AFTER_EMOJI = false
     const val PREF_AUTOSPACE_AFTER_SUGGESTION = true
