@@ -17,6 +17,7 @@ import android.view.MotionEvent
 import android.view.View
 import helium314.keyboard.accessibility.AccessibilityUtils
 import helium314.keyboard.accessibility.PopupKeysKeyboardAccessibilityDelegate
+import helium314.keyboard.event.HapticEvent
 import helium314.keyboard.keyboard.emoji.EmojiViewCallback
 import helium314.keyboard.keyboard.internal.KeyDrawParams
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
@@ -26,6 +27,7 @@ import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.CoordinateUtils
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.abs
 
 /**
  * A view that renders a virtual [PopupKeysKeyboard]. It handles rendering of keys and
@@ -47,6 +49,8 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
     private var mOriginX = 0
     private var mOriginY = 0
     private var mCurrentKey: Key? = null
+    private var mSwipeShortcutDirection: SwipeShortcutMenu.Direction? = null
+    private var mSwipeShortcutCancelY = 0
 
     private var mActivePointerId = 0
 
@@ -97,6 +101,9 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
     }
 
     override fun setKeyboard(keyboard: Keyboard) {
+        mCurrentKey?.onReleased()
+        mCurrentKey = null
+        mSwipeShortcutDirection = null
         super.setKeyboard(keyboard)
         mKeyDetector.setKeyboard(
             keyboard,
@@ -130,6 +137,32 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
         mListener = listener
         mEmojiViewCallback = null
         showPopupKeysPanelInternal(parentView, controller, pointX, pointY)
+    }
+
+    fun showSwipeShortcutPanel(
+        parentView: View,
+        controller: PopupKeysPanel.Controller,
+        left: Int,
+        top: Int,
+        direction: SwipeShortcutMenu.Direction,
+        cancelY: Int,
+        listener: KeyboardActionListener
+    ) {
+        mListener = listener
+        mEmojiViewCallback = null
+        mController = controller
+        mSwipeShortcutDirection = direction
+        mSwipeShortcutCancelY = cancelY
+        mOriginX = left - paddingLeft
+        mOriginY = top - paddingTop
+        val container = getContainerView()
+        parentView.getLocationInWindow(mCoordinates)
+        // Only the background padding may overhang; the key centers stay on the source row.
+        container.x = (CoordinateUtils.x(mCoordinates) + mOriginX - this.left).toFloat()
+        container.y = (CoordinateUtils.y(mCoordinates) + mOriginY - this.top).toFloat()
+        translationX = 0f
+        controller.setLayoutGravity(Gravity.CENTER_HORIZONTAL)
+        onPanelShown()
     }
 
     override fun showPopupKeysPanel(
@@ -192,7 +225,11 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
 
         mOriginX = panelFinalX
         mOriginY = y + container.paddingTop + this.y.toInt()
-        controller.onShowPopupKeysPanel(this)
+        onPanelShown()
+    }
+
+    private fun onPanelShown() {
+        mController.onShowPopupKeysPanel(this)
         val accessibilityDelegate = mAccessibilityDelegate
         if (accessibilityDelegate != null && AccessibilityUtils.instance.isAccessibilityEnabled) {
             accessibilityDelegate.onShowPopupKeysKeyboard()
@@ -245,6 +282,8 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
         val listener = mListener
         if (listener != null) {
             val code = key.code
+            val isSwipeShortcut = mSwipeShortcutDirection != null
+            if (isSwipeShortcut) listener.onPressKey(code, 0, true, HapticEvent.NO_HAPTICS)
             if (code == KeyCode.MULTIPLE_CODE_POINTS) {
                 listener.onTextInput(key.outputText)
             } else if (code != KeyCode.NOT_SPECIFIED) {
@@ -259,6 +298,7 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
                     )
                 }
             }
+            if (isSwipeShortcut) listener.onReleaseKey(code, false)
         } else {
             mEmojiViewCallback?.onReleaseKey(key)
         }
@@ -266,7 +306,8 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
 
     private fun detectKey(x: Int, y: Int): Key? {
         val oldKey = mCurrentKey
-        val newKey = mKeyDetector.detectHitKey(x, y)
+        val newKey = if (mSwipeShortcutDirection == null) mKeyDetector.detectHitKey(x, y)
+            else detectSwipeShortcut(x, y)
         if (newKey === oldKey) {
             return newKey
         }
@@ -280,6 +321,18 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
             invalidateKey(newKey)
         }
         return newKey
+    }
+
+    private fun detectSwipeShortcut(x: Int, y: Int): Key? {
+        val keyboard = keyboard ?: return null
+        val parentY = y + mOriginY
+        val outward = if (mSwipeShortcutDirection == SwipeShortcutMenu.Direction.UP)
+            parentY < mSwipeShortcutCancelY else parentY > mSwipeShortcutCancelY
+        val touchX = mKeyDetector.getTouchX(x)
+        if (!outward || touchX < 0 || touchX >= keyboard.mOccupiedWidth) return null
+        // Project onto the menu row so a short outward swipe already selects its aligned item.
+        return keyboard.sortedKeys.minByOrNull { abs(touchX - (it.x + it.width / 2)) }
+            ?.takeIf { it.isEnabled && !it.isSpacer }
     }
 
     private fun updateReleaseKeyGraphics(key: Key) {
