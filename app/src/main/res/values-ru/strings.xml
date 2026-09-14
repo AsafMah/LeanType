@@ -119,10 +119,10 @@
     <string name="show_emoji_key">Клавиша эмодзи</string>
     <string name="settings_category_clipboard_history">История буфера обмена</string>
     <string name="enable_clipboard_history">Включить журнал буфера обмена</string>
-    <string name="spell_checker_service_name">Проверка орфографии LeanType</string>
-    <string name="android_spell_checker_settings">Настройки проверки орфографии LeanType</string>
+    <string name="spell_checker_service_name">Проверка орфографии LeanTypeDual</string>
+    <string name="android_spell_checker_settings">Настройки проверки орфографии LeanTypeDual</string>
     <string name="abbreviation_unit_minutes">%s мин.</string>
-    <string name="ime_settings">Настройки LeanType</string>
+    <string name="ime_settings">Настройки LeanTypeDual</string>
     <string name="settings_no_limit">Без ограничений</string>
     <string name="clipboard_history_retention_time">Время хранения журнала буфера обмена</string>
     <string name="subtype_akkhor_bn_BD">%s (Акхор)</string>
@@ -604,7 +604,7 @@
         <item>Баскский</item>
     </string-array>
 
-    <string name="ime_name">LeanType</string>
+    <string name="ime_name">LeanTypeDual</string>
     <string name="settings_category_touchpad">Сенсорная панель</string>
     <string name="edit_blocked_words">Заблокированные слова</string>
     <string name="blocked_words_summary">Управление словами, заблокированными в предложениях</string>
@@ -710,7 +710,7 @@
     <string name="disable_network_summary">Внутренняя блокировка: Блокирует все сетевые запросы от этого приложения. Чтобы полностью отозвать разрешение, используйте системные настройки приложения.</string>
     <string name="open_app_info">Открыть системные настройки приложения</string>
     <string name="open_app_info_summary">Управляйте разрешениями и использованием батареи в настройках Android</string>
-    <string name="gemini_network_disabled">Сетевой доступ отключен в настройках LeanType</string>
+    <string name="gemini_network_disabled">Сетевой доступ отключен в настройках LeanTypeDual</string>
     <string name="ai_provider_summary">Выберите сервис AI для проверки орфографии</string>
     <string name="ai_provider_gemini">Google Gemini</string>
     <string name="auto_span_toolbar_keys">Авто-растяжение кнопок панели инструментов</string>

@@ -94,8 +94,8 @@
     <string name="enable_clipboard_history">Habilitar historial del portapapeles</string>
     <string name="clipboard_history_retention_time">Tiempo para mantener el historial</string>
     <string name="abbreviation_unit_minutes">%smin.</string>
-    <string name="spell_checker_service_name">Corrector ortográfico de LeanType</string>
-    <string name="android_spell_checker_settings">Ajustes del corrector ortográfico de LeanType</string>
+    <string name="spell_checker_service_name">Corrector ortográfico de LeanTypeDual</string>
+    <string name="android_spell_checker_settings">Ajustes del corrector ortográfico de LeanTypeDual</string>
     <string name="prefs_keyboard_height_scale">Escala de altura del teclado</string>
     <string name="show_emoji_key">Tecla de emoji</string>
     <string name="enable_clipboard_history_summary">Si está deshabilitada, la tecla del portapapeles pegará el contenido del portapapeles si lo hay</string>
@@ -120,7 +120,7 @@
     <string name="key_borders">Bordes de teclas</string>
     <string name="day_night_mode_summary">Seguir la configuración del sistema</string>
     <string name="day_night_mode">Modo claro/oscuro automático</string>
-    <string name="ime_settings">Ajustes de LeanType</string>
+    <string name="ime_settings">Ajustes de LeanTypeDual</string>
     <string name="settings_category_input">Entrada</string>
     <string name="settings_category_additional_keys">Teclas adicionales</string>
     <string name="settings_category_correction">Correcciones</string>
@@ -369,7 +369,7 @@
     <string name="label_enter_key" tools:keep="@string/label_enter_key">Intro</string>
     <string name="label_space_key_for_number_layout" tools:keep="@string/label_space_key_for_number_layout">Espacio (diseño numérico)</string>
 
-    <string name="ime_name">LeanType</string>
+    <string name="ime_name">LeanTypeDual</string>
     <string name="vibrate_in_dnd_mode">Vibrar en modo no molestar</string>
     <string name="suggest_emojis">Sugerir emojis</string>
     <string name="suggest_emojis_summary">Usar diccionario de emojis en las sugerencias normales</string>
@@ -533,7 +533,7 @@
     <string name="disable_network_summary">Bloqueo interno: Bloquea todas las solicitudes de red de esta app. Para revocar el permiso completamente, usa los ajustes de Información de la app del sistema.</string>
     <string name="open_app_info">Abrir Información de la app del sistema</string>
     <string name="open_app_info_summary">Administrar permisos y uso de batería en los ajustes de Android</string>
-    <string name="gemini_network_disabled">El acceso a red está desactivado en los ajustes de LeanType</string>
+    <string name="gemini_network_disabled">El acceso a red está desactivado en los ajustes de LeanTypeDual</string>
     <string name="ai_provider_title">Proveedor de AI</string>
     <string name="ai_provider_summary">Selecciona el servicio AI para la revisión</string>
     <string name="ai_provider_gemini">Google Gemini</string>

@@ -108,11 +108,11 @@
     <string name="about_github_link">Xem trên GitHub</string>
     <string name="theme_name_sand" tools:keep="@string/theme_name_sand">Cát</string>
     <string name="day_night_mode">Tự động chọn ngày/đêm</string>
-    <string name="spell_checker_service_name">Kiểm tra lỗi chính tả</string>
+    <string name="spell_checker_service_name">LeanTypeDual Kiểm tra lỗi chính tả</string>
     <string name="prefs_always_show_suggestions">Luôn hiển thị gợi ý</string>
     <string name="dictionary_link_text">ở đây</string>
-    <string name="ime_settings">Cài đặt</string>
-    <string name="android_spell_checker_settings">Cài đặt trình kiểm tra lỗi chính tả</string>
+    <string name="ime_settings">LeanTypeDual Cài đặt</string>
+    <string name="android_spell_checker_settings">LeanTypeDual Cài đặt trình kiểm tra lỗi chính tả</string>
     <string name="select_word" tools:keep="@string/select_word">Chọn từ</string>
     <string name="one_handed" tools:keep="@string/one_handed">Chế độ một tay</string>
     <string name="auto_hide_toolbar">Tự động ẩn thanh công cụ</string>

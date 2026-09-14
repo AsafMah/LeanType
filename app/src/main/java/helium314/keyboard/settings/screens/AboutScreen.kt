@@ -143,7 +143,7 @@ fun createAboutSettings(context: Context) = listOf(
                 }
             ) {
                 Text(
-                    text = "LeanType is licensed under GNU GPL v3.0.\n\nThird-Party Speech Components:\n• whisper.cpp — MIT License (github.com/ggerganov/whisper.cpp)\n• Vosk Speech Recognition — Apache 2.0 (alphacephei.com/vosk)",
+                    text = "LeanTypeDual is licensed under GNU GPL v3.0.\n\nThird-Party Speech Components:\n• whisper.cpp — MIT License (github.com/ggerganov/whisper.cpp)\n• Vosk Speech Recognition — Apache 2.0 (alphacephei.com/vosk)",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }

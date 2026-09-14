@@ -134,8 +134,8 @@ Nouveau dictionnaire:
     <string name="user_dict_settings_more_languages">"Plus de langues…"</string>
     <string name="user_dict_word_already_present">Ce mot est déjà présent dans le dictionnaire utilisateur %s. Veuillez en saisir un autre.</string>
     <string name="user_dict_add_word_button">Ajouter un mot</string>
-    <string name="spell_checker_service_name">Correcteur orthographique LeanType</string>
-    <string name="android_spell_checker_settings">Paramètres du correcteur orthographique LeanType</string>
+    <string name="spell_checker_service_name">Correcteur orthographique LeanTypeDual</string>
+    <string name="android_spell_checker_settings">Paramètres du correcteur orthographique LeanTypeDual</string>
     <string name="number_row">Ligne de chiffres</string>
     <string name="delete_swipe">Balayage sur la touche Effacer</string>
     <string name="delete_swipe_summary">Glissez sur la touche de suppression pour supprimer des parties de texte en une seule fois</string>
@@ -153,7 +153,7 @@ Nouveau dictionnaire:
     <string name="checksum_mismatch_message">Fichier de bibliothèque inconnu. Êtes-vous sûr qu\'il provient d\'une source fiable et que c\'est pour CPU \'%s\' ?</string>
     <string name="load_gesture_library_button_load">Charger bibliothèque</string>
     <string name="load_gesture_library_button_delete">Supprimer bibliothèque</string>
-    <string name="ime_settings">Paramètres d\'LeanType</string>
+    <string name="ime_settings">Paramètres d\'LeanTypeDual</string>
     <string name="settings_category_input">Saisie</string>
     <string name="settings_category_correction">Corrections</string>
     <string name="settings_category_suggestions">Suggestions</string>
@@ -495,7 +495,7 @@ Nouveau dictionnaire:
     <string name="gesture_data_share_limit">Pour éviter de dépasser les limites de taille, seuls les %s premiers mots seront exportés</string>
     <string name="gesture_data_links">Informations sur la collecte de données gestuelles sur :</string>
 
-    <string name="ime_name">LeanType</string>
+    <string name="ime_name">LeanTypeDual</string>
     <string name="settings_category_configuration">Configuration</string>
     <string name="settings_category_visuals">Visuels &amp; Aperçu</string>
     <string name="settings_category_behavior">Comportement</string>
@@ -619,7 +619,7 @@ Nouveau dictionnaire:
     <string name="disable_network_summary">Verrou interne : bloque toutes les requêtes réseau de cette application. Pour révoquer complètement l\'autorisation, utilisez les paramètres d\'informations sur l\'application du système.</string>
     <string name="open_app_info">Ouvrir les infos de l\'application système</string>
     <string name="open_app_info_summary">Gérer les autorisations et l\'utilisation de la batterie dans les paramètres Android</string>
-    <string name="gemini_network_disabled">L\'accès réseau est désactivé dans les paramètres de LeanType</string>
+    <string name="gemini_network_disabled">L\'accès réseau est désactivé dans les paramètres de LeanTypeDual</string>
     <string name="ai_provider_title">Fournisseur AI</string>
     <string name="ai_provider_summary">Sélectionnez le service AI pour la relecture</string>
     <string name="ai_provider_gemini">Google Gemini</string>
