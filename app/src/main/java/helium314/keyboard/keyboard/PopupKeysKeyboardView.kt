@@ -47,11 +47,11 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
     private var mController: PopupKeysPanel.Controller = PopupKeysPanel.EMPTY_CONTROLLER
     protected var mListener: KeyboardActionListener? = null
     protected var mEmojiViewCallback: EmojiViewCallback? = null
-    private var mOriginX = 0
-    private var mOriginY = 0
+    private var mOriginXInParent = 0
+    private var mOriginYInParent = 0
     private var mCurrentKey: Key? = null
     private var mSwipeShortcutDirection: SwipeShortcutMenu.Direction? = null
-    private var mSwipeShortcutCancelY = 0
+    private var mSwipeStartYInParent = 0
 
     private var mActivePointerId = 0
 
@@ -143,24 +143,26 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
     fun showSwipeShortcutPanel(
         parentView: View,
         controller: PopupKeysPanel.Controller,
-        left: Int,
-        top: Int,
+        keysLeftInParent: Int,
+        keysTopInParent: Int,
         direction: SwipeShortcutMenu.Direction,
-        cancelY: Int,
+        startYInParent: Int,
         listener: KeyboardActionListener
     ) {
         mListener = listener
         mEmojiViewCallback = null
         mController = controller
         mSwipeShortcutDirection = direction
-        mSwipeShortcutCancelY = cancelY
-        mOriginX = left - paddingLeft
-        mOriginY = top - paddingTop
+        mSwipeStartYInParent = startYInParent
+        mOriginXInParent = keysLeftInParent - paddingLeft
+        mOriginYInParent = keysTopInParent - paddingTop
         val container = getContainerView()
         parentView.getLocationInWindow(mCoordinates)
-        // Only the background padding may overhang; the key centers stay on the source row.
-        container.x = (CoordinateUtils.x(mCoordinates) + mOriginX - this.left).toFloat()
-        container.y = (CoordinateUtils.y(mCoordinates) + mOriginY - this.top).toFloat()
+        val parentXInWindow = CoordinateUtils.x(mCoordinates)
+        val parentYInWindow = CoordinateUtils.y(mCoordinates)
+        // The preview container is window-relative; its child view includes background padding.
+        container.x = (parentXInWindow + mOriginXInParent - left).toFloat()
+        container.y = (parentYInWindow + mOriginYInParent - top).toFloat()
         translationX = 0f
         controller.setLayoutGravity(Gravity.CENTER_HORIZONTAL)
         onPanelShown()
@@ -228,8 +230,8 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
         controller.setLayoutGravity(layoutGravity)
 
         val clampedY = containerY - CoordinateUtils.y(mCoordinates)
-        mOriginX = panelFinalX
-        mOriginY = clampedY + container.paddingTop + this.y.toInt()
+        mOriginXInParent = panelFinalX
+        mOriginYInParent = clampedY + container.paddingTop + this.y.toInt()
 
         // Anchor animation pivot to the center of the pressed key:
         val keyCenterXInContainer = (pointX - containerFinalX).toFloat()
@@ -336,13 +338,13 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
 
     private fun detectSwipeShortcut(x: Int, y: Int): Key? {
         val keyboard = keyboard ?: return null
-        val parentY = y + mOriginY
+        val touchYInParent = y + mOriginYInParent
         val outward = if (mSwipeShortcutDirection == SwipeShortcutMenu.Direction.UP)
-            parentY < mSwipeShortcutCancelY else parentY > mSwipeShortcutCancelY
-        val touchX = mKeyDetector.getTouchX(x)
-        if (!outward || touchX < 0 || touchX >= keyboard.mOccupiedWidth) return null
+            touchYInParent < mSwipeStartYInParent else touchYInParent > mSwipeStartYInParent
+        val touchXInKeyboard = mKeyDetector.getTouchX(x)
+        if (!outward || touchXInKeyboard < 0 || touchXInKeyboard >= keyboard.mOccupiedWidth) return null
         // Project onto the menu row so a short outward swipe already selects its aligned item.
-        return keyboard.sortedKeys.minByOrNull { abs(touchX - (it.x + it.width / 2)) }
+        return keyboard.sortedKeys.minByOrNull { abs(touchXInKeyboard - (it.x + it.width / 2)) }
             ?.takeIf { it.isEnabled && !it.isSpacer }
     }
 
@@ -368,11 +370,11 @@ open class PopupKeysKeyboardView @JvmOverloads constructor(
     }
 
     override fun translateX(x: Int): Int {
-        return x - mOriginX
+        return x - mOriginXInParent
     }
 
     override fun translateY(y: Int): Int {
-        return y - mOriginY
+        return y - mOriginYInParent
     }
 
     @SuppressLint("ClickableViewAccessibility")
