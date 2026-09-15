@@ -26,6 +26,7 @@ android {
         // LeanTypeDual: 4000 + major * 1000 + minor * 100 + patch * 10.
         versionCode = 6000
         versionName = "2.0.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         
@@ -204,6 +205,15 @@ android {
         // these orphaned strings are harmlessly stripped by R8 during minification.
         disable += "ExtraTranslation"
     }
+
+    sourceSets {
+        getByName("test") {
+            java.srcDir("src/sharedTest/java")
+        }
+        getByName("androidTestStandard") {
+            java.srcDir("src/sharedTest/java")
+        }
+    }
 }
 
 dependencies {
@@ -233,6 +243,10 @@ dependencies {
     "standardImplementation"("com.google.ai.client.generativeai:generativeai:0.9.0")
     "standardImplementation"("androidx.security:security-crypto:1.1.0-alpha06") // for encrypted API key storage
 
+    // Decode supplied bytes only: no network fetcher or provider-media cache.
+    "standardImplementation"("io.coil-kt.coil3:coil-core:3.3.0")
+    "standardImplementation"("io.coil-kt.coil3:coil-gif:3.3.0")
+
     // local llm proofreading is now dynamically provided by LeanType-Offline-AI-Plugin
 
     // Force 16 KB page-aligned version of graphics-path
@@ -257,6 +271,8 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("androidx.test:runner:1.6.2")
     testImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
 }
 dependencies {
     testImplementation("androidx.test.ext:junit:1.1.5")
