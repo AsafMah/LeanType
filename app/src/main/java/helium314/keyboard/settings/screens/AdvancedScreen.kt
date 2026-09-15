@@ -63,6 +63,7 @@ import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.Theme
 
 import helium314.keyboard.settings.preferences.BackupRestorePreference
+import helium314.keyboard.settings.preferences.GiphyKeyPreference
 import helium314.keyboard.settings.preferences.LoadGestureLibPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 import helium314.keyboard.settings.previewDark
@@ -89,6 +90,7 @@ fun AdvancedSettingsScreen(
     val items = listOfNotNull(
         Settings.PREF_ALWAYS_INCOGNITO_MODE,
         Settings.PREF_DISABLE_NETWORK,
+        if (BuildConfig.FLAVOR != "offline") SettingsWithoutKey.GIPHY_API_KEY else null,
         Settings.PREF_KEY_LONGPRESS_TIMEOUT,
         if (Settings.readHorizontalSpaceSwipe(prefs) == KeyboardActionListener.SWIPE_SWITCH_LANGUAGE
             || Settings.readVerticalSpaceSwipe(prefs) == KeyboardActionListener.SWIPE_SWITCH_LANGUAGE)
@@ -123,6 +125,10 @@ fun AdvancedSettingsScreen(
 
 @SuppressLint("ApplySharedPref")
 fun createAdvancedSettings(context: Context) = listOfNotNull(
+    if (BuildConfig.FLAVOR != "offline")
+        Setting(context, SettingsWithoutKey.GIPHY_API_KEY,
+            R.string.giphy_key_title, R.string.giphy_key_description) { GiphyKeyPreference(it) }
+    else null,
     Setting(context, Settings.PREF_ALWAYS_INCOGNITO_MODE,
         R.string.incognito, R.string.prefs_force_incognito_mode_summary)
     {

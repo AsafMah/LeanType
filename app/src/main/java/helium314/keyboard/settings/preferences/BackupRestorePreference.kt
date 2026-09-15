@@ -486,7 +486,8 @@ private fun readJsonLinesToSettings(list: List<String>, prefs: SharedPreferences
  * should be included in backups. The key is the zip entry name to use, and the value
  * is the SharedPreferences instance to read from / write back into on restore.
  *
- * NOTE: This must NOT include EncryptedSharedPreferences (e.g. "gemini_prefs"), because
+ * NOTE: This must NOT include EncryptedSharedPreferences (e.g. "gemini_prefs" or
+ * "giphy_credentials"), because
  * those values are encrypted with a device-bound master key and would be unreadable on
  * any other device. Plus they typically hold credentials, which we don't want in a plain
  * backup zip.
