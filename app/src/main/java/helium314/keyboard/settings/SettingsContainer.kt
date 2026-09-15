@@ -176,6 +176,7 @@ object SettingsWithoutKey {
     const val CUSTOM_FONT = "custom_font"
     const val CUSTOM_EMOJI_FONT = "custom_emoji_font"
     const val GEMINI_API_KEY = "gemini_api_key"
+    const val GIPHY_API_KEY = "giphy_api_key"
     const val GEMINI_MODEL = "gemini_model"
     const val GEMINI_TARGET_LANGUAGE = "gemini_target_language"
     const val TRANSLATE_GROQ_MODEL = "translate_groq_model"
