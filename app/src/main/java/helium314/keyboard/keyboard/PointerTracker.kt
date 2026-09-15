@@ -1345,6 +1345,12 @@ class PointerTracker private constructor(
             sListener = listener
         }
 
+        fun replaceKeyboardActionListener(expected: KeyboardActionListener, replacement: KeyboardActionListener): Boolean {
+            if (sListener !== expected) return false
+            sListener = replacement
+            return true
+        }
+
         fun setKeyDetector(keyDetector: KeyDetector) {
             val keyboard = keyDetector.getKeyboard() ?: return
             val trackersSize = sTrackers.size
