@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="clipboard_images" path="clipboard_images/" />
+    <cache-path name="media_staging" path="media_staging/" />
     <cache-path name="logs" path="logs/" />
     <cache-path name="updates" path="updates/" />
 </paths>
