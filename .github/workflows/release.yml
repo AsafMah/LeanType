@@ -1,0 +1,151 @@
+# Manual dispatch builds a signed candidate only. Version tags create a DRAFT,
+# never a public release. Required secrets: KEYSTORE_BASE64, KEYSTORE_PASSWORD,
+# KEY_ALIAS, KEY_PASSWORD (the existing LeanTypeDual signing identity).
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate release notes
+        run: |
+          python3 -B -m unittest discover -s docs/scripts -p 'test_*.py' -v
+          python3 docs/scripts/generate_release_notes.py
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - uses: gradle/actions/setup-gradle@v3
+
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required signing secret $name is not set."
+              exit 1
+            fi
+          done
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          # Java properties treat backslashes and leading spaces as syntax.
+          def escape(value):
+              encoded = value.encode("utf-16-be")
+              return "".join(
+                  f"\\u{int.from_bytes(encoded[i:i + 2], 'big'):04x}"
+                  for i in range(0, len(encoded), 2)
+              )
+
+          properties = {
+              "storeFile": os.environ["RUNNER_TEMP"] + "/release.jks",
+              "storePassword": os.environ["KEYSTORE_PASSWORD"],
+              "keyAlias": os.environ["KEY_ALIAS"],
+              "keyPassword": os.environ["KEY_PASSWORD"],
+          }
+          Path("keystore.properties").write_text(
+              "".join(f"{key}={escape(value)}\n" for key, value in properties.items()),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Build signed release APKs (three flavors, with R8)
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleStandardRelease :app:assembleStandardfullRelease :app:assembleOfflineRelease
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f keystore.properties "$RUNNER_TEMP/release.jks"
+
+      - name: Verify and collect signed APKs
+        run: |
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          test -x "$APKSIGNER"
+          shopt -s nullglob
+          all_apks=(app/build/outputs/apk/*/release/*.apk)
+          test "${#all_apks[@]}" -eq 3
+          mkdir -p release-apks release-verification
+          for flavor in standard standardfull offline; do
+            apks=(app/build/outputs/apk/"$flavor"/release/*.apk)
+            test "${#apks[@]}" -eq 1
+            apk="${apks[0]}"
+            [[ "$apk" == *"-${flavor}-release.apk" ]]
+            "$APKSIGNER" verify --verbose --print-certs "$apk" | tee "release-verification/$flavor.txt"
+            min_sdk=23
+            if [ "$flavor" = offline ]; then min_sdk=21; fi
+            # Android 5/6 require v1 signing; modern-only signatures are insufficient.
+            "$APKSIGNER" verify --verbose --min-sdk-version "$min_sdk" --max-sdk-version 23 "$apk" \
+              | tee -a "release-verification/$flavor.txt"
+            test -s "app/build/outputs/mapping/${flavor}Release/mapping.txt"
+            cp "$apk" release-apks/
+          done
+          cp docs/releasenote/release_notes_temp.md release-apks/release_notes.md
+          printf '%s\n' "$GITHUB_SHA" > release-apks/commit.txt
+          (cd release-apks && sha256sum ./*.apk > SHA256SUMS.txt)
+
+      - name: Upload signed candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apks
+          path: release-apks/
+          if-no-files-found: error
+
+      - name: Upload verification and R8 mappings
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-verification
+          path: |
+            release-verification/
+            app/build/outputs/mapping/*Release/mapping.txt
+          if-no-files-found: error
+
+  draft:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-apks
+          path: release-apks
+
+      - name: Draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          body_path: release-apks/release_notes.md
+          fail_on_unmatched_files: true
+          files: |
+            release-apks/*.apk
+            release-apks/SHA256SUMS.txt

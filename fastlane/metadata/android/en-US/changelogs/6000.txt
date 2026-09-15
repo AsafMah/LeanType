@@ -1,0 +1,7 @@
+LeanTypeDual 2.0.0 is a clean reset onto LeanBitLab/LeanType, not feature parity with 0.3.0.
+
+Opt-in, editable swipe shortcuts align with keyboard rows, follow the number row, and cancel safely. Fixed glide/long-press/repeat timers when menus take over.
+
+Enable in Gesture typing; edit in Secondary layouts.
+
+Three flavors: standard, standardfull, offline. No offlinelite. Retained package/signing identity; full settings migration is not guaranteed. Export important data before upgrading.
