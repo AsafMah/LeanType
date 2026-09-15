@@ -420,6 +420,19 @@ class EmojiSearchKeyboardTest {
 
     private fun code(code: Int) = searchListener.onCodeInput(code, 0, 0, false)
 
+    @Test
+    fun mediaReturnRestoresSymbolsAndNumpadThroughState() {
+        for ((code, mode) in listOf(KeyCode.SYMBOL to "SYMBOLS", KeyCode.NUMPAD to "NUMPAD")) {
+            event(KeyCode.ALPHA)
+            event(code)
+            val original = main.keyboard!!.mId
+            event(KeyCode.EMOJI)
+            switcher.returnFromMediaKeyboard(original.mElementId)
+            assertEquals(original, main.keyboard!!.mId)
+            assertEquals(mode, stateMode)
+        }
+    }
+
     private fun openSearch() {
         val magnifier = descendants(tabs).single { it.contentDescription == "Search Emojis" }
         assertTrue(magnifier.performClick())

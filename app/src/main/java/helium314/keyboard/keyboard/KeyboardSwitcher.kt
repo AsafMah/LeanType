@@ -242,6 +242,10 @@ class KeyboardSwitcher private constructor() : KeyboardState.SwitchActions {
         mState?.setAlphabetKeyboard(0, null)
     }
 
+    fun returnFromMediaKeyboard(elementId: Int) {
+        mState?.returnFromMediaKeyboard(elementId)
+    }
+
     fun onPressKey(code: Int, isSinglePointer: Boolean, currentAutoCapsState: Int, currentRecapitalizeState: RecapitalizeMode?) {
         mState?.onPressKey(code, isSinglePointer, currentAutoCapsState, currentRecapitalizeState)
     }
