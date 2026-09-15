@@ -40,8 +40,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.inputmethod.InputConnectionCompat
-import androidx.core.view.inputmethod.InputContentInfoCompat
 import com.leanbitlab.leantype.voice.VoiceConstants
 import helium314.keyboard.accessibility.AccessibilityUtils
 import helium314.keyboard.compat.AppQuirksManager
@@ -65,6 +63,9 @@ import helium314.keyboard.keyboard.KeyboardLayoutSet
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.MainKeyboardView
 import helium314.keyboard.keyboard.emoji.EmojiPalettesView
+import helium314.keyboard.keyboard.media.MediaContent
+import helium314.keyboard.keyboard.media.MediaPrivacy
+import helium314.keyboard.keyboard.media.StagedMedia
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
@@ -126,6 +127,15 @@ class LatinIME : InputMethodService(),
     private var lastInputType = 0
     private var lastOrientation = 0
     private var lastNightMode = 0
+    var mediaEditorVersion = 0L
+        private set
+    private val mediaKeysDown = mutableSetOf<Int>()
+    private var mediaBackRegistration: AutoCloseable? = null
+    val isMediaInputPrivate: Boolean
+        get() = MediaPrivacy.isRestricted(
+            prefs().getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE),
+            currentInputEditorInfo
+        )
 
     val mSettings: Settings = Settings.getInstance()
     val settings: Settings get() = mSettings
@@ -276,6 +286,7 @@ class LatinIME : InputMethodService(),
         val inputAttributes = InputAttributes(editorInfo, isFullscreenMode, packageName)
         val currentKeyboardScript = keyboardSwitcher.currentKeyboardScript
         settings.loadSettings(this, locale, inputAttributes, currentKeyboardScript)
+        if (isMediaInputPrivate) keyboardSwitcher.emojiPalettesView?.stopMediaSession()
 
         val currentSettingsValues = settings.current
         AudioAndHapticFeedbackManager.getInstance().onSettingsChanged(currentSettingsValues)
@@ -594,6 +605,8 @@ class LatinIME : InputMethodService(),
 
     override fun onFinishInputView(finishingInput: Boolean) {
         isExplicitShowRequested = false
+        mediaEditorVersion++
+        keyboardSwitcher.emojiPalettesView?.stopMediaSession()
         StatsUtils.onFinishInputView()
         handler.onFinishInputView(finishingInput)
         statsUtilsManager.onFinishInputView()
@@ -607,6 +620,8 @@ class LatinIME : InputMethodService(),
 
     override fun onFinishInput() {
         isExplicitShowRequested = false
+        mediaEditorVersion++
+        keyboardSwitcher.emojiPalettesView?.stopMediaSession()
         handler.onFinishInput()
         floatingKeyboardManager?.resetDragAndResizeState()
         if (KeyboardActionListenerImpl.sPersistentTextEditModeActive && !Settings.getInstance().current.mPersistTextEditMode) {
@@ -636,6 +651,8 @@ class LatinIME : InputMethodService(),
     }
 
     fun onStartInputInternal(editorInfo: EditorInfo?, restarting: Boolean) {
+        mediaEditorVersion++
+        keyboardSwitcher.emojiPalettesView?.stopMediaSession()
         super.onStartInput(editorInfo, restarting)
         floatingKeyboardManager?.resetDragAndResizeState()
         inputLogic.connection.onStartInput()
@@ -797,6 +814,7 @@ class LatinIME : InputMethodService(),
 
     override fun onWindowHidden() {
         super.onWindowHidden()
+        keyboardSwitcher.emojiPalettesView?.stopMediaSession()
         Log.i(TAG, "onWindowHidden")
         val fkm = floatingKeyboardManager
         if (fkm != null) {
@@ -1284,27 +1302,53 @@ class LatinIME : InputMethodService(),
             if (!file.exists()) return
             androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
         }
-        
+
         try {
             val mimeType = contentResolver.getType(contentUri) ?: "image/png"
-            val inputContentInfoCompat = InputContentInfoCompat(
-                contentUri,
-                android.content.ClipDescription("Clipboard Image", arrayOf(mimeType)),
-                null
-            )
             val ic = currentInputConnection ?: return
-            var flags = 0
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-                flags = InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION
-            }
             val inserted = try {
-                InputConnectionCompat.commitContent(ic, editorInfo, inputContentInfoCompat, flags, null)
+                MediaContent.commit(this, ic, editorInfo, StagedMedia(contentUri, mimeType, "Clipboard Image"),
+                    requireAdvertisedMimeType = false)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to commit content", e); false
             }
             if (!inserted) Toast.makeText(this, R.string.image_pasting_not_supported, Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to paste image", e)
+        }
+    }
+
+    fun insertPickerMedia(media: StagedMedia, expectedEditorVersion: Long): Boolean {
+        if (expectedEditorVersion != mediaEditorVersion || isMediaInputPrivate) return false
+        val editor = currentInputEditorInfo ?: return false
+        val connection = currentInputConnection ?: return false
+        if (!MediaContent.supports(editor, media.mimeType)) return false
+        inputLogic.finishInput()
+        if (expectedEditorVersion != mediaEditorVersion || isMediaInputPrivate ||
+            currentInputConnection !== connection || currentInputEditorInfo !== editor) return false
+        return MediaContent.commit(this, connection, editor, media)
+    }
+
+    fun updateMediaBackHandling(enabled: Boolean) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (enabled && mediaBackRegistration == null) {
+            val target = window?.window ?: return
+            mediaBackRegistration = MediaBackApi33.register(target) {
+                keyboardSwitcher.emojiPalettesView?.onMediaBack()
+            }
+        } else if (!enabled) {
+            mediaBackRegistration?.close()
+            mediaBackRegistration = null
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private object MediaBackApi33 {
+        fun register(window: android.view.Window, onBack: () -> Unit): AutoCloseable {
+            val dispatcher = window.onBackInvokedDispatcher
+            val callback = android.window.OnBackInvokedCallback { onBack() }
+            dispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback)
+            return AutoCloseable { dispatcher.unregisterOnBackInvokedCallback(callback) }
         }
     }
 
@@ -1573,6 +1617,10 @@ class LatinIME : InputMethodService(),
     }
 
     override fun onKeyDown(keyCode: Int, keyEvent: KeyEvent): Boolean {
+        if (keyboardSwitcher.emojiPalettesView?.onMediaHardwareKey(keyCode, keyEvent) == true) {
+            mediaKeysDown.add(keyCode)
+            return true
+        }
         if (keyCode == KeyEvent.KEYCODE_BACK && keyboardSwitcher.isOcrShowing) {
             keyboardSwitcher.hideOcrPanels()
             return true
@@ -1582,6 +1630,7 @@ class LatinIME : InputMethodService(),
     }
 
     override fun onKeyUp(keyCode: Int, keyEvent: KeyEvent): Boolean {
+        if (mediaKeysDown.remove(keyCode)) return true
         if (keyCode == KeyEvent.KEYCODE_BACK && keyboardSwitcher.isOcrShowing) {
             return true
         }

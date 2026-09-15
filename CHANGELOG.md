@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Unified Emoji, GIFs and Stickers picker in online flavors, using a personal GIPHY API key, explicit search, animated previews and an explicit Android Share fallback when a field rejects insertion. Online media is disabled in incognito/no-learning mode; the offline flavor remains emoji-only.
 - Optional swipe-up and swipe-down shortcut menus, aligned with the top and bottom character rows and editable through Secondary layouts. The upper gesture follows the number row when shown. (#156)
 
 ### Fixed
