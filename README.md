@@ -163,6 +163,40 @@ LeanTypeDual is available in two purpose-built flavors designed to match your ex
 
 ## 🛠️ Setup Guide
 
+### GIF and sticker search
+
+In Standard and Standard Full, open the emoji picker and choose **GIFs** or **Stickers**.
+Configure your own GIPHY API key in **Advanced settings**; no shared key or account backend is supplied.
+Type a query using your active language/custom layout, then press **Search**. Typing alone does not send requests.
+Visible previews animate; choosing an item inserts it and returns to the previous typing layout.
+If the field cannot accept the media, **Share** explicitly opens Android's chooser instead. The receiving app controls whether an item appears as an image, animation or native sticker.
+
+**Back** first leaves query editing, then returns to typing. **X** clears the query without searching.
+GIPHY receives submitted queries and media requests; LeanType does not add advertising identifiers or action analytics.
+Online media is disabled in incognito/no-learning/password contexts. The Offline flavor shows Emoji only.
+Keys are stored separately from exported settings and can be removed in the same preference.
+Local sticker imports, packs and remote favorites are not included.
+Selected-media storage is capped at 64 MiB and 64 files. Cleanup protects a selected file for a
+one-hour receiver-read window, then removes expired files when the picker is opened or another
+item is staged. This is not a guarantee of deletion exactly one hour later, and Android may
+reclaim cache storage earlier. The picker rejects new items when the protected store is full.
+
+GIPHY sets [key quotas and access conditions](https://developers.giphy.com/docs/api/quick-start-guide/).
+Personal keys do not waive its [API terms](https://support.giphy.com/hc/en-us/articles/360028134111-GIPHY-API-Terms-of-Service)
+or [media storage requirements](https://developers.giphy.com/docs/api/best-practices/).
+Confirm the applicable conditions for your use, including temporary files needed for Android image sharing.
+The unmodified GIPHY attribution PNGs in `app/src/main/res/drawable-nodpi/` are supplied through
+[GIPHY's official attribution archive](https://media.giphy.com/giphy-attribution-marks.zip);
+GIPHY retains its trademark rights, and use of those marks is governed by its API terms.
+
+With the Android build toolchain installed, media JVM checks can be run with
+`.\gradlew.bat :app:testStandardRunTestsUnitTest --tests "*Media*" --tests "*Giphy*"`.
+The legacy GIF decoder uses Android `Movie` JNI that Robolectric cannot supply; its frame-change,
+transparency and stop assertions are retained in `MediaLegacyDecoderDeviceTest`. Run it on an
+authorized Android device with `.\gradlew.bat :app:connectedStandardDebugAndroidTest
+-Pandroid.testInstrumentationRunnerArguments.class=helium314.keyboard.keyboard.media.MediaLegacyDecoderDeviceTest`.
+JVM-only verification does not establish APK/native or receiving-app compatibility.
+
 ### 1. Cloud & Self-Hosted AI Setup (Gemini / Groq / OpenAI / Ollama)
 1. **Cloud API**: Obtain an API key from [Google AI Studio](https://aistudio.google.com/apikey) or [Groq Console](https://console.groq.com/keys).
 2. **Self-Hosted AI**: Run [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/), or [LocalAI](https://localai.io/) on your local network (e.g. `http://192.168.1.100:11434/v1`).

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media_tab_emoji">Emoji</string>
+    <string name="media_tab_gifs">GIFs</string>
+    <string name="media_tab_stickers">Stickers</string>
+    <string name="media_search_hint">Search GIPHY</string>
+    <string name="media_search_action">Search</string>
+    <string name="media_clear_query">Clear query</string>
+    <string name="media_typing_action">ABC</string>
+    <string name="media_more_action">More results</string>
+    <string name="media_share_action">Share…</string>
+    <string name="media_share_error">Unable to open sharing. Try another app or try again later.</string>
+    <string name="media_key_settings">Set GIPHY API key</string>
+    <string name="media_giphy_attribution">Powered By GIPHY</string>
+    <string name="media_enter_query">Enter a query and press Search.</string>
+    <string name="media_results_for">Results for “%1$s”</string>
+    <string name="media_loading">Searching…</string>
+    <string name="media_downloading">Preparing media…</string>
+    <string name="media_no_results">No results. Try another query.</string>
+    <string name="media_unavailable">Online media is unavailable in this mode.</string>
+    <string name="media_missing_key">Add your own GIPHY API key in settings to search.</string>
+    <string name="media_key_locked">Secure key storage is unavailable. Unlock your device and try again.</string>
+    <string name="media_invalid_key">GIPHY rejected the API key. Check it in settings.</string>
+    <string name="media_quota">GIPHY’s request limit was reached. Try again later.</string>
+    <string name="media_query_long">GIPHY queries can contain at most 50 characters.</string>
+    <string name="media_too_large">This media exceeds the supported size limit.</string>
+    <string name="media_unsupported">This field cannot insert this media. You can share it instead.</string>
+    <string name="media_format_unsupported">No supported media format is available for this item.</string>
+    <string name="media_storage_error">Unable to prepare media or securely store the key.</string>
+    <string name="media_invalid_response">GIPHY returned an invalid response. Try again.</string>
+    <string name="media_network_error">Unable to reach GIPHY. Check your connection and try again.</string>
+    <string name="media_preview_failed">Preview unavailable</string>
+    <item name="media_query" type="id" />
+    <item name="media_keyboard" type="id" />
+    <item name="media_status" type="id" />
+    <item name="media_results" type="id" />
+    <item name="media_share" type="id" />
+    <item name="media_more" type="id" />
+    <item name="media_clear" type="id" />
+    <item name="media_submit" type="id" />
+</resources>

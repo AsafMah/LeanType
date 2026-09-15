@@ -48,6 +48,11 @@ import helium314.keyboard.keyboard.KeyboardLayoutSet
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.MainKeyboardView
 import helium314.keyboard.keyboard.PointerTracker
+import helium314.keyboard.keyboard.media.MediaContent
+import helium314.keyboard.keyboard.media.MediaKind
+import helium314.keyboard.keyboard.media.MediaPickerHost
+import helium314.keyboard.keyboard.media.MediaPickerView
+import helium314.keyboard.keyboard.media.StagedMedia
 import helium314.keyboard.keyboard.internal.KeyDrawParams
 import helium314.keyboard.keyboard.internal.KeyVisualAttributes
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
@@ -208,6 +213,21 @@ class EmojiPalettesView @JvmOverloads constructor(
     private var mSearchAlphabetKeyboardId = KeyboardId.ELEMENT_ALPHABET
 
     private var mEditorInfo: EditorInfo? = null
+    private var mediaTypes: LinearLayout? = null
+    private var mediaPicker: MediaPickerView? = null
+    private var mediaReturnElement = KeyboardId.ELEMENT_ALPHABET
+
+    val isShowingMedia: Boolean get() = visibility == View.VISIBLE && mediaPicker?.visibility == View.VISIBLE
+
+    fun onMediaBack(): Boolean = mediaPicker?.takeIf { isShowingMedia }?.onBack() ?: false
+
+    fun onMediaHardwareKey(code: Int, event: android.view.KeyEvent): Boolean =
+        mediaPicker?.takeIf { isShowingMedia }?.onHardwareKey(code, event) ?: false
+
+    fun stopMediaSession() {
+        mediaPicker?.stop()
+        KeyboardSwitcher.getInstance().latinIME?.updateMediaBackHandling(false)
+    }
 
     init {
         mColors = Settings.getValues().mColors
@@ -229,6 +249,13 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val contentHeight = ResourceUtils.getSecondaryKeyboardHeight(resources, Settings.getValues())
+        val tabsHeight = if (mediaTypes?.visibility == View.VISIBLE) toPx(40f) else 0
+        if (isShowingMedia) {
+            mediaPicker?.layoutParams?.height = (contentHeight - tabsHeight).coerceAtLeast(1)
+        } else if (!mInSearchMode) {
+            mPager?.layoutParams?.height = (mEmojiLayoutParams.emojiKeyboardHeight - tabsHeight).coerceAtLeast(1)
+        }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         val res = context.resources
         val isFloating = ResourceUtils.getFloatingKeyboardWidth() > 0 ||
@@ -302,6 +329,85 @@ class EmojiPalettesView @JvmOverloads constructor(
             mColors.get(ColorType.STRIP_BACKGROUND)
         )
         initialized = true
+        initializeMedia()
+    }
+
+    private fun initializeMedia() {
+        if (BuildConfig.FLAVOR == "offline" || mediaTypes != null) return
+        val switcher = KeyboardSwitcher.getInstance()
+        val host = object : MediaPickerHost {
+            override val editorVersion get() = switcher.latinIME?.mediaEditorVersion ?: -1L
+            override val privateMode get() = switcher.latinIME?.isMediaInputPrivate ?: true
+            override val typingListener get() = mKeyboardActionListener
+            override fun supports(mimeType: String): Boolean =
+                switcher.latinIME?.currentInputEditorInfo?.let { MediaContent.supports(it, mimeType) } ?: false
+            override fun insert(media: StagedMedia, editorVersion: Long): Boolean =
+                switcher.latinIME?.insertPickerMedia(media, editorVersion) ?: false
+            override fun returnToTyping() {
+                switcher.returnFromMediaKeyboard(mediaReturnElement)
+            }
+        }
+        val types = LinearLayout(context).apply { orientation = HORIZONTAL }
+        fun tab(label: Int, action: () -> Unit) {
+            types.addView(Button(context).apply {
+                setText(label)
+                isAllCaps = false
+                setOnClickListener { action() }
+            }, LayoutParams(0, toPx(40f), 1f))
+        }
+        tab(R.string.media_tab_emoji) { showEmojiTab() }
+        tab(R.string.media_tab_gifs) { showMediaTab(MediaKind.GIF) }
+        tab(R.string.media_tab_stickers) { showMediaTab(MediaKind.STICKER) }
+        mediaTypes = types
+        types.getChildAt(0).isSelected = true
+        addView(types, 0, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, toPx(40f)))
+        val picker = MediaPickerView(context, host).apply { visibility = GONE }
+        mediaPicker = picker
+        addView(picker, 1, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0))
+    }
+
+    private fun showMediaTab(kind: MediaKind) {
+        stopSearchMode(returnToKeyboard = false)
+        mediaTypes?.visibility = VISIBLE
+        selectMediaType(kind.ordinal + 1)
+        mPager?.visibility = GONE
+        mSearchContainer?.visibility = GONE
+        mEmojiCategoryPageIndicatorView?.visibility = GONE
+        mTabStrip?.visibility = GONE
+        findViewById<MainKeyboardView>(R.id.bottom_row_keyboard).visibility = GONE
+        KeyboardSwitcher.getInstance().suggestionStripView?.clearEmojiSuggestions()
+        mediaPicker?.apply {
+            visibility = VISIBLE
+            open(kind)
+        }
+        KeyboardSwitcher.getInstance().latinIME?.updateMediaBackHandling(true)
+        requestLayout()
+    }
+
+    private fun showEmojiTab() {
+        stopMediaSession()
+        mediaPicker?.visibility = GONE
+        mediaTypes?.visibility = VISIBLE
+        selectMediaType(0)
+        mPager?.visibility = VISIBLE
+        mTabStrip?.visibility = VISIBLE
+        findViewById<MainKeyboardView>(R.id.bottom_row_keyboard).visibility = VISIBLE
+        setupBottomRowKeyboard(mEditorInfo, mKeyboardActionListener)
+        setupCategoryTabs()
+        requestLayout()
+    }
+
+    private fun selectMediaType(selected: Int) {
+        mediaTypes?.let { types ->
+            for (index in 0 until types.childCount) {
+                val button = types.getChildAt(index) as Button
+                button.isSelected = index == selected
+                button.setTextColor(mColors.get(ColorType.KEY_TEXT))
+                button.backgroundTintList = android.content.res.ColorStateList.valueOf(mColors.get(
+                    if (button.isSelected) ColorType.TOOL_BAR_KEY_ENABLED_BACKGROUND else ColorType.STRIP_BACKGROUND
+                ))
+            }
+        }
     }
 
     private fun addTab(host: LinearLayout, categoryId: Int) {
@@ -374,6 +480,7 @@ class EmojiPalettesView @JvmOverloads constructor(
         Log.d("EmojiSearch", "startSearchMode() called")
         if (mInSearchMode) return
         mInSearchMode = true
+        mediaTypes?.visibility = GONE
 
         mTabStrip?.removeAllViews()
         val ctx = context
@@ -681,6 +788,7 @@ class EmojiPalettesView @JvmOverloads constructor(
         Log.d("EmojiSearch", "stopSearchMode")
         if (!mInSearchMode) return
         mInSearchMode = false
+        mediaTypes?.visibility = VISIBLE
 
         if (returnToKeyboard) {
             setupBottomRowKeyboard(null, mOriginalActionListener)
@@ -751,11 +859,20 @@ class EmojiPalettesView @JvmOverloads constructor(
         keyboardActionListener: KeyboardActionListener?
     ) {
         stopSearchMode(returnToKeyboard = false)
+        mediaPicker?.stop()
+        mediaPicker?.visibility = GONE
+        mediaTypes?.visibility = VISIBLE
+        mediaReturnElement = KeyboardSwitcher.getInstance().keyboard?.mId?.mElementId
+            ?: KeyboardSwitcher.getInstance().activeAlphabetKeyboardId
         mEditorInfo = editorInfo
         mKeyboardActionListener = keyboardActionListener ?: KeyboardActionListener.EMPTY_LISTENER
         initialize()
+        selectMediaType(0)
         updateColors()
         setupBottomRowKeyboard(editorInfo, mKeyboardActionListener)
+        mPager?.visibility = VISIBLE
+        mTabStrip?.visibility = VISIBLE
+        findViewById<MainKeyboardView>(R.id.bottom_row_keyboard).visibility = VISIBLE
         val params = KeyDrawParams()
         params.updateParams(mEmojiLayoutParams.bottomRowKeyboardHeight, keyVisualAttr)
         setupSidePadding()
@@ -879,6 +996,7 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     fun stopEmojiPalettes() {
+        stopMediaSession()
         if (!initialized) return
 
         if (mInSearchMode) {
@@ -1116,6 +1234,10 @@ class EmojiPalettesView @JvmOverloads constructor(
 
     fun updateColors() {
         mColors = Settings.getValues().mColors
+        mediaPicker?.updateColors()
+        mediaTypes?.let { types ->
+            selectMediaType((0 until types.childCount).firstOrNull { types.getChildAt(it).isSelected } ?: 0)
+        }
         val tabStrip = mTabStrip
         if (tabStrip != null) {
             mColors.setBackground(tabStrip, ColorType.STRIP_BACKGROUND)
@@ -1173,6 +1295,7 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     override fun setVisibility(visibility: Int) {
+        if (visibility != View.VISIBLE) stopMediaSession()
         if (visibility != View.VISIBLE && mInSearchMode) {
             stopSearchMode(returnToKeyboard = false)
         }
@@ -1180,6 +1303,7 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     override fun onDetachedFromWindow() {
+        stopMediaSession()
         if (mInSearchMode) {
             stopSearchMode(returnToKeyboard = false)
         }

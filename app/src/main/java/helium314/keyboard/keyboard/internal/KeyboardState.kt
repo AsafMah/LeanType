@@ -5,6 +5,8 @@
  */
 package helium314.keyboard.keyboard.internal
 
+import helium314.keyboard.keyboard.KeyboardId
+
 import android.text.TextUtils
 import helium314.keyboard.event.Event
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
@@ -266,6 +268,22 @@ class KeyboardState(private val switchActions: SwitchActions) {
         this.recapitalizeMode = null
         switchState = SwitchState.ALPHA
         switchActions.requestUpdatingShiftState(autoCapsFlags, recapitalizeMode)
+    }
+
+    fun returnFromMediaKeyboard(elementId: Int) {
+        setAlphabetKeyboard(0, null)
+        when (elementId) {
+            KeyboardId.ELEMENT_SYMBOLS -> setSymbolsKeyboard()
+            KeyboardId.ELEMENT_SYMBOLS_SHIFTED -> setSymbolsShiftedKeyboard()
+            KeyboardId.ELEMENT_NUMPAD -> setNumpadKeyboard(false, false, false)
+            KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED -> setShiftLocked(true)
+            KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCK_SHIFTED -> {
+                setShiftLocked(true)
+                setShifted(ShiftMode.SHIFT_LOCKED)
+            }
+            KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED -> setShifted(ShiftMode.MANUAL)
+            KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED -> setShifted(ShiftMode.AUTOMATIC)
+        }
     }
 
     private fun setCustomKeyboard(customIndex: Int) {
