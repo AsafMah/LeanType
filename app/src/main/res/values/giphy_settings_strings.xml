@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="giphy_key_title">GIPHY GIFs and stickers</string>
+    <string name="giphy_key_description">Set your personal GIPHY API key for GIF and sticker search</string>
+    <string name="giphy_key_configured">Personal key saved ••••••••</string>
+    <string name="giphy_key_label">Personal API key</string>
+    <string name="giphy_key_set">Set key</string>
+    <string name="giphy_key_replace">Replace key</string>
+    <string name="giphy_key_clear">Clear key</string>
+    <string name="giphy_key_privacy">Your key is stored encrypted on this device and excluded from settings backups. New search text is sent to GIPHY only when you press Search. Loading more results uses that submitted search. One personal key is used for GIFs and stickers.</string>
+    <string name="giphy_key_locked">Unlock your device to access the GIPHY key.</string>
+    <string name="giphy_key_storage_error">Secure key storage is unavailable. The key could not be read or saved. No unencrypted copy will be used.</string>
+</resources>

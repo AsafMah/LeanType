@@ -57,6 +57,7 @@ import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.Theme
 
 import helium314.keyboard.settings.preferences.BackupRestorePreference
+import helium314.keyboard.settings.preferences.GiphyKeyPreference
 import helium314.keyboard.settings.preferences.LoadGestureLibPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 import helium314.keyboard.settings.previewDark
@@ -64,12 +65,10 @@ import androidx.core.content.edit
 import helium314.keyboard.settings.FeedbackManager
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.getActivity
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 
 
 @Composable
@@ -83,6 +82,7 @@ fun AdvancedSettingsScreen(
     val items = listOfNotNull(
         Settings.PREF_ALWAYS_INCOGNITO_MODE,
         Settings.PREF_DISABLE_NETWORK,
+        if (BuildConfig.FLAVOR != "offline") SettingsWithoutKey.GIPHY_API_KEY else null,
         if (Settings.readHorizontalSpaceSwipe(prefs) == KeyboardActionListener.SWIPE_SWITCH_LANGUAGE)
             Settings.PREF_LANGUAGE_SWIPE_DISTANCE else null,
         Settings.PREF_PHYSICAL_KEYBOARD_LAYOUT,
@@ -107,6 +107,10 @@ fun AdvancedSettingsScreen(
 
 @SuppressLint("ApplySharedPref")
 fun createAdvancedSettings(context: Context) = listOfNotNull(
+    if (BuildConfig.FLAVOR != "offline")
+        Setting(context, SettingsWithoutKey.GIPHY_API_KEY,
+            R.string.giphy_key_title, R.string.giphy_key_description) { GiphyKeyPreference(it) }
+    else null,
     Setting(context, Settings.PREF_ALWAYS_INCOGNITO_MODE,
         R.string.incognito, R.string.prefs_force_incognito_mode_summary)
     {
