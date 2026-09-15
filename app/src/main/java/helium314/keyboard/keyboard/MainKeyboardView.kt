@@ -34,6 +34,7 @@ import helium314.keyboard.latin.settings.DebugSettings
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.*
+import helium314.keyboard.settings.FeedbackManager
 import java.util.Locale
 import java.util.WeakHashMap
 
@@ -292,6 +293,48 @@ class MainKeyboardView @JvmOverloads constructor(
         return popupKeysKeyboardView
     }
 
+    override fun showSwipeShortcutMenu(
+        tracker: PointerTracker, direction: SwipeShortcutMenu.Direction
+    ): PopupKeysPanel? {
+        val sourceKeyboard = keyboard ?: return null
+        val sourceRow = sourceKeyboard.swipeShortcutRows[direction] ?: return null
+        val menu = try {
+            SwipeShortcutMenu.Builder(context, sourceKeyboard, sourceRow, direction).build()
+        } catch (e: IllegalArgumentException) {
+            reportInvalidSwipeLayout(direction, e)
+            return null
+        } catch (e: IllegalStateException) {
+            reportInvalidSwipeLayout(direction, e)
+            return null
+        }
+        val container = mPopupKeysKeyboardContainer
+        container.findViewById<View>(R.id.description_view)?.visibility = View.GONE
+        val popup = container.findViewById<PopupKeysKeyboardView>(R.id.popup_keys_keyboard_view)
+        popup.setKeyboard(menu)
+        container.measure(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        container.layout(0, 0, container.measuredWidth, container.measuredHeight)
+        val downInView = CoordinateUtils.newInstance()
+        tracker.getDownCoordinates(downInView)
+        val menuTopInKeyboard = if (direction == SwipeShortcutMenu.Direction.UP)
+            sourceRow.top - menu.mOccupiedHeight - sourceKeyboard.mVerticalGap
+        else sourceRow.bottom + sourceKeyboard.mVerticalGap
+        popup.showSwipeShortcutPanel(
+            parentView = this,
+            controller = this,
+            keysLeftInParent = paddingLeft + sourceRow.left,
+            keysTopInParent = paddingTop + menuTopInKeyboard,
+            direction = direction,
+            startYInParent = CoordinateUtils.y(downInView),
+            listener = mKeyboardActionListener
+        )
+        return popup
+    }
+
+    private fun reportInvalidSwipeLayout(direction: SwipeShortcutMenu.Direction, error: RuntimeException) {
+        Log.e("SwipeShortcutMenu", "Invalid ${direction.layoutType} layout", error)
+        FeedbackManager.message(context, context.getString(R.string.layout_error, error.message))
+    }
+
     fun isInDraggingFinger(): Boolean = isShowingPopupKeysPanel() || PointerTracker.isAnyInDraggingFinger()
 
     override fun onShowPopupKeysPanel(panel: PopupKeysPanel) {
@@ -304,7 +347,7 @@ class MainKeyboardView @JvmOverloads constructor(
     }
 
     fun isShowingPopupKeysPanel(): Boolean = mPopupKeysPanel?.isShowingInParent == true
-    override fun onCancelPopupKeysPanel() { PointerTracker.dismissAllPopupKeysPanels() }
+    override fun onCancelPopupKeysPanel() { PointerTracker.finishAllPopupKeysInput() }
     override fun onDismissPopupKeysPanel() { if (isShowingPopupKeysPanel()) { mPopupKeysPanel?.removeFromParent(); mPopupKeysPanel = null } }
 
     fun startDoubleTapShiftKeyTimer() { mTimerHandler.startDoubleTapShiftKeyTimer() }
@@ -315,6 +358,7 @@ class MainKeyboardView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (keyboard == null) return false
         if (mNonDistinctMultitouchHelper != null) {
+            if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) PointerTracker.cancelSwipeShortcutMenus()
             if (event.pointerCount > 1 && mTimerHandler.isInKeyRepeat()) mTimerHandler.cancelKeyRepeatTimers()
             mNonDistinctMultitouchHelper.processMotionEvent(event, mKeyDetector)
             return true
@@ -323,6 +367,7 @@ class MainKeyboardView @JvmOverloads constructor(
     }
 
     fun processMotionEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) PointerTracker.cancelSwipeShortcutMenus()
         val index = event.actionIndex
         val id = event.getPointerId(index)
         val tracker = PointerTracker.getPointerTracker(id)
@@ -337,7 +382,7 @@ class MainKeyboardView @JvmOverloads constructor(
         PointerTracker.setReleasedKeyGraphicsToAllKeys()
         mGestureFloatingTextDrawingPreview.dismissGestureFloatingPreviewText()
         mSlidingKeyInputDrawingPreview.dismissSlidingKeyInputPreview()
-        PointerTracker.dismissAllPopupKeysPanels()
+        PointerTracker.finishAllPopupKeysInput()
         dismissAllKeyPreviews()
         PointerTracker.cancelAllPointerTrackers()
     }

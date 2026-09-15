@@ -9,11 +9,13 @@ package helium314.keyboard.keyboard.internal
 import helium314.keyboard.keyboard.Key
 import helium314.keyboard.keyboard.PopupKeysPanel
 import helium314.keyboard.keyboard.PointerTracker
+import helium314.keyboard.keyboard.SwipeShortcutMenu
 
 interface DrawingProxy {
     fun onKeyPressed(key: Key, withPreview: Boolean)
     fun onKeyReleased(key: Key, withAnimation: Boolean)
     fun showPopupKeysKeyboard(key: Key, tracker: PointerTracker): PopupKeysPanel?
+    fun showSwipeShortcutMenu(tracker: PointerTracker, direction: SwipeShortcutMenu.Direction): PopupKeysPanel?
     fun startWhileTypingAnimation(fadeInOrOut: Int)
     fun showSlidingKeyInputPreview(tracker: PointerTracker?)
     fun showGestureTrail(tracker: PointerTracker, showsFloatingPreviewText: Boolean)

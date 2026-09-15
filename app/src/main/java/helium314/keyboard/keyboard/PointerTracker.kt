@@ -114,6 +114,9 @@ class PointerTracker private constructor(
     private var mIsAllowedDraggingFinger = false
     // true if a keyswipe gesture is enabled and warranted.
     private var mKeySwipeAllowed = false
+    // The candidate is cleared when another gesture wins; an active menu consumes the pointer.
+    private var mSwipeShortcutCandidateKey: Key? = null
+    private var mSwipeShortcutActive = false
 
     private var mInTouchpadMode = false
     private var mTouchpadLastX = 0
@@ -230,6 +233,7 @@ class PointerTracker private constructor(
         if (keyDetector === mKeyDetector && keyboard === mKeyboard) {
             return
         }
+        cancelSwipeShortcut()
         val oldKeyboard = mKeyboard
         if (oldKeyboard != null) {
             // changing keyboards may change height
@@ -361,7 +365,7 @@ class PointerTracker private constructor(
             Log.d(TAG, String.format(Locale.US, "[%d] onStartBatchInput", mPointerId))
         }
         sListener.onStartBatchInput()
-        dismissAllPopupKeysPanels()
+        finishAllPopupKeysInput()
         getTimerProxy().cancelLongPressTimersOf(this)
     }
 
@@ -471,6 +475,7 @@ class PointerTracker private constructor(
         }
 
         val key = getKeyOn(x, y)
+        cancelSwipeShortcutMenus()
         mBogusMoveEventDetector.onActualDownEvent(x, y)
         if (key != null && key.isModifier()) {
             if (sInGesture) {
@@ -502,14 +507,25 @@ class PointerTracker private constructor(
 
     fun isShowingPopupKeysPanel(): Boolean = mPopupKeysPanel != null
 
-    private fun dismissPopupKeysPanel() {
+    private fun finishPopupKeysInput() {
+        if (mSwipeShortcutActive) {
+            mSwipeShortcutActive = false
+            // Dismissing or committing a menu must never fall through to typing its source key.
+            mIsTrackingForActionDisabled = true
+        }
         if (isShowingPopupKeysPanel()) {
             mPopupKeysPanel?.dismissPopupKeysPanel()
             mPopupKeysPanel = null
         }
     }
 
+    private fun cancelSwipeShortcut() {
+        mSwipeShortcutCandidateKey = null
+        if (mSwipeShortcutActive) finishPopupKeysInput()
+    }
+
     private fun onDownEventInternal(x: Int, y: Int, eventTime: Long) {
+        mSwipeShortcutCandidateKey = null
         var key = onDownKey(x, y, eventTime)
         val isEmojiClipBottomRow = mKeyboard?.mId?.isEmojiClipBottomRow == true
         mIsAllowedDraggingFinger = (sParams?.mKeySelectionByDraggingFinger == true) ||
@@ -538,6 +554,11 @@ class PointerTracker private constructor(
             mStartX = x
             mStartY = y
             mStartTime = System.currentTimeMillis()
+            val settings = Settings.getValues()
+            if (getActivePointerTrackerCount() == 1 && !mKeySwipeAllowed &&
+                (settings.mSwipeUpMenuEnabled || settings.mSwipeDownMenuEnabled)) {
+                mSwipeShortcutCandidateKey = key
+            }
         }
     }
 
@@ -608,15 +629,18 @@ class PointerTracker private constructor(
             return
         }
 
-        if (sGestureEnabler.shouldHandleGesture() && me != null) {
-            // Add historical points to gesture path.
+        if (!isShowingPopupKeysPanel() && me != null &&
+            (mSwipeShortcutCandidateKey != null || sGestureEnabler.shouldHandleGesture())) {
+            // Let the earliest decisive sample choose between shortcuts and glide.
             val pointerIndex = me.findPointerIndex(mPointerId)
             val historicalSize = me.historySize
             for (h in 0 until historicalSize) {
                 val historicalX = me.getHistoricalX(pointerIndex, h).toInt()
                 val historicalY = me.getHistoricalY(pointerIndex, h).toInt()
                 val historicalTime = me.getHistoricalEventTime(h)
-                onGestureMoveEvent(historicalX, historicalY, historicalTime, false, null)
+                if (tryStartSwipeShortcut(historicalX, historicalY, historicalTime)) break
+                if (sGestureEnabler.shouldHandleGesture())
+                    onGestureMoveEvent(historicalX, historicalY, historicalTime, false, null)
             }
         }
 
@@ -631,7 +655,39 @@ class PointerTracker private constructor(
             }
             return
         }
+        if (tryStartSwipeShortcut(x, y, eventTime)) return
         onMoveEventInternal(x, y, eventTime)
+    }
+
+    private fun tryStartSwipeShortcut(x: Int, y: Int, eventTime: Long): Boolean {
+        val source = mSwipeShortcutCandidateKey ?: return false
+        if (sInGesture || sInKeySwipe || isShowingPopupKeysPanel() ||
+            getActivePointerTrackerCount() != 1 || mIsTrackingForActionDisabled) {
+            mSwipeShortcutCandidateKey = null
+            return false
+        }
+        val dx = x - CoordinateUtils.x(mDownCoordinates)
+        val dy = y - CoordinateUtils.y(mDownCoordinates)
+        val threshold = maxOf(2 * sPointerStep, source.height / 4)
+        if (abs(dx) < threshold && abs(dy) < threshold) return false
+        mSwipeShortcutCandidateKey = null
+        if (abs(dy) <= abs(dx)) return false
+        val direction = if (dy < 0) SwipeShortcutMenu.Direction.UP else SwipeShortcutMenu.Direction.DOWN
+        val settings = Settings.getValues()
+        if (direction == SwipeShortcutMenu.Direction.UP && !settings.mSwipeUpMenuEnabled ||
+            direction == SwipeShortcutMenu.Direction.DOWN && !settings.mSwipeDownMenuEnabled) return false
+        val row = mKeyboard?.swipeShortcutRows?.get(direction) ?: return false
+        if (source !in row.keys) return false
+        val panel = sDrawingProxy?.showSwipeShortcutMenu(this, direction) ?: return false
+        getTimerProxy().cancelKeyTimersOf(this)
+        getTimerProxy().cancelUpdateBatchInputTimer(this)
+        mIsDetectingGesture = false
+        setReleasedKeyGraphics(mCurrentKey, true)
+        mCurrentKey = null
+        mSwipeShortcutActive = true
+        mPopupKeysPanel = panel
+        panel.onDownEvent(panel.translateX(x), panel.translateY(y), mPointerId, eventTime)
+        return true
     }
 
     private fun processDraggingFingerInToNewKey(newKey: Key, x: Int, y: Int, eventTime: Long) {
@@ -858,6 +914,7 @@ class PointerTracker private constructor(
             printTouchEvent("onUpEvent  :", x, y, eventTime)
         }
 
+        tryStartSwipeShortcut(x, y, eventTime)
         getTimerProxy().cancelUpdateBatchInputTimer(this)
         if (!sInGesture) {
             if (mCurrentKey?.isModifier() == true) {
@@ -879,6 +936,7 @@ class PointerTracker private constructor(
     }
 
     private fun onUpEventInternal(x: Int, y: Int, eventTime: Long) {
+        mSwipeShortcutCandidateKey = null
         getTimerProxy().cancelKeyTimersOf(this)
         val isInDraggingFinger = mIsInDraggingFinger
         val isInSlidingKeyInput = mIsInSlidingKeyInput
@@ -903,7 +961,7 @@ class PointerTracker private constructor(
                     panel.onUpEvent(translatedX, translatedY, mPointerId, eventTime)
                 }
             }
-            dismissPopupKeysPanel()
+            finishPopupKeysInput()
             if (isInSlidingKeyInput) {
                 callListenerOnFinishSlidingInput()
             }
@@ -955,7 +1013,8 @@ class PointerTracker private constructor(
     }
 
     override fun cancelTrackingForAction() {
-        if (isShowingPopupKeysPanel()) {
+        mSwipeShortcutCandidateKey = null
+        if (isShowingPopupKeysPanel() && !mSwipeShortcutActive) {
             return
         }
         mIsTrackingForActionDisabled = true
@@ -964,6 +1023,7 @@ class PointerTracker private constructor(
     val isInOperation: Boolean get() = !mIsTrackingForActionDisabled
 
     fun onLongPressed() {
+        mSwipeShortcutCandidateKey = null
         getTimerProxy().cancelLongPressTimersOf(this)
         if (isShowingPopupKeysPanel()) {
             return
@@ -1028,7 +1088,7 @@ class PointerTracker private constructor(
         getTimerProxy().cancelKeyTimersOf(this)
         setReleasedKeyGraphics(mCurrentKey, true)
         resetKeySelectionByDraggingFinger()
-        dismissPopupKeysPanel()
+        finishPopupKeysInput()
     }
 
     private fun isMajorEnoughMoveToBeOnNewKey(
@@ -1118,6 +1178,7 @@ class PointerTracker private constructor(
     }
 
     fun onKeyRepeat(code: Int, repeatCount: Int) {
+        mSwipeShortcutCandidateKey = null
         val key = key
         if (key == null || key.code != code) {
             mCurrentRepeatingKeyCode = Constants.NOT_A_CODE
@@ -1270,6 +1331,12 @@ class PointerTracker private constructor(
 
         fun isAnyInDraggingFinger(): Boolean = sPointerTrackerQueue.isAnyInDraggingFinger()
 
+        fun cancelSwipeShortcutMenus() {
+            for (tracker in sTrackers) {
+                tracker.cancelSwipeShortcut()
+            }
+        }
+
         fun cancelAllPointerTrackers() {
             sPointerTrackerQueue.cancelAllPointerTrackers()
         }
@@ -1296,11 +1363,11 @@ class PointerTracker private constructor(
             }
         }
 
-        fun dismissAllPopupKeysPanels() {
+        fun finishAllPopupKeysInput() {
             val trackersSize = sTrackers.size
             for (i in 0 until trackersSize) {
                 val tracker = sTrackers[i]
-                tracker.dismissPopupKeysPanel()
+                tracker.finishPopupKeysInput()
             }
         }
 
