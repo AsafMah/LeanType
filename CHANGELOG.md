@@ -7,6 +7,8 @@
 
 ### Fixed
 - Cancel queued glide updates when a swipe shortcut menu takes over the touch gesture. (#156)
+- Preserve restored settings and text-expander entries when both preference archives target the same store.
+- Keep the active custom keyboard and its options when searching from the emoji picker, and restore keyboard state correctly when closing search.
 
 ### Reliability & testing
 - Exercise swipe menus with glide detection both enabled and disabled, including completed glide paths, pending timers and recovery after cancellation; clarify popup input completion and coordinate spaces. (#156)
