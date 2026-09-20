@@ -6,12 +6,16 @@ import android.content.res.AssetManager
 import android.view.ContextThemeWrapper
 import android.view.MotionEvent
 import android.os.Looper
+import android.text.InputType
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.TextView
 import helium314.keyboard.ShadowInputMethodManager2
 import helium314.keyboard.ShadowLocaleManagerCompat
 import helium314.keyboard.ShadowProximityInfo
+import helium314.keyboard.compat.AppQuirk
+import helium314.keyboard.compat.AppQuirksManager
 import helium314.keyboard.keyboard.KeyboardTheme
 import helium314.keyboard.keyboard.KeyboardActionListener
 import helium314.keyboard.keyboard.MainKeyboardView
@@ -98,6 +102,32 @@ class MediaPickerInteractionTest {
         assertTrue(source.requests.isEmpty())
         assertTrue(picker.onBack())
         assertEquals(1, host.returns)
+    }
+
+    @Test fun appProfileIncognitoBlocksActualPickerSubmissionUntilRemoved() {
+        val editor = EditorInfo().apply {
+            packageName = "media.picker.privacy.fixture"
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+        host.editor = editor
+        try {
+            AppQuirksManager.saveQuirk(AppQuirk(editor.packageName, forceIncognito = true))
+            val field = picker.findViewById<EditText>(R.id.media_query)
+            field.setText("must remain local")
+            picker.findViewById<View>(R.id.media_submit).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(source.requests.isEmpty())
+            assertEquals(activity.getString(R.string.media_unavailable),
+                picker.findViewById<TextView>(R.id.media_status).text.toString())
+
+            AppQuirksManager.removeQuirk(editor.packageName)
+            field.setText("public")
+            picker.findViewById<View>(R.id.media_submit).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(listOf(MediaKind.GIF to "public"), source.requests)
+        } finally {
+            AppQuirksManager.removeQuirk(editor.packageName)
+        }
     }
 
     @Test fun staleEditorCannotSubmit() {
@@ -190,7 +220,9 @@ class MediaPickerInteractionTest {
 
     private class Host : MediaPickerHost {
         override var editorVersion = 1L
+        var editor: EditorInfo? = null
         override var privateMode = false
+            get() = field || editor?.let { MediaPrivacy.isRestricted(false, it) } == true
         override val typingListener = Mockito.mock(KeyboardActionListener::class.java)
         var returns = 0
         var throwOnInsert = false
