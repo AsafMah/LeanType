@@ -6,6 +6,19 @@ It installs alongside upstream LeanType as `com.asafmah.leantypedual` (with `.of
 LeanTypeDual releases are available from [this fork](https://github.com/AsafMah/LeanType/releases);
 the upstream artwork, documentation, community links, and plugin ecosystem below retain their original provenance.
 
+The `v2` branch is rebased on upstream commit
+`359f273ce3fbe969f131bc10be7310e7654766f0` (4.2.5). Its additions are fork
+branding, editable top/bottom-row swipe shortcut menus, and experimental GIF/sticker
+search. The backup-restore and custom-layout emoji-search fixes are now upstream-owned,
+not duplicate local patches. Fork version `2.0.0` (`6000`) is unchanged; upstream
+release numbers and transition plans below describe the inherited project.
+
+Build the network-capable debug app with `.\gradlew.bat :app:assembleStandardDebug`
+(JDK 21 and the Android SDK/NDK specified in Gradle). The output is
+`app\build\outputs\apk\standard\debug\1-LeanTypeDual_2.0.0-standard-debug.apk`,
+using package `com.asafmah.leantypedual.debug` and the local Android debug signer.
+This does not publish a release or install/change the active keyboard.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/leantype_banner_dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/images/leantype_banner_light.svg">
@@ -163,7 +176,7 @@ LeanTypeDual is available in two purpose-built flavors designed to match your ex
 
 ## 🛠️ Setup Guide
 
-### GIF and sticker search
+### GIF and sticker search (experimental)
 
 In Standard and Standard Full, open the emoji picker and choose **GIFs** or **Stickers**.
 Configure your own GIPHY API key in **Advanced settings**; no shared key or account backend is supplied.
@@ -173,7 +186,9 @@ If the field cannot accept the media, **Share** explicitly opens Android's choos
 
 **Back** first leaves query editing, then returns to typing. **X** clears the query without searching.
 GIPHY receives submitted queries and media requests; LeanType does not add advertising identifiers or action analytics.
-Online media is disabled in incognito/no-learning/password contexts. The Offline flavor shows Emoji only.
+Online media is disabled in global or per-app Force Incognito, no-learning and password contexts.
+An app's Force Non-Incognito override does not relax these media restrictions.
+The Offline flavor shows Emoji only.
 Keys are stored separately from exported settings and can be removed in the same preference.
 Local sticker imports, packs and remote favorites are not included.
 Selected-media storage is capped at 64 MiB and 64 files. Cleanup protects a selected file for a
