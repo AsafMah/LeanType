@@ -3,12 +3,14 @@ package helium314.keyboard
 
 import android.content.Context
 import android.content.res.AssetManager
+import android.app.Activity
 import android.app.KeyguardManager
 import android.os.Looper
 import android.view.ContextThemeWrapper
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.widget.FrameLayout
 import helium314.keyboard.event.HapticEvent
 import helium314.keyboard.event.Event
 import helium314.keyboard.keyboard.Key
@@ -34,6 +36,7 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.DebugSettings
 import helium314.keyboard.latin.utils.LayoutType
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
+import helium314.keyboard.latin.utils.ResourceUtils
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional
 import helium314.keyboard.latin.utils.prefs
 import org.junit.After
@@ -504,10 +507,74 @@ class SwipeShortcutMenuTest(private val glideEnabled: Boolean) {
         }
     }
 
+    @Test
+    fun `swipe popup aligns in window coordinates when docked or floating`() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val root = FrameLayout(activity)
+        root.addView(view, FrameLayout.LayoutParams(700, 400).apply {
+            leftMargin = 37
+            topMargin = 83
+        })
+        activity.setContentView(root)
+        try {
+            for (floating in listOf(false, true)) {
+                ResourceUtils.setFloatingKeyboardWidth(if (floating) 480 else 0)
+                KeyboardLayoutSet.onKeyboardThemeChanged()
+                for (numberRow in listOf(false, true)) {
+                    keyboard = buildKeyboard(numberRow = numberRow, width = if (floating) 480 else 700)
+                    view.setKeyboard(keyboard)
+                    view.setPadding(9, 5, 7, 3)
+                    root.measure(exact(1000), exact(900))
+                    root.layout(0, 0, 1000, 900)
+                    val location = IntArray(2)
+                    view.getLocationInWindow(location)
+                    assertTrue(location[0] > 0 && location[1] > 0)
+                    for (direction in listOf(UP, DOWN)) {
+                        val row = keyboard.swipeShortcutRows.getValue(direction)
+                        val source = row.keys.first()
+                        val x = center(source) + view.paddingLeft
+                        val y = source.y + source.height / 2 + view.paddingTop
+                        val endY = y + if (direction == UP) -source.height else source.height
+                        event(MotionEvent.ACTION_DOWN, x, y)
+                        event(MotionEvent.ACTION_MOVE, x, endY)
+                        assertTrue(view.isShowingPopupKeysPanel())
+                        val popup = MainKeyboardView::class.java.getDeclaredField("mPopupKeysPanel")
+                            .apply { isAccessible = true }.get(view) as PopupKeysKeyboardView
+                        val menu = assertNotNull(popup.keyboard)
+                        val container = popup.getContainerView()
+                        val expectedTop = location[1] + view.paddingTop + if (direction == UP)
+                            row.top - menu.mOccupiedHeight - keyboard.mVerticalGap
+                        else row.bottom + keyboard.mVerticalGap
+                        assertEquals(expectedTop.toFloat(), container.y + popup.y + popup.paddingTop)
+                        menu.sortedKeys.zip(row.centers(menu.sortedKeys.size)).forEach { (key, expected) ->
+                            val actual = container.x + popup.x + popup.paddingLeft + center(key)
+                            assertTrue(abs(actual - location[0] - view.paddingLeft - expected) <= 1)
+                        }
+                        val originalX = container.x
+                        val originalY = container.y
+                        val lastX = center(row.keys.last()) + view.paddingLeft
+                        event(MotionEvent.ACTION_MOVE, lastX, endY)
+                        assertEquals(originalX, container.x)
+                        assertEquals(originalY, container.y)
+                        event(MotionEvent.ACTION_UP, lastX, endY)
+                        verify(listener).onCodeInput(eq(menu.sortedKeys.last().code), anyInt(), anyInt(), eq(false))
+                        verify(listener, never()).onCodeInput(eq(source.code), anyInt(), anyInt(), anyBoolean())
+                        clearInvocations(listener)
+                    }
+                }
+            }
+        } finally {
+            ResourceUtils.setFloatingKeyboardWidth(0)
+            KeyboardLayoutSet.onKeyboardThemeChanged()
+            activity.finish()
+        }
+    }
+
     private fun buildKeyboard(
-        numberRow: Boolean = false, split: Boolean = false, element: Int = KeyboardId.ELEMENT_ALPHABET
+        numberRow: Boolean = false, split: Boolean = false, element: Int = KeyboardId.ELEMENT_ALPHABET,
+        width: Int = 700
     ): Keyboard = KeyboardLayoutSet.Builder(context, EditorInfo())
-        .setKeyboardGeometry(700, 400)
+        .setKeyboardGeometry(width, 400)
         .setSubtype(RichInputMethodSubtype.get(
             SubtypeUtilsAdditional.createEmojiCapableAdditionalSubtype(Locale.ENGLISH, "qwerty", true)
         ))
