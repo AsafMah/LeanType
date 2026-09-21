@@ -7,11 +7,12 @@ LeanTypeDual releases are available from [this fork](https://github.com/AsafMah/
 the upstream artwork, documentation, community links, and plugin ecosystem below retain their original provenance.
 
 The `v2` branch is rebased on upstream commit
-`359f273ce3fbe969f131bc10be7310e7654766f0` (4.2.5). Its additions are fork
+`10f29237acc559e7ef7185ebbb3ed6fe8973c14a` (4.2.6). Its additions are fork
 branding, editable top/bottom-row swipe shortcut menus, and experimental GIF/sticker
 search. The backup-restore and custom-layout emoji-search fixes are now upstream-owned,
 not duplicate local patches. Fork version `2.0.0` (`6000`) is unchanged; upstream
-release numbers and transition plans below describe the inherited project.
+release numbers below describe the inherited project. The surviving flavors are
+Standard (online, including GIF/sticker search) and Offline (no Internet permission).
 
 Build the network-capable debug app with `.\gradlew.bat :app:assembleStandardDebug`
 (JDK 21 and the Android SDK/NDK specified in Gradle). The output is
@@ -70,7 +71,7 @@ LeanTypeDual is available in two purpose-built flavors designed to match your ex
 
 > [!NOTE]
 > **Flavor Consolidation (v4.2.6)**:  
-> As announced in v4.2.5, `standardfull` has been completely merged into `standard`. Both editions operate with zero sensitive permissions (no `READ_CONTACTS`, `SYSTEM_ALERT_WINDOW`, or `REQUEST_INSTALL_PACKAGES`). Users previously using `standardfull` can update directly to `standard` with full data and settings preservation.
+> As announced in v4.2.5, `standardfull` has been completely merged into `standard`; it is no longer a build variant. Neither surviving flavor requests `READ_CONTACTS`, `SYSTEM_ALERT_WINDOW`, or `REQUEST_INSTALL_PACKAGES`. Existing Standard Full installations use Standard updates with the same package identity and signing key.
 
 | Feature / Capability | 🌿 Standard (Recommended)<br>`-standard-release.apk` | 🛡️ Offline<br>`-offline-release.apk` |
 | :--- | :---: | :---: |
@@ -168,7 +169,7 @@ LeanTypeDual is available in two purpose-built flavors designed to match your ex
 
 ### GIF and sticker search (experimental)
 
-In Standard and Standard Full, open the emoji picker and choose **GIFs** or **Stickers**.
+In Standard, open the emoji picker and choose **GIFs** or **Stickers**.
 Configure your own GIPHY API key in **Advanced settings**; no shared key or account backend is supplied.
 Type a query using your active language/custom layout, then press **Search**. Typing alone does not send requests.
 Visible previews animate; choosing an item inserts it and returns to the previous typing layout.
