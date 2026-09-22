@@ -60,6 +60,8 @@ import kotlin.test.assertTrue
 @Config(sdk = [33], shadows = [ShadowInputMethodManager2::class, ShadowProximityInfo::class])
 class SwipeShortcutMenuTest(private val glideEnabled: Boolean) {
     companion object {
+        private val DEFAULT_TOP_EMOJIS = listOf("😊", "😂", "❤️", "👍", "🙏", "😭", "🎉")
+
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "glide={0}")
         fun gestureModes() = listOf(arrayOf(false), arrayOf(true))
@@ -129,6 +131,60 @@ class SwipeShortcutMenuTest(private val glideEnabled: Boolean) {
         )
         row.keys.zip(menu.sortedKeys).forEach { (source, shortcut) ->
             assertTrue(abs(center(source) - row.left - center(shortcut)) <= 1)
+        }
+    }
+
+    @Test
+    fun `top shortcuts contain common emojis and send complete sequences`() {
+        val row = keyboard.swipeShortcutRows.getValue(UP)
+        val menu = SwipeShortcutMenu.Builder(context, keyboard, row, UP).build()
+        assertEquals(DEFAULT_TOP_EMOJIS, menu.sortedKeys.map { key ->
+            if (key.code == KeyCode.MULTIPLE_CODE_POINTS) key.outputText
+            else if (key.code > 0) String(Character.toChars(key.code))
+            else "action:${key.code}"
+        })
+        val source = row.keys.first()
+        val startY = source.y + source.height / 2
+        val endY = startY - source.height
+        row.centers(DEFAULT_TOP_EMOJIS.size).zip(DEFAULT_TOP_EMOJIS).forEach { (x, emoji) ->
+            clearInvocations(listener)
+            event(MotionEvent.ACTION_DOWN, center(source), startY)
+            event(MotionEvent.ACTION_MOVE, center(source), endY)
+            assertTrue(view.isShowingPopupKeysPanel())
+            event(MotionEvent.ACTION_MOVE, x, endY)
+            event(MotionEvent.ACTION_UP, x, endY)
+            if (emoji.codePointCount(0, emoji.length) == 1) {
+                verify(listener).onCodeInput(eq(emoji.codePointAt(0)), anyInt(), anyInt(), eq(false))
+                verify(listener, never()).onTextInput(anyString())
+            } else {
+                verify(listener).onTextInput(emoji)
+                verify(listener, never()).onCodeInput(anyInt(), anyInt(), anyInt(), anyBoolean())
+            }
+            assertFalse(view.isShowingPopupKeysPanel())
+        }
+    }
+
+    @Test
+    fun `custom top shortcut layout overrides emoji defaults without being rewritten`() {
+        val layout = """[[{"label":"copy"},{"label":"paste"}]]"""
+        val name = LayoutUtilsCustom.getLayoutName("My top menu", LayoutType.SWIPE_UP) + "json"
+        val file = LayoutUtilsCustom.getLayoutFile(name, LayoutType.SWIPE_UP, context)
+        file.writeText(layout)
+        LayoutUtilsCustom.onLayoutFileChanged()
+        Settings.writeDefaultLayoutName(name, LayoutType.SWIPE_UP, context.prefs())
+        LayoutParser.clearCache()
+        try {
+            val row = keyboard.swipeShortcutRows.getValue(UP)
+            val menu = SwipeShortcutMenu.Builder(context, keyboard, row, UP).build()
+            assertEquals(listOf(KeyCode.CLIPBOARD_COPY, KeyCode.CLIPBOARD_PASTE),
+                menu.sortedKeys.map { it.code })
+            assertEquals(name, Settings.readDefaultLayoutName(LayoutType.SWIPE_UP, context.prefs()))
+            assertEquals(layout, file.readText())
+        } finally {
+            Settings.writeDefaultLayoutName(null, LayoutType.SWIPE_UP, context.prefs())
+            file.delete()
+            LayoutUtilsCustom.onLayoutFileChanged()
+            LayoutParser.clearCache()
         }
     }
 
@@ -212,7 +268,7 @@ class SwipeShortcutMenuTest(private val glideEnabled: Boolean) {
         keyboard = buildKeyboard(numberRow = true)
         view.setKeyboard(keyboard)
         swipe(keyboard.getKey('1'.code)!!, UP)
-        verify(listener).onCodeInput(eq(KeyCode.UNDO), anyInt(), anyInt(), eq(false))
+        verify(listener).onCodeInput(eq(DEFAULT_TOP_EMOJIS.first().codePointAt(0)), anyInt(), anyInt(), eq(false))
         clearInvocations(listener)
         val q = keyboard.getKey('q'.code)!!
         event(MotionEvent.ACTION_DOWN, center(q), q.y + q.height / 2)

@@ -1,11 +1,11 @@
 [
   [
-    { "label": "undo" },
-    { "label": "redo" },
-    { "label": "cut" },
-    { "label": "copy" },
-    { "label": "paste" },
-    { "label": "select_all" },
-    { "label": "clipboard" }
+    { "label": "😊" },
+    { "label": "😂" },
+    { "label": "❤️" },
+    { "label": "👍" },
+    { "label": "🙏" },
+    { "label": "😭" },
+    { "label": "🎉" }
   ]
 ]

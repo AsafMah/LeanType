@@ -20,6 +20,7 @@
 - Retain newer upstream floating-window, emoji focus, physical-keyboard navigation, app-profile and permission-removal changes alongside the fork additions. Branding, swipe menus, glide cancellation and the three media layers remain separate patches.
 
 ### Changed
+- Use common emojis (😊 😂 ❤️ 👍 🙏 😭 🎉) for the built-in swipe-up menu. Selected custom layouts and the swipe-down menu are unchanged.
 - Brand the app, keyboard, spell checker, settings, and APKs as LeanTypeDual, using package `com.asafmah.leantypedual` and version `2.0.0` (`6000`) while retaining upstream icons and plugin compatibility.
 - Check this fork's releases for app updates instead of offering upstream LeanType APKs.
 - Follow upstream's completed Standard Full merger: build Standard or Offline only. GIF decoding dependencies and device-test fixtures remain attached to Standard; Offline keeps its unavailable-media implementations.

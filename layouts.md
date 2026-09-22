@@ -47,8 +47,9 @@ For example, a three-action menu:
 [[{ "label": "undo" }, { "label": "copy" }, { "label": "paste" }]]
 ```
 
-The built-in upper menu contains undo, redo, cut, copy, paste, select all and
-clipboard. The lower menu contains left, right, word left, word right, clipboard,
+The built-in upper menu contains common emojis: 😊 😂 ❤️ 👍 🙏 😭 🎉.
+Choosing a custom Swipe-up shortcuts layout keeps that layout instead of these defaults.
+The lower menu contains left, right, word left, word right, clipboard,
 numpad and emoji. Defaults live in `assets/layouts/swipe_up` and
 `assets/layouts/swipe_down`.
 
