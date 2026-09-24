@@ -421,6 +421,32 @@ class EmojiSearchKeyboardTest {
     private fun code(code: Int) = searchListener.onCodeInput(code, 0, 0, false)
 
     @Test
+    fun emojiPanelKeepsFullCustomKeyboardAndWrapperReservesItsWholeHeight() {
+        event(KeyCode.CUSTOM2)
+        val original = main.keyboard!!
+        event(KeyCode.EMOJI)
+        assertEquals(keyRows(original), keyRows(bottom.keyboard!!))
+        assertEquals(original.mId.mHeight, bottom.keyboard!!.mId.mHeight)
+        root.removeView(palettes)
+        val wrapper = helium314.keyboard.latin.KeyboardWrapperView(activity, null)
+        palettes.id = R.id.emoji_palettes_view
+        wrapper.addView(palettes)
+        root.addView(wrapper)
+        val width = original.mId.mWidth
+        wrapper.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        wrapper.layout(0, 0, wrapper.measuredWidth, wrapper.measuredHeight)
+        assertEquals(palettes.measuredHeight, wrapper.measuredHeight)
+        assertTrue(wrapper.measuredHeight > original.mId.mHeight)
+        val pager = palettes.findViewById<View>(R.id.emoji_pager)
+        assertTrue(pager.bottom <= bottom.top)
+        // Normal shift/layout updates must update the retained keyboard, not dismiss the pane.
+        switcher.setSymbolsKeyboard()
+        assertEquals(View.VISIBLE, palettes.visibility)
+        assertEquals(KeyboardId.ELEMENT_SYMBOLS, bottom.keyboard!!.mId.mElementId)
+    }
+
+    @Test
     fun mediaReturnRestoresSymbolsAndNumpadThroughState() {
         for ((code, mode) in listOf(KeyCode.SYMBOL to "SYMBOLS", KeyCode.NUMPAD to "NUMPAD")) {
             event(KeyCode.ALPHA)

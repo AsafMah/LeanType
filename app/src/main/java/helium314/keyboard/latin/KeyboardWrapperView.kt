@@ -134,6 +134,19 @@ class KeyboardWrapperView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val picker = findViewById<View>(R.id.emoji_palettes_view)
+        if (picker?.visibility == VISIBLE) {
+            picker.measure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), picker.measuredHeight)
+            val exactHeight = MeasureSpec.makeMeasureSpec(picker.measuredHeight, MeasureSpec.EXACTLY)
+            for (index in 0 until childCount) {
+                val child = getChildAt(index)
+                if (child !== picker && child.visibility != GONE) {
+                    measureChildWithMargins(child, widthMeasureSpec, 0, exactHeight, 0)
+                }
+            }
+            return
+        }
         val fkm = LatinIME.getInstance()?.floatingKeyboardManager
         val isFloating = ResourceUtils.getFloatingKeyboardWidth() > 0 || (fkm != null && (fkm.isFloating || (Settings.getValues().mRememberFloatingKeyboard && fkm.wasFloatingLastTime())))
         if (isFloating) {

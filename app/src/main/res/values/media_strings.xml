@@ -1,5 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="media_loading_saved">Restoring saved results…</string>
+    <string name="emoji_pin_action">Pin emoji</string>
+    <string name="emoji_pin_choose">Tap to pin · Done</string>
+    <string name="emoji_pinned_description">Pinned %1$s. Long press to unpin.</string>
+    <string name="media_pins">Pinned</string>
+    <string name="media_results">Results</string>
+    <string name="media_refresh">Refresh</string>
+    <string name="media_options">Media options</string>
+    <string name="media_pins_hint">Saved bookmarks — tap to load, long press to manage.</string>
+    <string name="media_pin_open">Tap to preview saved media</string>
+    <string name="media_pin_missing">This saved item is no longer available. You can unpin it.</string>
+    <string name="media_pin">Pin</string>
+    <string name="media_unpin">Unpin</string>
+    <string name="media_insert">Insert</string>
+    <string name="media_preview_close">Close</string>
+    <string name="media_expired_results">Saved results expired. Press Search or Refresh to load them again.</string>
+    <string name="media_clear_history">Clear history and cache</string>
+    <string name="media_reduce_motion">Reduce animation</string>
+    <item name="media_pins" type="id" />
+    <item name="media_refresh" type="id" />
+    <item name="media_options" type="id" />
+    <item name="media_preview" type="id" />
+    <item name="media_pin_toggle" type="id" />
+    <item name="media_preview_close" type="id" />
+    <item name="media_insert" type="id" />
+    <string name="media_focus_app">Typing in app</string>
+    <string name="media_focus_search">Typing search query</string>
+    <string name="media_expand">Expand</string>
+    <string name="media_collapse">Collapse</string>
+    <item name="media_focus" type="id" />
+    <item name="media_expand" type="id" />
     <string name="media_tab_emoji">Emoji</string>
     <string name="media_tab_gifs">GIFs</string>
     <string name="media_tab_stickers">Stickers</string>

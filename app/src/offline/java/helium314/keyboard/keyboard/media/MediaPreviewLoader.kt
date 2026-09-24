@@ -10,6 +10,7 @@ import androidx.annotation.MainThread
 @MainThread
 @Suppress("UNUSED_PARAMETER")
 class MediaPreviewLoader(context: Context, source: MediaSource) : AutoCloseable {
+    fun setAnimationsEnabled(enabled: Boolean) = Unit
     fun bind(view: ImageView, item: MediaItem, onError: (MediaError) -> Unit) {
         clear(view)
         onError(MediaError.UNAVAILABLE)

@@ -34,10 +34,12 @@ import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.assertSame
+import kotlinx.coroutines.runBlocking
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], shadows = [
-    ShadowInputMethodManager2::class, ShadowLocaleManagerCompat::class, ShadowProximityInfo::class
+    ShadowInputMethodManager2::class, ShadowLocaleManagerCompat::class, ShadowProximityInfo::class,
+    HostAtomicFile::class
 ])
 class MediaPickerInteractionTest {
     private lateinit var activity: Activity
@@ -138,6 +140,26 @@ class MediaPickerInteractionTest {
         assertTrue(source.requests.isEmpty())
     }
 
+    @Test fun repeatedNetworkLossClearsNewlyEnteredQueriesEachTime() {
+        val field = picker.findViewById<EditText>(R.id.media_query)
+        repeat(2) {
+            host.networkAvailable = true
+            picker.viewTreeObserver.dispatchOnPreDraw()
+            field.setText("sensitive-$it")
+            host.networkAvailable = false
+            picker.viewTreeObserver.dispatchOnPreDraw()
+            assertEquals("", field.text.toString())
+        }
+        assertTrue(source.requests.isEmpty())
+    }
+
+    @Test fun hardwareKeysInHostModeAreNotCapturedAsQueries() {
+        assertTrue(picker.isTypingInApp)
+        val event = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_A)
+        kotlin.test.assertFalse(picker.onHardwareKey(event.keyCode, event))
+        assertEquals("", picker.findViewById<EditText>(R.id.media_query).text.toString())
+    }
+
     @Test fun missingKeyReportsSetupWithoutNetwork() {
         source.hasKey = false
         picker.open(MediaKind.GIF)
@@ -222,10 +244,44 @@ class MediaPickerInteractionTest {
         assertEquals(View.VISIBLE, keyboard.visibility)
         assertTrue(source.requests.isEmpty())
         picker.onBack()
-        assertEquals(View.GONE, keyboard.visibility)
+        assertEquals(View.VISIBLE, keyboard.visibility)
         assertEquals(0, host.returns)
         picker.onBack()
         assertEquals(1, host.returns)
+    }
+
+    @Test fun resultsStayAboveFullKeyboardInBothFocusModes() {
+        val grid = picker.findViewById<View>(R.id.media_results)
+        val keyboard = picker.findViewById<MainKeyboardView>(R.id.media_keyboard)
+        val baseHeight = helium314.keyboard.latin.utils.ResourceUtils.getKeyboardHeight(
+            picker.resources, helium314.keyboard.latin.settings.Settings.getValues())
+        val width = helium314.keyboard.latin.utils.ResourceUtils.getKeyboardWidth(
+            picker.context, helium314.keyboard.latin.settings.Settings.getValues())
+        fun measure() {
+            picker.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+            picker.layout(0, 0, picker.measuredWidth, picker.measuredHeight)
+        }
+        measure()
+        val before = keyboard.keyboard!!.mId.mHeight
+        assertTrue(picker.height > baseHeight)
+        assertTrue(grid.height > 0)
+        val location = IntArray(2)
+        grid.getLocationInWindow(location)
+        val gridBottom = location[1] + grid.height
+        keyboard.getLocationInWindow(location)
+        assertTrue(gridBottom <= location[1])
+        picker.findViewById<EditText>(R.id.media_query).performClick()
+        measure()
+        assertEquals(View.VISIBLE, grid.visibility)
+        assertEquals(View.VISIBLE, keyboard.visibility)
+        assertEquals(before, keyboard.keyboard!!.mId.mHeight)
+        assertEquals(activity.getString(R.string.media_focus_search),
+            picker.findViewById<TextView>(R.id.media_focus).text.toString())
+        picker.findViewById<View>(R.id.media_focus).performClick()
+        assertEquals(activity.getString(R.string.media_focus_app),
+            picker.findViewById<TextView>(R.id.media_focus).text.toString())
+        assertTrue(picker.isTypingInApp)
     }
 
     @Test fun unavailableChooserReportsErrorWithoutLeavingPicker() {
@@ -238,8 +294,119 @@ class MediaPickerInteractionTest {
             picker.findViewById<TextView>(R.id.media_status).text.toString())
     }
 
+    @Test fun successfulResultsRestoreAfterRestartWithoutAnotherProviderRequest() {
+        picker.stop()
+        val item = OwnedMediaFixtures.item().copy(
+            pageUrl = "https://giphy.com/gifs/owned",
+            renditions = listOf(OwnedMediaFixtures.rendition().copy(url = "https://media.giphy.com/owned.gif"))
+        )
+        source.page = MediaPage(listOf(item), null)
+        val library = MediaLibrary(activity, source, { !host.privateMode })
+        picker = MediaPickerView(activity, host, source, library)
+        activity.setContentView(picker)
+        picker.open(MediaKind.GIF)
+        idleUntil { picker.findViewById<TextView>(R.id.media_status).text.toString().contains("Enter") }
+        picker.findViewById<EditText>(R.id.media_query).setText("owned query")
+        picker.findViewById<View>(R.id.media_submit).performClick()
+        idleUntil { picker.findViewById<TextView>(R.id.media_status).text.toString().contains("Results for") }
+        assertEquals(1, source.requests.size)
+        val bytes = runBlocking { library.download(item.renditions.first(), MediaLimits.PREVIEW_BYTES) }
+        picker.stop()
+        val restoredLibrary = MediaLibrary(activity, source, { !host.privateMode })
+        picker = MediaPickerView(activity, host, source, restoredLibrary)
+        activity.setContentView(picker)
+        picker.open(MediaKind.GIF)
+        idleUntil { picker.findViewById<EditText>(R.id.media_query).text.toString() == "owned query" }
+        assertEquals(1, source.requests.size)
+        val warm = runBlocking { restoredLibrary.download(item.renditions.first(), MediaLimits.PREVIEW_BYTES) }
+        kotlin.test.assertContentEquals(bytes, warm)
+        assertEquals(1, source.downloads)
+        assertEquals(1, picker.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.media_results).adapter!!.itemCount)
+        picker.findViewById<View>(R.id.media_refresh).performClick()
+        idleUntil { source.requests.size == 2 }
+    }
+
+    @Test fun privateReopenDoesNotDisplayCachedResultsOrQuery() {
+        picker.stop()
+        val library = MediaLibrary(activity, source, { !host.privateMode })
+        runBlocking {
+            val page = library.search(MediaKind.GIF, "private cached query", "en")
+            library.remember(MediaSnapshot(MediaKind.GIF, "private cached query", "private cached query",
+                "en", page.items, page.nextOffset))
+        }
+        host.privateMode = true
+        picker = MediaPickerView(activity, host, source, library)
+        activity.setContentView(picker)
+        picker.open(MediaKind.GIF)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals("", picker.findViewById<EditText>(R.id.media_query).text.toString())
+        assertEquals(0, picker.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.media_results).adapter!!.itemCount)
+        assertEquals(1, source.requests.size)
+    }
+
+    @Test fun closingBeforeRestoreCompletesDoesNotOverwriteSavedDraftOrPosition() {
+        picker.stop()
+        val library = MediaLibrary(activity, source, { !host.privateMode })
+        runBlocking {
+            val page = library.search(MediaKind.GIF, "saved query", "en")
+            library.remember(MediaSnapshot(MediaKind.GIF, "saved draft", "saved query",
+                "en", page.items, page.nextOffset, 4, 12))
+        }
+        picker = MediaPickerView(activity, host, source, library)
+        activity.setContentView(picker)
+        picker.open(MediaKind.GIF)
+        picker.stop()
+        shadowOf(Looper.getMainLooper()).idle()
+        val restored = runBlocking { library.restore()!!.tabs.single() }
+        assertEquals("saved draft", restored.draft)
+        assertEquals(4, restored.scrollPosition)
+        assertEquals(12, restored.scrollOffset)
+    }
+
+    @Test fun longPressPreviewPinsWithoutInsertingAndPersistsSeparateCollection() {
+        picker.stop()
+        val item = OwnedMediaFixtures.item().copy(
+            pageUrl = "https://giphy.com/gifs/owned",
+            renditions = listOf(OwnedMediaFixtures.rendition().copy(url = "https://media.giphy.com/owned.gif"))
+        )
+        source.page = MediaPage(listOf(item), null)
+        val library = MediaLibrary(activity, source, { !host.privateMode })
+        picker = MediaPickerView(activity, host, source, library)
+        activity.setContentView(picker)
+        picker.open(MediaKind.GIF)
+        picker.findViewById<EditText>(R.id.media_query).setText("owned")
+        picker.findViewById<View>(R.id.media_submit).performClick()
+        idleUntil { picker.findViewById<TextView>(R.id.media_status).text.toString().contains("Results for") }
+        val width = (400 * picker.resources.displayMetrics.density).toInt()
+        picker.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        picker.layout(0, 0, picker.measuredWidth, picker.measuredHeight)
+        val results = picker.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.media_results)
+        assertTrue(results.childCount > 0)
+        results.getChildAt(0).performLongClick()
+        assertEquals(View.VISIBLE, picker.findViewById<View>(R.id.media_preview).visibility)
+        assertEquals(0, host.returns)
+        picker.findViewById<View>(R.id.media_pin_toggle).performClick()
+        idleUntil { runBlocking { library.pins().size } == 1 }
+        picker.findViewById<View>(R.id.media_preview_close).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(View.GONE, picker.findViewById<View>(R.id.media_preview).visibility)
+        assertEquals(0, host.returns)
+        assertEquals(listOf("owned"), runBlocking { MediaLibrary(activity, source, { true }).pins().map { it.id } })
+    }
+
+    private fun idleUntil(condition: () -> Boolean) {
+        repeat(150) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (condition()) return
+            Thread.sleep(10)
+        }
+        assertTrue(condition(), "Asynchronous picker operation did not finish")
+    }
+
     private class Host : MediaPickerHost {
         override var editorVersion = 1L
+        override var networkAvailable = true
         var editor: EditorInfo? = null
         override var privateMode = false
             get() = field || editor?.let { MediaPrivacy.isRestricted(false, it) } == true
@@ -258,13 +425,17 @@ class MediaPickerInteractionTest {
         override val available = true
         override var credentialVersion = 0L
         var hasKey = true
+        var page = MediaPage(emptyList(), null)
+        var downloads = 0
         val requests = mutableListOf<Pair<MediaKind, String>>()
         override fun hasApiKey() = hasKey
         override suspend fun search(kind: MediaKind, query: String, language: String, offset: Int): MediaPage {
             requests.add(kind to query)
-            return MediaPage(emptyList(), null)
+            return page
         }
-        override suspend fun download(rendition: MediaRendition, maxBytes: Int): ByteArray =
-            error("No download expected")
+        override suspend fun download(rendition: MediaRendition, maxBytes: Int): ByteArray {
+            downloads++
+            return OwnedMediaFixtures.gif()
+        }
     }
 }

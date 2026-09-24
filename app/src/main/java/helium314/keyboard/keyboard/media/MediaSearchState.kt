@@ -16,6 +16,9 @@ internal class MediaSearchState {
         var language = ""
         var items: List<MediaItem> = emptyList()
         var nextOffset: Int? = null
+        var scrollPosition = 0
+        var scrollOffset = 0
+        var requiresRefresh = false
     }
 
     private val tabs = MediaKind.entries.associateWith { Tab() }
@@ -36,9 +39,6 @@ internal class MediaSearchState {
         invalidate()
         tabs.getValue(kind).apply {
             draft = ""
-            submitted = ""
-            items = emptyList()
-            nextOffset = null
         }
     }
 
@@ -50,20 +50,40 @@ internal class MediaSearchState {
         val offset = if (more) tab.nextOffset ?: return null else 0
         if (offset !in 0..MediaLimits.MAX_OFFSET) return null
         invalidate()
-        if (!more) {
-            tab.submitted = query
-            tab.language = language
-            tab.items = emptyList()
-            tab.nextOffset = null
-        }
-        return MediaRequest(kind, query, tab.language, offset, generation)
+        return MediaRequest(kind, query, if (more) tab.language else language, offset, generation)
     }
 
     fun accept(request: MediaRequest, page: MediaPage): Boolean {
         if (request.generation != generation || request.kind != kind) return false
-        tab.items = (tab.items + page.items).takeLast(MediaLimits.RETAINED_ITEMS)
+        val previous = if (request.offset == 0) emptyList() else tab.items
+        tab.items = (previous + page.items).takeLast(MediaLimits.RETAINED_ITEMS)
+        tab.submitted = request.query
+        tab.language = request.language
+        tab.requiresRefresh = false
+        if (request.offset == 0) {
+            tab.scrollPosition = 0
+            tab.scrollOffset = 0
+        }
         tab.nextOffset = page.nextOffset?.takeIf { it > request.offset && it <= MediaLimits.MAX_OFFSET }
         return true
+    }
+
+    fun snapshot(): MediaSnapshot = MediaSnapshot(kind, tab.draft, tab.submitted, tab.language,
+        tab.items, tab.nextOffset, tab.scrollPosition, tab.scrollOffset, tab.requiresRefresh)
+
+    fun restore(history: MediaHistory) {
+        history.tabs.forEach { saved ->
+            tabs.getValue(saved.kind).apply {
+                draft = saved.draft
+                submitted = saved.submitted.orEmpty()
+                language = saved.language
+                items = saved.items
+                nextOffset = saved.nextOffset
+                scrollPosition = saved.scrollPosition
+                scrollOffset = saved.scrollOffset
+                requiresRefresh = saved.requiresRefresh
+            }
+        }
     }
 
     fun reset() {
@@ -73,6 +93,9 @@ internal class MediaSearchState {
             it.submitted = ""
             it.items = emptyList()
             it.nextOffset = null
+            it.scrollPosition = 0
+            it.scrollOffset = 0
+            it.requiresRefresh = false
         }
     }
 }

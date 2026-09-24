@@ -57,6 +57,15 @@ class MediaPreviewLoader(context: Context, private val source: MediaSource) : Au
     private val loader by loaderDelegate
     private var paused = false
     private var closed = false
+    private var animationsEnabled = true
+
+    fun setAnimationsEnabled(enabled: Boolean) {
+        animationsEnabled = enabled
+        bindings.values.forEach {
+            val animation = it.view.drawable as? Animatable
+            if (enabled && it.visible()) animation?.start() else animation?.stop()
+        }
+    }
     private var reservedBytes = 0L
 
     fun bind(view: ImageView, item: MediaItem, onError: (MediaError) -> Unit) {
@@ -141,7 +150,7 @@ class MediaPreviewLoader(context: Context, private val source: MediaSource) : Au
                     binding.view.setImageDrawable(drawable)
                     binding.reservation = reservation
                     reservation = 0
-                    if (format.frames > 1) (drawable as? Animatable)?.start()
+                    if (format.frames > 1 && animationsEnabled) (drawable as? Animatable)?.start()
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled

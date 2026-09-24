@@ -10,6 +10,21 @@ import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
 
 class MediaSearchStateTest {
+    @Test fun unacceptedRequestCannotErasePreviousSuccessfulResults() {
+        val state = MediaSearchState()
+        state.tab.draft = "success"
+        val first = assertNotNull(state.request("en", false))
+        state.accept(first, MediaPage(listOf(item("saved")), 20))
+        state.tab.draft = "failed attempt"
+        assertNotNull(state.request("en", false))
+        assertEquals("success", state.tab.submitted)
+        assertEquals(listOf("saved"), state.tab.items.map { it.id })
+        assertEquals(20, state.tab.nextOffset)
+        state.clearQuery()
+        assertEquals("", state.tab.draft)
+        assertEquals(listOf("saved"), state.tab.items.map { it.id })
+    }
+
     @Test fun draftingDoesNotSubmit() {
         val state = MediaSearchState()
         state.tab.draft = "cat"
