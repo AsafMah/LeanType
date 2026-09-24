@@ -10,6 +10,30 @@ import java.nio.charset.CodingErrorAction
 import java.util.Locale
 
 internal object GiphyResponseParser {
+    fun parseLookup(bytes: ByteArray, kind: MediaKind, requestedId: String): MediaItem? {
+        if (bytes.size > MediaLimits.RESPONSE_BYTES) throw MediaException(MediaError.TOO_LARGE)
+        try {
+            val text = bytes.decodeToString(throwOnInvalidSequence = true)
+            checkNesting(text)
+            val root = Json.parseToJsonElement(text) as? JsonObject ?: invalid()
+            val status = root.obj("meta").number("status")
+            if (status == 404) return null
+            GiphyClient.statusError(status)?.let { throw MediaException(it, status) }
+            if (status != 200) invalid()
+            val data = root["data"]
+            if (data == kotlinx.serialization.json.JsonNull || data is JsonArray && data.isEmpty()) return null
+            val value = data as? JsonObject ?: invalid()
+            val item = item(value)
+            if (item.id != requestedId) invalid()
+            if (kind == MediaKind.STICKER && value.optionalNumber("is_sticker") == 0) return null
+            return item
+        } catch (error: MediaException) {
+            throw error
+        } catch (_: Exception) {
+            invalid()
+        }
+    }
+
     fun parse(bytes: ByteArray, requestedOffset: Int): MediaPage {
         if (bytes.size > MediaLimits.RESPONSE_BYTES) throw MediaException(MediaError.TOO_LARGE)
         try {

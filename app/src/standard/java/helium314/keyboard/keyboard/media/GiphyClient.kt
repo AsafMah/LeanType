@@ -16,6 +16,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 internal class GiphyClient(
+    private val clock: () -> Long = System::currentTimeMillis,
     private val openConnection: (URL) -> HttpURLConnection = {
         openPlatformConnection(it)
     }
@@ -25,7 +26,8 @@ internal class GiphyClient(
         kind: MediaKind,
         query: String,
         language: String,
-        offset: Int
+        offset: Int,
+        bypassCache: Boolean = false
     ): MediaPage {
         if (apiKey.isBlank()) throw MediaException(MediaError.MISSING_KEY)
         if (query.codePointCount(0, query.length) > MediaLimits.QUERY_CHARACTERS)
@@ -36,11 +38,29 @@ internal class GiphyClient(
         val url = URL("https://api.giphy.com/v1/${kind.endpoint}/search" +
             "?api_key=${encode(apiKey)}&q=${encode(query)}&limit=${MediaLimits.PAGE_SIZE}" +
             "&offset=$offset&rating=r&lang=${encode(languageCode(language))}")
-        val bytes = request(url, "application/json", MediaLimits.RESPONSE_BYTES, redirects = false)
-        return GiphyResponseParser.parse(bytes, offset)
+        val response = request(url, "application/json", MediaLimits.RESPONSE_BYTES, redirects = false, bypassCache)
+        return GiphyResponseParser.parse(response.bytes, offset).copy(cacheInfo = response.cacheInfo)
     }
 
-    suspend fun download(rendition: MediaRendition, maxBytes: Int): ByteArray {
+    suspend fun lookup(apiKey: String, kind: MediaKind, id: String): MediaLookup {
+        if (apiKey.isBlank()) throw MediaException(MediaError.MISSING_KEY)
+        MediaCacheValidation.id(id)
+        // GIPHY's single-ID endpoint serves both GIFs and stickers.
+        val url = URL("https://api.giphy.com/v1/gifs/${encode(id)}?api_key=${encode(apiKey)}")
+        return try {
+            val response = request(url, "application/json", MediaLimits.RESPONSE_BYTES, redirects = false, bypassCache = true)
+            MediaLookup(GiphyResponseParser.parseLookup(response.bytes, kind, id), response.cacheInfo)
+        } catch (error: MediaException) {
+            if (error.httpStatus == 404) MediaLookup(null, MediaCacheInfo(storable = false)) else throw error
+        }
+    }
+
+    suspend fun download(rendition: MediaRendition, maxBytes: Int): ByteArray =
+        downloadResponse(rendition, maxBytes).bytes
+
+    suspend fun downloadResponse(
+        rendition: MediaRendition, maxBytes: Int, bypassCache: Boolean = false
+    ): MediaDownload {
         if (rendition.mimeType !in setOf("image/gif", "image/webp") ||
             rendition.width <= 0 || rendition.height <= 0)
             throw MediaException(MediaError.UNSUPPORTED)
@@ -51,14 +71,16 @@ internal class GiphyClient(
         if (cap <= 0)
             throw MediaException(MediaError.TOO_LARGE)
         val url = mediaUrl(rendition.url)
-        val bytes = request(url, rendition.mimeType, cap, redirects = true)
+        val response = request(url, rendition.mimeType, cap, redirects = true, bypassCache)
         // GIPHY may generate renditions dynamically, so metadata byteSize is only an estimate.
         // The transfer's Content-Length and actual read cap are enforced by request().
-        GiphyMediaValidation.validate(bytes, rendition)
-        return bytes
+        GiphyMediaValidation.validate(response.bytes, rendition)
+        return response
     }
 
-    private suspend fun request(url: URL, accept: String, cap: Int, redirects: Boolean): ByteArray =
+    private suspend fun request(
+        url: URL, accept: String, cap: Int, redirects: Boolean, bypassCache: Boolean = false
+    ): MediaDownload =
         withContext(Dispatchers.IO) {
             suspendCancellableCoroutine { continuation ->
                 val active = AtomicReference<HttpURLConnection?>()
@@ -72,7 +94,8 @@ internal class GiphyClient(
                 }
                 try {
                     var target = url
-                    var result: ByteArray? = null
+                    var result: MediaDownload? = null
+                    var cacheInfo = MediaCacheInfo()
                     var redirectsFollowed = 0
                     while (result == null) {
                         checkCancelled()
@@ -88,7 +111,12 @@ internal class GiphyClient(
                             connection.setRequestProperty("Accept", accept)
                             connection.setRequestProperty("Accept-Encoding", "identity")
                             connection.setRequestProperty("User-Agent", "LeanTypeDual")
+                            if (bypassCache) {
+                                connection.setRequestProperty("Cache-Control", "no-cache")
+                                connection.setRequestProperty("Pragma", "no-cache")
+                            }
                             val status = connection.responseCode
+                            cacheInfo = GiphyHttpCache.combine(cacheInfo, GiphyHttpCache.read(connection, clock()))
                             checkCancelled()
                             if (status in REDIRECT_CODES) {
                                 // Search redirects are never followed: their query contains the key.
@@ -102,10 +130,10 @@ internal class GiphyClient(
                             statusError(status)?.let {
                                 // CDN URLs carry no API key; denial there does not invalidate the user's key.
                                 throw MediaException(if (redirects && it == MediaError.INVALID_KEY)
-                                    MediaError.INVALID_RESPONSE else it)
+                                    MediaError.INVALID_RESPONSE else it, status)
                             }
                             if (status != HttpURLConnection.HTTP_OK)
-                                throw MediaException(MediaError.INVALID_RESPONSE)
+                                throw MediaException(MediaError.INVALID_RESPONSE, status)
                             val contentType = connection.getHeaderField("Content-Type")
                                 ?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
                             if (contentType != null && contentType != accept &&
@@ -134,7 +162,7 @@ internal class GiphyClient(
                             }
                             if (length != null && length != bytes.size.toLong())
                                 throw MediaException(MediaError.INVALID_RESPONSE)
-                            result = bytes
+                            result = MediaDownload(bytes, cacheInfo)
                         } finally {
                             active.compareAndSet(connection, null)
                             connection.disconnect()
@@ -184,6 +212,11 @@ internal class GiphyClient(
         }
 
         internal fun mediaUrl(value: String): URL {
+            try {
+                MediaCacheValidation.url(value, asset = true)
+            } catch (_: MediaException) {
+                throw MediaException(MediaError.UNSUPPORTED)
+            }
             val url = try { URL(value) } catch (_: Exception) {
                 throw MediaException(MediaError.UNSUPPORTED)
             }
