@@ -197,6 +197,9 @@ LeanTypeDual is available in two purpose-built flavors designed to match your ex
 In Standard, open the emoji picker and choose **GIFs** or **Stickers**.
 Configure your own GIPHY API key in **Advanced settings**; no shared key or account backend is supplied.
 Type a query using your active language/custom layout, then press **Search**. Typing alone does not send requests.
+Emoji and media results occupy a compact pane **above the retained keyboard**, with Expand/Collapse controls.
+The focus button explicitly switches between **Typing in app** and **Typing search query**; results remain visible in both modes.
+The docked IME reserves the pane's height rather than drawing over the conversation. Landscape and floating modes limit expansion.
 Visible previews animate; choosing an item inserts it and returns to the previous typing layout.
 If the field cannot accept the media, **Share** explicitly opens Android's chooser instead. The receiving app controls whether an item appears as an image, animation or native sticker.
 
@@ -206,7 +209,25 @@ Online media is disabled in global or per-app Force Incognito, no-learning and p
 An app's Force Non-Incognito override does not relax these media restrictions.
 The Offline flavor shows Emoji only.
 Keys are stored separately from exported settings and can be removed in the same preference.
-Local sticker imports, packs and remote favorites are not included.
+The last successful media results, query, tab and scroll position are restored when reopening the picker.
+**Refresh** requests a new result explicitly; ordinary reopening does not rerun a search.
+Long press a result for preview and Pin/Unpin controls without inserting it. **Pinned** is a separate,
+newest-first collection of up to 200 provider-ID bookmarks, not a permanent offline media archive.
+Opening a bookmark reuses fresh cached metadata or fetches that ID; removed items can be unpinned.
+Responses marked no-store contribute only an explicitly pinned ID/kind, not persistent descriptive metadata.
+**Media options** includes reduced animation and Clear history and cache (bookmarks are retained).
+For Emoji, **Pin emoji** lets a tap save the chosen emoji/variant instead of inserting it; long press
+a pinned emoji to unpin it. Existing recents and the existing preferred skin-tone setting remain in use.
+Local sticker imports and packs are not included.
+
+The result/media cache is separate from receiver-read staging. It uses a one-hour maximum TTL,
+up to 64 MiB/64 downloaded files with least-recently-used eviction, finite metadata/history bounds,
+and respects shorter HTTP freshness and no-store/no-cache directives. Expired result URLs require an
+explicit refresh; bookmarks do not keep files forever. Key replacement/removal purges cache and
+media bookmarks, including across process restarts. Private, locked, offline and unavailable-network
+contexts do not restore cached media queries/results or initiate provider requests.
+Cached data is app-private and excluded from backup, but is not itself encrypted: this application
+defaults to device-protected storage and enforces unlock/privacy checks before access.
 Selected-media storage is capped at 64 MiB and 64 files. Cleanup protects a selected file for a
 one-hour receiver-read window, then removes expired files when the picker is opened or another
 item is staged. This is not a guarantee of deletion exactly one hour later, and Android may
@@ -216,6 +237,9 @@ GIPHY sets [key quotas and access conditions](https://developers.giphy.com/docs/
 Personal keys do not waive its [API terms](https://support.giphy.com/hc/en-us/articles/360028134111-GIPHY-API-Terms-of-Service)
 or [media storage requirements](https://developers.giphy.com/docs/api/best-practices/).
 Confirm the applicable conditions for your use, including temporary files needed for Android image sharing.
+Caching and bookmark support are experimental implementation choices, **not evidence of approval
+from GIPHY**. HTTP cache headers do not replace the provider's contractual terms. Clearing or evicting
+the cache never deletes or revokes the independent, unexpired receiver staging files.
 The unmodified GIPHY attribution PNGs in `app/src/main/res/drawable-nodpi/` are supplied through
 [GIPHY's official attribution archive](https://media.giphy.com/giphy-attribution-marks.zip);
 GIPHY retains its trademark rights, and use of those marks is governed by its API terms.

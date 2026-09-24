@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Retained-keyboard picker panes with explicit query/app focus, bounded media/result caching, persistent media bookmarks, emoji pins, preview controls and reduced-animation/clear-cache actions.
 - Experimental unified Emoji, GIFs and Stickers picker in online flavors, using a personal GIPHY API key, explicit search, animated previews and an explicit Android Share fallback when a field rejects insertion. Online media is disabled in incognito/no-learning/password contexts; the offline flavor remains emoji-only.
 - Optional swipe-up and swipe-down shortcut menus, aligned with the top and bottom character rows and editable through Secondary layouts. The upper gesture follows the number row when shown. (#156)
 - Optional per-field Literal typing through toolbar, pinned keys or custom layouts: preserve native composition and explicit editing while suspending automatic case, correction, suggestions, spaces, expansion, learning and word glide. No saved typing/privacy preferences or learned words are changed.
