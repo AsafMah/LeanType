@@ -219,8 +219,12 @@ class EmojiPalettesView @JvmOverloads constructor(
     private var emojiTools: LinearLayout? = null
     private var pinningEmoji = false
     private var pinsRow: LinearLayout? = null
-    private fun privateContext() = KeyboardSwitcher.getInstance().latinIME?.isMediaInputPrivate
-        ?: Settings.getValues().mIncognitoModeEnabled
+    private fun privateContext(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= 24 &&
+            context.getSystemService(android.os.UserManager::class.java)?.isUserUnlocked != true) return true
+        return KeyboardSwitcher.getInstance().latinIME?.isMediaInputPrivate
+            ?: Settings.getValues().mIncognitoModeEnabled
+    }
     private var retainedEmojiListener: KeyboardActionListener = KeyboardActionListener.EMPTY_LISTENER
     private fun createRetainedListener() = object : KeyboardActionListener by mKeyboardActionListener {
         private fun activate() {

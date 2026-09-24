@@ -421,6 +421,25 @@ class EmojiSearchKeyboardTest {
     private fun code(code: Int) = searchListener.onCodeInput(code, 0, 0, false)
 
     @Test
+    fun deviceLockRestrictsSavedEmojiStateEvenForAnOrdinaryEditor() {
+        val owner = field(switcher, "mLatinIME")
+        val publicIme = Mockito.mock(LatinIME::class.java)
+        Mockito.`when`(publicIme.isMediaInputPrivate).thenReturn(false)
+        setField(switcher, "mLatinIME", publicIme)
+        val manager = ime.getSystemService(android.os.UserManager::class.java)
+        val method = palettes.javaClass.getDeclaredMethod("privateContext").apply { isAccessible = true }
+        try {
+            org.robolectric.Shadows.shadowOf(manager).setUserUnlocked(true)
+            assertEquals(false, method.invoke(palettes))
+            org.robolectric.Shadows.shadowOf(manager).setUserUnlocked(false)
+            assertEquals(true, method.invoke(palettes))
+        } finally {
+            org.robolectric.Shadows.shadowOf(manager).setUserUnlocked(true)
+            setField(switcher, "mLatinIME", owner)
+        }
+    }
+
+    @Test
     fun emojiPanelKeepsFullCustomKeyboardAndWrapperReservesItsWholeHeight() {
         event(KeyCode.CUSTOM2)
         val original = main.keyboard!!
