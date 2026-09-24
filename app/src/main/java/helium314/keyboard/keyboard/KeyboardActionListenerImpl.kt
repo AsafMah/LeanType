@@ -96,7 +96,8 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
         if (!ProductionFlags.IS_HARDWARE_KEYBOARD_SUPPORTED)
             return false
 
-        if (keyboardSwitcher.isShowingEmojiPalettes) {
+        if (keyboardSwitcher.isShowingEmojiPalettes &&
+            keyboardSwitcher.emojiPalettesView?.isRetainingTypingKeyboard != true) {
             val emojiPalettesView = keyboardSwitcher.emojiPalettesView
             if (emojiPalettesView != null && emojiPalettesView.onHardwareKeyEvent(keyCode, keyEvent)) {
                 mConsumedPhysicalKeys.add(keyCode)

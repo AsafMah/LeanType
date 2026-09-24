@@ -203,7 +203,8 @@ class KeyboardSwitcher private constructor() : KeyboardState.SwitchActions {
         val keyboardView = mKeyboardView ?: return
 
         val currentSettingsValues = Settings.getValues()
-        setMainKeyboardFrame(currentSettingsValues, toggleState)
+        val retaining = mEmojiPalettesView?.shouldRetainPicker == true
+        if (!retaining) setMainKeyboardFrame(currentSettingsValues, toggleState)
         val oldKeyboard = keyboardView.keyboard
         val targetId: Int = if (KeyboardActionListenerImpl.sPersistentTextEditModeActive && (keyboardId == KeyboardId.ELEMENT_ALPHABET
                 || keyboardId == KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED
@@ -218,6 +219,7 @@ class KeyboardSwitcher private constructor() : KeyboardState.SwitchActions {
         val keyboardLayoutSet = mKeyboardLayoutSet ?: return
         val newKeyboard = keyboardLayoutSet.getKeyboard(targetId)
         keyboardView.setKeyboard(newKeyboard)
+        if (retaining) mEmojiPalettesView?.updateRetainedKeyboard(newKeyboard)
         mCurrentInputView?.setKeyboardTopPadding(newKeyboard.mTopPadding)
         keyboardView.setKeyPreviewPopupEnabled(currentSettingsValues.mKeyPreviewPopupOn)
         val richImm = mRichImm ?: RichInputMethodManager.getInstance()

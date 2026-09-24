@@ -49,6 +49,7 @@ import helium314.keyboard.keyboard.media.MediaKind
 import helium314.keyboard.keyboard.media.MediaPickerHost
 import helium314.keyboard.keyboard.media.MediaPickerView
 import helium314.keyboard.keyboard.media.StagedMedia
+import helium314.keyboard.keyboard.media.PickerPaneGeometry
 import helium314.keyboard.keyboard.internal.KeyDrawParams
 import helium314.keyboard.keyboard.internal.KeyVisualAttributes
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
@@ -210,16 +211,85 @@ class EmojiPalettesView @JvmOverloads constructor(
     private var mediaTypes: LinearLayout? = null
     private var mediaPicker: MediaPickerView? = null
     private var mediaReturnElement = KeyboardId.ELEMENT_ALPHABET
+    private var leavingPicker = false
+    private var emojiExpanded = false
+    private var emojiHostTyping = false
+    private val pickerPrefs = context.getSharedPreferences("media_picker_ui", Context.MODE_PRIVATE)
+    private val emojiPins = EmojiPins(context)
+    private var emojiTools: LinearLayout? = null
+    private var pinningEmoji = false
+    private var pinsRow: LinearLayout? = null
+    private fun privateContext() = KeyboardSwitcher.getInstance().latinIME?.isMediaInputPrivate
+        ?: Settings.getValues().mIncognitoModeEnabled
+    private var retainedEmojiListener: KeyboardActionListener = KeyboardActionListener.EMPTY_LISTENER
+    private fun createRetainedListener() = object : KeyboardActionListener by mKeyboardActionListener {
+        private fun activate() {
+            if (!emojiHostTyping) {
+                emojiHostTyping = true
+                KeyboardSwitcher.getInstance().returnFromMediaKeyboard(mediaReturnElement)
+            }
+        }
+        override fun onPressKey(primaryCode: Int, repeatCount: Int, isSinglePointer: Boolean, hapticEvent: HapticEvent) {
+            activate()
+            mKeyboardActionListener.onPressKey(primaryCode, repeatCount, isSinglePointer, hapticEvent)
+        }
+        override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
+            activate()
+            mKeyboardActionListener.onCodeInput(primaryCode, x, y, isKeyRepeat)
+        }
+        override fun onTextInput(text: String?) { activate(); mKeyboardActionListener.onTextInput(text) }
+        override fun onReleaseKey(primaryCode: Int, withSliding: Boolean) =
+            mKeyboardActionListener.onReleaseKey(primaryCode, withSliding)
+        override fun onHorizontalSpaceSwipe(steps: Int) = mKeyboardActionListener.onHorizontalSpaceSwipe(steps)
+        override fun onMoveDeletePointer(steps: Int) = mKeyboardActionListener.onMoveDeletePointer(steps)
+        override fun onUpWithDeletePointerActive() = mKeyboardActionListener.onUpWithDeletePointerActive()
+    }
+    val isRetainingTypingKeyboard: Boolean
+        get() = visibility == VISIBLE && !leavingPicker && !mInSearchMode &&
+            (if (isShowingMedia) mediaPicker?.isTypingInApp == true else initialized)
+    val shouldRetainPicker: Boolean get() = visibility == VISIBLE && !leavingPicker &&
+        (!mInSearchMode || isShowingMedia)
+
+    fun updateRetainedKeyboard(keyboard: Keyboard) {
+        if (isShowingMedia) mediaPicker?.updateTypingKeyboard(keyboard)
+        else if (isRetainingTypingKeyboard) {
+            findViewById<MainKeyboardView>(R.id.bottom_row_keyboard)?.apply {
+                setKeyboard(keyboard)
+                setKeyboardActionListener(retainedEmojiListener)
+                PointerTracker.switchTo(this)
+            }
+        }
+    }
+
+    private fun leavePicker() {
+        leavingPicker = true
+        KeyboardSwitcher.getInstance().returnFromMediaKeyboard(mediaReturnElement)
+    }
 
     val isShowingMedia: Boolean get() = visibility == View.VISIBLE && mediaPicker?.visibility == View.VISIBLE
 
-    fun onMediaBack(): Boolean = mediaPicker?.takeIf { isShowingMedia }?.onBack() ?: false
+    fun onMediaBack(): Boolean {
+        if (visibility != VISIBLE) return false
+        if (isShowingMedia) return mediaPicker?.onBack() ?: false
+        if (mInSearchMode) {
+            stopSearchMode(returnToKeyboard = false)
+            setupRetainedEmojiKeyboard()
+        } else leavePicker()
+        return true
+    }
 
-    fun onMediaHardwareKey(code: Int, event: android.view.KeyEvent): Boolean =
-        mediaPicker?.takeIf { isShowingMedia }?.onHardwareKey(code, event) ?: false
+    fun onMediaHardwareKey(code: Int, event: android.view.KeyEvent): Boolean {
+        if (visibility != VISIBLE) return false
+        if (code == android.view.KeyEvent.KEYCODE_BACK) return if (event.repeatCount == 0) onMediaBack() else true
+        return mediaPicker?.takeIf { isShowingMedia }?.onHardwareKey(code, event) ?: false
+    }
 
     fun stopMediaSession() {
         mediaPicker?.stop()
+        if (privateContext()) {
+            stopPinning()
+            (pinsRow?.parent as? View)?.visibility = GONE
+        }
         KeyboardSwitcher.getInstance().latinIME?.updateMediaBackHandling(false)
     }
 
@@ -243,12 +313,16 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val contentHeight = ResourceUtils.getSecondaryKeyboardHeight(resources, Settings.getValues())
+        val keyboardHeight = ResourceUtils.getKeyboardHeight(resources, Settings.getValues())
+        val contentHeight = if (isShowingMedia) mediaPicker?.preferredHeight() ?: keyboardHeight
+            else keyboardHeight + PickerPaneGeometry.panelHeight(context, keyboardHeight, emojiExpanded)
         val tabsHeight = if (mediaTypes?.visibility == View.VISIBLE) toPx(40f) else 0
+        val toolsHeight = if (emojiTools?.visibility == VISIBLE) toPx(40f) else 0
+        val pinsHeight = if ((pinsRow?.parent as? View)?.visibility == VISIBLE) toPx(40f) else 0
         if (isShowingMedia) {
-            mediaPicker?.layoutParams?.height = (contentHeight - tabsHeight).coerceAtLeast(1)
+            mediaPicker?.layoutParams?.height = contentHeight
         } else if (!mInSearchMode) {
-            mPager?.layoutParams?.height = (mEmojiLayoutParams.emojiKeyboardHeight - tabsHeight).coerceAtLeast(1)
+            mPager?.layoutParams?.height = (contentHeight - keyboardHeight).coerceAtLeast(1)
         }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         val res = context.resources
@@ -260,7 +334,7 @@ class EmojiPalettesView @JvmOverloads constructor(
         val padV = if (isFloating) 0 else (paddingTop + paddingBottom)
         val width = ResourceUtils.getKeyboardWidth(context, Settings.getValues()) + padH
         if (!mInSearchMode) {
-            val height = ResourceUtils.getSecondaryKeyboardHeight(res, Settings.getValues()) + padV
+            val height = contentHeight + tabsHeight + toolsHeight + pinsHeight + padV
             setMeasuredDimension(width, height)
         } else {
             setMeasuredDimension(width, measuredHeight)
@@ -327,18 +401,29 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     private fun initializeMedia() {
+        if (emojiTools == null) initializeEmojiTools()
         if (BuildConfig.FLAVOR == "offline" || mediaTypes != null) return
         val switcher = KeyboardSwitcher.getInstance()
         val host = object : MediaPickerHost {
             override val editorVersion get() = switcher.latinIME?.mediaEditorVersion ?: -1L
             override val privateMode get() = switcher.latinIME?.isMediaInputPrivate ?: true
             override val typingListener get() = mKeyboardActionListener
+            override val networkAvailable: Boolean
+                get() {
+                    val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+                    val network = manager?.activeNetwork ?: return false
+                    return manager.getNetworkCapabilities(network)
+                        ?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+                }
+            override fun beginTyping() {
+                switcher.returnFromMediaKeyboard(mediaReturnElement)
+            }
             override fun supports(mimeType: String): Boolean =
                 switcher.latinIME?.currentInputEditorInfo?.let { MediaContent.supports(it, mimeType) } ?: false
             override fun insert(media: StagedMedia, editorVersion: Long): Boolean =
                 switcher.latinIME?.insertPickerMedia(media, editorVersion) ?: false
             override fun returnToTyping() {
-                switcher.returnFromMediaKeyboard(mediaReturnElement)
+                leavePicker()
             }
         }
         val types = LinearLayout(context).apply { orientation = HORIZONTAL }
@@ -361,7 +446,11 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     private fun showMediaTab(kind: MediaKind) {
+        stopPinning()
+        if (!privateContext()) pickerPrefs.edit().putString("last_tab", kind.name).apply()
         stopSearchMode(returnToKeyboard = false)
+        emojiTools?.visibility = GONE
+        pinsRow?.parent?.let { (it as View).visibility = GONE }
         mediaTypes?.visibility = VISIBLE
         selectMediaType(kind.ordinal + 1)
         mPager?.visibility = GONE
@@ -379,6 +468,7 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     private fun showEmojiTab() {
+        if (!privateContext()) pickerPrefs.edit().putString("last_tab", "EMOJI").apply()
         stopMediaSession()
         mediaPicker?.visibility = GONE
         mediaTypes?.visibility = VISIBLE
@@ -386,9 +476,107 @@ class EmojiPalettesView @JvmOverloads constructor(
         mPager?.visibility = VISIBLE
         mTabStrip?.visibility = VISIBLE
         findViewById<MainKeyboardView>(R.id.bottom_row_keyboard).visibility = VISIBLE
-        setupBottomRowKeyboard(mEditorInfo, mKeyboardActionListener)
+        setupRetainedEmojiKeyboard()
         setupCategoryTabs()
+        emojiTools?.visibility = VISIBLE
+        refreshEmojiPins()
+        KeyboardSwitcher.getInstance().latinIME?.updateMediaBackHandling(true)
         requestLayout()
+    }
+
+    private fun initializeEmojiTools() {
+        val tools = LinearLayout(context)
+        tools.addView(Button(context).apply {
+            text = context.getString(R.string.media_focus_app)
+            isAllCaps = false
+            setOnClickListener { leavePicker() }
+        }, LayoutParams(0, toPx(40f), 1f))
+        tools.addView(Button(context).apply {
+            setText(R.string.emoji_pin_action)
+            isAllCaps = false
+            setOnClickListener {
+                if (privateContext()) return@setOnClickListener
+                pinningEmoji = !pinningEmoji
+                setText(if (pinningEmoji) R.string.emoji_pin_choose else R.string.emoji_pin_action)
+            }
+        }, LayoutParams(0, toPx(40f), 1f))
+        tools.addView(Button(context).apply {
+            setText(R.string.media_expand)
+            isAllCaps = false
+            setOnClickListener {
+                emojiExpanded = !emojiExpanded
+                setText(if (emojiExpanded) R.string.media_collapse else R.string.media_expand)
+                requestLayout()
+            }
+        }, LayoutParams(0, toPx(40f), 1f))
+        tools.addView(Button(context).apply {
+            setText(R.string.prefs_emoji_skin_tone)
+            isAllCaps = false
+            setOnClickListener {
+                context.startActivity(Intent(context, SettingsActivity::class.java)
+                    .putExtra("screen", "preferences").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }, LayoutParams(0, toPx(40f), 1f))
+        emojiTools = tools
+        addView(tools, 0, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, toPx(40f)))
+        val row = LinearLayout(context)
+        pinsRow = row
+        val scroll = android.widget.HorizontalScrollView(context).apply { addView(row); visibility = GONE }
+        addView(scroll, 1, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, toPx(40f)))
+    }
+
+    private fun refreshEmojiPins() {
+        val row = pinsRow ?: return
+        row.removeAllViews()
+        val pins = if (privateContext()) emptyList() else try {
+            emojiPins.items()
+        } catch (e: RuntimeException) {
+            Log.w("EmojiPins", "Cannot read pinned emojis (${e.javaClass.simpleName})")
+            Toast.makeText(context, R.string.media_storage_error, Toast.LENGTH_SHORT).show()
+            emptyList()
+        }
+        (row.parent as View).visibility = if (pins.isEmpty() || isShowingMedia || mInSearchMode) GONE else VISIBLE
+        pins.forEach { emoji ->
+            row.addView(Button(context).apply {
+                text = emoji
+                contentDescription = context.getString(R.string.emoji_pinned_description, emoji)
+                setOnClickListener {
+                    if (pinningEmoji) { toggleEmojiPin(emoji); return@setOnClickListener }
+                    addRecentKey(emoji)
+                    mKeyboardActionListener.onTextInput(emoji)
+                    if (Settings.getValues().mAlphaAfterEmojiInEmojiView) leavePicker()
+                }
+                setOnLongClickListener { toggleEmojiPin(emoji); true }
+            }, LayoutParams(toPx(48f), toPx(40f)))
+        }
+    }
+
+    private fun toggleEmojiPin(emoji: String) {
+        if (privateContext()) return
+        try { emojiPins.toggle(emoji); refreshEmojiPins() }
+        catch (e: RuntimeException) {
+            Log.w("EmojiPins", "Cannot save pinned emoji (${e.javaClass.simpleName})")
+            Toast.makeText(context, R.string.media_storage_error, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun stopPinning() {
+        pinningEmoji = false
+        (emojiTools?.getChildAt(1) as? Button)?.setText(R.string.emoji_pin_action)
+    }
+
+    private fun setupRetainedEmojiKeyboard() {
+        val keyboardView = findViewById<MainKeyboardView>(R.id.bottom_row_keyboard) ?: return
+        val switcher = KeyboardSwitcher.getInstance()
+        val keyboard = switcher.keyboard ?: KeyboardLayoutSet.Builder(context, mEditorInfo)
+            .setSubtype(RichInputMethodManager.getInstance().currentSubtype)
+            .setKeyboardOptions(Settings.getValues())
+            .setKeyboardGeometry(ResourceUtils.getKeyboardWidth(context, Settings.getValues()),
+                ResourceUtils.getKeyboardHeight(resources, Settings.getValues()))
+            .build().getKeyboard(switcher.activeAlphabetKeyboardId)
+        keyboardView.setKeyboard(keyboard)
+        keyboardView.setKeyboardActionListener(retainedEmojiListener)
+        PointerTracker.switchTo(keyboardView)
     }
 
     private fun selectMediaType(selected: Int) {
@@ -474,6 +662,8 @@ class EmojiPalettesView @JvmOverloads constructor(
         Log.d("EmojiSearch", "startSearchMode() called")
         if (mInSearchMode) return
         mInSearchMode = true
+        emojiTools?.visibility = GONE
+        (pinsRow?.parent as? View)?.visibility = GONE
         mediaTypes?.visibility = GONE
 
         mTabStrip?.removeAllViews()
@@ -782,6 +972,8 @@ class EmojiPalettesView @JvmOverloads constructor(
         Log.d("EmojiSearch", "stopSearchMode")
         if (!mInSearchMode) return
         mInSearchMode = false
+        emojiTools?.visibility = VISIBLE
+        refreshEmojiPins()
         mediaTypes?.visibility = VISIBLE
 
         if (returnToKeyboard) {
@@ -806,6 +998,7 @@ class EmojiPalettesView @JvmOverloads constructor(
         }
 
         if (returnToKeyboard && isAttachedToWindow) {
+            leavingPicker = true
             KeyboardSwitcher.getInstance().returnToAlphabetKeyboard()
         }
 
@@ -853,6 +1046,8 @@ class EmojiPalettesView @JvmOverloads constructor(
         keyboardActionListener: KeyboardActionListener?
     ) {
         stopSearchMode(returnToKeyboard = false)
+        leavingPicker = false
+        emojiHostTyping = false
         mediaPicker?.stop()
         mediaPicker?.visibility = GONE
         mediaTypes?.visibility = VISIBLE
@@ -860,13 +1055,16 @@ class EmojiPalettesView @JvmOverloads constructor(
             ?: KeyboardSwitcher.getInstance().activeAlphabetKeyboardId
         mEditorInfo = editorInfo
         mKeyboardActionListener = keyboardActionListener ?: KeyboardActionListener.EMPTY_LISTENER
+        retainedEmojiListener = createRetainedListener()
         initialize()
         selectMediaType(0)
         updateColors()
-        setupBottomRowKeyboard(editorInfo, mKeyboardActionListener)
+        setupRetainedEmojiKeyboard()
         mPager?.visibility = VISIBLE
         mTabStrip?.visibility = VISIBLE
         findViewById<MainKeyboardView>(R.id.bottom_row_keyboard).visibility = VISIBLE
+        emojiTools?.visibility = VISIBLE
+        refreshEmojiPins()
         val params = KeyDrawParams()
         params.updateParams(mEmojiLayoutParams.bottomRowKeyboardHeight, keyVisualAttr)
         setupSidePadding()
@@ -874,6 +1072,15 @@ class EmojiPalettesView @JvmOverloads constructor(
 
         if (Settings.getValues().mSplitToolbar) {
             populateSuggestionBarWithRecents()
+        }
+        KeyboardSwitcher.getInstance().latinIME?.updateMediaBackHandling(true)
+        if (BuildConfig.FLAVOR != "offline" && !privateContext()) {
+            val last = pickerPrefs.getString("last_tab", "EMOJI")
+            MediaKind.entries.firstOrNull { it.name == last }?.let { kind ->
+                post {
+                    if (isShown && !privateContext()) showMediaTab(kind)
+                }
+            }
         }
     }
 
@@ -914,11 +1121,17 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     override fun onPressKey(key: Key) {
+        if (pinningEmoji && !privateContext()) return
         val code = key.code
         mKeyboardActionListener.onPressKey(code, 0, true, HapticEvent.KEY_PRESS)
     }
 
     override fun onReleaseKey(key: Key) {
+        if (pinningEmoji && !privateContext()) {
+            val emoji = key.outputText ?: if (key.code > 0) String(Character.toChars(key.code)) else return
+            toggleEmojiPin(emoji)
+            return
+        }
         addRecentKey(key)
         val code = key.code
         if (code == KeyCode.MULTIPLE_CODE_POINTS) {
@@ -928,6 +1141,7 @@ class EmojiPalettesView @JvmOverloads constructor(
         }
         mKeyboardActionListener.onReleaseKey(code, false)
         if (Settings.getValues().mAlphaAfterEmojiInEmojiView) {
+            leavingPicker = true
             mKeyboardActionListener.onCodeInput(KeyCode.ALPHA, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
         }
     }
@@ -990,6 +1204,7 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     fun stopEmojiPalettes() {
+        stopPinning()
         stopMediaSession()
         if (!initialized) return
 
@@ -1032,6 +1247,10 @@ class EmojiPalettesView @JvmOverloads constructor(
     private fun pushEmojisToSuggestionBar(emojis: List<String>) {
         val stripView = KeyboardSwitcher.getInstance().suggestionStripView ?: return
         stripView.setEmojiSuggestions(emojis) { emoji ->
+            if (pinningEmoji && !privateContext()) {
+                toggleEmojiPin(emoji)
+                return@setEmojiSuggestions
+            }
             mKeyboardActionListener.onTextInput(emoji)
             addRecentKey(emoji)
         }
@@ -1065,7 +1284,13 @@ class EmojiPalettesView @JvmOverloads constructor(
     }
 
     fun setKeyboardActionListener(listener: KeyboardActionListener?) {
+        val previous = retainedEmojiListener
         mKeyboardActionListener = listener ?: KeyboardActionListener.EMPTY_LISTENER
+        retainedEmojiListener = createRetainedListener()
+        if (!isShowingMedia && isRetainingTypingKeyboard &&
+            PointerTracker.replaceKeyboardActionListener(previous, retainedEmojiListener)) {
+            findViewById<MainKeyboardView>(R.id.bottom_row_keyboard)?.setKeyboardActionListener(retainedEmojiListener)
+        }
     }
 
     private fun updateEmojiCategoryPageIdView() {
