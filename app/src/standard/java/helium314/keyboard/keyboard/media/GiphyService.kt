@@ -11,6 +11,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
+import java.util.UUID
 
 class GiphyService internal constructor(
     private val credentials: GiphyCredentialStore,
@@ -20,6 +21,7 @@ class GiphyService internal constructor(
 
     override val available = true
     override val credentialVersion: Long get() = credentials.version
+    override val cacheIdentity: String get() = credentials.cacheIdentity()
     override fun hasApiKey() = getApiKey() != null
     fun getApiKey(): String? = credentials.get()
     fun setApiKey(apiKey: String?) = credentials.set(apiKey)
@@ -31,10 +33,33 @@ class GiphyService internal constructor(
             client.search(key, kind, query, language, offset).also { checkVersion(version) }
         }
 
+    override suspend fun refresh(kind: MediaKind, query: String, language: String, offset: Int): MediaPage =
+        withContext(Dispatchers.IO) {
+            val version = credentialVersion
+            val key = getApiKey() ?: throw MediaException(MediaError.MISSING_KEY)
+            client.search(key, kind, query, language, offset, bypassCache = true).also { checkVersion(version) }
+        }
+
+    override suspend fun lookup(kind: MediaKind, id: String): MediaItem? = lookupResponse(kind, id).item
+
+    override suspend fun lookupResponse(kind: MediaKind, id: String): MediaLookup = withContext(Dispatchers.IO) {
+        val version = credentialVersion
+        val key = getApiKey() ?: throw MediaException(MediaError.MISSING_KEY)
+        client.lookup(key, kind, id).also { checkVersion(version) }
+    }
+
     override suspend fun download(rendition: MediaRendition, maxBytes: Int): ByteArray = withContext(Dispatchers.IO) {
         val version = credentialVersion
         if (!hasApiKey()) throw MediaException(MediaError.MISSING_KEY)
         client.download(rendition, maxBytes).also { checkVersion(version) }
+    }
+
+    override suspend fun downloadResponse(
+        rendition: MediaRendition, maxBytes: Int, bypassCache: Boolean
+    ): MediaDownload = withContext(Dispatchers.IO) {
+        val version = credentialVersion
+        if (!hasApiKey()) throw MediaException(MediaError.MISSING_KEY)
+        client.downloadResponse(rendition, maxBytes, bypassCache).also { checkVersion(version) }
     }
 
     private fun checkVersion(version: Long) {
@@ -66,7 +91,8 @@ class GiphyService internal constructor(
                             EncryptedSharedPreferences.create(app, CREDENTIAL_PREFS_NAME, masterKey,
                                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
-                        }
+                        },
+                        onChanged = { MediaLibraryStorage.clearAll(app) }
                     ).also { sharedCredentials = it }
                 }
             }
@@ -76,7 +102,8 @@ class GiphyService internal constructor(
 /** Deliberately separate from both default preference stores and the backup export allowlist. */
 internal class GiphyCredentialStore(
     private val unlocked: () -> Boolean,
-    private val openPreferences: () -> SharedPreferences
+    private val openPreferences: () -> SharedPreferences,
+    private val onChanged: () -> Unit = {}
 ) {
     private val changes = AtomicLong()
     private var preferences: SharedPreferences? = null
@@ -98,17 +125,37 @@ internal class GiphyCredentialStore(
     }
 
     @Synchronized
-    fun set(value: String?) = secure {
-        val key = value?.trim()?.takeIf { it.isNotEmpty() }
+    fun cacheIdentity(): String = secure {
+        if (writeFailed) throw MediaException(MediaError.STORAGE)
         val prefs = prefs()
-        if (!writeFailed && prefs.getString(KEY, null) == key) return@secure
-        // Invalidate before commit; Android may dispatch its preference listener later on the UI thread.
-        changes.incrementAndGet()
-        writeFailed = true
-        val editor = prefs.edit()
-        if (key == null) editor.remove(KEY) else editor.putString(KEY, key)
-        if (!editor.commit()) throw MediaException(MediaError.STORAGE)
-        writeFailed = false
+        prefs.getString(GENERATION, null)?.let {
+            if (!it.matches(Regex("[a-f0-9-]{36}"))) throw MediaException(MediaError.STORAGE)
+            return@secure it
+        }
+        UUID.randomUUID().toString().also {
+            writeFailed = true
+            if (!prefs.edit().putString(GENERATION, it).commit()) throw MediaException(MediaError.STORAGE)
+            writeFailed = false
+        }
+    }
+
+    fun set(value: String?) = synchronized(MediaLibraryStorage.lock) {
+        synchronized(this) {
+            secure {
+                val key = value?.trim()?.takeIf { it.isNotEmpty() }
+                val prefs = prefs()
+                if (!writeFailed && prefs.getString(KEY, null) == key) return@secure
+                // Cache writers take the same outer lock: no old-generation write can race this purge.
+                changes.incrementAndGet()
+                writeFailed = true
+                onChanged()
+                val editor = prefs.edit()
+                editor.putString(GENERATION, UUID.randomUUID().toString())
+                if (key == null) editor.remove(KEY) else editor.putString(KEY, key)
+                if (!editor.commit()) throw MediaException(MediaError.STORAGE)
+                writeFailed = false
+            }
+        }
     }
 
     private fun prefs(): SharedPreferences = preferences ?: openPreferences().also {
@@ -130,5 +177,6 @@ internal class GiphyCredentialStore(
 
     companion object {
         internal const val KEY = "personal_api_key"
+        internal const val GENERATION = "cache_generation"
     }
 }
