@@ -387,11 +387,8 @@ object TextExpanderUtils {
         if (textBeforeCursor == null || !isEnabled(context)) return null
         getShortcuts(context)
         val compiledList = cachedCompiledList ?: return null
-        val fullText = if (word != null && !textBeforeCursor.endsWith(word, ignoreCase = true)) {
-            textBeforeCursor + word
-        } else {
-            textBeforeCursor
-        }
+        // A pending correction is not text the user typed and must not trigger a macro.
+        val fullText = textBeforeCursor
         
         for (item in compiledList) {
             val entry = item.entry
