@@ -150,6 +150,26 @@ class MediaPickerInteractionTest {
     }
 
     @Test fun realTouchRoutingReacquiresQueryListenerAndRestoresHost() {
+        assertQueryTouchRouting()
+    }
+
+    @Test fun literalModeKeepsSeparateQueryTypingAndExplicitMediaSubmission() {
+        val editor = EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT }
+        org.robolectric.util.ReflectionHelpers.setField(ime, "mInputEditorInfo", editor)
+        ime.keyboardActionListener.onCodeInput(
+            helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode.TOGGLE_LITERAL_MODE, 0, 0, false
+        )
+        assertTrue(ime.isLiteralMode)
+        assertQueryTouchRouting()
+        assertTrue(source.requests.isEmpty())
+        picker.findViewById<View>(R.id.media_submit).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(listOf(MediaKind.GIF to "a"), source.requests)
+        assertTrue(ime.isLiteralMode)
+        Mockito.verifyNoInteractions(host.typingListener)
+    }
+
+    private fun assertQueryTouchRouting() {
         // Reproduce the palette bottom-row setup replacing PointerTracker's global listener.
         PointerTracker.setKeyboardActionListener(host.typingListener)
         picker.findViewById<EditText>(R.id.media_query).performClick()
