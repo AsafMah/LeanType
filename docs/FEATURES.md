@@ -675,18 +675,37 @@ Every toolbar item also has a lowercase JSON `label` keyword. For example:
 
 These invoke the same primary action as the toolbar button, including any customized primary
 keycode. They do not invoke its long-press action or insert the keyword as text. To bind a fixed
-action regardless of toolbar customization, use an explicit numeric `code` instead. The keyword
-does not bypass an action's Android version, build flavor, permission, or configuration requirements.
+action regardless of toolbar customization, use an explicit numeric `code` instead.
 
 | Group | Keywords |
 | --- | --- |
-| Views and modes | `numpad`, `handwriting`, `one_handed`, `split`, `floating`, `incognito`, `touchpad`, `text_edit`, `autocorrect`, `auto_cap`, `force_auto_caps`, `emoji`, `select_mode` |
+| Views and modes | `numpad`, `handwriting`, `one_handed`, `split`, `floating`, `incognito`, `touchpad`, `text_edit`, `autocorrect`, `auto_cap`, `force_auto_caps`, `literal`, `emoji`, `select_mode` |
 | Clipboard and editing | `clipboard`, `clipboard_search`, `select_all`, `select_word`, `copy`, `cut`, `paste`, `clear_clipboard`, `close_history`, `undo`, `redo` |
 | Navigation | `left`, `right`, `up`, `down`, `word_left`, `word_right`, `page_up`, `page_down`, `full_left`, `full_right`, `page_start`, `page_end` |
 | Tools | `voice`, `settings`, `proofread`, `translate`, `ocr`, `custom_ai_1` through `custom_ai_10` |
 
 Custom AI keywords use the corresponding configured prompt. `auto_cap` and `force_auto_caps`
 invoke the capitalization controls described above.
+
+### Literal typing
+
+Add **Literal typing** in toolbar customization, pin it, or use `{"label":"literal"}`
+in a JSON layout (`-10078` binds the fixed action). It is optional and is not inserted
+into existing toolbar arrangements automatically. Its activated state shows whether
+the current field is in Literal mode; Autocorrect shows effectively off while active.
+
+Toggling finishes the visible composing text exactly as typed and preserves the cursor.
+While active, automatic capitalization, correction (including forced per-app correction),
+dictionary/app suggestions, next-word predictions, automatic spacing and double-space
+periods, text expansion, word learning/unlearning and word glide are suspended.
+Native combining input such as Hangul, manual Shift/Caps Lock, explicit case, symbols,
+navigation, deletion, the field's normal Enter action and paste remain available.
+Row-swipe shortcuts and the separate emoji/media query keyboard remain independent.
+
+The mode survives hiding/reopening the keyboard and a confirmed same-field restart.
+It resets on a new field/input type, a new non-restarting input session, real input
+finish or service destruction. Turning it off restores the current saved settings;
+it neither persists its own state nor changes privacy flags, preferences or learned words.
 
 ---
 
@@ -795,6 +814,7 @@ invoke the capitalization controls described above.
 | **`-233`** | `VOICE_INPUT` | Initiates voice typing (Whisper on-device or system voice IME). |
 | **`-244`** | `TOGGLE_INCOGNITO_MODE`| Toggles incognito private mode (disables dictionary learning). |
 | **`-245`** | `TOGGLE_AUTOCORRECT` | Instantly toggles auto-correction on or off. |
+| **`-10078`** | `TOGGLE_LITERAL_MODE` | Temporarily toggles Literal typing for the current field. |
 | **`-10079`** | `TOGGLE_AUTO_CAP` | Toggles the saved Auto-capitalization setting. |
 | **`-10080`** | `TOGGLE_FORCE_AUTO_CAPS` | Toggles the saved Force auto-capitalization setting. |
 | **`-301`** | `SETTINGS` | Opens LeanType Settings. |
@@ -873,4 +893,3 @@ invoke the capitalization controls described above.
 | **`12288`** | `CJK_SPACE` | CJK Fullwidth Ideographic Space (`\u3000`). |
 | **`-902`** | `MULTIPLE_CODE_POINTS` | Special container key producing multi-character text sequences. |
 | **`-10008`** | `NOT_SPECIFIED` | Structural dummy spacer key (disables key interaction, renders blank). |
-
