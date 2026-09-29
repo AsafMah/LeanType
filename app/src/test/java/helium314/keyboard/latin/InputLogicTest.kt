@@ -457,6 +457,38 @@ class InputLogicTest {
         assertTypedShortcutExpands("${TextExpanderUtils.REGEX_PREFIX}cpp")
     }
 
+    @Test fun prefixedRegexExpansionUsesTypedLengthNotCorrectionLength() {
+        for (correction in listOf("python", "p")) {
+            configureExpansion("${TextExpanderUtils.REGEX_PREFIX}\\.py", false)
+            setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
+            setText("keep .")
+            typeNoAssert("py")
+            assertEquals("py", composer.getTypedWord())
+            composer.setAutoCorrection(
+                SuggestedWordInfo(correction, "", 0, 0, Mockito.mock(Dictionary::class.java), 0, 0)
+            )
+            typeNoAssert(" ")
+            assertEquals("keep EXPANDED ", text, "correction=$correction")
+            assertEquals(text.length, cursor)
+            checkConnectionConsistency()
+        }
+    }
+
+    @Test fun manuallyPickedSuggestionDoesNotSynthesizeShortcutText() {
+        for (shortcut in listOf("cpp", "${TextExpanderUtils.REGEX_PREFIX}cpp")) {
+            configureExpansion(shortcut, false)
+            typeNoAssert("cps")
+            pickSuggestion("cpp")
+            assertEquals("cpp", text)
+            checkConnectionConsistency()
+        }
+        configureExpansion("cpp", false)
+        typeNoAssert("cpp")
+        pickSuggestion("chosen")
+        assertEquals("chosen", text)
+        checkConnectionConsistency()
+    }
+
     private fun assertTypedShortcutExpands(shortcut: String) {
         for (immediate in listOf(false, true)) {
             configureExpansion(shortcut, immediate)
