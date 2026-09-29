@@ -465,7 +465,7 @@
     <string name="gesture_data_active_start">Započni aktivno prikupljanje</string>
     <string name="gesture_data_active_stop">Zaustavi aktivno prikupljanje</string>
     <string name="gesture_data_share_all">Podijeli sve riječi (%s)</string>
-<string name="ime_name">LeanType</string>
+<string name="ime_name">LeanTypeDual</string>
     <string name="settings_screen_suggestions">Prijedlozi</string>
     <string name="settings_category_prediction">Predviđanje &amp; učenje</string>
     <string name="settings_category_smart_suggestions">Pametni prijedlozi &amp; alati</string>
