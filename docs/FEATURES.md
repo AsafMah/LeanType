@@ -664,6 +664,29 @@ uppercase letters suppress both effects. Accessibility state descriptions
 distinguish off, on, and saved-on-but-inactive states. Existing field-capitalization
 and correction rules are unchanged.
 
+### Toolbar actions as layout keywords
+
+Every toolbar item also has a lowercase JSON `label` keyword. For example:
+
+```json
+[[{"label":"autocorrect"},{"label":"incognito"},{"label":"select_mode"},{"label":"custom_ai_1"}]]
+```
+
+These invoke the same primary action as the toolbar button, including any customized primary
+keycode. They do not invoke its long-press action or insert the keyword as text. To bind a fixed
+action regardless of toolbar customization, use an explicit numeric `code` instead. The keyword
+does not bypass an action's Android version, build flavor, permission, or configuration requirements.
+
+| Group | Keywords |
+| --- | --- |
+| Views and modes | `numpad`, `handwriting`, `one_handed`, `split`, `floating`, `incognito`, `touchpad`, `text_edit`, `autocorrect`, `auto_cap`, `force_auto_caps`, `emoji`, `select_mode` |
+| Clipboard and editing | `clipboard`, `clipboard_search`, `select_all`, `select_word`, `copy`, `cut`, `paste`, `clear_clipboard`, `close_history`, `undo`, `redo` |
+| Navigation | `left`, `right`, `up`, `down`, `word_left`, `word_right`, `page_up`, `page_down`, `full_left`, `full_right`, `page_start`, `page_end` |
+| Tools | `voice`, `settings`, `proofread`, `translate`, `ocr`, `custom_ai_1` through `custom_ai_10` |
+
+Custom AI keywords use the corresponding configured prompt. `auto_cap` and `force_auto_caps`
+invoke the capitalization controls described above.
+
 ---
 
 ### 1. ✏️ Text Editing & Deletion
@@ -849,5 +872,4 @@ and correction rules are unchanged.
 | **`12288`** | `CJK_SPACE` | CJK Fullwidth Ideographic Space (`\u3000`). |
 | **`-902`** | `MULTIPLE_CODE_POINTS` | Special container key producing multi-character text sequences. |
 | **`-10008`** | `NOT_SPECIFIED` | Structural dummy spacer key (disables key interaction, renders blank). |
-
 

@@ -29,8 +29,11 @@ import helium314.keyboard.latin.utils.LayoutType.Companion.toExtraValue
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
 import helium314.keyboard.latin.utils.POPUP_KEYS_LAYOUT
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional
+import helium314.keyboard.latin.utils.ToolbarKey
 import helium314.keyboard.latin.utils.clearCustomToolbarKeyCodes
+import helium314.keyboard.latin.utils.getCodeForToolbarKey
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.utils.toolbarKeyStrings
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
@@ -89,6 +92,39 @@ class ParserTest {
         assertIsExpected("""[[{ "label": "space" }]]""", Expected(32, background = Key.BACKGROUND_TYPE_SPACEBAR))
         // action -> ACTION
         assertIsExpected("""[[{ "label": "action" }]]""", Expected(10, background = Key.BACKGROUND_TYPE_ACTION))
+    }
+
+    @Test fun everyToolbarActionHasMatchingJsonKeyword() {
+        for (toolbarKey in ToolbarKey.entries) {
+            val label = toolbarKeyStrings.getValue(toolbarKey)
+            val key = LayoutParser.parseJsonString("""[[{"label":"$label"}]]""")
+                .single().single().compute(params)!!.toKeyParams(params)
+            assertEquals(getCodeForToolbarKey(toolbarKey), key.mCode, label)
+            assertTrue(key.mCode < 0, "$label must be an action, not inserted text")
+            assertEquals(null, key.outputText, label)
+        }
+    }
+
+    @Test fun toolbarJsonKeywordsRespectCustomizedPrimaryCodes() {
+        val prefs = latinIME.prefs()
+        val original = prefs.getString(Settings.PREF_TOOLBAR_CUSTOM_KEY_CODES, null)
+        try {
+            for (toolbarKey in ToolbarKey.entries) {
+                prefs.edit {
+                    putString(Settings.PREF_TOOLBAR_CUSTOM_KEY_CODES, "${toolbarKey.name},${KeyCode.ESCAPE},")
+                }
+                clearCustomToolbarKeyCodes()
+                val label = toolbarKeyStrings.getValue(toolbarKey)
+                val key = LayoutParser.parseJsonString("""[[{"label":"$label"}]]""")
+                    .single().single().compute(params)!!.toKeyParams(params)
+                assertEquals(KeyCode.ESCAPE, getCodeForToolbarKey(toolbarKey), label)
+                assertEquals(KeyCode.ESCAPE, key.mCode, label)
+                assertEquals(null, key.outputText, label)
+            }
+        } finally {
+            prefs.edit { putString(Settings.PREF_TOOLBAR_CUSTOM_KEY_CODES, original) }
+            clearCustomToolbarKeyCodes()
+        }
     }
 
     @Test fun simpleParser() {
