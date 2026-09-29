@@ -436,6 +436,7 @@ Prevent offensive, sensitive, or unwanted words from ever appearing in the sugge
 LeanType learns your vocabulary organically as you type while providing deep granular control over the suggestion scoring pipeline:
 - **Adjustable Learning Threshold**: Choose how many times a new word must be typed (1 to 5 times) before it is automatically added to your personal dictionary.
 - **Session Word Boost**: Temporarily boosts recently typed, verified words for immediate next-word ranking during active typing sessions.
+- **Missing-Apostrophe Corrections**: With auto-correction enabled, an unrecognized word such as `youre` can select an existing `you're` candidate even when another suggestion ranks first. The conventional spelling is preferred when available, while Shift/CapsLock transformations and explicit dictionary replacements are preserved. Missing dictionary candidates are not created.
 - **Suggestion Balance Master Sliders**: Fine-tune the exact scoring weights between unigram frequency, bigram/ngram context, and dictionary matches (**Settings → Suggestions → Suggestion Balance**).
 - **SuggestTrace & ScoreAudit Telemetry**: Built-in developer/power-user instrumentation to audit why specific words are being predicted or auto-corrected, backed by early beam pruning (`BEAM_DELTA = 60`) for optimal typing latency.
 - **Google Dictionary Import**: Import existing user dictionaries exported from Gboard.

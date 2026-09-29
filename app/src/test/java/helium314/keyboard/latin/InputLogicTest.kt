@@ -12,6 +12,7 @@ import android.view.inputmethod.*
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import org.junit.Ignore
+import helium314.keyboard.ShadowBinaryDictionaryUtils
 import helium314.keyboard.ShadowInputMethodManager2
 import helium314.keyboard.ShadowLocaleManagerCompat
 import helium314.keyboard.ShadowProximityInfo
@@ -46,7 +47,9 @@ import helium314.keyboard.latin.inputlogic.InputLogicHandler
 import helium314.keyboard.latin.inputlogic.SpaceState
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.suggestions.SuggestionStripView
+import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.utils.ScriptUtils
+import helium314.keyboard.latin.utils.SuggestionResults
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.ToolbarKey
 import helium314.keyboard.latin.utils.createToolbarKey
@@ -81,6 +84,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.assertNotNull
+import helium314.keyboard.keyboard.KeyboardId
+import helium314.keyboard.keyboard.KeyboardLayoutSet
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [
@@ -670,6 +675,41 @@ class InputLogicTest {
         input(' ')
         assertEquals("hello ", text)
         assertEquals("", composingText)
+    }
+
+    @Config(shadows = [ShadowFacilitator::class, ShadowBinaryDictionaryUtils::class])
+    @Test fun `space commits selected contraction rather than higher ranked distractors`() {
+        for (distractor in listOf("Youre", "yours", "You're")) {
+            typingSuggestionResults = SuggestionResults(0, false, false)
+            reset()
+            latinIME.prefs().edit { putBoolean(Settings.PREF_MORE_AUTO_CORRECTION, true) }
+            chainInput("I think youre")
+            assertEquals("youre", composer.typedWord)
+            assertTrue(settingsValues.mAutoCorrectEnabled)
+            typingSuggestionResults = SuggestionResults(2, false, false).apply {
+                add(suggestion(distractor, 900000, Locale.ENGLISH))
+                add(suggestion("you're", 100000, Locale.ENGLISH))
+            }
+            val keyboard = Keyboard(KeyboardParams().apply {
+                mId = KeyboardLayoutSet.getFakeKeyboardId(KeyboardId.ELEMENT_ALPHABET)
+                GRID_WIDTH = 1
+                GRID_HEIGHT = 1
+            })
+            val result = inputLogic.suggest.getSuggestedWords(
+                composer, NgramContext(NgramContext.WordInfo("think")), keyboard,
+                SettingsValuesForSuggestion(false, false, ""), true, SuggestedWords.INPUT_STYLE_TYPING, 42
+            )
+            inputLogic.setSuggestedWords(result)
+            assertTrue(result.mWillAutoCorrect)
+            assertEquals("you're", composer.getAutoCorrectionOrNull()?.mWord)
+            latinIME.mHandler.cancelUpdateSuggestionStrip()
+            latinIME.onEvent(Event.createEventForCodePointFromUnknownSource(Constants.CODE_SPACE))
+            handleMessages()
+
+            assertEquals("I think you're ", text)
+            assertEquals("", composingText)
+            checkConnectionConsistency()
+        }
     }
 
     @Test fun delete() {
