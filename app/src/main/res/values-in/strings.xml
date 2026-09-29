@@ -421,7 +421,7 @@
     <string name="backspace_reverts_autocorrect">Backspace mengembalikan koreksi otomatis</string>
     <string name="prefs_emoji_skin_tone">Warna kulit emoji bawaan</string>
     <string name="prefs_emoji_skin_tone_neutral">Netral</string>
-<string name="ime_name">LeanType</string>
+<string name="ime_name">LeanTypeDual</string>
     <string name="suggest_emojis">Sarankan emoji</string>
     <string name="suggest_emojis_summary">Gunakan kamus emoji dalam saran normal</string>
     <string name="inline_emoji_search">Pencarian emoji sebaris</string>
@@ -1056,4 +1056,3 @@
     <string name="app_quirks_badge_autocorrect_on">Koreksi Otomatis AKTIF</string>
     <string name="app_quirks_badge_autocorrect_off">Koreksi Otomatis MATI</string>
 </resources>
-

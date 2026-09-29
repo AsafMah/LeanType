@@ -788,7 +788,7 @@
     <string name="app_quirks_autocorrect_disable">Siempre desactivada</string>
     <string name="app_quirks_badge_autocorrect_on">Autocorrección SÍ</string>
     <string name="app_quirks_badge_autocorrect_off">Autocorrección NO</string>
-<string name="ime_name">LeanType</string>
+<string name="ime_name">LeanTypeDual</string>
     <string name="settings_category_configuration">Configuración</string>
     <string name="settings_category_visuals">Visuales y vista previa</string>
     <string name="settings_category_behavior">Comportamiento</string>
@@ -1092,5 +1092,4 @@
     <string name="custom_ai_keys_tag_label">Etiqueta / Rótulo (ej. \'Francés\', \'Gramática\', \'Reescribir\')</string>
     <string name="custom_ai_keys_selected_functions">Funciones de palabras clave seleccionadas:</string>
 </resources>
-
 

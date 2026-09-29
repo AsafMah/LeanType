@@ -492,7 +492,7 @@
     <string name="gesture_data_reminder_message">היי לך!\n בעבר השתמשת באיסוף נתוני המחוות, אך לא הוספת נתונים מזה זמן מה. האם ברצונך לנדב נתונים שוב?</string>
     <string name="gesture_data_take_me_there">מעבר למסך כעת</string>
     <string name="gesture_data_links">מידע על איסוף נתוני שימוש במחוות:</string>
-<string name="ime_name">LeanType</string>
+<string name="ime_name">LeanTypeDual</string>
     <string name="settings_screen_suggestions">הצעות</string>
     <string name="settings_category_prediction">חיזוי ולמידה</string>
     <string name="settings_category_smart_suggestions">הצעות חכמות וכלים</string>
@@ -1100,4 +1100,3 @@
     <string name="app_quirks_badge_autocorrect_on">תיקון אוטומטי פעיל</string>
     <string name="app_quirks_badge_autocorrect_off">תיקון אוטומטי כבוי</string>
 </resources>
-

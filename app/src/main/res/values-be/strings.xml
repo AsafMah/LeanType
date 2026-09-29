@@ -415,7 +415,7 @@
     <string name="prefs_emoji_skin_tone_neutral">Нейтральны</string>
     <string name="subtype_generic_phonetic">%s (Фанетыка)</string>
     <string name="after_numpad_and_space">Націску Enter або прабелу пасля іншых клавіш на лічбавай клавіятуры</string>
-<string name="ime_name">LeanType</string>
+<string name="ime_name">LeanTypeDual</string>
     <string name="suggest_emojis">Прапаноўваць эмодзі</string>
     <string name="suggest_emojis_summary">Выкарыстоўваць слоўнік эмодзі ў звычайных прапановах</string>
     <string name="inline_emoji_search">Убудаваны пошук эмодзі</string>
@@ -1085,4 +1085,3 @@
     <string name="app_quirks_badge_autocorrect_on">Аўтавыпраўленне ЎКЛ</string>
     <string name="app_quirks_badge_autocorrect_off">Аўтавыпраўленне ВЫКЛ</string>
 </resources>
-

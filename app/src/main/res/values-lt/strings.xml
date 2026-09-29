@@ -437,7 +437,7 @@
     <string name="delete_confirmation">Tikrai pašalinti %s?</string>
     <string name="name_invalid">Netinkamas vardas</string>
     <string name="custom_subtype">Pasirinktinis tipas</string>
-<string name="ime_name">LeanType</string>
+<string name="ime_name">LeanTypeDual</string>
     <string name="settings_screen_suggestions">Pasiūlymai</string>
     <string name="settings_category_prediction">Prognozavimas ir mokymasis</string>
     <string name="settings_category_smart_suggestions">Išmanūs pasiūlymai ir įrankiai</string>
@@ -1088,4 +1088,3 @@
     <string name="ai_allow_insecure_connections_title">Leisti nesaugius ryšius</string>
     <string name="ai_allow_insecure_connections_summary">Leisti HTTP ryšius ir nepaisyti SSL sertifikato klaidų. Įspėjimas: įvestis tampa pažeidžiama pasiklausymui vietiniame tinkle.</string>
 </resources>
-

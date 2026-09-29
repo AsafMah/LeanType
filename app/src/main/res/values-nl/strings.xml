@@ -1048,7 +1048,7 @@
     <string name="dictionary_update_available">Update beschikbaar</string>
     <string name="dictionary_source_title">Woordenboekrepository</string>
     <string name="dictionary_source_summary">Blader door of download woordenboeken rechtstreeks in uw browser</string>
-    <string name="ime_name">LeanType</string>
+    <string name="ime_name">LeanTypeDual</string>
     <string name="settings_category_configuration">Configuratie</string>
     <string name="settings_category_visuals">Visueel &amp; Voorbeeld</string>
     <string name="settings_category_behavior">Gedrag</string>
@@ -1140,4 +1140,3 @@
     <string name="settings_category_prediction">Voorspelling &amp; leren</string>
     <string name="settings_category_smart_suggestions">Slimme suggesties &amp; tools</string>
 </resources>
-

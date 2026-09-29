@@ -428,7 +428,7 @@
     <string name="about_wiki_link_description">Wiki-ul poate fi îmbunătățit de orice utilizator GitHub!</string>
     <string name="landscape">Peisaj</string>
     <string name="label_zwnj_key" tools:keep="@string/label_zwnj_key">Separare fără spațiu</string>
-<string name="ime_name">LeanType</string>
+<string name="ime_name">LeanTypeDual</string>
     <string name="inline_emoji_search">Căutare emoji inline</string>
     <string name="inline_emoji_search_summary">Sugerează doar emoji-uri atunci când un cuvânt este precedat de două puncte</string>
     <string name="emoji_dictionary_required">Este necesar un dicționar de emoji-uri pentru ca această funcție să funcționeze. Dicționarele în format .dict pot fi descărcate %s.</string>
@@ -1087,4 +1087,3 @@
     <string name="app_quirks_badge_autocorrect_on">Corectare Automată PORNITĂ</string>
     <string name="app_quirks_badge_autocorrect_off">Corectare Automată OPRITĂ</string>
 </resources>
-
