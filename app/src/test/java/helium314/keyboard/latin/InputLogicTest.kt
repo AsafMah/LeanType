@@ -80,6 +80,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [
@@ -1042,6 +1043,30 @@ class InputLogicTest {
             typeNoAssert(" ")
             assertEquals("keep EXPANDED ", text, "correction=$correction")
             assertEquals(text.length, cursor)
+            assertEquals(emptyList(), committedCorrections)
+            checkConnectionConsistency()
+        }
+    }
+
+    @Test fun unexpandedAutoCorrectionStillNotifiesEditor() {
+        for (expansionEnabled in listOf(false, true)) {
+            configureExpansion("${TextExpanderUtils.REGEX_PREFIX}\\.zz", false)
+            latinIME.prefs().edit {
+                putBoolean(TextExpanderUtils.PREF_ENABLED, expansionEnabled)
+            }
+            setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
+            setText("keep .")
+            typeNoAssert("py")
+            composer.setAutoCorrection(
+                SuggestedWordInfo("python", "", 0, 0, Mockito.mock(Dictionary::class.java), 0, 0)
+            )
+            typeNoAssert(" ")
+            assertEquals("keep .python ", text)
+            assertEquals(text.length, cursor)
+            val correction = assertNotNull(committedCorrections.single())
+            assertEquals(6, correction.offset)
+            assertEquals("py", correction.oldText.toString())
+            assertEquals("python", correction.newText.toString())
             checkConnectionConsistency()
         }
     }
@@ -2001,6 +2026,7 @@ class InputLogicTest {
         lastNgramContext = ""
         addedWords.clear()
         ngramContexts.clear()
+        committedCorrections.clear()
         messages.clear()
         delayedMessages.clear()
 
@@ -2251,6 +2277,7 @@ private var selectionStart = 0
 private var selectionEnd = 0
 private var composingStart = -1
 private var composingEnd = -1
+private val committedCorrections = mutableListOf<CorrectionInfo?>()
 // convenience for access
 private val textBeforeCursor get() = text.substring(0, selectionStart)
 private val textAfterCursor get() = text.substring(selectionEnd)
@@ -2408,8 +2435,10 @@ private val ic = object : InputConnection {
             it.selectionEnd = selectionEnd
         }
     }
-    // only effect is flashing, so whatever...
-    override fun commitCorrection(p0: CorrectionInfo?): Boolean = true
+    override fun commitCorrection(p0: CorrectionInfo?): Boolean {
+        committedCorrections.add(p0)
+        return true
+    }
     override fun getCursorCapsMode(p0: Int): Int {
         lastCursorCapsRequest = p0
         return TextUtils.getCapsMode(text, selectionStart, p0)

@@ -2336,7 +2336,8 @@ class InputLogic(
         val stringToCommit = autoCorrectionOrNull?.mWord ?: typedWord
         if (stringToCommit != null) {
             val isBatchMode = mWordComposer.isBatchMode()
-            commitChosenWord(settingsValues, stringToCommit, LastComposedWord.COMMIT_TYPE_DECIDED_WORD, separator)
+            val expanded = commitChosenWord(settingsValues, stringToCommit, LastComposedWord.COMMIT_TYPE_DECIDED_WORD, separator)
+            if (expanded) return
             if (typedWord != stringToCommit) {
                 mConnection.commitCorrection(
                     CorrectionInfo(
@@ -2356,12 +2357,13 @@ class InputLogic(
         }
     }
 
+    /** Returns whether a shortcut expansion replaced the chosen word. */
     private fun commitChosenWord(
         settingsValues: SettingsValues,
         chosenWord: String,
         commitType: Int,
         separatorString: String
-    ) {
+    ): Boolean {
         var startTimeMillis = 0L
         if (DebugFlags.DEBUG_ENABLED) {
             startTimeMillis = System.currentTimeMillis()
@@ -2387,7 +2389,7 @@ class InputLogic(
                         mConnection.deleteTextBeforeCursor(result.prefixLength + chosenWord.length)
                         commitExpandedText(result.matchedString, result.expandedText)
                         resetComposingState(true)
-                        return
+                        return true
                     }
                 }
             }
@@ -2426,6 +2428,7 @@ class InputLogic(
             val runTimeMillis = System.currentTimeMillis() - startTimeMillis
             Log.d(TAG, "commitChosenWord() : $runTimeMillis ms to run WordComposer.commitWord()")
         }
+        return false
     }
 
     private fun wrapSelection(start: Int, end: Int) {
