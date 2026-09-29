@@ -570,13 +570,124 @@ class SwipeShortcutMenuTest(private val glideEnabled: Boolean) {
         }
     }
 
+    @Test
+    fun `honeycomb edge row swipes select shortcuts without entering word glide`() {
+        keyboard = buildKeyboard(layout = "hex_typewise")
+        view.setKeyboard(keyboard)
+        assertTrue(keyboard.mId.isHexagonal)
+        for (direction in listOf(UP, DOWN)) {
+            val row = keyboard.swipeShortcutRows.getValue(direction)
+            val source = row.keys.first()
+            val expected = SwipeShortcutMenu.Builder(context, keyboard, row, direction)
+                .build().sortedKeys.first().code
+            swipe(source, direction)
+            verify(listener).onCodeInput(eq(expected), anyInt(), anyInt(), eq(false))
+            verify(listener, never()).onCodeInput(eq(source.code), anyInt(), anyInt(), anyBoolean())
+            verify(listener, never()).onStartBatchInput()
+            clearInvocations(listener)
+        }
+    }
+
+    @Test
+    fun `independent space swipe directions remain available with row menus enabled`() {
+        context.prefs().edit()
+            .putString(Settings.PREF_SPACE_VERTICAL_SWIPE, "move_cursor")
+            .putString(Settings.PREF_SPACE_VERTICAL_DOWN_SWIPE, "switch_language")
+            .apply()
+        Settings.getInstance().loadSettings(context)
+        val space = keyboard.getKey(' '.code)!!
+        for ((direction, action) in listOf(
+            UP to KeyboardActionListener.SWIPE_MOVE_CURSOR,
+            DOWN to KeyboardActionListener.SWIPE_SWITCH_LANGUAGE
+        )) {
+            val x = center(space)
+            val y = space.y + space.height / 2
+            val endY = y + if (direction == UP) -space.height * 2 else space.height * 2
+            event(MotionEvent.ACTION_DOWN, x, y)
+            event(MotionEvent.ACTION_MOVE, x, endY)
+            assertFalse(view.isShowingPopupKeysPanel())
+            verify(listener).onVerticalSpaceSwipe(anyInt(), eq(action))
+            event(MotionEvent.ACTION_UP, x, endY)
+            verify(listener).onEndSpaceSwipe()
+            clearInvocations(listener)
+        }
+    }
+
+    @Test
+    fun `ordinary popup retains proportional offset clamp and translated selection`() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val root = FrameLayout(activity)
+        root.addView(view, FrameLayout.LayoutParams(700, 400))
+        activity.setContentView(root)
+        try {
+            for (parentTop in listOf(0, 400)) {
+                (view.layoutParams as FrameLayout.LayoutParams).topMargin = parentTop
+                root.measure(exact(1000), exact(1000))
+                root.layout(0, 0, 1000, 1000)
+                val location = IntArray(2)
+                view.getLocationInWindow(location)
+                for (percent in listOf(0f, 10f)) {
+                    context.prefs().edit()
+                        .putFloat(Settings.PREF_POPUP_KEYS_VERTICAL_OFFSET_PERCENT, percent)
+                        .apply()
+                    Settings.getInstance().loadSettings(context)
+                    val source = keyboard.getKey('e'.code)!!
+                    val popup = assertNotNull(view.showPopupKeysKeyboard(
+                        source, PointerTracker.getPointerTracker(0)
+                    )) as PopupKeysKeyboardView
+                    val container = popup.getContainerView()
+                    val expectedY = (location[1] + source.y - container.measuredHeight +
+                        container.paddingBottom + popup.paddingBottom -
+                        (keyboard.mOccupiedHeight * percent / 100).toInt()).coerceAtLeast(0)
+                    assertEquals(expectedY.toFloat(), container.y)
+                    assertEquals(container.measuredHeight.toFloat(), container.pivotY)
+                    val key = assertNotNull(popup.keyboard).sortedKeys.first()
+                    val parentY = container.y.toInt() - location[1] + container.paddingTop +
+                        popup.y.toInt() + popup.paddingTop + key.y + key.height / 2
+                    val translatedY = popup.translateY(parentY)
+                    assertEquals(popup.paddingTop + key.y + key.height / 2, translatedY)
+                    popup.onDownEvent(popup.paddingLeft + center(key), translatedY, 0, eventTime)
+                    popup.onUpEvent(popup.paddingLeft + center(key), translatedY, 0, eventTime)
+                    verify(listener).onCodeInput(eq(key.code), anyInt(), anyInt(), eq(false))
+                    popup.dismissPopupKeysPanel()
+                    clearInvocations(listener)
+                }
+            }
+        } finally {
+            context.prefs().edit().remove(Settings.PREF_POPUP_KEYS_VERTICAL_OFFSET_PERCENT).apply()
+            activity.finish()
+        }
+    }
+
+    @Test
+    fun `rapid animated swipe popup reuse and teardown leave no stale container`() {
+        context.prefs().edit().putFloat(Settings.PREF_ANIMATION_SPEED_SCALE, 1f).apply()
+        Settings.getInstance().loadSettings(context)
+        val source = keyboard.swipeShortcutRows.getValue(DOWN).keys.first()
+        swipe(source, DOWN)
+        val x = center(source)
+        val y = source.y + source.height / 2
+        event(MotionEvent.ACTION_DOWN, x, y)
+        event(MotionEvent.ACTION_MOVE, x, y + source.height)
+        val popup = MainKeyboardView::class.java.getDeclaredField("mPopupKeysPanel")
+            .apply { isAccessible = true }.get(view) as PopupKeysKeyboardView
+        shadowOf(Looper.getMainLooper()).idleFor(250, TimeUnit.MILLISECONDS)
+        assertTrue(view.isShowingPopupKeysPanel())
+        assertNotNull(popup.getContainerView().parent)
+        view.cancelAllOngoingEvents()
+        shadowOf(Looper.getMainLooper()).idleFor(250, TimeUnit.MILLISECONDS)
+        assertFalse(view.isShowingPopupKeysPanel())
+        assertEquals(null, popup.getContainerView().parent)
+        verify(listener, times(1)).onCodeInput(eq(KeyCode.ARROW_LEFT), anyInt(), anyInt(), eq(false))
+    }
+
     private fun buildKeyboard(
         numberRow: Boolean = false, split: Boolean = false, element: Int = KeyboardId.ELEMENT_ALPHABET,
-        width: Int = 700
+        width: Int = 700, layout: String = "qwerty"
     ): Keyboard = KeyboardLayoutSet.Builder(context, EditorInfo())
         .setKeyboardGeometry(width, 400)
         .setSubtype(RichInputMethodSubtype.get(
-            SubtypeUtilsAdditional.createEmojiCapableAdditionalSubtype(Locale.ENGLISH, "qwerty", true)
+            SubtypeUtilsAdditional.createEmojiCapableAdditionalSubtype(Locale.ENGLISH, layout, true)
         ))
         .setNumberRowEnabled(numberRow)
         .setSplitLayoutEnabled(split)
