@@ -2350,7 +2350,9 @@ class InputLogic(
             val textBefore = mConnection.getTextBeforeCursor(50, 0)
             if (textBefore != null) {
                 val textStr = textBefore.toString()
-                val result = TextExpanderUtils.getExpandedWordForTyped(chosenWord, textStr, mLatinIME)
+                val expansionWord = if (commitType == LastComposedWord.COMMIT_TYPE_DECIDED_WORD)
+                    mWordComposer.getTypedWord() else chosenWord
+                val result = TextExpanderUtils.getExpandedWordForTyped(expansionWord, textStr, mLatinIME)
                 if (result != null) {
                     if (mJustRevertedExpandedShortcut != null
                         && result.matchedString.equals(mJustRevertedExpandedShortcut, ignoreCase = true)
