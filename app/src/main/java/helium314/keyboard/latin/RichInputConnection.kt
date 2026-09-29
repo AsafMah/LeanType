@@ -411,14 +411,26 @@ class RichInputConnection(private val mParent: InputMethodService) : PrivateComm
         }
 
         val text = if (InputTypeUtils.isWebEditor(mParent.currentInputEditorInfo)) {
-            getTextBeforeCursor(Constants.EDITOR_CONTENTS_CACHE_SIZE, 0)?.toString() ?: ""
+            getTextBeforeCursor(Constants.EDITOR_CONTENTS_CACHE_SIZE, 0)?.toString()
         } else {
-            if (mCommittedTextBeforeComposingText.isEmpty() && mExpectedSelStart != 0) {
-                if (!reloadTextCache()) {
-                    Log.d(TAG, "Setting caps mode with default fallback (text cache unavailable).")
-                }
+            if (mCommittedTextBeforeComposingText.isEmpty() && mExpectedSelStart != 0 && !reloadTextCache()) {
+                null
+            } else {
+                mCommittedTextBeforeComposingText.toString()
             }
-            mCommittedTextBeforeComposingText.toString()
+        }
+
+        if (text == null || (text.isEmpty() && mExpectedSelStart != 0)) {
+            // Unavailable context is not evidence of a sentence boundary.
+            val requestedModes = inputType and (TextUtils.CAP_MODE_CHARACTERS or
+                TextUtils.CAP_MODE_WORDS or TextUtils.CAP_MODE_SENTENCES)
+            val knownModes = (TextUtils.CAP_MODE_CHARACTERS or
+                if (hasSpaceBefore) TextUtils.CAP_MODE_WORDS else 0) and requestedModes
+            if (requestedModes and (TextUtils.CAP_MODE_WORDS or TextUtils.CAP_MODE_SENTENCES) == 0) {
+                return knownModes
+            }
+            Log.d(TAG, "Getting caps mode from editor (surrounding text unavailable).")
+            return knownModes or ((mIC?.getCursorCapsMode(requestedModes) ?: 0) and requestedModes)
         }
 
         return CapsModeUtils.getCapsMode(
