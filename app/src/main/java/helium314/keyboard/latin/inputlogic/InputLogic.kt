@@ -115,6 +115,13 @@ class InputLogic(
     val suggestedWords: SuggestedWords
         get() = mSuggestedWords
 
+    val suggestionGeneration: Int get() = mInputLogicHandler.generation
+
+    fun isSuggestionRequestCurrent(generation: Int): Boolean =
+        generation == suggestionGeneration && !mLatinIME.isLiteralMode
+
+    fun invalidateSuggestions() = mInputLogicHandler.reset()
+
     fun startInput(combiningSpec: String?, settingsValues: SettingsValues) {
         mEnteredText = null
         mWordBeingCorrectedByCursor = null
@@ -150,13 +157,14 @@ class InputLogic(
     }
 
     fun finishInput() {
+        invalidateSuggestions()
         if (mWordComposer.isComposingWord()) {
             mConnection.finishComposingText()
             StatsUtils.onWordCommitUserTyped(mWordComposer.getTypedWord(), mWordComposer.isBatchMode())
         }
         resetComposingState(true)
-        mInputLogicHandler.reset()
         mSpaceState = SpaceState.NONE
+        cancelDoubleSpacePeriodCountdown()
         mConnection.ensureBatchEditClosed()
     }
 
@@ -251,7 +259,7 @@ class InputLogic(
             resetComposingState(true /* alsoResetLastComposedWord */)
         }
         handler.postUpdateSuggestionStrip(SuggestedWords.INPUT_STYLE_TYPING)
-        val text = performSpecificTldProcessingOnTextInput(rawText)
+        val text = if (settingsValues.mLiteralMode) rawText else performSpecificTldProcessingOnTextInput(rawText)
         if (SpaceState.PHANTOM == mSpaceState) {
             insertAutomaticSpaceIfOptionsAndTextAllow(settingsValues)
         }
@@ -429,6 +437,7 @@ class InputLogic(
         keyboardSwitcher: KeyboardSwitcher,
         handler: LatinIME.UIHandler
     ) {
+        if (mLatinIME.isLiteralMode) return
         mWordBeingCorrectedByCursor = null
         mInputLogicHandler.onStartBatchInput()
         handler.showGesturePreviewAndSetSuggestions(SuggestedWords.getEmptyBatchInstance(), false)
@@ -488,6 +497,7 @@ class InputLogic(
     }
 
     fun setSuggestedWords(suggestedWords: SuggestedWords) {
+        if (mLatinIME.isLiteralMode && !suggestedWords.isEmpty) return
         if (!suggestedWords.isEmpty) {
             val suggestedWordInfo = if (suggestedWords.mWillAutoCorrect) {
                 suggestedWords.getInfo(SuggestedWords.INDEX_OF_AUTO_CORRECTION)
@@ -1037,7 +1047,7 @@ class InputLogic(
 
         if (!isComposingWord
             && settingsValues.isWordCodePoint(codePoint)
-            && settingsValues.needsToLookupSuggestions()
+            && settingsValues.shouldComposeInput()
             && !settingsValues.isDirectCommitApp
             && (!settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
                 || !mConnection.isCursorTouchingWord(settingsValues.mSpacingAndPunctuations, !mConnection.hasSlowInputConnection())
@@ -1057,7 +1067,7 @@ class InputLogic(
             var didSetComposingText = false
             var didExpand = false
             var shouldDeferSegmentation = false
-            if (TextExpanderUtils.isEnabled(mLatinIME)
+            if (!mLatinIME.isLiteralMode && TextExpanderUtils.isEnabled(mLatinIME)
                 && TextExpanderUtils.isImmediateEnabled(mLatinIME)
             ) {
                 val typedWord = mWordComposer.getTypedWord()
@@ -1106,7 +1116,7 @@ class InputLogic(
                     inputTransaction.setRequiresUpdateSuggestions()
                 }
             }
-            if (TextExpanderUtils.isEnabled(mLatinIME)
+            if (!mLatinIME.isLiteralMode && TextExpanderUtils.isEnabled(mLatinIME)
                 && TextExpanderUtils.isImmediateEnabled(mLatinIME)
             ) {
                 val textBefore = mConnection.getTextBeforeCursor(50, 0)
@@ -1225,7 +1235,7 @@ class InputLogic(
             } else {
                 commitTyped(settingsValues, StringUtils.newSingleCodePointString(codePoint))
             }
-        } else if (TextExpanderUtils.isEnabled(mLatinIME)) {
+        } else if (!mLatinIME.isLiteralMode && TextExpanderUtils.isEnabled(mLatinIME)) {
             val textBefore = mConnection.getTextBeforeCursor(50, 0)
             if (textBefore != null) {
                 val result = TextExpanderUtils.getExpandedWordForTyped(null, textBefore.toString(), mLatinIME)
@@ -1409,7 +1419,7 @@ class InputLogic(
             if (mWordComposer.isComposingWord()) {
                 val typedWord = mWordComposer.getTypedWord()
                 setComposingTextInternal(getTextWithUnderline(typedWord), 1)
-                if (TextExpanderUtils.isEnabled(mLatinIME)
+                if (!mLatinIME.isLiteralMode && TextExpanderUtils.isEnabled(mLatinIME)
                     && TextExpanderUtils.isImmediateEnabled(mLatinIME)
                 ) {
                     val textBefore = mConnection.getTextBeforeCursor(50, 0)
@@ -1603,6 +1613,7 @@ class InputLogic(
     }
 
     internal fun unlearnWord(word: String, settingsValues: SettingsValues, eventType: Int) {
+        if (mLatinIME.isLiteralMode) return
         val ngramContext = mConnection.getNgramContextFromNthPreviousWord(settingsValues.mSpacingAndPunctuations, 2)
         val timeStampInSeconds = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis())
         mDictionaryFacilitator.unlearnFromUserHistory(word, ngramContext, timeStampInSeconds, eventType)
@@ -1631,6 +1642,7 @@ class InputLogic(
         event: Event,
         inputTransaction: InputTransaction
     ): Boolean {
+        if (mLatinIME.isLiteralMode) return false
         val codePoint = event.codePoint
         val isFromSuggestionStrip = event.isSuggestionStripPress
         if (Constants.CODE_ENTER == codePoint
@@ -1745,6 +1757,7 @@ class InputLogic(
         suggestion: String,
         ngramContext: NgramContext
     ) {
+        if (mLatinIME.isLiteralMode) return
         if (!settingsValues.isSuggestionsEnabledPerUserSettings() || TextUtils.isEmpty(suggestion)) {
             return
         }
@@ -1935,12 +1948,13 @@ class InputLogic(
             )
         }
         if (suggestions.size <= 1) {
+            val generation = suggestionGeneration
             mInputLogicHandler.getSuggestedWords {
                 getSuggestedWords(
                     SuggestedWords.INPUT_STYLE_TYPING,
                     SuggestedWords.NOT_A_SEQUENCE_NUMBER
                 ) { words ->
-                    if (words != null) doShowSuggestionsAndClearAutoCorrectionIndicator(words)
+                    if (words != null) doShowSuggestionsAndClearAutoCorrectionIndicator(words, generation)
                 }
             }
         } else {
@@ -1952,9 +1966,12 @@ class InputLogic(
         }
     }
 
-    private fun doShowSuggestionsAndClearAutoCorrectionIndicator(suggestedWords: SuggestedWords) {
+    private fun doShowSuggestionsAndClearAutoCorrectionIndicator(
+        suggestedWords: SuggestedWords, generation: Int = suggestionGeneration
+    ) {
+        if (!isSuggestionRequestCurrent(generation)) return
         mIsAutoCorrectionIndicatorOn = false
-        mLatinIME.mHandler.setSuggestions(suggestedWords)
+        mLatinIME.mHandler.setSuggestions(suggestedWords, generation)
     }
 
     private fun revertCommit(inputTransaction: InputTransaction) {
@@ -2039,7 +2056,7 @@ class InputLogic(
         get() = mWordComposer.isComposingWord()
 
     fun getCurrentAutoCapsState(settingsValues: SettingsValues): Int {
-        if (!settingsValues.mAutoCap) return Constants.TextUtils.CAP_MODE_OFF
+        if (mLatinIME.isLiteralMode || !settingsValues.mAutoCap) return Constants.TextUtils.CAP_MODE_OFF
 
         val ei = getCurrentInputEditorInfo() ?: return Constants.TextUtils.CAP_MODE_OFF
         var inputType = ei.inputType
@@ -2217,6 +2234,7 @@ class InputLogic(
         suggestedWords: SuggestedWords,
         keyboardSwitcher: KeyboardSwitcher
     ) {
+        if (mLatinIME.isLiteralMode) return
         val batchInputText = if (suggestedWords.isEmpty) null else suggestedWords.getWord(0)
         if (batchInputText.isNullOrEmpty()) {
             return
@@ -2260,6 +2278,10 @@ class InputLogic(
         separator: String,
         handler: LatinIME.UIHandler
     ) {
+        if (settingsValues.mLiteralMode) {
+            commitTyped(settingsValues, separator)
+            return
+        }
         if (handler.hasPendingUpdateSuggestions()) {
             handler.cancelUpdateSuggestionStrip()
             performUpdateSuggestionStripSync(settingsValues, SuggestedWords.INPUT_STYLE_TYPING)
@@ -2300,7 +2322,7 @@ class InputLogic(
             startTimeMillis = System.currentTimeMillis()
             Log.d(TAG, "commitChosenWord() : [$chosenWord]")
         }
-        val isEnabled = TextExpanderUtils.isEnabled(mLatinIME)
+        val isEnabled = !mLatinIME.isLiteralMode && TextExpanderUtils.isEnabled(mLatinIME)
         if (isEnabled) {
             val textBefore = mConnection.getTextBeforeCursor(50, 0)
             if (textBefore != null) {
@@ -2401,6 +2423,8 @@ class InputLogic(
         sequenceNumber: Int,
         callback: Suggest.OnGetSuggestedWordsCallback
     ) {
+        val generation = suggestionGeneration
+        if (!isSuggestionRequestCurrent(generation)) return
         val keyboard = KeyboardSwitcher.getInstance().keyboard
         if (keyboard == null) {
             callback.onGetSuggestedWords(SuggestedWords.getEmptyInstance())
@@ -2429,9 +2453,10 @@ class InputLogic(
                 settingsValues.mAutoCorrectEnabled,
                 inputStyle, sequenceNumber
             )
-            callback.onGetSuggestedWords(suggestedWords)
+            if (isSuggestionRequestCurrent(generation)) callback.onGetSuggestedWords(suggestedWords)
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching suggested words, using empty words instead", e)
+            if (!isSuggestionRequestCurrent(generation)) return
             callback.onGetSuggestedWords(SuggestedWords.getEmptyInstance())
             KeyboardSwitcher.getInstance().showToast("Error getting suggestions", true)
         }

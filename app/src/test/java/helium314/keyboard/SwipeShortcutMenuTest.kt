@@ -208,6 +208,22 @@ class SwipeShortcutMenuTest(private val glideEnabled: Boolean) {
     }
 
     @Test
+    fun `literal mode disables word glide but preserves row shortcut gestures`() {
+        val ime = requireNotNull(LatinIME.getInstance())
+        val editor = android.view.inputmethod.EditorInfo().apply { inputType = android.text.InputType.TYPE_CLASS_TEXT }
+        org.robolectric.util.ReflectionHelpers.setField(ime, "mInputEditorInfo", editor)
+        org.robolectric.util.ReflectionHelpers.setField(helium314.keyboard.keyboard.KeyboardSwitcher.getInstance(), "mKeyboardView", view)
+        ime.keyboardActionListener.onCodeInput(KeyCode.TOGGLE_LITERAL_MODE, 0, 0, false)
+        assertTrue(ime.isLiteralMode)
+        assertFalse(Settings.getInstance().current.mGestureInputEnabled)
+        assertTrue(Settings.getInstance().current.mSwipeUpMenuEnabled)
+        assertTrue(Settings.getInstance().current.mSwipeDownMenuEnabled)
+        swipe(keyboard.getKey('z'.code)!!, DOWN)
+        verify(listener).onCodeInput(eq(KeyCode.ARROW_LEFT), anyInt(), anyInt(), eq(false))
+        verify(listener, never()).onCodeInput(eq('z'.code), anyInt(), anyInt(), anyBoolean())
+    }
+
+    @Test
     fun `number row swipe opens upward menu and q does not`() {
         keyboard = buildKeyboard(numberRow = true)
         view.setKeyboard(keyboard)
