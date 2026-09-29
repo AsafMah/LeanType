@@ -663,13 +663,13 @@ class InputLogicTest {
     }
 
     @Test fun `english space-separated typing keeps composing word`() {
-    reset()
-    chainInput("hello")
-    assertEquals("hello", composingText)
-    input(' ')
-    assertEquals("hello ", text)
-    assertEquals("", composingText)
-}
+        reset()
+        chainInput("hello")
+        assertEquals("hello", composingText)
+        input(' ')
+        assertEquals("hello ", text)
+        assertEquals("", composingText)
+    }
 
     @Test fun delete() {
         reset()
