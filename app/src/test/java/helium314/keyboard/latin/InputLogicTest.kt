@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Message
 import android.text.InputType
+import android.text.TextUtils
 import android.view.KeyEvent
 import android.view.inputmethod.*
 import androidx.core.content.edit
@@ -54,6 +55,8 @@ import kotlin.streams.asSequence
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [
@@ -362,14 +365,44 @@ class InputLogicTest {
         assertEquals(prefsBefore, latinIME.prefs().all)
     }
 
-    @Test fun `english space-separated typing keeps composing word`() {
-        reset()
-        chainInput("hello")
-        assertEquals("hello", composingText)
-        input(' ')
-        assertEquals("hello ", text)
-        assertEquals("", composingText)
+    @Test fun `native missing context does not enable implicit sentence auto caps`() {
+        assertMissingContextDoesNotEnableAutoCaps(InputType.TYPE_CLASS_TEXT)
     }
+
+    @Test fun `web missing context does not enable implicit sentence auto caps`() {
+        assertMissingContextDoesNotEnableAutoCaps(
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
+        )
+    }
+
+    private fun assertMissingContextDoesNotEnableAutoCaps(inputType: Int) {
+        reset()
+        currentInputType = inputType
+        setText("hello there")
+        assertTrue(settingsValues.mAutoCap)
+        assertFalse(settingsValues.mForceAutoCaps)
+        assertEquals(0, currentInputType and TextUtils.CAP_MODE_SENTENCES)
+        textBeforeCursorAvailable = false
+        assertFalse(connection.resetCachesUponCursorMoveAndReturnSuccess(selectionStart, selectionEnd, false))
+        assertEquals("hello there", text)
+        assertEquals(11, selectionStart)
+        assertEquals(-1, connection.expectedSelectionStart)
+        assertEquals(0, inputLogic.getCurrentAutoCapsState(settingsValues))
+        assertEquals(TextUtils.CAP_MODE_SENTENCES, lastCursorCapsRequest)
+
+        textBeforeCursorAvailable = true
+        setText("Hello. ")
+        assertEquals(TextUtils.CAP_MODE_SENTENCES, inputLogic.getCurrentAutoCapsState(settingsValues))
+    }
+
+    @Test fun `english space-separated typing keeps composing word`() {
+    reset()
+    chainInput("hello")
+    assertEquals("hello", composingText)
+    input(' ')
+    assertEquals("hello ", text)
+    assertEquals("", composingText)
+}
 
     @Test fun delete() {
         reset()
@@ -1629,6 +1662,8 @@ class InputLogicTest {
         text = ""
         batchEdit = 0
         currentInputType = InputType.TYPE_CLASS_TEXT
+        textBeforeCursorAvailable = true
+        lastCursorCapsRequest = null
         lastAddedWord = ""
         lastNgramContext = ""
         addedWords.clear()
@@ -1870,6 +1905,8 @@ class InputLogicTest {
 }
 
 private var currentInputType = InputType.TYPE_CLASS_TEXT
+private var textBeforeCursorAvailable = true
+private var lastCursorCapsRequest: Int? = null
 private var currentScript = ScriptUtils.SCRIPT_LATIN
 private val messages = mutableListOf<Message>() // for latinIME / ShadowInputMethodService
 private val delayedMessages = mutableListOf<Message>() // for latinIME / ShadowInputMethodService
@@ -1894,7 +1931,8 @@ private val composingText get() = if (composingStart == -1 || composingEnd == -1
 private val ic = object : InputConnection {
     // pretty clear (though this may be slow depending on the editor)
     // bad return value here is likely the cause for that weird bug improved/fixed by fixIncorrectLength
-    override fun getTextBeforeCursor(p0: Int, p1: Int): CharSequence = textBeforeCursor.take(p0)
+    override fun getTextBeforeCursor(p0: Int, p1: Int): CharSequence? =
+        if (textBeforeCursorAvailable) textBeforeCursor.take(p0) else null
     // pretty clear (though this may be slow depending on the editor)
     override fun getTextAfterCursor(p0: Int, p1: Int): CharSequence = textAfterCursor.take(p0)
     // pretty clear
@@ -2038,8 +2076,11 @@ private val ic = object : InputConnection {
     }
     // only effect is flashing, so whatever...
     override fun commitCorrection(p0: CorrectionInfo?): Boolean = true
+    override fun getCursorCapsMode(p0: Int): Int {
+        lastCursorCapsRequest = p0
+        return TextUtils.getCapsMode(text, selectionStart, p0)
+    }
     // implement only when necessary
-    override fun getCursorCapsMode(p0: Int): Int = TODO("Not yet implemented")
     override fun deleteSurroundingTextInCodePoints(p0: Int, p1: Int): Boolean = TODO("Not yet implemented")
     override fun commitCompletion(p0: CompletionInfo?): Boolean = TODO("Not yet implemented")
     override fun performEditorAction(p0: Int): Boolean = true
