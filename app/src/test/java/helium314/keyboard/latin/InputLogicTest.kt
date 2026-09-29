@@ -51,6 +51,7 @@ import helium314.keyboard.latin.utils.getPinnedToolbarKeys
 import helium314.keyboard.latin.utils.getEnabledClipboardToolbarKeys
 import helium314.keyboard.latin.utils.setToolbarButtonActivatedState
 import helium314.keyboard.latin.utils.upgradeToolbarPrefs
+import helium314.keyboard.latin.utils.TextExpanderUtils
 import helium314.keyboard.latin.utils.getTimestampFormatter
 import helium314.keyboard.latin.utils.prefs
 import org.junit.runner.RunWith
@@ -694,6 +695,63 @@ class InputLogicTest {
         typeNoAssert("@john")
 
         assertEquals("user_mention", text)
+    }
+
+    @Test fun correctionToLiteralShortcutDoesNotExpand() {
+        assertCorrectionDoesNotTriggerShortcut("cpp")
+    }
+
+    @Test fun correctionToRegexShortcutDoesNotExpand() {
+        assertCorrectionDoesNotTriggerShortcut("${TextExpanderUtils.REGEX_PREFIX}cpp")
+    }
+
+    private fun assertCorrectionDoesNotTriggerShortcut(shortcut: String) {
+        for (immediate in listOf(false, true)) {
+            configureExpansion(shortcut, immediate)
+            setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
+            typeNoAssert("cps")
+            val correction = SuggestedWordInfo("cpp", "", 0, 0, Mockito.mock(Dictionary::class.java), 0, 0)
+            composer.setAutoCorrection(correction)
+            assertEquals(true, settingsValues.mAutoCorrectEnabled)
+            typeNoAssert(" ")
+            assertEquals("cpp ", text, "immediate=$immediate")
+            checkConnectionConsistency()
+        }
+    }
+
+    @Test fun literalShortcutStillExpandsOnlyFromActualTypedTrigger() {
+        assertTypedShortcutExpands("cpp")
+    }
+
+    @Test fun regexShortcutStillExpandsOnlyFromActualTypedTrigger() {
+        assertTypedShortcutExpands("${TextExpanderUtils.REGEX_PREFIX}cpp")
+    }
+
+    private fun assertTypedShortcutExpands(shortcut: String) {
+        for (immediate in listOf(false, true)) {
+            configureExpansion(shortcut, immediate)
+            typeNoAssert("cps ")
+            assertEquals("cps ", text)
+            typeNoAssert("cpp")
+            if (!immediate) typeNoAssert(" ")
+            assertEquals("cps EXPANDED" + if (immediate) "" else " ", text)
+            if (!immediate) functionalKeyPress(KeyCode.DELETE)
+            functionalKeyPress(KeyCode.DELETE)
+            assertEquals("cps cpp", text)
+            checkConnectionConsistency()
+        }
+    }
+
+    private fun configureExpansion(shortcut: String, immediate: Boolean) {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(TextExpanderUtils.PREF_IMMEDIATE, immediate)
+            putBoolean(TextExpanderUtils.PREF_BACKSPACE_REVERTS, true)
+        }
+        TextExpanderUtils.saveShortcuts(
+            latinIME, mapOf(shortcut to TextExpanderUtils.ShortcutEntry("EXPANDED"))
+        )
     }
 
     @Test fun numberShortcutWithAtPrefixExpandsOnSpace() {
