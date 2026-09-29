@@ -489,6 +489,71 @@ class InputLogicTest {
         checkConnectionConsistency()
     }
 
+    @Test fun manuallyPickedLongerSuggestionOverridesMatchingRegexShortcut() {
+        assertManualSuggestionOverridesMatchingRegexShortcut("python")
+    }
+
+    @Test fun manuallyPickedShorterSuggestionOverridesMatchingRegexShortcut() {
+        assertManualSuggestionOverridesMatchingRegexShortcut("p")
+    }
+
+    @Test fun manuallyPickedSuffixSuggestionOverridesMatchingRegexShortcut() {
+        assertManualSuggestionOverridesMatchingRegexShortcut("y")
+    }
+
+    @Test fun manuallyPickedSameLengthSuggestionOverridesMatchingRegexShortcut() {
+        assertManualSuggestionOverridesMatchingRegexShortcut("by")
+    }
+
+    private fun assertManualSuggestionOverridesMatchingRegexShortcut(suggestion: String) {
+        configureExpansion("${TextExpanderUtils.REGEX_PREFIX}\\.py", false)
+        setText("keep .")
+        typeNoAssert("py")
+        assertEquals("py", composer.getTypedWord())
+        pickSuggestion(suggestion)
+        assertEquals("keep .$suggestion", text)
+        assertEquals(text.length, cursor)
+        checkConnectionConsistency()
+    }
+
+    @Test fun manuallyPickedDifferentSuggestionOverridesWholeRegexMatch() {
+        configureExpansion("${TextExpanderUtils.REGEX_PREFIX}cpp", false)
+        typeNoAssert("cpp")
+        pickSuggestion("chosen")
+        assertEquals("chosen", text)
+        assertEquals(text.length, cursor)
+        checkConnectionConsistency()
+    }
+
+    @Test fun manuallyPickedMatchingShortcutStillExpands() {
+        for (shortcut in listOf("cpp", "${TextExpanderUtils.REGEX_PREFIX}cpp")) {
+            for (suggestion in listOf("cpp", "CPP")) {
+                configureExpansion(shortcut, false)
+                typeNoAssert("cpp")
+                pickSuggestion(suggestion)
+                assertEquals("EXPANDED", text)
+                assertEquals(text.length, cursor)
+                functionalKeyPress(KeyCode.DELETE)
+                assertEquals("cpp", text)
+                checkConnectionConsistency()
+            }
+        }
+    }
+
+    @Test fun manuallyPickedMatchingPrefixedRegexShortcutStillExpands() {
+        for (suggestion in listOf("py", "PY")) {
+            configureExpansion("${TextExpanderUtils.REGEX_PREFIX}\\.py", false)
+            setText("keep .")
+            typeNoAssert("py")
+            pickSuggestion(suggestion)
+            assertEquals("keep EXPANDED", text)
+            assertEquals(text.length, cursor)
+            functionalKeyPress(KeyCode.DELETE)
+            assertEquals("keep .py", text)
+            checkConnectionConsistency()
+        }
+    }
+
     private fun assertTypedShortcutExpands(shortcut: String) {
         for (immediate in listOf(false, true)) {
             configureExpansion(shortcut, immediate)

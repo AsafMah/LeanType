@@ -2301,7 +2301,9 @@ class InputLogic(
             Log.d(TAG, "commitChosenWord() : [$chosenWord]")
         }
         val isEnabled = TextExpanderUtils.isEnabled(mLatinIME)
-        if (isEnabled) {
+        val isDifferentManualPick = commitType == LastComposedWord.COMMIT_TYPE_MANUAL_PICK
+            && !chosenWord.equals(mWordComposer.getTypedWord(), ignoreCase = true)
+        if (isEnabled && !isDifferentManualPick) {
             val textBefore = mConnection.getTextBeforeCursor(50, 0)
             if (textBefore != null) {
                 val textStr = textBefore.toString()
