@@ -153,6 +153,7 @@
     <string name="prefs_block_potentially_offensive_summary">Do not suggest potentially offensive words</string>
     <!-- Option to enable auto correction -->
     <string name="autocorrect">Auto-correction</string>
+    <string name="literal">Literal typing</string>
     <!-- Description for auto correction -->
     <string name="auto_correction_summary">Spacebar and punctuation automatically correct mistyped words</string>
     <string name="auto_correction_trigger">Auto-correct on</string>

@@ -21,6 +21,7 @@ import helium314.keyboard.keyboard.KeyboardActionListener
 import helium314.keyboard.keyboard.KeyboardTheme
 import helium314.keyboard.keyboard.internal.keyboard_parser.POPUP_KEYS_NORMAL
 import helium314.keyboard.latin.InputAttributes
+import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.common.Colors
@@ -48,6 +49,7 @@ open class SettingsValues(
     val mInputAttributes: InputAttributes,
     currentKeyboardScript: String
 ) {
+    val mLiteralMode = LatinIME.getInstance()?.isLiteralMode == true
     // From resources:
     val mSpacingAndPunctuations: SpacingAndPunctuations
     val mDoubleSpacePeriodTimeout: Long
@@ -254,7 +256,7 @@ open class SettingsValues(
         mToolbarKeysAlignment = prefs.getString(Settings.PREF_TOOLBAR_KEYS_ALIGNMENT, fallbackAlign) ?: fallbackAlign
         mClipboardKeysAlignment = mToolbarKeysAlignment
         mShowDownloadButtonInToolbar = prefs.getBoolean(Settings.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR, Defaults.PREF_SHOW_DOWNLOAD_BUTTON_IN_TOOLBAR)
-        mAutoCap = prefs.getBoolean(Settings.PREF_AUTO_CAP, Defaults.PREF_AUTO_CAP) && ScriptUtils.scriptSupportsUppercase(mLocale)
+        mAutoCap = !mLiteralMode && prefs.getBoolean(Settings.PREF_AUTO_CAP, Defaults.PREF_AUTO_CAP) && ScriptUtils.scriptSupportsUppercase(mLocale)
         mVibrateOn = Settings.readVibrationEnabled(prefs)
         mVibrateInDndMode = prefs.getBoolean(Settings.PREF_VIBRATE_IN_DND_MODE, Defaults.PREF_VIBRATE_IN_DND_MODE)
         mSoundOn = prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON)
@@ -301,12 +303,12 @@ open class SettingsValues(
         mEnableClipboardListener = prefs.getBoolean(Settings.PREF_ENABLE_CLIPBOARD_LISTENER, Defaults.PREF_ENABLE_CLIPBOARD_LISTENER)
         mEnableSmsOtpReceiver = prefs.getBoolean(Settings.PREF_ENABLE_SMS_OTP_RECEIVER, Defaults.PREF_ENABLE_SMS_OTP_RECEIVER)
         mEnableAppSyncListener = prefs.getBoolean(Settings.PREF_ENABLE_APP_SYNC_LISTENER, Defaults.PREF_ENABLE_APP_SYNC_LISTENER)
-        mUseDoubleSpacePeriod = prefs.getBoolean(Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD, Defaults.PREF_KEY_USE_DOUBLE_SPACE_PERIOD) && mInputAttributes.mIsGeneralTextInput
+        mUseDoubleSpacePeriod = !mLiteralMode && prefs.getBoolean(Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD, Defaults.PREF_KEY_USE_DOUBLE_SPACE_PERIOD) && mInputAttributes.mIsGeneralTextInput
         mBlockPotentiallyOffensive = prefs.getBoolean(Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE, Defaults.PREF_BLOCK_POTENTIALLY_OFFENSIVE)
         mUrlDetectionEnabled = prefs.getBoolean(Settings.PREF_URL_DETECTION, Defaults.PREF_URL_DETECTION)
         val globalAutoCorrect = prefs.getBoolean(Settings.PREF_AUTO_CORRECTION, Defaults.PREF_AUTO_CORRECTION)
         val appAutoCorrection = AppQuirksManager.getAutoCorrectionOverride(mInputAttributes.mTargetApplicationPackageName)
-        mAutoCorrectionEnabledPerUserSettings = when (appAutoCorrection) {
+        mAutoCorrectionEnabledPerUserSettings = !mLiteralMode && when (appAutoCorrection) {
             AppQuirksManager.AUTOCORRECT_FORCE_ENABLE -> true
             AppQuirksManager.AUTOCORRECT_FORCE_DISABLE -> false
             else -> globalAutoCorrect
@@ -329,7 +331,7 @@ open class SettingsValues(
         mPersistTextEditMode = prefs.getBoolean(Settings.PREF_PERSIST_TEXT_EDIT_MODE, Defaults.PREF_PERSIST_TEXT_EDIT_MODE)
         mBackspaceRevertsAutocorrect = prefs.getBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT, Defaults.PREF_BACKSPACE_REVERTS_AUTOCORRECT)
         mDisableMultiWordSuggestions = prefs.getBoolean(Settings.PREF_DISABLE_MULTI_WORD_SUGGESTIONS, Defaults.PREF_DISABLE_MULTI_WORD_SUGGESTIONS)
-        mBigramPredictionEnabled = prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS)
+        mBigramPredictionEnabled = !mLiteralMode && prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS)
         mPrioritizePersonalSuggestions = prefs.getBoolean(Settings.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS, Defaults.PREF_PRIORITIZE_PERSONAL_SUGGESTIONS)
         mSuggestionBalance = prefs.getInt(Settings.PREF_SUGGESTION_BALANCE, Defaults.PREF_SUGGESTION_BALANCE)
 
@@ -341,7 +343,7 @@ open class SettingsValues(
         }
         mNextWordBoostLevel = boostLevel
         mNextWordStrictNgram = prefs.getBoolean(Settings.PREF_NEXT_WORD_STRICT_NGRAM, Defaults.PREF_NEXT_WORD_STRICT_NGRAM)
-        mFirstWordPredictionEnabled = prefs.getBoolean(Settings.PREF_FIRST_WORD_PREDICTIONS, Defaults.PREF_FIRST_WORD_PREDICTIONS)
+        mFirstWordPredictionEnabled = !mLiteralMode && prefs.getBoolean(Settings.PREF_FIRST_WORD_PREDICTIONS, Defaults.PREF_FIRST_WORD_PREDICTIONS)
         mSuggestPunctuation = prefs.getBoolean(Settings.PREF_SUGGEST_PUNCTUATION, Defaults.PREF_SUGGEST_PUNCTUATION)
         mSuggestClipboardContent = prefs.getBoolean(Settings.PREF_SUGGEST_CLIPBOARD_CONTENT, Defaults.PREF_SUGGEST_CLIPBOARD_CONTENT)
         mSuggestScreenshots = prefs.getBoolean(Settings.PREF_SUGGEST_SCREENSHOTS, Defaults.PREF_SUGGEST_SCREENSHOTS)
@@ -380,7 +382,7 @@ open class SettingsValues(
         mSoundVolModifiers = prefs.getFloat(Settings.PREF_SOUND_VOL_MODIFIERS, Defaults.PREF_SOUND_VOL_MODIFIERS)
         mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY, Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY)
         mGestureMethod = prefs.getString(Settings.PREF_GESTURE_METHOD, "fallback") ?: "fallback"
-        mGestureInputEnabled = JniUtils.sHaveGestureLib && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
+        mGestureInputEnabled = !mLiteralMode && JniUtils.sHaveGestureLib && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
         mGestureTrailEnabled = prefs.getBoolean(Settings.PREF_GESTURE_PREVIEW_TRAIL, Defaults.PREF_GESTURE_PREVIEW_TRAIL)
         mGestureFloatingPreviewTextEnabled = !mInputAttributes.mDisableGestureFloatingPreviewText && prefs.getBoolean(Settings.PREF_GESTURE_FLOATING_PREVIEW_TEXT, Defaults.PREF_GESTURE_FLOATING_PREVIEW_TEXT)
         mGestureFloatingPreviewDynamicEnabled = Settings.readGestureDynamicPreviewEnabled(prefs)
@@ -393,7 +395,7 @@ open class SettingsValues(
         mOverrideShowingSuggestions = mInputAttributes.mMayOverrideShowingSuggestions && (prefs.getBoolean(Settings.PREF_ALWAYS_SHOW_SUGGESTIONS, Defaults.PREF_ALWAYS_SHOW_SUGGESTIONS) || (moreAutoCorrection && !isUriOrEmail)) && ((mInputAttributes.mInputType and InputType.TYPE_MASK_VARIATION) != InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT || !prefs.getBoolean(Settings.PREF_ALWAYS_SHOW_SUGGESTIONS_EXCEPT_WEB_TEXT, Defaults.PREF_ALWAYS_SHOW_SUGGESTIONS_EXCEPT_WEB_TEXT))
 
         val suggestionsEnabled = prefs.getBoolean(Settings.PREF_SHOW_SUGGESTIONS, Defaults.PREF_SHOW_SUGGESTIONS)
-        mSuggestionsEnabledPerUserSettings = suggestionsEnabled && (mInputAttributes.mShouldShowSuggestions || mOverrideShowingSuggestions) && !mSuggestionStripHiddenPerUserSettings
+        mSuggestionsEnabledPerUserSettings = !mLiteralMode && suggestionsEnabled && (mInputAttributes.mShouldShowSuggestions || mOverrideShowingSuggestions) && !mSuggestionStripHiddenPerUserSettings
         mSuggestionsCountInStrip = prefs.getInt(Settings.PREF_SUGGESTIONS_COUNT_IN_STRIP, Defaults.PREF_SUGGESTIONS_COUNT_IN_STRIP)
         mSecondaryStripVisible = mToolbarMode != ToolbarMode.HIDDEN || !mToolbarHidingGlobal
         mIncognitoModeEnabled = if (AppQuirksManager.isNonIncognitoApp(mInputAttributes.mTargetApplicationPackageName)) {
@@ -409,17 +411,17 @@ open class SettingsValues(
         mLanguageSwipeDistance = prefs.getInt(Settings.PREF_LANGUAGE_SWIPE_DISTANCE, Defaults.PREF_LANGUAGE_SWIPE_DISTANCE)
         mTouchpadSensitivity = prefs.getInt(Settings.PREF_TOUCHPAD_SENSITIVITY, Defaults.PREF_TOUCHPAD_SENSITIVITY)
         mTouchpadFullscreen = prefs.getBoolean(Settings.PREF_TOUCHPAD_FULLSCREEN, Defaults.PREF_TOUCHPAD_FULLSCREEN)
-        mForceAutoCaps = prefs.getBoolean(Settings.PREF_FORCE_AUTO_CAPS, Defaults.PREF_FORCE_AUTO_CAPS)
+        mForceAutoCaps = !mLiteralMode && prefs.getBoolean(Settings.PREF_FORCE_AUTO_CAPS, Defaults.PREF_FORCE_AUTO_CAPS)
         mDeleteSwipeEnabled = prefs.getBoolean(Settings.PREF_DELETE_SWIPE, Defaults.PREF_DELETE_SWIPE)
         mDeleteSwipeWordByWord = prefs.getBoolean(Settings.PREF_DELETE_SWIPE_WORD_BY_WORD, Defaults.PREF_DELETE_SWIPE_WORD_BY_WORD)
         mSwipeUpMenuEnabled = prefs.getBoolean(Settings.PREF_SWIPE_UP_MENU, Defaults.PREF_SWIPE_UP_MENU)
         mSwipeDownMenuEnabled = prefs.getBoolean(Settings.PREF_SWIPE_DOWN_MENU, Defaults.PREF_SWIPE_DOWN_MENU)
-        mAutospaceAfterPunctuation = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, Defaults.PREF_AUTOSPACE_AFTER_PUNCTUATION)
-        mAutospaceAfterEmoji = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_EMOJI, Defaults.PREF_AUTOSPACE_AFTER_EMOJI)
-        mAutospaceAfterSuggestion = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_SUGGESTION, Defaults.PREF_AUTOSPACE_AFTER_SUGGESTION)
-        mImmediateAutoSpace = prefs.getBoolean(Settings.PREF_IMMEDIATE_AUTO_SPACE, Defaults.PREF_IMMEDIATE_AUTO_SPACE)
-        mAutospaceAfterGestureTyping = prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING, Defaults.PREF_AUTOSPACE_AFTER_GESTURE_TYPING)
-        mAutospaceBeforeGestureTyping = prefs.getBoolean(Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING, Defaults.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING)
+        mAutospaceAfterPunctuation = !mLiteralMode && prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, Defaults.PREF_AUTOSPACE_AFTER_PUNCTUATION)
+        mAutospaceAfterEmoji = !mLiteralMode && prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_EMOJI, Defaults.PREF_AUTOSPACE_AFTER_EMOJI)
+        mAutospaceAfterSuggestion = !mLiteralMode && prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_SUGGESTION, Defaults.PREF_AUTOSPACE_AFTER_SUGGESTION)
+        mImmediateAutoSpace = !mLiteralMode && prefs.getBoolean(Settings.PREF_IMMEDIATE_AUTO_SPACE, Defaults.PREF_IMMEDIATE_AUTO_SPACE)
+        mAutospaceAfterGestureTyping = !mLiteralMode && prefs.getBoolean(Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING, Defaults.PREF_AUTOSPACE_AFTER_GESTURE_TYPING)
+        mAutospaceBeforeGestureTyping = !mLiteralMode && prefs.getBoolean(Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING, Defaults.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING)
         mShiftRemovesAutospace = prefs.getBoolean(Settings.PREF_SHIFT_REMOVES_AUTOSPACE, Defaults.PREF_SHIFT_REMOVES_AUTOSPACE)
         mPreserveSpaceBeforePunctuation = prefs.getBoolean(Settings.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION, Defaults.PREF_PRESERVE_SPACE_BEFORE_PUNCTUATION)
         mClipboardHistoryEnabled = prefs.getBoolean(Settings.PREF_ENABLE_CLIPBOARD_HISTORY, Defaults.PREF_ENABLE_CLIPBOARD_HISTORY)
@@ -480,12 +482,14 @@ open class SettingsValues(
     }
 
     fun isApplicationSpecifiedCompletionsOn(): Boolean {
-        return mInputAttributes.mApplicationSpecifiedCompletionOn
+        return !mLiteralMode && mInputAttributes.mApplicationSpecifiedCompletionOn
     }
 
     fun needsToLookupSuggestions(): Boolean {
-        return (mInputAttributes.mShouldShowSuggestions || mOverrideShowingSuggestions || isSymbolComposingApp) && (mAutoCorrectEnabled || mSuggestionsEnabledPerUserSettings || isSymbolComposingApp)
+        return !mLiteralMode && (mInputAttributes.mShouldShowSuggestions || mOverrideShowingSuggestions || isSymbolComposingApp) && (mAutoCorrectEnabled || mSuggestionsEnabledPerUserSettings || isSymbolComposingApp)
     }
+
+    fun shouldComposeInput(): Boolean = mLiteralMode || needsToLookupSuggestions()
 
     fun isSuggestionsEnabledPerUserSettings(): Boolean {
         return mSuggestionsEnabledPerUserSettings
@@ -515,7 +519,7 @@ open class SettingsValues(
     val isAutoSpaceDisabled: Boolean = AppQuirksManager.isAutoSpaceDisabled(mInputAttributes.mTargetApplicationPackageName)
 
     fun shouldInsertSpacesAutomatically(): Boolean {
-        return mInputAttributes.mShouldInsertSpacesAutomatically && !isAutoSpaceDisabled
+        return !mLiteralMode && mInputAttributes.mShouldInsertSpacesAutomatically && !isAutoSpaceDisabled
     }
 
     fun isLanguageSwitchKeyEnabled(): Boolean {

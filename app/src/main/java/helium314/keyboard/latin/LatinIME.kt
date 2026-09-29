@@ -195,6 +195,46 @@ class LatinIME : InputMethodService(),
     private val mTempRect = Rect()
     private val mFloatingTouchableRect = Rect()
     @Volatile var isCursorGestureActive = false
+    @Volatile var isLiteralMode = false
+        private set
+    private var literalEditor: EditorInfo? = null
+    private var literalEditorIdentity: LiteralEditorIdentity? = null
+    private var literalEditorConnection: android.view.inputmethod.InputConnection? = null
+
+    private data class LiteralEditorIdentity(
+        val packageName: String?, val fieldId: Int, val fieldName: String?,
+        val inputType: Int, val imeOptions: Int
+    )
+
+    fun toggleLiteralMode() {
+        if (currentInputEditorInfo == null) return
+        // Finish the visible composition as typed, without correction, expansion, or learning.
+        inputLogic.finishInput()
+        isLiteralMode = !isLiteralMode
+        handler.cancelPendingSuggestions()
+        sSettingsDirty = true
+        loadSettings()
+        setNeutralSuggestionStrip()
+        keyboardSwitcher.mainKeyboardView?.apply {
+            setGestureHandlingEnabledByUser(
+                settings.current.mGestureInputEnabled, settings.current.mGestureTrailEnabled,
+                settings.current.mGestureFloatingPreviewTextEnabled
+            )
+            showGestureFloatingPreviewText(SuggestedWords.getEmptyInstance(), true)
+        }
+        keyboardSwitcher.requestUpdatingShiftState(currentAutoCapsState, currentRecapitalizeState)
+        suggestionStripView?.updateToolbarButtonsActivatedState()
+    }
+
+    private fun resetLiteralMode() {
+        isLiteralMode = false
+        literalEditor = null
+        literalEditorIdentity = null
+        literalEditorConnection = null
+        inputLogic.invalidateSuggestions()
+        handler.cancelPendingSuggestions()
+        sSettingsDirty = true
+    }
 
     private var voicePluginManager: VoicePluginManager? = null
     private var voiceInputManager: VoiceInputManager? = null
@@ -386,6 +426,7 @@ class LatinIME : InputMethodService(),
     val localeAndConfidenceInfo: String? get() = dictionaryFacilitator.localesAndConfidences()
 
     override fun onDestroy() {
+        resetLiteralMode()
         if (sInstance === this) sInstance = null
         if (isShowingOptionDialog()) {
             optionsDialog?.dismiss()
@@ -674,6 +715,16 @@ class LatinIME : InputMethodService(),
         mediaEditorVersion++
         keyboardSwitcher.emojiPalettesView?.stopMediaSession()
         super.onStartInput(editorInfo, restarting)
+        val identity = editorInfo?.let {
+            LiteralEditorIdentity(it.packageName, it.fieldId, it.fieldName, it.inputType, it.imeOptions)
+        }
+        val sameEditor = restarting && identity != null && identity == literalEditorIdentity &&
+            (identity.fieldId != 0 || editorInfo === literalEditor ||
+                (currentInputConnection != null && currentInputConnection === literalEditorConnection))
+        if (!sameEditor) resetLiteralMode()
+        literalEditor = editorInfo
+        literalEditorIdentity = identity
+        literalEditorConnection = currentInputConnection
         floatingKeyboardManager?.resetDragAndResizeState()
         inputLogic.connection.onStartInput()
         
@@ -733,7 +784,7 @@ class LatinIME : InputMethodService(),
         
         updateFullscreenMode()
         
-        if (isDifferentTextField || !currentSettingsValues.hasSameOrientation(resources.configuration)) {
+        if (sSettingsDirty || isDifferentTextField || !currentSettingsValues.hasSameOrientation(resources.configuration)) {
             loadSettings()
             currentSettingsValues = settings.current
             suggestionStripView?.updateVoiceKey()
@@ -850,6 +901,7 @@ class LatinIME : InputMethodService(),
     }
 
     fun onFinishInputInternal() {
+        resetLiteralMode()
         super.onFinishInput()
         Log.i(TAG, "onFinishInput")
         floatingKeyboardManager?.resetDragAndResizeState()
@@ -937,6 +989,7 @@ class LatinIME : InputMethodService(),
     }
 
     override fun onDisplayCompletions(applicationSpecifiedCompletions: Array<CompletionInfo>?) {
+        if (isLiteralMode) return
         if (DebugFlags.DEBUG_ENABLED) {
             Log.i(TAG, "Received completions:")
             applicationSpecifiedCompletions?.forEachIndexed { i, info -> Log.i(TAG, "  #$i: $info") }
@@ -1415,6 +1468,7 @@ class LatinIME : InputMethodService(),
     private fun hasSuggestionStripView(): Boolean = suggestionStripView != null
 
     private fun setSuggestedWords(suggestedWords: SuggestedWords) {
+        if (isLiteralMode && !suggestedWords.isEmpty) return
         val currentSettingsValues = settings.current
         inputLogic.setSuggestedWords(suggestedWords)
         if (!hasSuggestionStripView()) return
@@ -1439,6 +1493,10 @@ class LatinIME : InputMethodService(),
     }
 
     override fun setSuggestions(suggestedWords: SuggestedWords) {
+        if (isLiteralMode) {
+            setSuggestedWords(SuggestedWords.getEmptyInstance())
+            return
+        }
         if (tryShowMathSuggestion()) return
         if (suggestedWords.isEmpty) {
             if (keyboardSwitcher.isHandwritingShowing) {
@@ -1457,7 +1515,7 @@ class LatinIME : InputMethodService(),
     }
 
     override fun pickSuggestionManually(suggestionInfo: SuggestedWordInfo?) {
-        if (suggestionInfo == null) return
+        if (suggestionInfo == null || isLiteralMode) return
         val completeInputTransaction = inputLogic.onPickSuggestionManually(settings.current, suggestionInfo, keyboardSwitcher.keyboardShiftMode, handler)
         updateStateAfterInputTransaction(completeInputTransaction)
         if (keyboardSwitcher.isHandwritingShowing) keyboardSwitcher.clearHandwritingCanvas()
@@ -1468,6 +1526,7 @@ class LatinIME : InputMethodService(),
     }
 
     fun tryShowOtpSuggestion(): Boolean {
+        if (isLiteralMode) return false
         val strip = suggestionStripView ?: return false
         val otpView = otpSuggestionManager.getOtpSuggestionView(strip)
         if (otpView != null) {
@@ -1478,6 +1537,7 @@ class LatinIME : InputMethodService(),
     }
 
     fun tryShowMathSuggestion(): Boolean {
+        if (isLiteralMode) return false
         val strip = suggestionStripView ?: return false
         val mathView = mathSuggestionManager.getMathSuggestionView(strip)
         if (mathView != null) {
@@ -1488,6 +1548,7 @@ class LatinIME : InputMethodService(),
     }
 
     fun tryShowClipboardSuggestion(): Boolean {
+        if (isLiteralMode) return false
         val strip = suggestionStripView ?: return false
         val clipboardView = clipboardHistoryManager.getClipboardSuggestionView(currentInputEditorInfo, strip)
         if (clipboardView != null) {
@@ -1505,6 +1566,11 @@ class LatinIME : InputMethodService(),
         get() = suggestionStripView?.isExternalSuggestionVisible == true
 
     override fun setNeutralSuggestionStrip() {
+        if (isLiteralMode) {
+            suggestionStripView?.setExternalSuggestionView(null, false)
+            setSuggestedWords(SuggestedWords.getEmptyInstance())
+            return
+        }
         if (keyboardSwitcher.isHandwritingShowing) return
         val currentSettings = settings.current
         if (tryShowExternalSuggestion()) {
@@ -1811,6 +1877,9 @@ class LatinIME : InputMethodService(),
 
         override fun handleMessage(msg: Message) {
             val latinIme = ownerInstance ?: return
+            if (msg.what in listOf(MSG_UPDATE_SUGGESTION_STRIP, MSG_RESUME_SUGGESTIONS,
+                    MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS, MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED) &&
+                !latinIme.inputLogic.isSuggestionRequestCurrent(msg.arg2)) return
             when (msg.what) {
                 MSG_UPDATE_SUGGESTION_STRIP -> {
                     cancelUpdateSuggestionStrip()
@@ -1846,9 +1915,9 @@ class LatinIME : InputMethodService(),
         }
 
         fun postUpdateSuggestionStrip(inputStyle: Int) {
-            val latinIme = ownerInstance
-            if (latinIme != null && latinIme.keyboardSwitcher.isHandwritingShowing) return
-            sendMessageDelayed(obtainMessage(MSG_UPDATE_SUGGESTION_STRIP, inputStyle, 0), delayInMillisecondsToUpdateSuggestions.toLong())
+            val latinIme = ownerInstance ?: return
+            if (latinIme.isLiteralMode || latinIme.keyboardSwitcher.isHandwritingShowing) return
+            sendMessageDelayed(obtainMessage(MSG_UPDATE_SUGGESTION_STRIP, inputStyle, latinIme.inputLogic.suggestionGeneration), delayInMillisecondsToUpdateSuggestions.toLong())
         }
 
         fun postReopenDictionaries() { sendMessage(obtainMessage(MSG_REOPEN_DICTIONARIES)) }
@@ -1859,8 +1928,9 @@ class LatinIME : InputMethodService(),
             if (latinIme.keyboardSwitcher.isHandwritingShowing) return
             if (!latinIme.settings.current.needsToLookupSuggestions()) return
             removeMessages(MSG_RESUME_SUGGESTIONS)
-            if (shouldDelay) sendMessageDelayed(obtainMessage(MSG_RESUME_SUGGESTIONS), delayInMillisecondsToUpdateSuggestions.toLong())
-            else sendMessage(obtainMessage(MSG_RESUME_SUGGESTIONS))
+            val message = obtainMessage(MSG_RESUME_SUGGESTIONS, 0, latinIme.inputLogic.suggestionGeneration)
+            if (shouldDelay) sendMessageDelayed(message, delayInMillisecondsToUpdateSuggestions.toLong())
+            else sendMessage(message)
         }
 
         fun postResetCaches(tryResumeSuggestions: Boolean, remainingTries: Int) {
@@ -1873,6 +1943,12 @@ class LatinIME : InputMethodService(),
         fun hasPendingWaitForDictionaryLoad(): Boolean = hasMessages(MSG_WAIT_FOR_DICTIONARY_LOAD)
         fun cancelUpdateSuggestionStrip() { removeMessages(MSG_UPDATE_SUGGESTION_STRIP) }
         fun cancelResumeSuggestions() { removeMessages(MSG_RESUME_SUGGESTIONS) }
+        fun cancelPendingSuggestions() {
+            cancelUpdateSuggestionStrip()
+            cancelResumeSuggestions()
+            removeMessages(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS)
+            removeMessages(MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED)
+        }
         fun hasPendingUpdateSuggestions(): Boolean = hasMessages(MSG_UPDATE_SUGGESTION_STRIP)
         fun hasPendingResumeSuggestions(): Boolean = hasMessages(MSG_RESUME_SUGGESTIONS)
         fun hasPendingReopenDictionaries(): Boolean = hasMessages(MSG_REOPEN_DICTIONARIES)
@@ -1890,19 +1966,25 @@ class LatinIME : InputMethodService(),
             for (i in 0..MSG_LAST) removeMessages(i)
         }
 
-        fun showGesturePreviewAndSetSuggestions(suggestedWords: SuggestedWords, dismissGestureFloatingPreviewText: Boolean) {
+        fun showGesturePreviewAndSetSuggestions(
+            suggestedWords: SuggestedWords, dismissGestureFloatingPreviewText: Boolean,
+            generation: Int = ownerInstance?.inputLogic?.suggestionGeneration ?: 0
+        ) {
+            if (ownerInstance?.inputLogic?.isSuggestionRequestCurrent(generation) != true) return
             removeMessages(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS)
             val arg1 = if (dismissGestureFloatingPreviewText) ARG1_DISMISS_GESTURE_FLOATING_PREVIEW_TEXT else ARG1_SHOW_GESTURE_FLOATING_PREVIEW_TEXT
-            obtainMessage(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS, arg1, ARG2_UNUSED, suggestedWords).sendToTarget()
+            obtainMessage(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS, arg1, generation, suggestedWords).sendToTarget()
         }
 
-        fun setSuggestions(suggestedWords: SuggestedWords) {
+        fun setSuggestions(suggestedWords: SuggestedWords, generation: Int = ownerInstance?.inputLogic?.suggestionGeneration ?: 0) {
+            if (ownerInstance?.inputLogic?.isSuggestionRequestCurrent(generation) != true) return
             removeMessages(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS)
-            obtainMessage(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS, ARG1_NOT_GESTURE_INPUT, ARG2_UNUSED, suggestedWords).sendToTarget()
+            obtainMessage(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS, ARG1_NOT_GESTURE_INPUT, generation, suggestedWords).sendToTarget()
         }
 
-        fun showTailBatchInputResult(suggestedWords: SuggestedWords) {
-            obtainMessage(MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED, suggestedWords).sendToTarget()
+        fun showTailBatchInputResult(suggestedWords: SuggestedWords, generation: Int) {
+            if (ownerInstance?.inputLogic?.isSuggestionRequestCurrent(generation) != true) return
+            obtainMessage(MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED, 0, generation, suggestedWords).sendToTarget()
         }
 
         fun postSwitchLanguage(subtype: InputMethodSubtype) {

@@ -199,6 +199,7 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
             }
         }
         when (primaryCode) {
+            KeyCode.TOGGLE_LITERAL_MODE -> return latinIME.toggleLiteralMode()
             KeyCode.TOGGLE_SELECTION_MODE -> {
                 if (sPersistentSelectionModeActive || connection.hasSelection()) {
                     val hadSelection = connection.hasSelection()

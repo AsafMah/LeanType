@@ -19,6 +19,7 @@ import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.common.Constants.Separators
 import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.settings.Defaults
@@ -207,6 +208,7 @@ fun setToolbarButtonActivatedState(button: ImageButton) {
         AUTOCORRECT -> Settings.getValues().mAutoCorrectionEnabledPerUserSettings
         AUTO_CAP -> Settings.getValues().mAutoCap
         FORCE_AUTO_CAPS -> Settings.getValues().mAutoCap && Settings.getValues().mForceAutoCaps
+        LITERAL -> LatinIME.getInstance()?.isLiteralMode == true
         SELECT_MODE -> helium314.keyboard.keyboard.KeyboardActionListenerImpl.sPersistentSelectionModeActive
         else -> true
     }
@@ -224,7 +226,7 @@ fun setToolbarButtonActivatedState(button: ImageButton) {
         ViewCompat.setStateDescription(button, button.context.getString(state))
     }
     val colors = Settings.getValues().mColors
-    if (activated && button.tag in listOf(INCOGNITO, ONE_HANDED, SPLIT, AUTOCORRECT, AUTO_CAP, FORCE_AUTO_CAPS, SELECT_MODE)) {
+    if (activated && button.tag in listOf(INCOGNITO, ONE_HANDED, SPLIT, AUTOCORRECT, AUTO_CAP, FORCE_AUTO_CAPS, LITERAL, SELECT_MODE)) {
         colors.setColor(button.background, ColorType.TOOL_BAR_KEY_ENABLED_BACKGROUND)
         if (button.drawable != null) {
             button.clearColorFilter()
@@ -262,6 +264,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     AUTOCORRECT -> KeyCode.TOGGLE_AUTOCORRECT
     AUTO_CAP -> KeyCode.TOGGLE_AUTO_CAP
     FORCE_AUTO_CAPS -> KeyCode.TOGGLE_FORCE_AUTO_CAPS
+    LITERAL -> KeyCode.TOGGLE_LITERAL_MODE
     CLEAR_CLIPBOARD -> KeyCode.CLIPBOARD_CLEAR_HISTORY
     CLOSE_HISTORY -> KeyCode.ALPHA
     EMOJI -> KeyCode.EMOJI
@@ -318,7 +321,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 // names need to be aligned with resources strings (using lowercase of key.name)
 enum class ToolbarKey {
     VOICE, CLIPBOARD, CLIPBOARD_SEARCH, NUMPAD, HANDWRITING, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, SPLIT, FLOATING,
-    INCOGNITO, TOUCHPAD, TEXT_EDIT, AUTOCORRECT, AUTO_CAP, FORCE_AUTO_CAPS, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
+    INCOGNITO, TOUCHPAD, TEXT_EDIT, AUTOCORRECT, AUTO_CAP, FORCE_AUTO_CAPS, LITERAL, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
     PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, PROOFREAD, TRANSLATE, OCR, SELECT_MODE,
     CUSTOM_AI_1, CUSTOM_AI_2, CUSTOM_AI_3, CUSTOM_AI_4, CUSTOM_AI_5,
     CUSTOM_AI_6, CUSTOM_AI_7, CUSTOM_AI_8, CUSTOM_AI_9, CUSTOM_AI_10
