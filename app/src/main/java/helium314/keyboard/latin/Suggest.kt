@@ -118,12 +118,23 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         val firstOccurrenceOfTypedWordInSuggestions = SuggestedWordInfo.removeDupsAndTypedWord(capitalizedTypedWord, suggestionsContainer)
         makeFirstTwoSuggestionsNonEmoji(suggestionsContainer)
 
+        val firstSuggestion = suggestionsContainer.firstOrNull()
+        val expectedContraction = getExpectedContraction(
+            capitalizedTypedWord.dropLast(trailingSingleQuotesCount), trailingSingleQuotesCount)
+        val correctionCandidate = if (typedWordFirstOccurrenceWordInfo == null && expectedContraction != null
+            && firstSuggestion?.isKindOf(SuggestedWordInfo.KIND_WHITELIST) != true
+            && firstSuggestion?.isKindOf(SuggestedWordInfo.KIND_SHORTCUT) != true) {
+            // Prefer the existing canonical spelling, then a Shift/CapsLock or dictionary variant.
+            suggestionsContainer.firstOrNull { it.mWord == expectedContraction }
+                ?: suggestionsContainer.firstOrNull { it.mWord.equals(expectedContraction, ignoreCase = true) }
+                ?: firstSuggestion
+        } else firstSuggestion
         val (allowsToBeAutoCorrected, hasAutoCorrection) = shouldBeAutoCorrected(
             trailingSingleQuotesCount,
             capitalizedTypedWord,
-            suggestionsContainer.firstOrNull(),
+            correctionCandidate,
             {
-                val first = suggestionsContainer.firstOrNull() ?: suggestionResults.first()
+                val first = correctionCandidate ?: suggestionResults.first()
                 val suggestions = getNextWordSuggestions(ngramContext, keyboard, inputStyleIfNotPrediction, settingsValuesForSuggestion)
                 val suggestionForFirstInContainer = suggestions.firstOrNull { it.mWord == first.word }
                 val suggestionForTypedWord = suggestions.firstOrNull { it.mWord == capitalizedTypedWord }
@@ -135,6 +146,10 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             firstOccurrenceOfTypedWordInSuggestions,
             typedWordFirstOccurrenceWordInfo
         )
+        if (hasAutoCorrection && correctionCandidate != null && correctionCandidate !== firstSuggestion) {
+            suggestionsContainer.remove(correctionCandidate)
+            suggestionsContainer.add(0, correctionCandidate)
+        }
          val typedWordInfo = SuggestedWordInfo(capitalizedTypedWord, "", SuggestedWordInfo.MAX_SCORE,
             SuggestedWordInfo.KIND_TYPED, typedWordFirstOccurrenceWordInfo?.mSourceDict ?: Dictionary.DICTIONARY_USER_TYPED,
             SuggestedWordInfo.NOT_AN_INDEX , SuggestedWordInfo.NOT_A_CONFIDENCE)
@@ -272,19 +287,20 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             hasAutoCorrection = false
         } else {
             val firstSuggestion = firstSuggestionInContainer ?: suggestionResults.first()
+            val expectedContraction = getExpectedContraction(consideredWord, trailingSingleQuotesCount)
+            if (expectedContraction != null && typedWordInfo == null
+                && firstSuggestion.isKindOf(SuggestedWordInfo.KIND_SHORTCUT)
+                && !Settings.getValues().mAutoCorrectShortcuts) {
+                return true to false
+            }
             if (suggestionResults.mFirstSuggestionExceedsConfidenceThreshold && firstOccurrenceOfTypedWordInSuggestions != 0) {
                 // mFirstSuggestionExceedsConfidenceThreshold is always set to false, so currently this branch is useless
                 return true to true
             }
 
-            val lowerConsidered = consideredWord.lowercase(Locale.ROOT)
-            val expectedContraction = COMMON_CONTRACTIONS[lowerConsidered]
-            if (expectedContraction != null && typedWordInfo == null) {
-                // If typed word matches a missing-apostrophe contraction (e.g. dont -> don't), promote it
-                val contractionMatch = suggestionResults.firstOrNull { it.mWord.equals(expectedContraction, ignoreCase = true) }
-                if (contractionMatch != null || firstSuggestion.mWord.equals(expectedContraction, ignoreCase = true)) {
-                    return true to true
-                }
+            if (expectedContraction != null && typedWordInfo == null
+                && firstSuggestion.mWord.equals(expectedContraction, ignoreCase = true)) {
+                return true to true
             }
 
             // For short words (<= 3 chars) not in the dictionary (e.g. Ab, yt, tg, db),
@@ -584,6 +600,12 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             "theres" to "there's", "heres" to "here's", "wheres" to "where's", "whos" to "who's",
             "lets" to "let's", "itll" to "it'll", "youll" to "you'll", "theyll" to "they'll"
         )
+
+        private fun getExpectedContraction(consideredWord: String, trailingSingleQuotesCount: Int): String? {
+            val contraction = COMMON_CONTRACTIONS[consideredWord.lowercase(Locale.ROOT)] ?: return null
+            // Contractions already contain one apostrophe; match the normal trailing-quote transform.
+            return contraction + "'".repeat((trailingSingleQuotesCount - 1).coerceAtLeast(0))
+        }
 
         private fun isDeveloperTokenOrSpecialSyntax(word: String): Boolean {
             if (word.isEmpty()) return false

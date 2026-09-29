@@ -5,6 +5,11 @@ import androidx.core.content.edit
 import helium314.keyboard.ShadowBinaryDictionaryUtils
 import helium314.keyboard.ShadowInputMethodManager2
 import helium314.keyboard.ShadowLocaleManagerCompat
+import helium314.keyboard.event.Event
+import helium314.keyboard.keyboard.Keyboard
+import helium314.keyboard.keyboard.KeyboardId
+import helium314.keyboard.keyboard.KeyboardLayoutSet
+import helium314.keyboard.keyboard.internal.KeyboardParams
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
 import helium314.keyboard.latin.common.ComposedData
 import helium314.keyboard.latin.common.StringUtils
@@ -25,6 +30,9 @@ import java.util.*
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 @Suppress("NonAsciiCharacters")
 @RunWith(RobolectricTestRunner::class)
@@ -44,6 +52,9 @@ class SuggestTest {
     private val thresholdVeryAggressive = -1f
 
     @BeforeTest fun setUp() {
+        currentTypingLocale = Locale.ENGLISH
+        typingSuggestionResults = SuggestionResults(0, false, false)
+        mainDictionaryInitialized = true
         latinIME = Robolectric.setupService(LatinIME::class.java)
         // start logging only after latinIME is created, avoids showing the stack traces if library is not found
         ShadowLog.setupLogging()
@@ -291,6 +302,253 @@ class SuggestTest {
         assert(result.last()) // should be corrected
     }
 
+    @Test fun `missing apostrophe promotes the actual contraction past a case-only distractor`() {
+        val contraction = suggestion("you're", 100000, Locale.ENGLISH)
+        val candidates = listOf(
+            suggestion("Youre", 900000, Locale.ENGLISH),
+            suggestion("your", 800000, Locale.ENGLISH),
+            suggestion("yours", 700000, Locale.ENGLISH),
+            suggestion("yore", 600000, Locale.ENGLISH),
+            contraction
+        )
+        val result = getSuggestedWords("youre", candidates)
+
+        assertTrue(result.mWillAutoCorrect)
+        assertSame(contraction, result.getInfo(SuggestedWords.INDEX_OF_AUTO_CORRECTION))
+        assertEquals("youre", result.getWord(SuggestedWords.INDEX_OF_TYPED_WORD))
+        assertEquals("youre", result.getWord(2))
+        assertEquals(listOf("youre", "you're", "youre", "Youre", "your", "yours", "yore"),
+            (0 until result.size()).map(result::getWord))
+        assertEquals(SuggestedWords.INPUT_STYLE_TYPING, result.mInputStyle)
+        assertEquals(42, result.mSequenceNumber)
+        assertFalse(result.mTypedWordValid)
+    }
+
+    @Test fun `missing apostrophe does not authorize an unrelated first candidate`() {
+        val contraction = suggestion("you're", 100000, Locale.ENGLISH)
+        val result = getSuggestedWords("youre", listOf(
+            suggestion("yours", 900000, Locale.ENGLISH), contraction))
+
+        assertTrue(result.mWillAutoCorrect)
+        assertSame(contraction, result.getInfo(SuggestedWords.INDEX_OF_AUTO_CORRECTION))
+        assertEquals("youre", result.getWord(2))
+        assertEquals("yours", result.getWord(3))
+    }
+
+    @Test fun `unshifted contraction prefers existing canonical spelling over a higher capitalized variant`() {
+        val contraction = suggestion("you're", 100000, Locale.ENGLISH)
+        val result = getSuggestedWords("youre", listOf(
+            suggestion("Youre", 950000, Locale.ENGLISH),
+            suggestion("You're", 900000, Locale.ENGLISH),
+            contraction
+        ))
+        assertTrue(result.mWillAutoCorrect)
+        assertSame(contraction, result.getInfo(SuggestedWords.INDEX_OF_AUTO_CORRECTION))
+        assertEquals(listOf("youre", "you're", "youre", "Youre", "You're"),
+            (0 until result.size()).map(result::getWord))
+    }
+
+    @Test fun `canonical contraction spelling retains English I capitalization`() {
+        val contraction = suggestion("I'm", 100000, Locale.ENGLISH)
+        val result = getSuggestedWords("im", listOf(
+            suggestion("Im", 950000, Locale.ENGLISH),
+            suggestion("i'm", 900000, Locale.ENGLISH),
+            contraction
+        ))
+        assertTrue(result.mWillAutoCorrect)
+        assertSame(contraction, result.getInfo(SuggestedWords.INDEX_OF_AUTO_CORRECTION))
+    }
+
+    @Test fun `contraction shortcut only authorizes the candidate being evaluated`() {
+        val result = shouldBeAutoCorrected(
+            "youre",
+            listOf(suggestion("Youre", 900000, Locale.ENGLISH),
+                suggestion("you're", 100000, Locale.ENGLISH)),
+            null, null, Locale.ENGLISH, thresholdModest
+        )
+        assertFalse(result.last())
+    }
+
+    @Test fun `promoted contraction retains sentence-start and manual capitalization`() {
+        val candidates = listOf(
+            suggestion("yours", 900000, Locale.ENGLISH),
+            suggestion("you're", 100000, Locale.ENGLISH),
+            suggestion("You're", 90000, Locale.ENGLISH)
+        )
+        val cases = listOf(
+            Triple("Youre", KeyboardId.ELEMENT_ALPHABET, WordComposer.CAPS_MODE_AUTO_SHIFTED),
+            Triple("Youre", KeyboardId.ELEMENT_ALPHABET, WordComposer.CAPS_MODE_MANUAL_SHIFTED),
+            Triple("youre", KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED, WordComposer.CAPS_MODE_OFF),
+            Triple("YOURE", KeyboardId.ELEMENT_ALPHABET, WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED),
+            Triple("youre", KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED, WordComposer.CAPS_MODE_OFF)
+        )
+        for ((word, element, capsMode) in cases) {
+            val result = getSuggestedWords(word, candidates, keyboardElement = element, capsMode = capsMode)
+            val expected = if (word == "YOURE" || element == KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED)
+                "YOU'RE" else "You're"
+            assertTrue(result.mWillAutoCorrect, "$word / $element / $capsMode")
+            assertEquals(expected, result.getWord(SuggestedWords.INDEX_OF_AUTO_CORRECTION))
+            assertEquals(1, (0 until result.size()).count { result.getWord(it) == expected })
+            val promoted = result.getInfo(SuggestedWords.INDEX_OF_AUTO_CORRECTION)
+            assertEquals(candidates[1].mScore, promoted.mScore)
+            assertEquals(candidates[1].mKindAndFlags, promoted.mKindAndFlags)
+            assertSame(candidates[1].mSourceDict, promoted.mSourceDict)
+            assertEquals(result.getWord(SuggestedWords.INDEX_OF_TYPED_WORD), result.getWord(2))
+        }
+    }
+
+    @Test fun `promoted contraction retains trailing quote transformation`() {
+        for ((word, expected) in listOf("youre'" to "you're", "youre''" to "you're'")) {
+            val result = getSuggestedWords(word, listOf(
+                suggestion("yours", 900000, Locale.ENGLISH),
+                suggestion("you're", 100000, Locale.ENGLISH)
+            ))
+            assertTrue(result.mWillAutoCorrect)
+            assertEquals(expected, result.getWord(SuggestedWords.INDEX_OF_AUTO_CORRECTION))
+            assertEquals(word, result.getWord(2))
+        }
+    }
+
+    @Test fun `disabled correction resumed input and missing main dictionary do not promote contractions`() {
+        val candidates = listOf(
+            suggestion("Youre", 900000, Locale.ENGLISH),
+            suggestion("you're", 100000, Locale.ENGLISH)
+        )
+        val disabled = getSuggestedWords("youre", candidates, correctionEnabled = false)
+        val resumed = getSuggestedWords("youre", candidates, resumed = true)
+        mainDictionaryInitialized = false
+        val noDictionary = getSuggestedWords("youre", candidates)
+        for (result in listOf(disabled, resumed, noDictionary)) {
+            assertFalse(result.mWillAutoCorrect)
+            assertEquals("Youre", result.getWord(1))
+            assertEquals(listOf("Youre", "you're"),
+                (0 until result.size()).map(result::getWord).filter { it != "youre" })
+        }
+    }
+
+    @Test fun `known typed words are not replaced by contractions including in another language`() {
+        for ((word, contraction, locale) in listOf(
+            Triple("cant", "can't", Locale.ENGLISH),
+            Triple("dont", "don't", Locale.FRENCH),
+            Triple("you're", "Youre", Locale.ENGLISH)
+        )) {
+            val result = getSuggestedWords(word, listOf(
+                suggestion(contraction, 1900000, Locale.ENGLISH),
+                suggestion(word, 1600000, locale)
+            ), typingLocale = locale)
+            assertTrue(result.mTypedWordValid)
+            assertFalse(result.mWillAutoCorrect)
+            assertEquals(word, result.mTypedWordInfo?.mWord)
+            assertTrue((0 until result.size()).any { result.getWord(it) == word })
+        }
+    }
+
+    @Test fun `existing dictionary whitelist takes priority over contraction promotion`() {
+        val whitelist = suggestion("your", Int.MAX_VALUE, Locale.ENGLISH)
+        val result = getSuggestedWords("youre", listOf(
+            whitelist, suggestion("you're", 100000, Locale.ENGLISH)))
+        assertTrue(result.mWillAutoCorrect)
+        assertSame(whitelist, result.getInfo(SuggestedWords.INDEX_OF_AUTO_CORRECTION))
+    }
+
+    @Test fun `explicit dictionary shortcut keeps priority and respects its correction setting`() {
+        val shortcut = suggestion("your", 1200000, Locale.ENGLISH, shortcut = true)
+        val candidates = listOf(shortcut, suggestion("you're", 100000, Locale.ENGLISH))
+        for (enabled in listOf(true, false)) {
+            latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOCORRECT_SHORTCUTS, enabled) }
+            val result = getSuggestedWords("youre", candidates)
+            assertEquals(enabled, result.mWillAutoCorrect)
+            assertSame(shortcut, result.getInfo(1))
+        }
+    }
+
+    @Test fun `contraction shortcut does not bypass disabled dictionary shortcuts`() {
+        val contraction = suggestion("you're", 100000, Locale.ENGLISH, shortcut = true)
+        val candidates = listOf(suggestion("Youre", 900000, Locale.ENGLISH), contraction)
+        for (enabled in listOf(true, false)) {
+            latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOCORRECT_SHORTCUTS, enabled) }
+            val result = getSuggestedWords("youre", candidates)
+            assertEquals(enabled, result.mWillAutoCorrect)
+            assertSame(if (enabled) contraction else candidates[0], result.getInfo(1))
+        }
+    }
+
+    @Test fun `absent contractions are not synthesized and case-only protection remains`() {
+        val result = getSuggestedWords("youre", listOf(suggestion("Youre", 900000, Locale.ENGLISH)))
+        assertFalse(result.mWillAutoCorrect)
+        assertEquals("Youre", result.getWord(1))
+        assertFalse((0 until result.size()).any { result.getWord(it) == "you're" })
+    }
+
+    @Test fun `contraction promotion does not rewrite dictionary casing`() {
+        val contraction = suggestion("You're", 100000, Locale.ENGLISH)
+        val result = getSuggestedWords("youre", listOf(
+            suggestion("yours", 900000, Locale.ENGLISH), contraction))
+        assertTrue(result.mWillAutoCorrect)
+        assertSame(contraction, result.getInfo(SuggestedWords.INDEX_OF_AUTO_CORRECTION))
+    }
+
+    @Test fun `existing contraction matching still works with English as a secondary language`() {
+        val contraction = suggestion("you're", 100000, Locale.ENGLISH)
+        val result = getSuggestedWords("youre", listOf(
+            suggestion("yourte", 900000, Locale.FRENCH), contraction), typingLocale = Locale.FRENCH)
+        assertTrue(result.mWillAutoCorrect)
+        assertSame(contraction, result.getInfo(SuggestedWords.INDEX_OF_AUTO_CORRECTION))
+    }
+
+    @Test fun `intentional mixed case is not replaced or reordered`() {
+        val result = getSuggestedWords("yOUre", listOf(
+            suggestion("yours", 900000, Locale.ENGLISH),
+            suggestion("you're", 100000, Locale.ENGLISH)))
+        assertFalse(result.mWillAutoCorrect)
+        assertEquals("yours", result.getWord(1))
+    }
+
+    private fun getSuggestedWords(
+        word: String,
+        candidates: List<SuggestedWordInfo>,
+        correctionEnabled: Boolean = true,
+        keyboardElement: Int = KeyboardId.ELEMENT_ALPHABET,
+        capsMode: Int = WordComposer.CAPS_MODE_OFF,
+        resumed: Boolean = false,
+        typingLocale: Locale = Locale.ENGLISH
+    ): SuggestedWords {
+        currentTypingLocale = typingLocale
+        val dictionaryResults = SuggestionResults(candidates.size, false, false).apply {
+            addAll(candidates)
+            mRawSuggestions?.addAll(candidates)
+        }
+        val originalOrder = dictionaryResults.toList()
+        typingSuggestionResults = dictionaryResults
+        suggest.clearNextWordSuggestionsCache()
+        suggest.setAutoCorrectionThreshold(thresholdModest)
+        val composer = WordComposer()
+        if (resumed) {
+            val codePoints = StringUtils.toCodePointArray(word)
+            composer.setComposingWord(codePoints, IntArray(codePoints.size * 2))
+        } else {
+            word.codePoints().forEach {
+                composer.applyProcessedEvent(composer.processEvent(
+                    Event.createEventForCodePointFromUnknownSource(it)))
+            }
+        }
+        composer.setCapitalizedModeAtStartComposingTime(capsMode)
+        val keyboard = Keyboard(KeyboardParams().apply {
+            mId = KeyboardLayoutSet.getFakeKeyboardId(keyboardElement)
+            GRID_WIDTH = 1
+            GRID_HEIGHT = 1
+        })
+        val result = suggest.getSuggestedWords(
+            composer, NgramContext(NgramContext.WordInfo("think")), keyboard,
+            SettingsValuesForSuggestion(false, false, ""),
+            correctionEnabled, SuggestedWords.INPUT_STYLE_TYPING, 42
+        )
+        assertEquals(originalOrder, dictionaryResults.toList())
+        assertSame(dictionaryResults.mRawSuggestions, result.mRawSuggestions)
+        result.mRawSuggestions?.let { assertEquals(candidates, it) }
+        return result
+    }
+
 
     private fun shouldBeAutoCorrected(word: String, // typed word
                               suggestions: List<SuggestedWordInfo>, // suggestions ordered by score, including suggestion for typed word if in dictionary
@@ -329,6 +587,8 @@ class SuggestTest {
 }
 
 private var currentTypingLocale = Locale.ENGLISH
+internal var typingSuggestionResults = SuggestionResults(0, false, false)
+private var mainDictionaryInitialized = true
 
 fun suggestion(word: String, score: Int, locale: Locale, shortcut: Boolean = false) =
     SuggestedWordInfo(
@@ -352,7 +612,21 @@ class ShadowFacilitator {
     @Implementation
     fun getCurrentLocale(): Locale = currentTypingLocale
     @Implementation
-    fun hasAtLeastOneInitializedMainDictionary() = true // otherwise no autocorrect
+    fun getMainLocale(): Locale = currentTypingLocale
+    @Implementation
+    fun hasAtLeastOneInitializedMainDictionary() = mainDictionaryInitialized
+    @Implementation
+    fun isMainDictionaryLoadPending() = false
+    @Implementation
+    fun getSuggestionResults(
+        composedData: ComposedData,
+        ngramContext: NgramContext,
+        keyboard: Keyboard,
+        settingsValuesForSuggestion: SettingsValuesForSuggestion,
+        sessionId: Int,
+        inputStyle: Int
+    ): SuggestionResults = if (composedData.mTypedWord.isEmpty()) SuggestionResults(0, false, false)
+        else typingSuggestionResults
 }
 
 private class TestDict(locale: Locale) : Dictionary("testDict", locale) {
