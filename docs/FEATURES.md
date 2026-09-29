@@ -347,6 +347,16 @@ LeanType features an advanced **Native IME Floating Window** architecture that r
 Split your toolbar and suggestion strip into two independent rows for fast, unhindered access to both word predictions and quick actions.
 - Configure via **Settings → Appearance → Split toolbar & suggestions**.
 
+### Optional Literal typing
+
+For URLs, code, or other text that should stay as typed, add **Literal typing** in **Settings → Toolbar → Toolbar keys** (or **Pinned toolbar keys**, where available). It is off by default and is not automatically added to your enabled toolbar actions.
+
+Tap the action to turn it on for the current field; tap again to restore normal typing. The highlighted toolbar and pinned buttons share the same state. A toggle finishes any pending composition as typed, without applying a correction or moving the cursor. The mode resets when input finishes or a new field starts; hiding the keyboard and identifiable same-field restarts preserve it. An ambiguous restart without a stable field identity resets it rather than carrying it to another field.
+
+While active, Literal typing suppresses automatic capitalization (including Force auto-caps), auto-correction (including per-app force-enable), word predictions, application completions, automatic spacing, double-space periods, text expansion, word-glide typing, and dictionary learning. Manual Shift/caps, script composition such as Hangul, explicit editing, paste, emoji insertion, and the editor's Enter action remain available. Normal typing preferences and learned data are not changed or deleted.
+
+Custom JSON layouts can use `{"label":"literal"}` or `{"code":-10078,"label":"Raw"}`. This is an explicit per-field mode, not automatic URL/code detection or a fix for all capitalization or contraction behavior.
+
 ---
 
 ## 12. Versatile Text Expander & Modifiers
@@ -716,6 +726,7 @@ LeanType provides an extensible keycode architecture that allows customizing key
 | **`-10075`** | `CLEAR_HANDWRITING` | Clears all current drawing strokes from the handwriting canvas. |
 | **`-10077`** | `OCR` | Opens the live camera viewfinder and screenshot OCR scanner. |
 | **`-10076`** | `SWITCH_TO_USER_IME` | Instantly switches to the user's configured target IME keyboard. |
+| **`-10078`** | `TOGGLE_LITERAL_MODE` | Toggles optional Literal typing for the current field; JSON keyword `literal`. |
 
 ---
 
@@ -827,6 +838,5 @@ LeanType provides an extensible keycode architecture that allows customizing key
 | **`12288`** | `CJK_SPACE` | CJK Fullwidth Ideographic Space (`\u3000`). |
 | **`-902`** | `MULTIPLE_CODE_POINTS` | Special container key producing multi-character text sequences. |
 | **`-10008`** | `NOT_SPECIFIED` | Structural dummy spacer key (disables key interaction, renders blank). |
-
 
 

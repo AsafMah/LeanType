@@ -24,6 +24,8 @@ class InputLogicHandler(
     private val nonUIThreadHandler: Handler
     private val lock = Any()
     private var inBatchInput = false // synchronized using lock.
+    @Volatile var generation = 0
+        private set
 
     init {
         val handlerThread = HandlerThread(InputLogicHandler::class.java.simpleName)
@@ -32,7 +34,11 @@ class InputLogicHandler(
     }
 
     fun reset() {
-        nonUIThreadHandler.removeCallbacksAndMessages(null)
+        synchronized(lock) {
+            generation++
+            inBatchInput = false
+            nonUIThreadHandler.removeCallbacksAndMessages(null)
+        }
     }
 
     /**
@@ -83,14 +89,15 @@ class InputLogicHandler(
                 return
             }
             inputLogic.wordComposer.setBatchInputPointers(batchPointers)
+            val requestGeneration = generation
             getSuggestedWords {
                 inputLogic.getSuggestedWords(
                     if (isTailBatchInput) SuggestedWords.INPUT_STYLE_TAIL_BATCH else SuggestedWords.INPUT_STYLE_UPDATE_BATCH,
                     sequenceNumber,
                     object : Suggest.OnGetSuggestedWordsCallback {
                         override fun onGetSuggestedWords(suggestedWords: SuggestedWords?) {
-                            if (suggestedWords != null) {
-                                showGestureSuggestionsWithPreviewVisuals(suggestedWords, isTailBatchInput)
+                            if (suggestedWords != null && inputLogic.isSuggestionRequestCurrent(requestGeneration)) {
+                                showGestureSuggestionsWithPreviewVisuals(suggestedWords, isTailBatchInput, requestGeneration)
                             }
                         }
                     }
@@ -101,7 +108,8 @@ class InputLogicHandler(
 
     private fun showGestureSuggestionsWithPreviewVisuals(
         suggestedWordsForBatchInput: SuggestedWords,
-        isTailBatchInput: Boolean
+        isTailBatchInput: Boolean,
+        requestGeneration: Int
     ) {
         // We're now inside the callback. This always runs on the Non-UI thread,
         // no matter what thread updateBatchInput was originally called on.
@@ -114,12 +122,15 @@ class InputLogicHandler(
         } else {
             suggestedWordsForBatchInput
         }
-        latinIMEHandler.showGesturePreviewAndSetSuggestions(suggestedWordsToShowSuggestions, isTailBatchInput)
+        latinIMEHandler.showGesturePreviewAndSetSuggestions(suggestedWordsToShowSuggestions, isTailBatchInput, requestGeneration)
         if (isTailBatchInput) {
-            inBatchInput = false
+            synchronized(lock) {
+                if (!inputLogic.isSuggestionRequestCurrent(requestGeneration)) return
+                inBatchInput = false
+            }
             // The following call schedules onEndBatchInputInternal
             // to be called on the UI thread.
-            latinIMEHandler.showTailBatchInputResult(suggestedWordsToShowSuggestions)
+            latinIMEHandler.showTailBatchInputResult(suggestedWordsToShowSuggestions, requestGeneration)
         }
     }
 
@@ -173,7 +184,11 @@ class InputLogicHandler(
     }
 
     fun getSuggestedWords(callback: Runnable) {
-        nonUIThreadHandler.obtainMessage(MSG_GET_SUGGESTED_WORDS, callback).sendToTarget()
+        val requestGeneration = generation
+        val guardedCallback = Runnable {
+            if (inputLogic.isSuggestionRequestCurrent(requestGeneration)) callback.run()
+        }
+        nonUIThreadHandler.obtainMessage(MSG_GET_SUGGESTED_WORDS, guardedCallback).sendToTarget()
     }
 
     companion object {

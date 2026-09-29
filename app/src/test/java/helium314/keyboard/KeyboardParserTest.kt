@@ -407,6 +407,23 @@ f""", // no newline at the end
         assertEquals(KeyCode.UNDO, key.toKeyParams(params).mPopupKeys?.first()?.mCode)
     }
 
+    @Test fun literalToolbarKey() {
+        assertIsExpected("""[[{ "label": "literal" }]]""",
+            Expected(KeyCode.TOGGLE_LITERAL_MODE, icon = "literal"))
+        assertIsExpected("""[[{ "code": -10078, "label": "Raw" }]]""",
+            Expected(KeyCode.TOGGLE_LITERAL_MODE, label = "Raw"))
+    }
+
+    @Test fun literalPopupToolbarKey() {
+        val key = LayoutParser.parseJsonString("""[[{ "label": "x", "popup": {
+          "main": { "label": "literal" }
+    } }]]""").map { row -> row.mapNotNull { it.compute(params) } }.flatten().single()
+        val popup = key.toKeyParams(params).mPopupKeys?.first()
+        assertEquals(null, popup?.mLabel)
+        assertEquals("literal", popup?.mIconName)
+        assertEquals(KeyCode.TOGGLE_LITERAL_MODE, popup?.mCode)
+    }
+
     @Test fun popupKeyWithIconAndImplicitText() {
         val key = LayoutParser.parseJsonString("""[[{ "label": "a", "popup": { "relevant": [
        { "label": "!icon/go_key|aa" }

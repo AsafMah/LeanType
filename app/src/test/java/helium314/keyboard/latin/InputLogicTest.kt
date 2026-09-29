@@ -13,6 +13,9 @@ import org.junit.Ignore
 import helium314.keyboard.ShadowInputMethodManager2
 import helium314.keyboard.ShadowLocaleManagerCompat
 import helium314.keyboard.event.Event
+import helium314.keyboard.compat.AppQuirk
+import helium314.keyboard.compat.AppQuirksManager
+import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.MainKeyboardView
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
@@ -26,10 +29,15 @@ import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.common.StringUtils
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.inputlogic.InputLogic
+import helium314.keyboard.latin.inputlogic.InputLogicHandler
 import helium314.keyboard.latin.inputlogic.SpaceState
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ScriptUtils
 import helium314.keyboard.latin.utils.SubtypeSettings
+import helium314.keyboard.latin.utils.TextExpanderUtils
+import helium314.keyboard.latin.utils.ToolbarKey
+import helium314.keyboard.latin.utils.createToolbarKey
+import helium314.keyboard.latin.suggestions.SuggestionStripView
 import helium314.keyboard.latin.utils.getTimestampFormatter
 import helium314.keyboard.latin.utils.prefs
 import org.junit.runner.RunWith
@@ -87,6 +95,283 @@ class InputLogicTest {
         assertEquals("c", composingText)
         latinIME.mHandler.onFinishInput()
         assertEquals("", composingText)
+    }
+
+    @Test fun literalActionPreservesTypedCompositionAndRestoresPreferences() {
+        reset()
+        setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
+        typeNoAssert("cps")
+        composer.setAutoCorrection(
+            SuggestedWordInfo("CPP", "", 0, 0, Mockito.mock(Dictionary::class.java), 0, 0)
+        )
+        val prefsBefore = latinIME.prefs().all.toMap()
+        val cursorBefore = cursor
+        toggleLiteral()
+        assertEquals("cps", text)
+        assertEquals(cursorBefore, cursor)
+        assertEquals("", composingText)
+        assertEquals(false, settingsValues.mAutoCorrectEnabled)
+        assertEquals(false, settingsValues.mAutoCap)
+        assertEquals(false, settingsValues.isSuggestionsEnabledPerUserSettings())
+        assertEquals(false, settingsValues.mGestureInputEnabled)
+        assertEquals(prefsBefore, latinIME.prefs().all)
+        toggleLiteral()
+        assertEquals("cps", text)
+        assertEquals(cursorBefore, cursor)
+        assertEquals(true, settingsValues.mAutoCorrectEnabled)
+        assertEquals(prefsBefore, latinIME.prefs().all)
+    }
+
+    @Test fun literalTypingKeepsCaseSpacesPunctuationAndDoesNotExpandOrLearn() {
+        configureExpansion("cpp", true)
+        setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
+        editorInfoOverride = EditorInfo().apply {
+            inputType = currentInputType
+            imeOptions = EditorInfo.IME_ACTION_NONE
+        }
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_AUTO_CAP, true)
+            putBoolean(Settings.PREF_FORCE_AUTO_CAPS, true)
+            putBoolean(Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD, true)
+            putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true)
+        }
+        toggleLiteral()
+        val literal = "cpp  https://Host/x_Y?ID=ABC  C:\\Src\\a.py .\n"
+        typeNoAssert(literal)
+        assertEquals(literal, text)
+        assertEquals(emptyList<String>(), addedWords)
+        checkConnectionConsistency()
+    }
+
+    private fun toggleLiteral() {
+        latinIME.keyboardActionListener.onCodeInput(KeyCode.TOGGLE_LITERAL_MODE, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+        handleMessages()
+        checkConnectionConsistency()
+    }
+
+    private fun configureExpansion(shortcut: String, immediate: Boolean) {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(TextExpanderUtils.PREF_ENABLED, true)
+            putBoolean(TextExpanderUtils.PREF_IMMEDIATE, immediate)
+            putBoolean(TextExpanderUtils.PREF_BACKSPACE_REVERTS, true)
+        }
+        TextExpanderUtils.saveShortcuts(
+            latinIME, mapOf(shortcut to TextExpanderUtils.ShortcutEntry("EXPANDED"))
+        )
+    }
+
+    @Test fun literalModePreservesHangulCompositionAndExplicitEditing() {
+        reset()
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        toggleLiteral()
+        typeNoAssert("ㅎㅏㄴ")
+        assertEquals("한", java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFC))
+        assertEquals(true, composer.isComposingWord())
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("하", java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFC))
+        latinIME.onTextInput("PASTED")
+        handleMessages()
+        assertEquals("하PASTED", java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFC))
+        assertEquals(emptyList<String>(), addedWords)
+    }
+
+    @Test fun literalModeRejectsCompletionsManualStalePicksAndGlideResults() {
+        reset()
+        typeNoAssert("raw")
+        toggleLiteral()
+        val word = SuggestedWordInfo("REPLACED", "", 0, 0, Mockito.mock(Dictionary::class.java), 0, 0)
+        val words = SuggestedWords(arrayListOf(word), null, word, true, true, false, 0, 0)
+        latinIME.onDisplayCompletions(arrayOf(CompletionInfo(1, 0, "REPLACED")))
+        latinIME.setSuggestions(words)
+        latinIME.pickSuggestionManually(word)
+        inputLogic.setSuggestedWords(words)
+        inputLogic.onStartBatchInput(settingsValues, latinIME.keyboardSwitcher, latinIME.handler)
+        inputLogic.onUpdateTailBatchInputCompleted(settingsValues, words, latinIME.keyboardSwitcher)
+        assertEquals("raw", text)
+        assertEquals(true, inputLogic.suggestedWords.isEmpty)
+        assertEquals(SpaceState.NONE, spaceState)
+    }
+
+    @Test fun literalModeSurvivesHideAndSameFieldRestartButNotNewEditorOrFinish() {
+        reset()
+        fun editor(id: Int = 42, input: Int = currentInputType) = EditorInfo().apply {
+            packageName = "test.literal.editor"
+            fieldId = id
+            inputType = input
+        }
+        fun start(info: EditorInfo, restarting: Boolean) {
+            editorInfoOverride = info
+            latinIME.onStartInputInternal(info, restarting)
+            latinIME.onStartInputViewInternal(info, restarting)
+        }
+        start(editor(), false)
+        toggleLiteral()
+        latinIME.onFinishInputViewInternal(false)
+        latinIME.onStartInputViewInternal(requireNotNull(editorInfoOverride), true)
+        assertEquals(true, latinIME.isLiteralMode)
+        start(editor(), true)
+        assertEquals(true, latinIME.isLiteralMode)
+        start(editor(43), true)
+        assertEquals(false, latinIME.isLiteralMode)
+        toggleLiteral()
+        start(editor(43, InputType.TYPE_CLASS_NUMBER), true)
+        assertEquals(false, latinIME.isLiteralMode)
+        start(editor(0), false)
+        toggleLiteral()
+        start(editor(0), true) // Same connection is positive evidence for a zero-ID restart.
+        assertEquals(true, latinIME.isLiteralMode)
+        inputConnectionOverride = InputConnectionWrapper(ic, false)
+        start(editor(0), true)
+        assertEquals(false, latinIME.isLiteralMode)
+        toggleLiteral()
+        start(editor(0), false)
+        assertEquals(false, latinIME.isLiteralMode)
+        toggleLiteral()
+        latinIME.onFinishInputInternal()
+        assertEquals(false, latinIME.isLiteralMode)
+        start(editor(), false)
+        toggleLiteral()
+        latinIME.onDestroy()
+        assertEquals(false, latinIME.isLiteralMode)
+    }
+
+    @Test fun literalModeOverridesForcedAppCorrectionAcrossSettingsReloadWithoutChangingPrefs() {
+        reset()
+        val packageName = "test.literal.forced"
+        editorInfoOverride = EditorInfo().apply {
+            inputType = currentInputType
+            this.packageName = packageName
+        }
+        AppQuirksManager.saveQuirk(AppQuirk(packageName, autoCorrectionMode = AppQuirksManager.AUTOCORRECT_FORCE_ENABLE))
+        try {
+            latinIME.onStartInputInternal(editorInfoOverride, false)
+            latinIME.onStartInputViewInternal(requireNotNull(editorInfoOverride), false)
+            val personalized = settingsValues.mUsePersonalizedDicts
+            val prefsBefore = latinIME.prefs().all.toMap()
+            assertEquals(true, settingsValues.mAutoCorrectEnabled)
+            toggleLiteral()
+            latinIME.settings.loadSettings(latinIME, Locale.US, settingsValues.mInputAttributes, currentScript)
+            assertEquals(true, latinIME.isLiteralMode)
+            assertEquals(false, settingsValues.mAutoCorrectEnabled)
+            assertEquals(personalized, settingsValues.mUsePersonalizedDicts)
+            assertEquals(prefsBefore, latinIME.prefs().all)
+            toggleLiteral()
+            assertEquals(true, settingsValues.mAutoCorrectEnabled)
+            assertEquals(prefsBefore, latinIME.prefs().all)
+        } finally {
+            AppQuirksManager.removeQuirk(packageName)
+        }
+    }
+
+    @Test fun literalModeInvalidatesQueuedWorkerAndUiTailAcrossOnOff() {
+        reset()
+        val worker = InputLogic::class.java.getDeclaredField("mInputLogicHandler").apply { isAccessible = true }
+            .get(inputLogic) as InputLogicHandler
+        var workerCalls = 0
+        worker.getSuggestedWords { workerCalls++ }
+        val queued = messages.last().obj as Runnable
+        val word = SuggestedWordInfo("STALE", "", 0, 0, Mockito.mock(Dictionary::class.java), 0, 0)
+        val words = SuggestedWords(arrayListOf(word), null, word, true, true, false, 0, 0)
+        latinIME.handler.setSuggestions(words)
+        val queuedSuggestions = Message.obtain(messages.last())
+        latinIME.handler.showTailBatchInputResult(words, inputLogic.suggestionGeneration)
+        val queuedTail = Message.obtain(messages.last())
+        toggleLiteral()
+        toggleLiteral()
+        queued.run()
+        latinIME.handler.handleMessage(queuedSuggestions)
+        latinIME.handler.handleMessage(queuedTail)
+        assertEquals(0, workerCalls)
+        assertEquals("", text)
+        assertEquals(true, inputLogic.suggestedWords.isEmpty)
+        queuedSuggestions.recycle()
+        queuedTail.recycle()
+    }
+
+    @Test fun literalModeDiscardsRunningSuggestionResultEvenAfterTurningOff() {
+        reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_FIRST_WORD_PREDICTIONS, false)
+            putBoolean(Settings.PREF_BIGRAM_PREDICTIONS, false)
+        }
+        val view = Mockito.mock(MainKeyboardView::class.java)
+        Mockito.`when`(view.keyboard).thenReturn(Mockito.mock(Keyboard::class.java, Mockito.RETURNS_DEEP_STUBS))
+        val viewField = KeyboardSwitcher::class.java.getDeclaredField("mKeyboardView").apply { isAccessible = true }
+        viewField.set(latinIME.keyboardSwitcher, view)
+        var computations = 0
+        val suggest = Mockito.mock(Suggest::class.java) { invocation ->
+            if (invocation.method.name == "getSuggestedWords") {
+                computations++
+                if (computations == 1) {
+                    toggleLiteral()
+                    toggleLiteral()
+                }
+                SuggestedWords.getEmptyInstance()
+            } else Mockito.RETURNS_DEFAULTS.answer(invocation)
+        }
+        InputLogic::class.java.getDeclaredField("mSuggest").apply { isAccessible = true }.set(inputLogic, suggest)
+        var delivered = 0
+        try {
+            inputLogic.getSuggestedWords(SuggestedWords.INPUT_STYLE_TYPING, 1) { delivered++ }
+            assertEquals(1, computations)
+            assertEquals(0, delivered)
+            assertEquals(false, latinIME.isLiteralMode)
+        } finally {
+            viewField.set(latinIME.keyboardSwitcher, null)
+        }
+    }
+
+    @Test fun literalModeKeepsExplicitCaseEmojiAndTextKeysWithoutAutomaticSpacingOrTldRewriting() {
+        reset()
+        toggleLiteral()
+        assertEquals(Constants.TextUtils.CAP_MODE_OFF, latinIME.inputLogic.getCurrentAutoCapsState(Settings.getInstance().current))
+        latinIME.keyboardActionListener.onCodeInput('A'.code, 0, 0, false)
+        latinIME.keyboardActionListener.onCodeInput('b'.code, 0, 0, false)
+        latinIME.onTextInput(".")
+        latinIME.onTextInput(".com")
+        latinIME.onTextInput("🙂")
+        latinIME.keyboardActionListener.onCodeInput('C'.code, 0, 0, false)
+        handleMessages()
+        assertEquals("Ab..com🙂C", text)
+        assertEquals(SpaceState.NONE, spaceState)
+        assertEquals(emptyList<String>(), addedWords)
+        checkConnectionConsistency()
+    }
+
+    @Test fun literalToolbarAndPinnedButtonsShareDispatchAndActivation() {
+        reset()
+        val strip = SuggestionStripView(latinIME, null)
+        val keyboardView = MainKeyboardView(latinIME, null).apply { id = R.id.keyboard_view }
+        strip.setListener(latinIME, keyboardView)
+        LatinIME::class.java.getDeclaredField("suggestionStripView").apply { isAccessible = true }.set(latinIME, strip)
+        val toolbar = strip.findViewById<android.view.ViewGroup>(R.id.toolbar)
+        val pinned = strip.findViewById<android.view.ViewGroup>(R.id.pinned_keys)
+        toolbar.removeAllViews()
+        pinned.removeAllViews()
+        val mainButton = createToolbarKey(latinIME, ToolbarKey.LITERAL)
+        val pinnedButton = createToolbarKey(latinIME, ToolbarKey.LITERAL)
+        val correctionButton = createToolbarKey(latinIME, ToolbarKey.AUTOCORRECT)
+        toolbar.addView(mainButton)
+        toolbar.addView(correctionButton)
+        pinned.addView(pinnedButton)
+        mainButton.setOnClickListener(strip)
+        pinnedButton.setOnClickListener(strip)
+        val prefsBefore = latinIME.prefs().all.toMap()
+        assertEquals("Literal typing", mainButton.contentDescription)
+        assertEquals(false, mainButton.isActivated)
+        mainButton.performClick()
+        assertEquals(true, latinIME.isLiteralMode)
+        assertEquals(true, mainButton.isActivated)
+        assertEquals(true, pinnedButton.isActivated)
+        assertEquals(false, correctionButton.isActivated)
+        assertEquals(true, createToolbarKey(latinIME, ToolbarKey.LITERAL).isActivated)
+        pinnedButton.performClick()
+        assertEquals(false, mainButton.isActivated)
+        assertEquals(false, pinnedButton.isActivated)
+        assertEquals(true, correctionButton.isActivated)
+        assertEquals(prefsBefore, latinIME.prefs().all)
     }
 
     @Test fun `english space-separated typing keeps composing word`() {
@@ -1260,6 +1545,8 @@ class InputLogicTest {
 
     // should be called before every test, so the same state is guaranteed
     private fun reset() {
+        editorInfoOverride = null
+        inputConnectionOverride = null
         // reset input connection & facilitator
         currentScript = ScriptUtils.SCRIPT_LATIN
         text = ""
@@ -1703,17 +1990,20 @@ private val ic = object : InputConnection {
 
 // could also extend LatinIME, it's not final anyway
 @Implements(InputMethodService::class)
-class ShadowInputMethodService {
+class ShadowInputMethodService : org.robolectric.shadows.ShadowService() {
     @Implementation
-    fun getCurrentInputEditorInfo() = EditorInfo().apply {
+    fun getCurrentInputEditorInfo() = editorInfoOverride ?: EditorInfo().apply {
         inputType = currentInputType
         // anything else?
     }
     @Implementation
-    fun getCurrentInputConnection() = ic
+    fun getCurrentInputConnection(): InputConnection = inputConnectionOverride ?: ic
     @Implementation
     fun isInputViewShown() = true // otherwise selection updates will do nothing
 }
+
+private var editorInfoOverride: EditorInfo? = null
+private var inputConnectionOverride: InputConnection? = null
 
 @Implements(Handler::class)
 class ShadowHandler {
