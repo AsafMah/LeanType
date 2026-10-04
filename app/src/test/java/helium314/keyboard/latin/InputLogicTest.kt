@@ -19,9 +19,6 @@ import helium314.keyboard.ShadowProximityInfo
 import helium314.keyboard.compat.AppQuirk
 import helium314.keyboard.compat.AppQuirksManager
 import helium314.keyboard.event.Event
-import helium314.keyboard.compat.AppQuirk
-import helium314.keyboard.compat.AppQuirksManager
-import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.keyboard.KeyboardId
@@ -59,9 +56,6 @@ import helium314.keyboard.latin.utils.getEnabledClipboardToolbarKeys
 import helium314.keyboard.latin.utils.setToolbarButtonActivatedState
 import helium314.keyboard.latin.utils.upgradeToolbarPrefs
 import helium314.keyboard.latin.utils.TextExpanderUtils
-import helium314.keyboard.latin.utils.ToolbarKey
-import helium314.keyboard.latin.utils.createToolbarKey
-import helium314.keyboard.latin.suggestions.SuggestionStripView
 import helium314.keyboard.latin.utils.getTimestampFormatter
 import helium314.keyboard.latin.utils.prefs
 import org.junit.runner.RunWith
@@ -83,9 +77,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlin.test.assertNotNull
-import helium314.keyboard.keyboard.KeyboardId
-import helium314.keyboard.keyboard.KeyboardLayoutSet
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [
@@ -2059,7 +2050,6 @@ class InputLogicTest {
         text = ""
         batchEdit = 0
         currentInputType = InputType.TYPE_CLASS_TEXT
-        editorInfoOverride = null
         textBeforeCursorAvailable = true
         lastCursorCapsRequest = null
         lastAddedWord = ""
@@ -2523,7 +2513,6 @@ class ShadowInputMethodService : org.robolectric.shadows.ShadowService() {
     fun isInputViewShown() = true // otherwise selection updates will do nothing
 }
 
-private var editorInfoOverride: EditorInfo? = null
 private var inputConnectionOverride: InputConnection? = null
 
 @Implements(Handler::class)

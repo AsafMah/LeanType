@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard
 
+import android.content.ContextWrapper
+import android.content.res.AssetManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodSubtype
 import androidx.core.content.edit
@@ -35,6 +37,7 @@ import helium314.keyboard.latin.utils.getCodeForToolbarKey
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.toolbarKeyStrings
 import org.junit.runner.RunWith
+import org.mockito.Mockito
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -768,7 +771,18 @@ f""", // no newline at the end
         val keysInRowsField = KeyboardBuilder::class.java.getDeclaredField("keysInRows").apply { isAccessible = true }
 
         val id = KeyboardId(elementId, layoutParams)
-        val builder = KeyboardBuilder(latinIME, KeyboardParams(UniqueKeysCache.NO_CACHE))
+        // Asset paths use Android separators even when the host JVM runs on Windows.
+        val assets = Mockito.mock(AssetManager::class.java)
+        Mockito.`when`(assets.list(Mockito.anyString())).thenAnswer {
+            latinIME.assets.list(it.getArgument<String>(0).replace('\\', '/'))
+        }
+        Mockito.`when`(assets.open(Mockito.anyString())).thenAnswer {
+            latinIME.assets.open(it.getArgument<String>(0).replace('\\', '/'))
+        }
+        val context = object : ContextWrapper(latinIME) {
+            override fun getAssets() = assets
+        }
+        val builder = KeyboardBuilder(context, KeyboardParams(UniqueKeysCache.NO_CACHE))
         builder.load(id)
         @Suppress("UNCHECKED_CAST")
         return builder.build() to keysInRowsField.get(builder) as ArrayList<ArrayList<KeyParams>>
