@@ -22,9 +22,10 @@
 - Enforce JSON keyword parity for every toolbar action, including customized primary codes. ([LeanBitLab/LeanType#572](https://github.com/LeanBitLab/LeanType/pull/572))
 
 ### Upstream
-- Rebased `v2` onto LeanBitLab/LeanType commit `b718d832c41ba01e1cce613f14e6209c279e9d17` (4.2.7 Beta4; latest stable is still 4.2.6). Upstream release history remains in `docs/releasenote/`; the fork remains version `2.0.0` (`6000`).
+- Upstream baseline: LeanBitLab/LeanType commit `24ecbb0a6503a48965ef99e8958530a9445bb414` ([4.2.9 beta-429-1](https://github.com/LeanBitLab/LeanType/releases/tag/beta-429-1), prerelease). Upstream release history remains in `docs/releasenote/`; the fork remains version `2.0.0` (`6000`).
+- Includes upstream fixes for web-editor backspace lag, double capitalization during fast typing/chording, Pixel haptics, the delete-key icon, Arabic secondary symbols and landscape `TYPE_NULL` fields. Keeps the fork's Literal mode and focused expander/contraction fixes alongside upstream's auto-capitalization controls.
 - Backup restore store preservation is now supplied by [LeanBitLab/LeanType#519](https://github.com/LeanBitLab/LeanType/pull/519), and custom-layout emoji search preservation by [LeanBitLab/LeanType#518](https://github.com/LeanBitLab/LeanType/pull/518). Their patch-equivalent standalone fork commits were dropped during the rebase.
-- Retain newer upstream honeycomb layouts, proportional popup placement/animations, toolbar gestures, physical-keyboard translation, OTP and lifecycle changes alongside the fork additions. All 15 existing fork patches remained unique in this refresh. Branding, swipe menus, glide cancellation, media layers and new input fixes remain separate patches.
+- Retain upstream honeycomb layouts, proportional popup placement/animations, toolbar gestures, physical-keyboard translation, OTP and lifecycle changes alongside the fork additions. Branding, swipe menus, glide cancellation, media layers and focused input fixes remain separate patches.
 
 ### Changed
 - Brand the app, keyboard, spell checker, settings, and APKs as LeanTypeDual, using package `com.asafmah.leantypedual` and version `2.0.0` (`6000`) while retaining upstream icons and plugin compatibility.
