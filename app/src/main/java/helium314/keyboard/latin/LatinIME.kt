@@ -713,7 +713,10 @@ class LatinIME : InputMethodService(),
 
     fun onStartInputInternal(editorInfo: EditorInfo?, restarting: Boolean) {
         mediaEditorVersion++
-        keyboardSwitcher.emojiPalettesView?.stopMediaSession()
+        keyboardSwitcher.emojiPalettesView?.let {
+            it.stopMediaSession()
+            it.dismissForInputRestart()
+        }
         super.onStartInput(editorInfo, restarting)
         val identity = editorInfo?.let {
             LiteralEditorIdentity(it.packageName, it.fieldId, it.fieldName, it.inputType, it.imeOptions)

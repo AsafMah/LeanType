@@ -9,6 +9,7 @@
 - Optional per-field Literal typing through toolbar, pinned keys or custom layouts: preserve native composition and explicit editing while suspending automatic case, correction, suggestions, spaces, expansion, learning and word glide. No saved typing/privacy preferences or learned words are changed.
 
 ### Fixed
+- Dismiss an invalidated retained picker when the host restarts input, and keep overlapping emoji-query touches from consuming the host keyboard's Shift state.
 - Cancel queued glide updates when a swipe shortcut menu takes over the touch gesture. (#156)
 - Apply upstream's per-app Force Incognito profiles to online media immediately, without relaxing password, no-learning or global incognito restrictions.
 - Match text-expander triggers and prefix lengths against actual typed text, not a pending autocorrection, while preserving explicit manual suggestion choices. ([LeanBitLab/LeanType#570](https://github.com/LeanBitLab/LeanType/pull/570))

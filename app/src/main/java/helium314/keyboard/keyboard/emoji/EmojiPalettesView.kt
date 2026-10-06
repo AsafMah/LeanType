@@ -303,6 +303,10 @@ class EmojiPalettesView @JvmOverloads constructor(
         KeyboardSwitcher.getInstance().latinIME?.updateMediaBackHandling(false)
     }
 
+    fun dismissForInputRestart() {
+        if (visibility == VISIBLE) leavePicker()
+    }
+
     init {
         mColors = Settings.getValues().mColors
         val builder = KeyboardLayoutSet.Builder(context, null)
@@ -854,27 +858,13 @@ class EmojiPalettesView @JvmOverloads constructor(
             }
 
             override fun onPressKey(p: Int, r: Int, s: Boolean, h: HapticEvent) {
-                if (p != KeyCode.SYMBOL && p != KeyCode.ALPHA && p != KeyCode.NUMPAD &&
-                    p != KeyCode.SYMBOL_ALPHA && p != KeyCode.SHIFT && p != KeyCode.EMOJI &&
-                    p != KeyCode.CLIPBOARD && p != KeyCode.LANGUAGE_SWITCH &&
-                    p != KeyCode.CUSTOM1 && p != KeyCode.CUSTOM2 && p != KeyCode.CUSTOM3 &&
-                    p != KeyCode.CUSTOM4 && p != KeyCode.CUSTOM5
-                ) {
-                    mOriginalActionListener?.onPressKey(p, r, s, h)
-                }
+                // Query touches must not consume the host keyboard's pending Shift/chording state.
+                AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(p, bottomRow, h)
             }
 
             override fun onReleaseKey(p: Int, w: Boolean) {
                 mDeleteSwipeStartSel = -1
                 mCurrentDeleteSwipeStart = -1
-                if (p != KeyCode.SYMBOL && p != KeyCode.ALPHA && p != KeyCode.NUMPAD &&
-                    p != KeyCode.SYMBOL_ALPHA && p != KeyCode.SHIFT && p != KeyCode.EMOJI &&
-                    p != KeyCode.CLIPBOARD && p != KeyCode.LANGUAGE_SWITCH &&
-                    p != KeyCode.CUSTOM1 && p != KeyCode.CUSTOM2 && p != KeyCode.CUSTOM3 &&
-                    p != KeyCode.CUSTOM4 && p != KeyCode.CUSTOM5
-                ) {
-                    mOriginalActionListener?.onReleaseKey(p, w)
-                }
             }
 
             override fun onTextInput(t: String?) {

@@ -421,6 +421,61 @@ class EmojiSearchKeyboardTest {
     private fun code(code: Int) = searchListener.onCodeInput(code, 0, 0, false)
 
     @Test
+    fun inputRestartDismissesRetainedPickerEvenWhenHostStateIsAlreadyAlphabet() {
+        val editor = EditorInfo().apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            packageName = "picker.restart.fixture"
+            fieldId = 7
+        }
+        org.robolectric.util.ReflectionHelpers.setField(ime, "mInputEditorInfo", editor)
+        event(KeyCode.EMOJI)
+        if (helium314.keyboard.latin.BuildConfig.FLAVOR == "standard") {
+            descendants(palettes).filterIsInstance<android.widget.Button>()
+                .single { it.text == activity.getString(R.string.media_tab_gifs) }.performClick()
+            assertTrue(palettes.isShowingMedia)
+        } else {
+            switcher.returnToAlphabetKeyboard()
+        }
+        assertEquals("ALPHABET", stateMode)
+        assertEquals(View.VISIBLE, palettes.visibility)
+        ime.onStartInputInternal(editor, true)
+        assertEquals(View.GONE, palettes.visibility)
+        assertEquals(View.VISIBLE, main.visibility)
+        assertFalse(palettes.shouldRetainPicker)
+        assertSame(main, staticField(PointerTracker::class.java, "sDrawingProxy"))
+    }
+
+    @Test
+    fun emojiQueryChordDoesNotConsumeRetainedHostShiftOrDismissSearch() {
+        val forwardingHost = object : KeyboardActionListener.Adapter() {
+            override fun onPressKey(code: Int, repeat: Int, single: Boolean, event: helium314.keyboard.event.HapticEvent) {
+                switcher.onPressKey(code, single, 0, null)
+            }
+            override fun onReleaseKey(code: Int, sliding: Boolean) {
+                switcher.onReleaseKey(code, sliding, 0, null)
+            }
+        }
+        event(KeyCode.EMOJI)
+        palettes.setKeyboardActionListener(forwardingHost)
+        searchListener.onPressKey(KeyCode.SHIFT, 0, true, helium314.keyboard.event.HapticEvent.KEY_PRESS)
+        searchListener.onReleaseKey(KeyCode.SHIFT, false)
+        assertEquals("ALPHABET", stateMode)
+        assertTrue(main.keyboard!!.mId.isAlphabetShiftedManually)
+        openSearch()
+        val listener = searchListener
+        listener.onPressKey('a'.code, 0, true, helium314.keyboard.event.HapticEvent.KEY_PRESS)
+        listener.onPressKey('b'.code, 0, false, helium314.keyboard.event.HapticEvent.KEY_PRESS)
+        assertEquals(View.VISIBLE, palettes.visibility)
+        assertTrue(field(palettes, "mInSearchMode") as Boolean)
+        listener.onCodeInput('a'.code, 0, 0, false)
+        listener.onCodeInput('b'.code, 0, 0, false)
+        listener.onReleaseKey('a'.code, false)
+        listener.onReleaseKey('b'.code, false)
+        assertEquals("ab", searchBar.text.toString())
+        assertTrue(main.keyboard!!.mId.isAlphabetShiftedManually)
+    }
+
+    @Test
     fun deviceLockRestrictsSavedEmojiStateEvenForAnOrdinaryEditor() {
         val owner = field(switcher, "mLatinIME")
         val publicIme = Mockito.mock(LatinIME::class.java)

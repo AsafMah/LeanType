@@ -57,6 +57,7 @@ class MediaImeLifecycleTest {
         }, false)
         assertEquals(before + 1, ime.mediaEditorVersion)
         Mockito.verify(palettes).stopMediaSession()
+        Mockito.verify(palettes).dismissForInputRestart()
     }
 
     @Test fun hidingWindowStopsMedia() {
