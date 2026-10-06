@@ -6,11 +6,12 @@ It installs alongside upstream LeanType as `com.asafmah.leantypedual` (with `.of
 LeanTypeDual releases are available from [this fork](https://github.com/AsafMah/LeanType/releases);
 the upstream artwork, documentation, community links, and plugin ecosystem below retain their original provenance.
 
-The `v2` branch is rebased on upstream commit
+This source tree is based on upstream commit
 `24ecbb0a6503a48965ef99e8958530a9445bb414` ([4.2.9 beta-429-1](https://github.com/LeanBitLab/LeanType/releases/tag/beta-429-1),
 a prerelease). Its additions are fork
-branding, editable top/bottom-row swipe shortcut menus, and experimental GIF/sticker
-search, plus optional temporary Literal typing and focused input-correction fixes.
+branding, editable top/bottom-row swipe shortcut menus, and an experimental GIF/sticker
+picker with retained-keyboard results, bounded caching and saved media bookmarks,
+plus optional temporary Literal typing and focused input-correction fixes.
 The backup-restore and custom-layout emoji-search fixes are now upstream-owned,
 not duplicate local patches. Fork version `2.0.0` (`6000`) is unchanged; upstream
 release numbers below describe the inherited project. The surviving flavors are
@@ -20,6 +21,11 @@ The beta supplies the web-editor backspace, fast-typing capitalization, Pixel ha
 delete-key icon, Arabic symbols and landscape `TYPE_NULL` updates. Literal typing,
 the fork's expander/contraction fixes and upstream's saved auto-capitalization controls
 remain separate features.
+
+The combined picker also retains common-emoji swipe-up defaults, emoji variant pins,
+long-press media preview, and reduced-animation controls. These additions coexist with
+the beta's typing fixes; see [GIF and sticker search](#gif-and-sticker-search-experimental)
+for cache, privacy and provider-term limitations.
 
 Build the network-capable debug app with `.\gradlew.bat :app:assembleStandardDebug`
 (JDK 21 and the Android SDK/NDK specified in Gradle). The output is
